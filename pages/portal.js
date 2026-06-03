@@ -1,0 +1,628 @@
+import { state } from '../app.js'
+import { showToast } from '../components/toast.js'
+import {
+  SERVICE_GROUPS, EXCHANGE_SUB, SERVICE_CATALOG, WORKFLOW_STEPS
+} from '../data/portal-services.js'
+
+// ============================================================
+// View state
+// ============================================================
+let portalView = 'landing'      // 'landing' | 'service' | 'form' | 'submitted'
+let activeGroupId = null
+let activeSubId = null          // for Exchange sub-services
+let activeOpId = null
+let formValues = {}
+let reqCounter = 100
+
+// ============================================================
+// Entry
+// ============================================================
+export function initPortal() {
+  const el = document.getElementById('page-portal')
+  if (!el) return
+  portalView = 'landing'
+  activeGroupId = null
+  activeSubId = null
+  activeOpId = null
+  formValues = {}
+  render(el)
+}
+
+function render(el) {
+  if (portalView === 'landing')   renderLanding(el)
+  else if (portalView === 'service') renderServiceView(el)
+  else if (portalView === 'form')  renderFormView(el)
+  else if (portalView === 'submitted') renderSubmitted(el)
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+function svcEnabled(svcKey) {
+  const s = state.settings
+  if (!s.portalEnabled) return false
+  return s[svcKey] !== false
+}
+
+function groupSettingKey(groupId) {
+  return 'portal_' + groupId.replace(/-/g, '_')
+}
+
+function getCatalog(serviceId) {
+  return SERVICE_CATALOG[serviceId] || null
+}
+
+function getGroup(groupId) {
+  return SERVICE_GROUPS.find(g => g.id === groupId)
+}
+
+function getOperation(serviceId, opId) {
+  const cat = getCatalog(serviceId)
+  if (!cat) return null
+  return cat.operations.find(o => o.id === opId)
+}
+
+function isExchange(groupId) { return groupId === 'exchange' }
+
+// For exchange, default sub is first enabled sub
+function defaultExchangeSub() {
+  const subKeys = { 'exchange-groups': 'portal_exchange_groups', 'shared-mailbox': 'portal_shared_mailbox', 'room-equipment': 'portal_room_equipment', 'email-services': 'portal_email_services' }
+  for (const sub of EXCHANGE_SUB) {
+    if (svcEnabled(subKeys[sub.id])) return sub.id
+  }
+  return EXCHANGE_SUB[0].id
+}
+
+// Which service ID to use for operations lookup
+function resolveServiceId() {
+  if (isExchange(activeGroupId)) return activeSubId
+  return activeGroupId
+}
+
+// Build the actual approval steps for an operation
+function buildWorkflow(op) {
+  if (!op) return []
+  const required = ['submit', ...op.approvalPath, 'agent', 'action', 'done']
+  return WORKFLOW_STEPS.filter(s => required.includes(s.id))
+}
+
+// ============================================================
+// LANDING VIEW — 11 service tiles
+// ============================================================
+function renderLanding(el) {
+  const u = state.currentUser
+  if (!state.settings.portalEnabled) {
+    el.innerHTML = `
+      <div class="page-header"><div class="page-title"><i class="ti ti-grid-dots"></i> Self-Service Portal</div></div>
+      <div class="locked-banner">
+        <i class="ti ti-plug-x"></i>
+        <h3>Portal Temporarily Disabled</h3>
+        <p>The self-service portal has been disabled by your administrator. Please contact IT for assistance.</p>
+      </div>`
+    return
+  }
+
+  const roleDesc = { user: 'Standard user', manager: 'Manager', admin: 'Administrator', super: 'Super Admin' }
+  const available = SERVICE_GROUPS.filter(g => svcEnabled(groupSettingKey(g.id)))
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-grid-dots"></i> Self-Service Portal</div>
+        <div class="page-subtitle">Submit requests — automated approval and provisioning via AI Agent</div>
+      </div>
+    </div>
+
+    <div class="alert-banner info mb-3">
+      <i class="ti ti-user-circle"></i>
+      <span>Signed in as <strong>${u?.name}</strong> (${roleDesc[u?.role] || u?.role}).
+      All requests are logged and subject to approval workflow and AI Agent validation before provisioning.</span>
+    </div>
+
+    <div class="portal-workflow-banner mb-3">
+      ${WORKFLOW_STEPS.map((s, i) => `
+        <div class="pwf-step">
+          <div class="pwf-circle pwf-${s.color}"><i class="ti ${s.icon}"></i></div>
+          <div class="pwf-label">${s.label}</div>
+        </div>
+        ${i < WORKFLOW_STEPS.length - 1 ? '<div class="pwf-arrow"><i class="ti ti-arrow-right"></i></div>' : ''}
+      `).join('')}
+    </div>
+
+    <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">
+      ${available.length} services available
+    </div>
+
+    <div class="portal-service-grid" id="portal-service-grid"></div>
+  `
+
+  const grid = el.querySelector('#portal-service-grid')
+  SERVICE_GROUPS.forEach(group => {
+    const enabled = svcEnabled(groupSettingKey(group.id))
+    const opsCount = isExchange(group.id)
+      ? EXCHANGE_SUB.reduce((n, sub) => n + (getCatalog(sub.id)?.operations?.length || 0), 0)
+      : (getCatalog(group.id)?.operations?.length || 0)
+
+    const card = document.createElement('div')
+    card.className = `portal-svc-card ${!enabled ? 'disabled' : ''}`
+    card.innerHTML = `
+      <div class="psc-icon" style="background:${group.bg};color:${group.color}"><i class="ti ${group.icon}"></i></div>
+      <div class="psc-name">${group.name}</div>
+      <div class="psc-desc">${group.desc}</div>
+      <div class="psc-footer">
+        <span class="badge ${enabled ? 'info' : 'neutral'}">${enabled ? opsCount + ' actions' : 'Disabled'}</span>
+        <button class="btn btn-xs btn-primary psc-open-btn" data-gid="${group.id}" ${!enabled ? 'disabled' : ''}>
+          <i class="ti ti-arrow-right"></i> Open
+        </button>
+      </div>
+    `
+    if (!enabled) card.title = 'This service has been disabled by your administrator.'
+    grid.appendChild(card)
+  })
+
+  el.querySelectorAll('.psc-open-btn:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeGroupId = btn.dataset.gid
+      if (isExchange(activeGroupId)) activeSubId = defaultExchangeSub()
+      activeOpId = null
+      formValues = {}
+      portalView = 'service'
+      render(el)
+    })
+  })
+}
+
+// ============================================================
+// SERVICE VIEW — operation selector
+// ============================================================
+function renderServiceView(el) {
+  const group = getGroup(activeGroupId)
+  if (!group) { portalView = 'landing'; render(el); return }
+
+  const serviceId = resolveServiceId()
+  const catalog = getCatalog(serviceId)
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn" id="svc-back"><i class="ti ti-arrow-left"></i> Back</button>
+        <div class="psc-icon sm" style="background:${group.bg};color:${group.color}"><i class="ti ${group.icon}"></i></div>
+        <div>
+          <div class="page-title">${group.name}</div>
+          <div class="page-subtitle">${group.desc}</div>
+        </div>
+      </div>
+    </div>
+
+    ${isExchange(activeGroupId) ? renderExchangeSubTabs() : ''}
+
+    <div id="svc-ops-area"></div>
+  `
+
+  el.querySelector('#svc-back').addEventListener('click', () => { portalView = 'landing'; render(el) })
+
+  if (isExchange(activeGroupId)) {
+    el.querySelectorAll('.ex-sub-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        activeSubId = tab.dataset.sub
+        activeOpId = null
+        renderOperations(el, getCatalog(activeSubId))
+        el.querySelectorAll('.ex-sub-tab').forEach(t => t.classList.toggle('active', t.dataset.sub === activeSubId))
+      })
+    })
+  }
+
+  renderOperations(el, catalog)
+}
+
+function renderExchangeSubTabs() {
+  const subKeys = { 'exchange-groups': 'portal_exchange_groups', 'shared-mailbox': 'portal_shared_mailbox', 'room-equipment': 'portal_room_equipment', 'email-services': 'portal_email_services' }
+  return `
+    <div class="tabs mb-3" style="margin-bottom:16px">
+      ${EXCHANGE_SUB.map(sub => {
+        const enabled = svcEnabled(subKeys[sub.id])
+        return `<button class="tab-btn ex-sub-tab ${sub.id === activeSubId ? 'active' : ''} ${!enabled ? 'disabled-tab' : ''}"
+          data-sub="${sub.id}" ${!enabled ? 'disabled' : ''} title="${sub.desc}">
+          <i class="ti ${sub.icon}" style="margin-right:4px"></i>${sub.name}
+          ${!enabled ? '<span class="badge neutral" style="margin-left:4px;font-size:8px">Off</span>' : ''}
+        </button>`
+      }).join('')}
+    </div>
+  `
+}
+
+function renderOperations(el, catalog) {
+  const area = el.querySelector('#svc-ops-area')
+  if (!area) return
+  if (!catalog) { area.innerHTML = '<div class="empty-state">No operations available for this service.</div>'; return }
+
+  // Group operations
+  const grouped = {}
+  catalog.operations.forEach(op => {
+    if (!grouped[op.group]) grouped[op.group] = []
+    grouped[op.group].push(op)
+  })
+
+  area.innerHTML = `
+    <div class="card">
+      <div class="card-title mb-3"><i class="ti ti-list-check"></i> Select an action</div>
+      ${Object.entries(grouped).map(([grpName, ops]) => `
+        <div style="margin-bottom:16px">
+          <div class="section-heading">${grpName}</div>
+          <div class="op-cards-grid">
+            ${ops.map(op => `
+              <div class="op-card ${activeOpId === op.id ? 'selected' : ''}" data-op="${op.id}">
+                <div class="op-card-title">${op.label}</div>
+                <div class="op-card-steps">
+                  ${buildWorkflow(op).map(s => `<span class="op-step-dot op-step-${s.color}" title="${s.label}"></span>`).join('')}
+                </div>
+                <div class="op-card-approval">
+                  <i class="ti ti-route" style="font-size:10px"></i>
+                  ${buildWorkflow(op).map(s => s.label).join(' → ')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div id="svc-form-preview"></div>
+  `
+
+  area.querySelectorAll('.op-card').forEach(card => {
+    card.addEventListener('click', () => {
+      area.querySelectorAll('.op-card').forEach(c => c.classList.remove('selected'))
+      card.classList.add('selected')
+      activeOpId = card.dataset.op
+      renderFormPreview(area, getCatalog(resolveServiceId()), activeOpId)
+    })
+  })
+
+  if (activeOpId) {
+    const card = area.querySelector(`.op-card[data-op="${activeOpId}"]`)
+    if (card) card.classList.add('selected')
+    renderFormPreview(area, catalog, activeOpId)
+  }
+}
+
+function renderFormPreview(area, catalog, opId) {
+  const preview = area.querySelector('#svc-form-preview')
+  if (!preview) return
+  const op = catalog?.operations?.find(o => o.id === opId)
+  if (!op) return
+
+  const wfSteps = buildWorkflow(op)
+
+  preview.innerHTML = `
+    <div class="card mt-3">
+      <div class="card-header">
+        <span class="card-title"><i class="ti ti-info-circle"></i> ${op.label}</span>
+        <button class="btn btn-primary" id="svc-start-form"><i class="ti ti-arrow-right"></i> Start Request</button>
+      </div>
+
+      <div class="grid-2" style="gap:16px">
+        <div>
+          <div class="section-heading">Approval & Provisioning Workflow</div>
+          <div class="workflow-timeline-h">
+            ${wfSteps.map((s, i) => `
+              <div class="wfh-step">
+                <div class="wfh-circle wfh-${s.color}"><i class="ti ${s.icon}"></i></div>
+                <div class="wfh-label">${s.label}</div>
+              </div>
+              ${i < wfSteps.length - 1 ? '<div class="wfh-arrow"></div>' : ''}
+            `).join('')}
+          </div>
+        </div>
+        <div>
+          <div class="section-heading">AI Agent Validation Checks</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            ${op.agentChecks.map(c => `
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--color-text-secondary)">
+                <i class="ti ti-robot" style="color:var(--clr-teal-text);font-size:12px;flex-shrink:0;margin-top:1px"></i>
+                ${c}
+              </div>
+            `).join('')}
+          </div>
+          <div style="margin-top:10px">
+            <div class="section-heading">System Action</div>
+            <code style="font-size:10px;font-family:var(--font-mono);color:var(--clr-info-text);background:var(--clr-info-bg);padding:4px 8px;border-radius:4px;display:block;word-break:break-all">${op.systemAction}</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+
+  preview.querySelector('#svc-start-form').addEventListener('click', () => {
+    portalView = 'form'
+    formValues = {}
+    const pageEl = document.getElementById('page-portal')
+    render(pageEl)
+  })
+}
+
+// ============================================================
+// FORM VIEW — dynamic fields + workflow
+// ============================================================
+function renderFormView(el) {
+  const group = getGroup(activeGroupId)
+  const serviceId = resolveServiceId()
+  const op = getOperation(serviceId, activeOpId)
+  if (!op || !group) { portalView = 'service'; render(el); return }
+
+  const wfSteps = buildWorkflow(op)
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn" id="form-back"><i class="ti ti-arrow-left"></i> Back</button>
+        <div class="psc-icon sm" style="background:${group.bg};color:${group.color}"><i class="ti ${group.icon}"></i></div>
+        <div>
+          <div class="page-title">${op.label}</div>
+          <div class="page-subtitle">${group.name}${activeSubId ? ' — ' + (EXCHANGE_SUB.find(s => s.id === activeSubId)?.name || '') : ''}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="gap:16px">
+      <!-- Form -->
+      <div>
+        <div class="card mb-3">
+          <div class="card-title mb-3"><i class="ti ti-forms"></i> Request Details</div>
+          <div id="dynamic-form">
+            ${op.fields.map(f => renderField(f)).join('')}
+          </div>
+        </div>
+
+        <div class="card" style="background:var(--clr-info-bg);border-color:var(--clr-info-border)">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <i class="ti ti-robot" style="font-size:18px;color:var(--clr-teal-text);flex-shrink:0;margin-top:2px"></i>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px">AI Agent will validate before provisioning:</div>
+              ${op.agentChecks.map(c => `<div style="font-size:11px;color:var(--color-text-secondary);padding:2px 0;display:flex;align-items:flex-start;gap:5px"><i class="ti ti-check" style="color:var(--clr-teal-text);font-size:10px;flex-shrink:0;margin-top:2px"></i>${c}</div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Workflow sidebar -->
+      <div>
+        <div class="card mb-3">
+          <div class="card-title mb-3"><i class="ti ti-route"></i> Approval & Provisioning Flow</div>
+          <div class="workflow-timeline-v">
+            ${wfSteps.map((s, i) => `
+              <div class="wfv-step">
+                <div class="wfv-left">
+                  <div class="wfv-circle wfv-${s.color}"><i class="ti ${s.icon}"></i></div>
+                  ${i < wfSteps.length - 1 ? '<div class="wfv-line"></div>' : ''}
+                </div>
+                <div class="wfv-content">
+                  <div class="wfv-title">${s.label}</div>
+                  ${wfStepDesc(s.id, op) ? `<div class="wfv-desc">${wfStepDesc(s.id, op)}</div>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title mb-2"><i class="ti ti-api"></i> System Action</div>
+          <code style="font-size:10px;font-family:var(--font-mono);color:var(--clr-info-text);word-break:break-all;line-height:1.6">${op.systemAction}</code>
+        </div>
+
+        <div style="margin-top:16px">
+          <button class="btn btn-primary w-full" id="form-submit" style="width:100%;justify-content:center;padding:10px">
+            <i class="ti ti-send"></i> Submit Request
+          </button>
+          <p style="font-size:10px;color:var(--color-text-tertiary);text-align:center;margin-top:8px">
+            By submitting, you acknowledge this request will be logged in the audit trail and routed for approval.
+          </p>
+        </div>
+      </div>
+    </div>
+  `
+
+  el.querySelector('#form-back').addEventListener('click', () => { portalView = 'service'; render(el) })
+  el.querySelector('#form-submit').addEventListener('click', () => handleSubmit(el, op))
+
+  // Wire conditional field visibility
+  wireFieldDependencies(el, op)
+}
+
+function renderField(f) {
+  const req = f.required ? ' *' : ''
+  const hint = f.hint ? `<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:3px">${f.hint}</div>` : ''
+
+  if (f.type === 'text' || f.type === 'email') {
+    return `<div class="form-group" data-field="${f.id}">
+      <label class="form-label" for="ff-${f.id}">${f.label}${req}</label>
+      <input type="${f.type}" class="form-input" id="ff-${f.id}" name="${f.id}" placeholder="${f.placeholder || ''}" ${f.required ? 'required' : ''}>
+      ${hint}
+    </div>`
+  }
+  if (f.type === 'date') {
+    return `<div class="form-group" data-field="${f.id}">
+      <label class="form-label" for="ff-${f.id}">${f.label}${req}</label>
+      <input type="date" class="form-input" id="ff-${f.id}" name="${f.id}" ${f.required ? 'required' : ''}>
+      ${hint}
+    </div>`
+  }
+  if (f.type === 'select') {
+    return `<div class="form-group" data-field="${f.id}">
+      <label class="form-label" for="ff-${f.id}">${f.label}${req}</label>
+      <select class="form-select" id="ff-${f.id}" name="${f.id}" ${f.required ? 'required' : ''}>
+        <option value="">— Select —</option>
+        ${(f.options || []).map(o => `<option value="${o}">${o}</option>`).join('')}
+      </select>
+      ${hint}
+    </div>`
+  }
+  if (f.type === 'textarea') {
+    return `<div class="form-group" data-field="${f.id}">
+      <label class="form-label" for="ff-${f.id}">${f.label}${req}</label>
+      <textarea class="form-textarea" id="ff-${f.id}" name="${f.id}" placeholder="${f.placeholder || ''}" ${f.required ? 'required' : ''}></textarea>
+      ${hint}
+    </div>`
+  }
+  if (f.type === 'checkbox') {
+    return `<div class="form-group" data-field="${f.id}">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="ff-${f.id}" name="${f.id}">
+        <span class="form-label" style="margin:0">${f.label}</span>
+      </label>
+      ${hint}
+    </div>`
+  }
+  return ''
+}
+
+function wireFieldDependencies(el) {
+  // No complex conditional logic needed for now — all fields shown
+}
+
+function wfStepDesc(stepId, op) {
+  const paths = op.approvalPath || []
+  if (stepId === 'submit') return `Request submitted with required details`
+  if (stepId === 'manager') return `Your direct manager reviews and approves`
+  if (stepId === 'it') return `IT team validates technical feasibility and security`
+  if (stepId === 'dataowner') return `Data/resource owner confirms access appropriateness`
+  if (stepId === 'agent') return `AI Agent validates: ${op.agentChecks[0]}, and ${op.agentChecks.length - 1} more checks`
+  if (stepId === 'action') return `Provisioning via: ${op.systemAction}`
+  if (stepId === 'done') return `Email notification sent. Request available in My Requests.`
+  return ''
+}
+
+function handleSubmit(el, op) {
+  // Validate required fields
+  const form = el.querySelector('#dynamic-form')
+  let valid = true
+  const missingFields = []
+
+  op.fields.filter(f => f.required).forEach(f => {
+    const input = form.querySelector(`#ff-${f.id}`)
+    if (!input) return
+    const val = input.type === 'checkbox' ? input.checked : input.value.trim()
+    if (!val) {
+      valid = false
+      missingFields.push(f.label)
+      input.style.borderColor = 'var(--clr-danger-text)'
+      input.addEventListener('input', () => { input.style.borderColor = '' }, { once: true })
+    }
+  })
+
+  // Special: wipe confirmation
+  const confirmField = op.fields.find(f => f.id === 'confirmation')
+  if (confirmField) {
+    const inp = form.querySelector('#ff-confirmation')
+    const nameInp = form.querySelector('#ff-groupName, #ff-siteUrl, #ff-currentName')
+    if (inp && inp.value.toUpperCase() !== 'CONFIRM' && !nameInp) {
+      // wipe device requires "CONFIRM"
+      if (inp.value !== 'CONFIRM') {
+        valid = false
+        showToast('Type CONFIRM in the confirmation field to proceed.', 'error')
+        return
+      }
+    }
+  }
+
+  if (!valid) {
+    showToast(`Please fill in required fields: ${missingFields.slice(0, 3).join(', ')}`, 'error')
+    return
+  }
+
+  // Collect values
+  op.fields.forEach(f => {
+    const inp = form.querySelector(`#ff-${f.id}`)
+    if (inp) formValues[f.id] = inp.type === 'checkbox' ? inp.checked : inp.value
+  })
+
+  reqCounter++
+  portalView = 'submitted'
+  render(el)
+}
+
+// ============================================================
+// SUBMITTED VIEW — confirmation + workflow progress
+// ============================================================
+function renderSubmitted(el) {
+  const group = getGroup(activeGroupId)
+  const serviceId = resolveServiceId()
+  const op = getOperation(serviceId, activeOpId)
+  if (!op || !group) { portalView = 'landing'; render(el); return }
+
+  const wfSteps = buildWorkflow(op)
+  const reqNum = `REQ-${String(reqCounter).padStart(4, '0')}`
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div class="page-title"><i class="ti ti-circle-check" style="color:var(--clr-success-text)"></i> Request Submitted</div>
+    </div>
+
+    <div class="alert-banner success mb-3">
+      <i class="ti ti-circle-check"></i>
+      <strong>${reqNum}</strong> — ${op.label} request submitted successfully. You will be notified at each approval stage.
+    </div>
+
+    <div class="grid-2" style="gap:16px;margin-bottom:16px">
+      <div class="card">
+        <div class="card-title mb-3"><i class="ti ti-receipt"></i> Request Summary</div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:5px 16px;font-size:11px">
+          <span style="color:var(--color-text-tertiary)">Request ID</span>
+          <span class="monospace" style="font-weight:600;color:var(--clr-info-text)">${reqNum}</span>
+          <span style="color:var(--color-text-tertiary)">Service</span>
+          <span>${group.name}</span>
+          <span style="color:var(--color-text-tertiary)">Action</span>
+          <span>${op.label}</span>
+          <span style="color:var(--color-text-tertiary)">Submitted by</span>
+          <span>${state.currentUser?.name}</span>
+          <span style="color:var(--color-text-tertiary)">Time</span>
+          <span>${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} today</span>
+          <span style="color:var(--color-text-tertiary)">Next step</span>
+          <span style="color:var(--clr-warning-text);font-weight:600">${wfSteps[1]?.label || 'AI Validation'}</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title mb-3"><i class="ti ti-route"></i> Workflow Progress</div>
+        <div class="workflow-timeline-v compact">
+          ${wfSteps.map((s, i) => `
+            <div class="wfv-step">
+              <div class="wfv-left">
+                <div class="wfv-circle ${i === 0 ? 'wfv-success' : 'wfv-neutral'}">
+                  ${i === 0 ? '<i class="ti ti-check"></i>' : `<span style="font-size:9px;font-weight:700">${i + 1}</span>`}
+                </div>
+                ${i < wfSteps.length - 1 ? '<div class="wfv-line"></div>' : ''}
+              </div>
+              <div class="wfv-content">
+                <div class="wfv-title ${i === 0 ? 'done' : i === 1 ? 'active' : 'pending'}">${s.label}</div>
+                <div class="wfv-desc">${i === 0 ? 'Completed' : i === 1 ? 'In progress — awaiting response' : 'Pending'}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" id="submit-new">
+        <i class="ti ti-plus"></i> Submit another request
+      </button>
+      <button class="btn" id="submit-myreqs">
+        <i class="ti ti-list-check"></i> View my requests
+      </button>
+    </div>
+  `
+
+  el.querySelector('#submit-new').addEventListener('click', () => {
+    portalView = 'landing'
+    activeGroupId = null
+    activeSubId = null
+    activeOpId = null
+    formValues = {}
+    render(el)
+  })
+
+  el.querySelector('#submit-myreqs').addEventListener('click', () => {
+    import('../app.js').then(m => m.go('myreqs'))
+  })
+}

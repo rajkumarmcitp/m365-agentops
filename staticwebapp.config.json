@@ -1,0 +1,26 @@
+{
+  "routes": [
+    {
+      "route": "/*",
+      "serve": "/index.html",
+      "statusCode": 200
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/assets/*", "*.svg", "*.png", "*.jpg", "*.gif", "*.json"]
+  },
+  "cors": {
+    "allowedOrigins": [
+      "https://m365ops.azurestaticapps.net",
+      "https://m365ops-api.azurewebsites.net"
+    ],
+    "allowedMethods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allowedHeaders": ["Content-Type", "Authorization"],
+    "exposeHeaders": ["Content-Type"]
+  },
+  "mimeTypes": {
+    ".js": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8"
+  }
+}
