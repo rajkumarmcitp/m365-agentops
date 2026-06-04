@@ -13,17 +13,21 @@ export async function initDashboard() {
   el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading dashboard data...</p></div>`
 
   // Fetch real data
-  console.log('📡 Fetching real dashboard data from backend...')
-  const devicesResult = await getDevices()
-  const usersResult = await getUsers()
-  const scoreResult = await getSecurityScore()
+  try {
+    console.log('📡 Fetching real dashboard data from backend...')
+    const devicesResult = await getDevices()
+    const usersResult = await getUsers()
+    const scoreResult = await getSecurityScore()
 
-  // Set real counts with fallback
-  realDeviceCount = devicesResult.success && devicesResult.count > 0 ? devicesResult.count : 847
-  realUserCount = usersResult.success && usersResult.count > 0 ? usersResult.count : 1000
-  realSecureScore = scoreResult.success ? scoreResult.data : null
+    // Set real counts with fallback
+    realDeviceCount = (devicesResult.success && devicesResult.count) ? devicesResult.count : 847
+    realUserCount = (usersResult.success && usersResult.count) ? usersResult.count : 1000
+    realSecureScore = scoreResult.success ? scoreResult.data : null
 
-  console.log(`✅ Loaded dashboard data: ${realDeviceCount} devices, ${realUserCount} users`)
+    console.log(`✅ Loaded dashboard data: ${realDeviceCount} devices, ${realUserCount} users`)
+  } catch (error) {
+    console.error('❌ Error loading dashboard data:', error)
+  }
 
   el.innerHTML = `
     <div class="page-header">

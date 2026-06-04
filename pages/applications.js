@@ -38,24 +38,30 @@ export async function initApplications() {
 
   el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading real M365 application data...</p></div>`
 
-  console.log('📡 Fetching real application data from backend...')
-  const appsResult = await getApplications()
-  const spResult = await getServicePrincipals()
+  try {
+    console.log('📡 Fetching real application data from backend...')
+    const appsResult = await getApplications()
+    const spResult = await getServicePrincipals()
 
-  if (!appsResult.success) {
-    console.warn('⚠️ Failed to fetch applications, using simulated data:', appsResult.error)
+    if (!appsResult.success) {
+      console.warn('⚠️ Failed to fetch applications, using simulated data:', appsResult.error)
+      realApps = APP_REGISTRATIONS
+    } else {
+      realApps = appsResult.data || APP_REGISTRATIONS
+      console.log(`✅ Loaded ${realApps.length} real applications from API`)
+    }
+
+    if (!spResult.success) {
+      console.warn('⚠️ Failed to fetch service principals, using simulated data')
+      realServicePrincipals = ENTERPRISE_APPLICATIONS
+    } else {
+      realServicePrincipals = spResult.data || ENTERPRISE_APPLICATIONS
+      console.log(`✅ Loaded ${realServicePrincipals.length} real service principals from API`)
+    }
+  } catch (error) {
+    console.error('❌ Error loading application data:', error)
     realApps = APP_REGISTRATIONS
-  } else {
-    realApps = appsResult.data || APP_REGISTRATIONS
-    console.log(`✅ Loaded ${realApps.length} real applications from API`)
-  }
-
-  if (!spResult.success) {
-    console.warn('⚠️ Failed to fetch service principals, using simulated data')
     realServicePrincipals = ENTERPRISE_APPLICATIONS
-  } else {
-    realServicePrincipals = spResult.data || ENTERPRISE_APPLICATIONS
-    console.log(`✅ Loaded ${realServicePrincipals.length} real service principals from API`)
   }
 
   render(el)

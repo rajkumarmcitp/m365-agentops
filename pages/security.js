@@ -48,24 +48,30 @@ export async function initSecurity() {
 
   el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading real M365 security data...</p></div>`
 
-  console.log('📡 Fetching real security data from backend...')
-  const scoreResult = await getSecurityScore()
-  const threatsResult = await getThreatAssessment()
+  try {
+    console.log('📡 Fetching real security data from backend...')
+    const scoreResult = await getSecurityScore()
+    const threatsResult = await getThreatAssessment()
 
-  if (!scoreResult.success) {
-    console.warn('⚠️ Failed to fetch security score, using simulated data:', scoreResult.error)
+    if (!scoreResult.success) {
+      console.warn('⚠️ Failed to fetch security score, using simulated data:', scoreResult.error)
+      realSecureScore = SECURE_SCORE
+    } else {
+      realSecureScore = scoreResult.data || SECURE_SCORE
+      console.log('✅ Loaded real secure score from API')
+    }
+
+    if (!threatsResult.success) {
+      console.warn('⚠️ Failed to fetch threats, using simulated data')
+      realThreats = []
+    } else {
+      realThreats = threatsResult.data || []
+      console.log(`✅ Loaded ${realThreats.length} threats from API`)
+    }
+  } catch (error) {
+    console.error('❌ Error loading security data:', error)
     realSecureScore = SECURE_SCORE
-  } else {
-    realSecureScore = scoreResult.data || SECURE_SCORE
-    console.log('✅ Loaded real secure score from API')
-  }
-
-  if (!threatsResult.success) {
-    console.warn('⚠️ Failed to fetch threats, using simulated data')
     realThreats = []
-  } else {
-    realThreats = threatsResult.data || []
-    console.log(`✅ Loaded ${realThreats.length} threats from API`)
   }
 
   render(el)
