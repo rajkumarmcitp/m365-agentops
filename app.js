@@ -2,6 +2,7 @@ import { USERS } from './data/users.js'
 import { renderHeader } from './components/header.js'
 import { renderNav } from './components/nav.js'
 import { showToast } from './components/toast.js'
+import { initMSAL, loginWithMicrosoft, getCurrentUser, logout } from './lib/auth.js'
 import { initDashboard } from './pages/dashboard.js'
 import { initRequests } from './pages/requests.js'
 import { initSecurity } from './pages/security.js'
@@ -165,8 +166,16 @@ export function go(pageId) {
 // ============================================================
 // Login Screen
 // ============================================================
-function renderLogin() {
+async function renderLogin() {
   const app = document.getElementById('app')
+
+  // Check if already authenticated via Entra ID
+  const entraUser = await initMSAL()
+  if (entraUser) {
+    doLoginWithEntraID(entraUser)
+    return
+  }
+
   app.innerHTML = `
     <div id="login-screen">
       <div class="login-card">
@@ -177,7 +186,20 @@ function renderLogin() {
             <p>Enterprise Tenant Administration</p>
           </div>
         </div>
-        <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:16px;">Select a user account to sign in:</p>
+
+        <div style="margin-bottom:16px">
+          <p style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:8px;text-transform:uppercase">Real Account</p>
+          <button class="btn-ms" id="entra-login-btn" style="width:100%">
+            <svg width="16" height="16" viewBox="0 0 21 21" fill="none"><rect width="10" height="10" fill="#F25022"/><rect x="11" width="10" height="10" fill="#7FBA00"/><rect y="11" width="10" height="10" fill="#00A4EF"/><rect x="11" y="11" width="10" height="10" fill="#FFB900"/></svg>
+            Sign in with Microsoft Entra ID
+          </button>
+          <p style="font-size:9px;color:var(--color-text-tertiary);margin-top:6px">Use your Office 365 account for real M365 data</p>
+        </div>
+
+        <div class="login-divider">or Demo</div>
+
+        <p style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:8px;text-transform:uppercase">Demo Account</p>
+        <p style="font-size:11px;color:var(--color-text-secondary);margin-bottom:12px;">Test with simulated data:</p>
         <div class="user-tiles">
           ${USERS.map(u => `
             <div class="user-tile" data-user="${u.id}">
@@ -190,38 +212,40 @@ function renderLogin() {
             </div>
           `).join('')}
         </div>
-        <div class="login-divider">or</div>
-        <button class="btn-ms" id="sso-btn" disabled>
-          <svg width="16" height="16" viewBox="0 0 21 21" fill="none"><rect width="10" height="10" fill="#F25022"/><rect x="11" width="10" height="10" fill="#7FBA00"/><rect y="11" width="10" height="10" fill="#00A4EF"/><rect x="11" y="11" width="10" height="10" fill="#FFB900"/></svg>
-          Sign in with Microsoft Entra ID
-        </button>
-        <p style="text-align:center;font-size:10px;color:var(--color-text-tertiary);margin-top:12px;">SSO integration placeholder — select a user above to simulate login</p>
       </div>
     </div>
   `
 
-  // User tile selection
+  // Entra ID login
+  document.getElementById('entra-login-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('entra-login-btn')
+    btn.innerHTML = '<span class="spinner" style="margin-right:8px"></span> Signing in...'
+    btn.disabled = true
+
+    const account = await loginWithMicrosoft()
+    if (account) {
+      doLoginWithEntraID(account)
+    } else {
+      btn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 21 21" fill="none"><rect width="10" height="10" fill="#F25022"/><rect x="11" width="10" height="10" fill="#7FBA00"/><rect y="11" width="10" height="10" fill="#00A4EF"/><rect x="11" y="11" width="10" height="10" fill="#FFB900"/></svg>
+        Sign in with Microsoft Entra ID
+      `
+      btn.disabled = false
+      showToast('Login cancelled or failed. Try again or use demo account.', 'warning')
+    }
+  })
+
+  // Demo user tile selection
   let selected = null
   document.querySelectorAll('.user-tile').forEach(tile => {
     tile.addEventListener('click', () => {
       document.querySelectorAll('.user-tile').forEach(t => t.classList.remove('selected'))
       tile.classList.add('selected')
       selected = tile.dataset.user
-      document.getElementById('sso-btn').disabled = false
-      document.getElementById('sso-btn').textContent = ''
-      document.getElementById('sso-btn').innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 21 21" fill="none"><rect width="10" height="10" fill="#F25022"/><rect x="11" width="10" height="10" fill="#7FBA00"/><rect y="11" width="10" height="10" fill="#00A4EF"/><rect x="11" y="11" width="10" height="10" fill="#FFB900"/></svg>
-        Continue as ${USERS.find(u => u.id === selected)?.name}
-      `
-      // Double-click or click again to login
     })
     tile.addEventListener('dblclick', () => {
       doLogin(tile.dataset.user)
     })
-  })
-
-  document.getElementById('sso-btn').addEventListener('click', () => {
-    if (selected) doLogin(selected)
   })
 }
 
@@ -233,6 +257,33 @@ function doLogin(userId) {
   const defaultPage = user.navAccess[0]
   go(defaultPage)
   showToast(`Welcome back, ${user.name}!`, 'success')
+}
+
+function doLoginWithEntraID(account) {
+  // Create user object from Entra ID account
+  const nameParts = (account.name || account.username).split(' ')
+  const entraUser = {
+    id: account.localAccountId,
+    name: account.name || account.username,
+    email: account.username,
+    role: 'admin', // Default to admin for real users (Phase 3 will check Graph API for roles)
+    initials: nameParts.map(n => n[0]).join('').toUpperCase(),
+    color: '#0C447C',
+    isEntraID: true,
+    account: account,
+    navAccess: [
+      'dashboard', 'requests', 'security', 'zerotrust', 'privaccts',
+      'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune',
+      'portal', 'myreqs', 'chat',
+      'audit', 'settings'
+    ]
+  }
+
+  state.currentUser = entraUser
+  renderShell()
+  const defaultPage = entraUser.navAccess[0]
+  go(defaultPage)
+  showToast(`Welcome, ${entraUser.name}! Authenticated with Entra ID.`, 'success')
 }
 
 // ============================================================
@@ -281,4 +332,7 @@ function renderAllPages() {
 // Boot
 // ============================================================
 loadState()
-renderLogin()
+renderLogin().catch(err => {
+  console.error('Login render error:', err)
+  renderLogin()
+})
