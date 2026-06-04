@@ -1,5 +1,6 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
+import { getApplications, getServicePrincipals } from '../lib/api-client.js'
 import {
   APPS_SUMMARY, APP_REGISTRATIONS, ENTERPRISE_APPLICATIONS, SECRETS_CERTIFICATES,
   API_PERMISSIONS, ADMIN_CONSENTS, SIGN_IN_ANALYTICS, RISK_ASSESSMENT,
@@ -10,6 +11,8 @@ let activeSection = 'executive'
 let appFilter = { type: 'all', status: 'all', search: '' }
 let copilotMessages = []
 let copilotInit = false
+let realApps = []
+let realServicePrincipals = []
 
 const APP_TABS = [
   { id: 'executive',        label: 'Executive',          icon: 'ti-layout-dashboard' },
@@ -29,9 +32,32 @@ const APP_TABS = [
 // ============================================================
 // Entry
 // ============================================================
-export function initApplications() {
+export async function initApplications() {
   const el = document.getElementById('page-applications')
   if (!el) return
+
+  el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading real M365 application data...</p></div>`
+
+  console.log('📡 Fetching real application data from backend...')
+  const appsResult = await getApplications()
+  const spResult = await getServicePrincipals()
+
+  if (!appsResult.success) {
+    console.warn('⚠️ Failed to fetch applications, using simulated data:', appsResult.error)
+    realApps = APP_REGISTRATIONS
+  } else {
+    realApps = appsResult.data || APP_REGISTRATIONS
+    console.log(`✅ Loaded ${realApps.length} real applications from API`)
+  }
+
+  if (!spResult.success) {
+    console.warn('⚠️ Failed to fetch service principals, using simulated data')
+    realServicePrincipals = ENTERPRISE_APPLICATIONS
+  } else {
+    realServicePrincipals = spResult.data || ENTERPRISE_APPLICATIONS
+    console.log(`✅ Loaded ${realServicePrincipals.length} real service principals from API`)
+  }
+
   render(el)
 }
 
@@ -225,14 +251,15 @@ function renderExecutive() {
 // APP REGISTRATIONS
 // ============================================================
 function renderAppRegistrations() {
-  const filtered = APP_REGISTRATIONS.filter(app => {
+  const apps = realApps.length > 0 ? realApps : APP_REGISTRATIONS
+  const filtered = apps.filter(app => {
     if (appFilter.type !== 'all' && app.category !== appFilter.type) return false
     if (appFilter.status !== 'all' && app.status !== appFilter.status) return false
     if (appFilter.search && !app.name.toLowerCase().includes(appFilter.search.toLowerCase())) return false
     return true
   })
 
-  const cats = [...new Set(APP_REGISTRATIONS.map(a => a.category))]
+  const cats = [...new Set(apps.map(a => a.category))]
 
   return `
     <div class="filter-bar mb-3">
@@ -246,7 +273,7 @@ function renderAppRegistrations() {
         <option value="active" ${appFilter.status === 'active' ? 'selected' : ''}>Active</option>
         <option value="inactive" ${appFilter.status === 'inactive' ? 'selected' : ''}>Inactive</option>
       </select>
-      <span style="font-size:10px;color:var(--color-text-tertiary)">Showing ${filtered.length} of ${APP_REGISTRATIONS.length}</span>
+      <span style="font-size:10px;color:var(--color-text-tertiary)">Showing ${filtered.length} of ${apps.length}</span>
     </div>
 
     <div class="card" style="padding:0;overflow:hidden">
@@ -282,7 +309,8 @@ function renderAppRegistrations() {
 // ENTERPRISE APPLICATIONS
 // ============================================================
 function renderEnterpriseApps() {
-  const cats = [...new Set(ENTERPRISE_APPLICATIONS.map(a => a.category))]
+  const sps = realServicePrincipals.length > 0 ? realServicePrincipals : ENTERPRISE_APPLICATIONS
+  const cats = [...new Set(sps.map(a => a.category || 'Other'))]
   return `
     <div class="filter-bar mb-3">
       <select class="form-select" style="min-width:150px">
@@ -292,7 +320,7 @@ function renderEnterpriseApps() {
     </div>
 
     <div class="grid-2 mb-3" style="gap:16px">
-      ${ENTERPRISE_APPLICATIONS.map(app => `
+      ${sps.map(app => `
         <div class="card">
           <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:8px">
             <div style="flex:1">

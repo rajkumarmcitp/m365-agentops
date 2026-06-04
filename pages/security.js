@@ -1,5 +1,6 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
+import { getSecurityScore, getThreatAssessment } from '../lib/api-client.js'
 import {
   SECURE_SCORE, IDENTITY, EMAIL, ENDPOINT, TEAMS_SEC, SHAREPOINT_SEC,
   DATA_PROTECTION, PRIV_ACCESS, GUEST_GOVERNANCE, INCIDENTS, RECOMMENDATIONS,
@@ -33,15 +34,45 @@ const SEC_TABS = [
 ]
 
 // ============================================================
+// Real data storage
+// ============================================================
+let realSecureScore = null
+let realThreats = []
+
+// ============================================================
 // Entry
 // ============================================================
-export function initSecurity() {
+export async function initSecurity() {
   const el = document.getElementById('page-security')
   if (!el) return
+
+  el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading real M365 security data...</p></div>`
+
+  console.log('📡 Fetching real security data from backend...')
+  const scoreResult = await getSecurityScore()
+  const threatsResult = await getThreatAssessment()
+
+  if (!scoreResult.success) {
+    console.warn('⚠️ Failed to fetch security score, using simulated data:', scoreResult.error)
+    realSecureScore = SECURE_SCORE
+  } else {
+    realSecureScore = scoreResult.data || SECURE_SCORE
+    console.log('✅ Loaded real secure score from API')
+  }
+
+  if (!threatsResult.success) {
+    console.warn('⚠️ Failed to fetch threats, using simulated data')
+    realThreats = []
+  } else {
+    realThreats = threatsResult.data || []
+    console.log(`✅ Loaded ${realThreats.length} threats from API`)
+  }
+
   render(el)
 }
 
 function render(el) {
+  const ss = realSecureScore || SECURE_SCORE
   const critCount = INCIDENTS.filter(i => i.severity === 'critical').length
   const highCount = INCIDENTS.filter(i => i.severity === 'high' && i.status !== 'resolved').length
   const openRec   = RECOMMENDATIONS.filter(r => r.priority === 'critical' || r.priority === 'high').length
@@ -107,7 +138,7 @@ function render(el) {
 // Top-5 always-visible strip
 // ============================================================
 function topFiveKpi() {
-  const ss = SECURE_SCORE
+  const ss = realSecureScore || SECURE_SCORE
   const pct = ss.percentOf100
   const ssColor = pct >= 80 ? 'success' : pct >= 60 ? 'warning' : 'danger'
   const critical = INCIDENTS.filter(i => i.severity === 'critical' && i.status !== 'resolved').length
@@ -218,7 +249,7 @@ function renderSection() {
 // EXECUTIVE DASHBOARD
 // ============================================================
 function renderExecutive() {
-  const ss = SECURE_SCORE
+  const ss = realSecureScore || SECURE_SCORE
   return `
     <!-- Secondary KPI row -->
     <div class="kpi-row mb-3">
@@ -363,7 +394,7 @@ function renderExecutive() {
 // SECURE SCORE
 // ============================================================
 function renderSecureScore() {
-  const ss = SECURE_SCORE
+  const ss = realSecureScore || SECURE_SCORE
   return `
     <div class="grid-2 mb-3" style="gap:16px">
       <div class="card">
