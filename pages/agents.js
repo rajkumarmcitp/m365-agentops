@@ -57,9 +57,9 @@ export function initAgents() {
   })
 
   el.querySelectorAll('.agent-configure').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const id = btn.dataset.id
-      if (id === 'config') go('m365config')
+      if (id === 'config') await go('m365config')
       else showToast(`Opening configuration for ${AGENTS.find(a => a.id === id)?.name}...`, 'info')
     })
   })

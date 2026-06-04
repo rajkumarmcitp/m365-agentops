@@ -230,12 +230,12 @@ export function initDashboard() {
   ciSection.innerHTML = buildChangeIntelWidget()
   el.querySelector('#page-dashboard-inner') || el.appendChild(ciSection)
 
-  el.querySelector('#dash-to-msgcenter-health')?.addEventListener('click', () => go('msgcenter'))
-  el.querySelector('#dash-to-requests')?.addEventListener('click', () => go('requests'))
-  el.querySelector('#dash-to-m365')?.addEventListener('click', () => go('m365config'))
-  el.querySelector('#dash-to-zt')?.addEventListener('click', () => go('zerotrust'))
-  el.querySelector('#dash-to-audit')?.addEventListener('click', () => go('audit'))
-  el.querySelector('#dash-to-msgcenter')?.addEventListener('click', () => go('msgcenter'))
+  el.querySelector('#dash-to-msgcenter-health')?.addEventListener('click', async () => await go('msgcenter'))
+  el.querySelector('#dash-to-requests')?.addEventListener('click', async () => await go('requests'))
+  el.querySelector('#dash-to-m365')?.addEventListener('click', async () => await go('m365config'))
+  el.querySelector('#dash-to-zt')?.addEventListener('click', async () => await go('zerotrust'))
+  el.querySelector('#dash-to-audit')?.addEventListener('click', async () => await go('audit'))
+  el.querySelector('#dash-to-msgcenter')?.addEventListener('click', async () => await go('msgcenter'))
 }
 
 function buildChangeIntelWidget() {

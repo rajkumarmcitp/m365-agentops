@@ -96,6 +96,6 @@ export function renderNav() {
 
   // Click handlers
   sidebar.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => go(item.dataset.page))
+    item.addEventListener('click', async () => await go(item.dataset.page))
   })
 }

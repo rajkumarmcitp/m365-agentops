@@ -27,8 +27,8 @@ export function renderHeader() {
     </div>
   `
 
-  document.getElementById('hdr-settings').addEventListener('click', () => {
-    if (state.currentUser?.navAccess.includes('settings')) go('settings')
+  document.getElementById('hdr-settings').addEventListener('click', async () => {
+    if (state.currentUser?.navAccess.includes('settings')) await go('settings')
   })
 
   document.getElementById('hdr-signout').addEventListener('click', () => {

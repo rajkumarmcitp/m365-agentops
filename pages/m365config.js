@@ -280,10 +280,10 @@ function renderTopic(el, topic) {
   `
 
   el.querySelector('#cfg-back').addEventListener('click', () => renderMain(el))
-  el.querySelector('#cfg-topic-settings-btn').addEventListener('click', () => go('settings'))
+  el.querySelector('#cfg-topic-settings-btn').addEventListener('click', async () => await go('settings'))
 
   const settingsLink = el.querySelector('#cfg-topic-settings-link')
-  if (settingsLink) settingsLink.addEventListener('click', e => { e.preventDefault(); go('settings') })
+  if (settingsLink) settingsLink.addEventListener('click', async e => { e.preventDefault(); await go('settings') })
 
   el.querySelector('#cfg-topic-scan').addEventListener('click', () => {
     const btn = el.querySelector('#cfg-topic-scan')

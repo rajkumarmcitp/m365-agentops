@@ -141,7 +141,7 @@ const PAGE_INIT = {
   settings: initSettings,
 }
 
-export function go(pageId) {
+export async function go(pageId) {
   if (!hasAccess(pageId)) {
     showToast('You do not have access to that page.', 'error')
     return
@@ -159,8 +159,8 @@ export function go(pageId) {
   const ni = document.getElementById('n-' + pageId)
   if (ni) ni.classList.add('active')
 
-  // Call init function
-  if (PAGE_INIT[pageId]) PAGE_INIT[pageId]()
+  // Call init function (handle both sync and async)
+  if (PAGE_INIT[pageId]) await PAGE_INIT[pageId]()
 }
 
 // ============================================================
@@ -172,7 +172,7 @@ async function renderLogin() {
   // Check if already authenticated via Entra ID
   const entraUser = await initMSAL()
   if (entraUser) {
-    doLoginWithEntraID(entraUser)
+    await doLoginWithEntraID(entraUser)
     return
   }
 
@@ -224,7 +224,7 @@ async function renderLogin() {
 
     const account = await loginWithMicrosoft()
     if (account) {
-      doLoginWithEntraID(account)
+      await doLoginWithEntraID(account)
     } else {
       btn.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 21 21" fill="none"><rect width="10" height="10" fill="#F25022"/><rect x="11" width="10" height="10" fill="#7FBA00"/><rect y="11" width="10" height="10" fill="#00A4EF"/><rect x="11" y="11" width="10" height="10" fill="#FFB900"/></svg>
@@ -243,23 +243,23 @@ async function renderLogin() {
       tile.classList.add('selected')
       selected = tile.dataset.user
     })
-    tile.addEventListener('dblclick', () => {
-      doLogin(tile.dataset.user)
+    tile.addEventListener('dblclick', async () => {
+      await doLogin(tile.dataset.user)
     })
   })
 }
 
-function doLogin(userId) {
+async function doLogin(userId) {
   const user = USERS.find(u => u.id === userId)
   if (!user) return
   state.currentUser = user
   renderShell()
   const defaultPage = user.navAccess[0]
-  go(defaultPage)
+  await go(defaultPage)
   showToast(`Welcome back, ${user.name}!`, 'success')
 }
 
-function doLoginWithEntraID(account) {
+async function doLoginWithEntraID(account) {
   // Create user object from Entra ID account
   const nameParts = (account.name || account.username).split(' ')
   const entraUser = {
@@ -282,7 +282,7 @@ function doLoginWithEntraID(account) {
   state.currentUser = entraUser
   renderShell()
   const defaultPage = entraUser.navAccess[0]
-  go(defaultPage)
+  await go(defaultPage)
   showToast(`Welcome, ${entraUser.name}! Authenticated with Entra ID.`, 'success')
 }
 
@@ -315,7 +315,7 @@ function renderShell() {
 
   if (state.currentUser?.role === 'manager') {
     const lnk = document.getElementById('alert-approvals-link')
-    if (lnk) lnk.addEventListener('click', e => { e.preventDefault(); go('approvals') })
+    if (lnk) lnk.addEventListener('click', async e => { e.preventDefault(); await go('approvals') })
   }
 }
 
