@@ -30,14 +30,17 @@ export async function initSecurity() {
 }
 
 function render(el) {
-  const ss = realSecureScore || SECURE_SCORE
-  const currentScore = ss.currentScore || 64
-  const maxScore = ss.maxScore || 95
-  const percentScore = Math.round((currentScore / maxScore) * 100)
+  try {
+    const ss = realSecureScore || SECURE_SCORE
+    const currentScore = ss?.currentScore || 64
+    const maxScore = ss?.maxScore || 95
+    const percentScore = Math.round((currentScore / maxScore) * 100)
 
-  const critCount = INCIDENTS.filter(i => i.severity === 'critical').length
-  const highCount = INCIDENTS.filter(i => i.severity === 'high').length
-  const recCount = RECOMMENDATIONS.length
+    const incidents = INCIDENTS || []
+    const recommendations = RECOMMENDATIONS || []
+    const critCount = incidents.filter(i => i?.severity === 'critical').length || 0
+    const highCount = incidents.filter(i => i?.severity === 'high').length || 0
+    const recCount = recommendations.length || 0
 
   el.innerHTML = `
     <div class="page-header">
@@ -107,7 +110,7 @@ function render(el) {
         <span class="badge blue">${recCount} total</span>
       </div>
       <div style="padding:16px">
-        ${RECOMMENDATIONS.slice(0, 5).map(r => `
+        ${(recommendations || []).slice(0, 5).map(r => `
           <div style="padding:12px;border-bottom:1px solid var(--color-border);display:flex;gap:12px">
             <div style="min-width:32px;height:32px;border-radius:50%;background:${r.priority === 'critical' ? '#fee2e2' : '#fef3c7'};display:flex;align-items:center;justify-content:center;font-size:16px">
               ${r.priority === 'critical' ? '🔴' : r.priority === 'high' ? '🟠' : '🟡'}
@@ -121,4 +124,8 @@ function render(el) {
       </div>
     </div>
   `
+  } catch (renderError) {
+    console.error('❌ Error rendering security page:', renderError)
+    el.innerHTML = `<div class="alert danger" style="margin:20px"><strong>Error loading Security page</strong><p>${renderError.message}</p></div>`
+  }
 }
