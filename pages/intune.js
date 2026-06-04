@@ -1,5 +1,6 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
+import { getDevices, getDeviceCompliancePolicies } from '../lib/api-client.js'
 import {
   INTUNE_SUMMARY, PLATFORM_DISTRIBUTION, DEVICE_COMPLIANCE_POLICIES, DEVICE_INVENTORY,
   ENDPOINT_SECURITY_ASSESSMENT, PATCH_MANAGEMENT, APPLICATION_INVENTORY,
@@ -11,6 +12,8 @@ import {
 let activeSection = 'executive'
 let copilotMessages = []
 let copilotInit = false
+let realDevices = [] // Store real data from API
+let realPolicies = []
 
 const INTUNE_TABS = [
   { id: 'executive',      label: 'Executive',           icon: 'ti-layout-dashboard' },
@@ -26,9 +29,36 @@ const INTUNE_TABS = [
   { id: 'copilot',        label: 'Intune Copilot',      icon: 'ti-robot' },
 ]
 
-export function initIntune() {
+export async function initIntune() {
   const el = document.getElementById('page-intune')
   if (!el) return
+
+  // Show loading state
+  el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading real M365 device data...</p></div>`
+
+  // Fetch real data from backend
+  console.log('📡 Fetching real device data from backend...')
+  const devicesResult = await getDevices()
+  const policiesResult = await getDeviceCompliancePolicies()
+
+  // Handle errors gracefully
+  if (!devicesResult.success) {
+    console.warn('⚠️ Failed to fetch devices, using simulated data:', devicesResult.error)
+    showToast(`Device data unavailable: ${devicesResult.error}. Using demo data.`, 'warning')
+    realDevices = DEVICE_INVENTORY // Fallback to simulated
+  } else {
+    realDevices = devicesResult.data || DEVICE_INVENTORY
+    console.log(`✅ Loaded ${realDevices.length} real devices from API`)
+  }
+
+  if (!policiesResult.success) {
+    console.warn('⚠️ Failed to fetch policies, using simulated data')
+    realPolicies = DEVICE_COMPLIANCE_POLICIES
+  } else {
+    realPolicies = policiesResult.data || DEVICE_COMPLIANCE_POLICIES
+    console.log(`✅ Loaded ${realPolicies.length} real policies from API`)
+  }
+
   render(el)
 }
 
@@ -338,7 +368,7 @@ function renderCompliance() {
           <th style="width:10%">Coverage</th>
         </tr></thead>
         <tbody>
-          ${DEVICE_COMPLIANCE_POLICIES.map(p => `
+          ${(realPolicies.length > 0 ? realPolicies : DEVICE_COMPLIANCE_POLICIES).map(p => `
             <tr>
               <td style="font-weight:600">${p.name}</td>
               <td>${p.assignedDevices}</td>
@@ -388,17 +418,17 @@ function renderInventory() {
           <th style="width:7%">Risk</th>
         </tr></thead>
         <tbody>
-          ${DEVICE_INVENTORY.slice(0, 8).map(d => `
+          ${(realDevices.length > 0 ? realDevices : DEVICE_INVENTORY).slice(0, 50).map(d => `
             <tr>
-              <td style="font-weight:600">${d.name}</td>
-              <td>${d.type}</td>
-              <td>${d.model}</td>
-              <td style="font-size:10px">${d.osVersion}</td>
-              <td style="font-size:10px">${d.lastSync}</td>
-              <td>${d.owner}</td>
-              <td><span class="badge ${d.compliance === 'compliant' ? 'success' : 'danger'}">${d.compliance}</span></td>
-              <td>${d.encryption ? '✓' : '✗'}</td>
-              <td><span style="font-weight:700;color:${d.riskLevel === 'critical' ? 'var(--clr-danger-text)' : d.riskLevel === 'high' ? 'var(--clr-warning-text)' : 'var(--clr-success-text)'}">${d.riskLevel === 'critical' ? '🔴' : d.riskLevel === 'high' ? '🟠' : '🟢'}</span></td>
+              <td style="font-weight:600">${d.deviceName || d.name || 'Unknown'}</td>
+              <td>${d.operatingSystem || d.type || 'N/A'}</td>
+              <td>${d.model || 'N/A'}</td>
+              <td style="font-size:10px">${d.osVersion || 'N/A'}</td>
+              <td style="font-size:10px">${d.lastSyncDateTime ? new Date(d.lastSyncDateTime).toLocaleString() : d.lastSync || 'N/A'}</td>
+              <td>${d.userId || d.owner || 'N/A'}</td>
+              <td><span class="badge ${d.isCompliant === true || d.compliance === 'compliant' ? 'success' : 'danger'}">${d.isCompliant === true ? 'compliant' : 'non-compliant'}</span></td>
+              <td>${d.encryptionStatus === true || d.encryption === true ? '✓' : '✗'}</td>
+              <td><span style="font-weight:700;color:var(--clr-success-text)">🟢</span></td>
             </tr>
           `).join('')}
         </tbody>
