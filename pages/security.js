@@ -68,12 +68,7 @@ export async function initSecurity() {
     realThreats = []
   }
 
-  try {
-    render(el)
-  } catch (renderError) {
-    console.error('❌ Error rendering security page:', renderError)
-    el.innerHTML = `<div class="alert danger" style="margin:20px"><strong>Error loading Security page</strong><p>${renderError.message}</p></div>`
-  }
+  render(el)
 }
 
 function render(el) {
