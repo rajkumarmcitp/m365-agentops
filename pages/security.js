@@ -60,8 +60,7 @@ export async function initSecurity() {
       console.log('✅ Loaded real secure score from API')
     }
 
-    // Note: Threat assessment endpoint requires additional permissions (SecurityEvents.Read.All)
-    // Skip for now and use simulated data
+    // Threat assessment endpoint not available - skip
     realThreats = []
   } catch (error) {
     console.error('❌ Error loading security data:', error)
