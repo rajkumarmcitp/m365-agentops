@@ -38,6 +38,15 @@ const authProvider = new TokenCredentialAuthenticationProvider(credential, {
 const graphClient = Client.initWithMiddleware({ authProvider })
 
 // ============================================================
+// Azure AD Group IDs for Role Mapping
+// ============================================================
+const ROLE_GROUPS = {
+  'super': process.env.AZURE_GROUP_SUPER_ADMINS,      // M365-Super-Admins group ID
+  'admin': process.env.AZURE_GROUP_ADMINS,            // M365-Admins group ID
+  'manager': process.env.AZURE_GROUP_MANAGERS,        // M365-Managers group ID
+}
+
+// ============================================================
 // Health Check
 // ============================================================
 app.get('/api/health', (req, res) => {
@@ -47,6 +56,49 @@ app.get('/api/health', (req, res) => {
     service: 'M365 AgentOps Backend',
     version: '1.0.0'
   })
+})
+
+// ============================================================
+// User Role Determination (based on Azure AD Groups)
+// ============================================================
+app.post('/api/user/role', async (req, res) => {
+  try {
+    const { userId } = req.body
+    if (!userId) {
+      return res.status(400).json({ error: 'userId required' })
+    }
+
+    console.log(`Determining role for user: ${userId}`)
+
+    // Get user's group memberships
+    const memberOf = await graphClient
+      .api(`/users/${userId}/memberOf`)
+      .get()
+
+    const groupIds = memberOf.value.map(g => g.id)
+    console.log(`User is member of ${groupIds.length} groups`)
+
+    // Check which role group the user belongs to (priority: super > admin > manager > user)
+    let role = 'user' // default role
+
+    if (ROLE_GROUPS.super && groupIds.includes(ROLE_GROUPS.super)) {
+      role = 'super'
+    } else if (ROLE_GROUPS.admin && groupIds.includes(ROLE_GROUPS.admin)) {
+      role = 'admin'
+    } else if (ROLE_GROUPS.manager && groupIds.includes(ROLE_GROUPS.manager)) {
+      role = 'manager'
+    }
+
+    console.log(`✓ User role determined: ${role}`)
+    res.json({ success: true, userId, role })
+  } catch (error) {
+    console.error('✗ Error determining user role:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      hint: 'Ensure group IDs are configured in AZURE_GROUP_* environment variables'
+    })
+  }
 })
 
 // ============================================================

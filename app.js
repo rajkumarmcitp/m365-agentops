@@ -262,28 +262,54 @@ async function doLogin(userId) {
 async function doLoginWithEntraID(account) {
   // Create user object from Entra ID account
   const nameParts = (account.name || account.username).split(' ')
+
+  // Determine role from backend (based on Azure AD group membership)
+  let role = 'user' // default role
+  try {
+    console.log(`📡 Determining role for user: ${account.localAccountId}`)
+    const response = await fetch(
+      'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net/api/user/role',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: account.localAccountId })
+      }
+    )
+    const data = await response.json()
+    if (data.success) {
+      role = data.role
+      console.log(`✓ User role: ${role}`)
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not determine role from backend, using default:', error.message)
+    role = 'user'
+  }
+
+  // Determine nav access based on role
+  const roleNavAccess = {
+    super: ['dashboard', 'requests', 'security', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'chat', 'graphapi', 'sso', 'audit', 'settings'],
+    admin: ['dashboard', 'requests', 'security', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'chat', 'audit', 'settings'],
+    manager: ['dashboard', 'requests', 'approvals', 'msgcenter', 'portal', 'myreqs', 'chat', 'settings'],
+    user: ['dashboard', 'portal', 'myreqs', 'chat', 'settings']
+  }
+
   const entraUser = {
     id: account.localAccountId,
     name: account.name || account.username,
     email: account.username,
-    role: 'admin', // Default to admin for real users (Phase 3 will check Graph API for roles)
+    role: role,
     initials: nameParts.map(n => n[0]).join('').toUpperCase(),
     color: '#0C447C',
     isEntraID: true,
     account: account,
-    navAccess: [
-      'dashboard', 'requests', 'security', 'zerotrust', 'privaccts',
-      'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune',
-      'portal', 'myreqs', 'chat',
-      'audit', 'settings'
-    ]
+    navAccess: roleNavAccess[role] || roleNavAccess.user
   }
 
   state.currentUser = entraUser
   renderShell()
   const defaultPage = entraUser.navAccess[0]
   await go(defaultPage)
-  showToast(`Welcome, ${entraUser.name}! Authenticated with Entra ID.`, 'success')
+  showToast(`Welcome, ${entraUser.name}! Role: ${role}`, 'success')
 }
 
 // ============================================================
