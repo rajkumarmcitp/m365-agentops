@@ -51,7 +51,6 @@ export async function initSecurity() {
   try {
     console.log('📡 Fetching real security data from backend...')
     const scoreResult = await getSecurityScore()
-    const threatsResult = await getThreatAssessment()
 
     if (!scoreResult.success) {
       console.warn('⚠️ Failed to fetch security score, using simulated data:', scoreResult.error)
@@ -61,20 +60,21 @@ export async function initSecurity() {
       console.log('✅ Loaded real secure score from API')
     }
 
-    if (!threatsResult.success) {
-      console.warn('⚠️ Failed to fetch threats, using simulated data')
-      realThreats = []
-    } else {
-      realThreats = threatsResult.data || []
-      console.log(`✅ Loaded ${realThreats.length} threats from API`)
-    }
+    // Note: Threat assessment endpoint requires additional permissions (SecurityEvents.Read.All)
+    // Skip for now and use simulated data
+    realThreats = []
   } catch (error) {
     console.error('❌ Error loading security data:', error)
     realSecureScore = SECURE_SCORE
     realThreats = []
   }
 
-  render(el)
+  try {
+    render(el)
+  } catch (renderError) {
+    console.error('❌ Error rendering security page:', renderError)
+    el.innerHTML = `<div class="alert danger" style="margin:20px"><strong>Error loading Security page</strong><p>${renderError.message}</p></div>`
+  }
 }
 
 function render(el) {
