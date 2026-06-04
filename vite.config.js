@@ -14,7 +14,7 @@ export default defineConfig({
   },
   define: {
     'process.env.VITE_API_URL': JSON.stringify(
-      process.env.VITE_API_URL || 'https://m365ops-api.azurewebsites.net/api'
+      process.env.VITE_API_URL || 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net/api'
     )
   },
   plugins: [
