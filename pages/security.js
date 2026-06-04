@@ -1,10 +1,13 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
+import { getSecurityScore } from '../lib/api-client.js'
 import {
   SECURE_SCORE, IDENTITY, EMAIL, ENDPOINT, TEAMS_SEC, SHAREPOINT_SEC,
   DATA_PROTECTION, PRIV_ACCESS, GUEST_GOVERNANCE, INCIDENTS, RECOMMENDATIONS,
   API_REFERENCE, SECURITY_COPILOT_KB
 } from '../data/security-data.js'
+
+let realSecureScore = SECURE_SCORE
 
 // ============================================================
 // Sub-navigation
@@ -35,9 +38,22 @@ const SEC_TABS = [
 // ============================================================
 // Entry
 // ============================================================
-export function initSecurity() {
+export async function initSecurity() {
   const el = document.getElementById('page-security')
   if (!el) return
+
+  try {
+    console.log('📡 Fetching real security data from backend...')
+    const scoreResult = await getSecurityScore()
+    if (scoreResult.success) {
+      realSecureScore = scoreResult.data || SECURE_SCORE
+      console.log('✅ Loaded real secure score from API')
+    }
+  } catch (error) {
+    console.warn('⚠️ Using simulated secure score:', error.message)
+    realSecureScore = SECURE_SCORE
+  }
+
   render(el)
 }
 
@@ -107,7 +123,7 @@ function render(el) {
 // Top-5 always-visible strip
 // ============================================================
 function topFiveKpi() {
-  const ss = SECURE_SCORE
+  const ss = realSecureScore || SECURE_SCORE
   const pct = ss.percentOf100
   const ssColor = pct >= 80 ? 'success' : pct >= 60 ? 'warning' : 'danger'
   const critical = INCIDENTS.filter(i => i.severity === 'critical' && i.status !== 'resolved').length
