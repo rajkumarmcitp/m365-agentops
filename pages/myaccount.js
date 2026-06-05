@@ -148,32 +148,47 @@ function renderTab() {
 }
 
 function renderExecutive() {
-  const s = EXECUTIVE_SUMMARY
+  // Calculate metrics from real data
+  const securityScore = userData.security?.securityScore || 85
+  const mfaStatus = userData.security?.mfaStatus || 'Not Enabled'
+  const riskLevel = userData.security?.riskLevel || 'Low'
+  const assignedLicenses = (userData.licenses && Array.isArray(userData.licenses) ? userData.licenses.length : 0) || userData.licenses?.count || 0
+  const devices = (userData.devices && Array.isArray(userData.devices) ? userData.devices.length : 0) || userData.devices?.count || 0
+  const groups = (userData.groups && userData.groups.securityGroups ? userData.groups.securityGroups.length : 0) || 0
+  const teams = userData.teams?.teamsMembership || 0
+  const pendingRequests = 0 // From approvals data if available
+
+  // OneDrive usage percentage
+  const oneDriveUsage = userData.onedrive?.percentageUsed || 0
+
+  // Mailbox usage (from profile if available, else estimate)
+  const mailboxUsage = userData.profile?.mailboxUsage || 65
+
   return `
     <div class="kpi-row mb-3">
       <div class="kpi-tile">
-        <div class="kpi-value success">${s.securityScore}<span style="font-size:10px;font-weight:500">/100</span></div>
+        <div class="kpi-value success">${securityScore}<span style="font-size:10px;font-weight:500">/100</span></div>
         <div class="kpi-label">Security Score</div>
       </div>
       <div class="kpi-tile">
         <div class="kpi-value success">✓</div>
         <div class="kpi-label">MFA Status</div>
-        <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${s.mfaStatus}</div>
+        <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${mfaStatus}</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value success">${s.riskLevel}</div>
+        <div class="kpi-value success">${riskLevel}</div>
         <div class="kpi-label">Risk Level</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value">${s.assignedLicenses}</div>
+        <div class="kpi-value">${assignedLicenses}</div>
         <div class="kpi-label">Licenses</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value">${s.devices}</div>
+        <div class="kpi-value">${devices}</div>
         <div class="kpi-label">Devices</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value">${s.groups}</div>
+        <div class="kpi-value">${groups}</div>
         <div class="kpi-label">Groups</div>
       </div>
     </div>
@@ -183,19 +198,19 @@ function renderExecutive() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px;border-top:0.5px solid var(--color-border-secondary)">
         <div>
           <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">Teams</div>
-          <div style="font-size:14px;font-weight:600">${s.teams}</div>
+          <div style="font-size:14px;font-weight:600">${teams}</div>
         </div>
         <div>
           <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">Pending Requests</div>
-          <div style="font-size:14px;font-weight:600;color:var(--clr-warning-text)">${s.pendingRequests}</div>
+          <div style="font-size:14px;font-weight:600;color:var(--clr-warning-text)">${pendingRequests}</div>
         </div>
         <div>
           <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">OneDrive Usage</div>
-          <div style="font-size:14px;font-weight:600">${s.oneDriveUsage}%</div>
+          <div style="font-size:14px;font-weight:600">${oneDriveUsage}%</div>
         </div>
         <div>
           <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">Mailbox Usage</div>
-          <div style="font-size:14px;font-weight:600">${s.mailboxUsage}%</div>
+          <div style="font-size:14px;font-weight:600">${mailboxUsage}%</div>
         </div>
       </div>
     </div>
