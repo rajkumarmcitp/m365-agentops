@@ -1151,6 +1151,11 @@ app.get('/api/me/security', async (req, res) => {
           passwordExpiryDate: '15 days remaining',
           riskLevel: 'Low',
           securityScore: 92,
+          authenticationMethods: [
+            { type: 'Password', status: 'Enabled' },
+            { type: 'Microsoft Authenticator', status: mfaEnabled ? 'Enabled' : 'Not registered' },
+            { type: 'FIDO2 Security Key', status: 'Not registered' },
+            { type: 'Phone Authentication', status: 'Enabled' },
             { type: 'Email OTP', status: 'Not registered' }
           ]
         }
