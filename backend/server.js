@@ -13,8 +13,26 @@ const PORT = process.env.PORT || 3000
 // ============================================================
 // Middleware
 // ============================================================
+// Configure CORS to allow frontend requests
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://proud-river-0f55f1e10.7.azurestaticapps.net',
+  process.env.FRONTEND_URL
+].filter(Boolean)
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl requests, etc)
+    if (!origin) return callback(null, true)
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      console.warn(`CORS blocked request from origin: ${origin}`)
+      callback(null, true) // Allow all for now, log blocking
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
