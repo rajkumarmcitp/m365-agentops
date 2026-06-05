@@ -35,8 +35,15 @@ export async function initMyAccount() {
   try {
     console.log('📡 Fetching My Account data from backend...')
 
-    // Get current user's UPN from MSAL if available
-    const userEmail = window.userEmail || 'rajkumar.duraisami@contoso.com'
+    // Get current user's email from MSAL (set during login)
+    const userEmail = window.userEmail
+    if (!userEmail) {
+      console.error('❌ User email not found. Make sure you are logged in.')
+      showToast('Error: User not authenticated. Please log in again.', 'error')
+      return
+    }
+
+    console.log(`Fetching data for user: ${userEmail}`)
 
     const [profile, security, signin, licenses, groups, onedrive, teams, devices] = await Promise.allSettled([
       fetch(`${api}/me/profile?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),

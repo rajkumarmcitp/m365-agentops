@@ -2,7 +2,7 @@ import { USERS } from './data/users.js'
 import { renderHeader } from './components/header.js'
 import { renderNav } from './components/nav.js'
 import { showToast } from './components/toast.js'
-import { initMSAL, loginWithMicrosoft, getCurrentUser, logout } from './lib/auth.js'
+import { initMSAL, loginWithMicrosoft, getCurrentUser, getUserEmail, logout } from './lib/auth.js'
 import { initDashboard } from './pages/dashboard.js'
 import { initRequests } from './pages/requests.js'
 import { initSecurity } from './pages/security.js'
@@ -319,7 +319,7 @@ async function doLoginWithEntraID(account) {
   }
 
   // Store user email globally for backend API calls
-  window.userEmail = account.username
+  window.userEmail = account.username || account.mail || account.email
 
   state.currentUser = entraUser
   renderShell()
