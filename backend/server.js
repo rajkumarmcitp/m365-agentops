@@ -478,23 +478,30 @@ app.get('/api/me/signin-activity', async (req, res) => {
       console.log(`Fetching sign-in activity for user: ${userEmail}`)
 
       // Fetch sign-in logs from audit logs (requires AuditLog.Read.All permission)
+      // Note: auditLogs/signIns returns the last 30 days by default
+      const filterQuery = `userPrincipalName eq '${userEmail.toLowerCase()}'`
+      console.log(`Using filter: ${filterQuery}`)
+
       const signIns = await graphClient
         .api('/auditLogs/signIns')
-        .filter(`userPrincipalName eq '${userEmail}'`)
+        .filter(filterQuery)
+        .orderby('createdDateTime desc')
         .top(30)
         .get()
 
+      console.log(`✓ API returned ${signIns.value?.length || 0} sign-in records`)
+
       const recentSignins = (signIns.value || []).map(signin => ({
-        date: new Date(signin.createdDateTime).toLocaleString('en-US', { month: 'short', day: 'numeric', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }),
+        date: signin.createdDateTime ? new Date(signin.createdDateTime).toLocaleString('en-US', { month: 'short', day: 'numeric', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Unknown',
         app: signin.appDisplayName || 'Unknown App',
         device: signin.deviceDetail?.displayName || 'Unknown Device',
         browser: signin.deviceDetail?.browser || 'Unknown',
         location: `${signin.location?.city || 'Unknown'}, ${signin.location?.state || 'Unknown'}`,
         ip: signin.ipAddress || 'Unknown',
-        result: signin.status?.additionalDetails === 'MFA requirement satisfied by claim in the token' || signin.status?.additionalDetails === 'MFA requirement satisfied by claim' ? 'Success' : 'Success'
+        result: signin.status?.errorCode === 0 || !signin.status?.errorCode ? 'Success' : 'Failed'
       }))
 
-      console.log(`✓ Retrieved ${recentSignins.length} sign-in records`)
+      console.log(`✓ Processed ${recentSignins.length} sign-in records for display`)
 
       res.json({
         success: true,
@@ -506,7 +513,10 @@ app.get('/api/me/signin-activity', async (req, res) => {
       })
     } catch (graphError) {
       console.error('⚠️ Graph API sign-in fetch failed:', graphError.message)
-      console.log('Falling back to simulated data')
+      console.error('Error code:', graphError.code)
+      console.error('Error statusCode:', graphError.statusCode)
+      console.error('Full error:', JSON.stringify(graphError, null, 2))
+      console.log('ℹ️ Falling back to simulated data')
 
       res.json({
         success: true,
