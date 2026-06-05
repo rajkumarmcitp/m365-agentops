@@ -22,6 +22,7 @@ import { initSettings } from './pages/settings.js'
 import { initMsgCenter } from './pages/msgcenter.js'
 import { initApplications } from './pages/applications.js'
 import { initIntune } from './pages/intune.js'
+import { initMyAccount } from './pages/myaccount.js'
 
 // ============================================================
 // Global application state
@@ -134,6 +135,7 @@ const PAGE_INIT = {
   approvals: initApprovals,
   portal: initPortal,
   myreqs: initMyReqs,
+  myaccount: initMyAccount,
   chat: initChat,
   graphapi: initGraphApi,
   sso: initSso,
@@ -199,7 +201,7 @@ async function renderLogin() {
         <div class="login-divider">or Demo</div>
 
         <p style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:8px;text-transform:uppercase">Demo Account</p>
-        <p style="font-size:11px;color:var(--color-text-secondary);margin-bottom:12px;">Test with simulated data:</p>
+        <p style="font-size:11px;color:var(--color-text-secondary);margin-bottom:12px;">Select a user and click Sign In:</p>
         <div class="user-tiles">
           ${USERS.map(u => `
             <div class="user-tile" data-user="${u.id}">
@@ -212,6 +214,9 @@ async function renderLogin() {
             </div>
           `).join('')}
         </div>
+        <button class="btn" id="demo-signin-btn" style="width:100%;margin-top:12px;display:none">
+          <i class="ti ti-login"></i> Sign In as Selected User
+        </button>
       </div>
     </div>
   `
@@ -237,15 +242,23 @@ async function renderLogin() {
 
   // Demo user tile selection
   let selected = null
+  const signInBtn = document.getElementById('demo-signin-btn')
+
   document.querySelectorAll('.user-tile').forEach(tile => {
     tile.addEventListener('click', () => {
       document.querySelectorAll('.user-tile').forEach(t => t.classList.remove('selected'))
       tile.classList.add('selected')
       selected = tile.dataset.user
+      signInBtn.style.display = 'block'
     })
-    tile.addEventListener('dblclick', async () => {
-      await doLogin(tile.dataset.user)
-    })
+  })
+
+  signInBtn.addEventListener('click', async () => {
+    if (selected) {
+      signInBtn.innerHTML = '<span class="spinner" style="margin-right:8px"></span> Signing in...'
+      signInBtn.disabled = true
+      await doLogin(selected)
+    }
   })
 }
 
@@ -287,10 +300,10 @@ async function doLoginWithEntraID(account) {
 
   // Determine nav access based on role
   const roleNavAccess = {
-    super: ['dashboard', 'requests', 'security', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'chat', 'graphapi', 'sso', 'audit', 'settings'],
-    admin: ['dashboard', 'requests', 'security', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'chat', 'audit', 'settings'],
-    manager: ['dashboard', 'requests', 'approvals', 'msgcenter', 'portal', 'myreqs', 'chat', 'settings'],
-    user: ['dashboard', 'portal', 'myreqs', 'chat', 'settings']
+    super: ['dashboard', 'requests', 'security', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'audit', 'settings'],
+    admin: ['dashboard', 'requests', 'security', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings'],
+    manager: ['requests', 'approvals', 'msgcenter', 'portal', 'myreqs', 'myaccount', 'chat'],
+    user: ['portal', 'myreqs', 'myaccount', 'chat']
   }
 
   const entraUser = {
@@ -348,7 +361,7 @@ function renderShell() {
 function renderAllPages() {
   const pages = [
     'dashboard','requests','security','zerotrust','privaccts','m365config',
-    'msgcenter','applications','intune','licenses','agents','approvals','portal','myreqs','chat',
+    'msgcenter','applications','intune','licenses','agents','approvals','portal','myreqs','myaccount','chat',
     'graphapi','sso','audit','settings'
   ]
   return pages.map(p => `<div class="page" id="page-${p}"></div>`).join('')

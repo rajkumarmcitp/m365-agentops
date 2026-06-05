@@ -15,9 +15,10 @@ const NAV_ITEMS = {
     { id: 'agents',     label: 'AI Agents',            icon: 'ti-robot' },
   ],
   selfservice: [
-    { id: 'portal',  label: 'Portal',       icon: 'ti-grid-dots' },
-    { id: 'myreqs',  label: 'My Requests',  icon: 'ti-list-check' },
-    { id: 'chat',    label: 'AI Copilot',   icon: 'ti-message-circle' },
+    { id: 'myaccount', label: 'My Account',   icon: 'ti-user-circle' },
+    { id: 'portal',    label: 'Portal',       icon: 'ti-grid-dots' },
+    { id: 'myreqs',    label: 'My Requests',  icon: 'ti-list-check' },
+    { id: 'chat',      label: 'AI Copilot',   icon: 'ti-message-circle' },
   ],
   manager: [
     { id: 'approvals', label: 'Pending Approvals', icon: 'ti-check-list', badge: '3', badgeCls: 'red' },

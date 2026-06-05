@@ -1,0 +1,574 @@
+import { go } from '../app.js'
+import { showToast } from '../components/toast.js'
+import { api } from '../lib/api-client.js'
+import {
+  USER_PROFILE, SECURITY_DASHBOARD, SIGNIN_ACTIVITY, LICENSES,
+  GROUP_MEMBERSHIPS, ONEDRIVE_INFO, TEAMS_INFO, DEVICES, APP_ACCESS,
+  PENDING_APPROVALS, COPILOT_READINESS, EXECUTIVE_SUMMARY
+} from '../data/myaccount-data.js'
+
+let activeTab = 'executive'
+
+// Real data from backend (fallback to simulated if errors)
+let userData = { profile: USER_PROFILE, security: SECURITY_DASHBOARD, signin: SIGNIN_ACTIVITY, licenses: LICENSES, groups: GROUP_MEMBERSHIPS, onedrive: ONEDRIVE_INFO, teams: TEAMS_INFO, devices: DEVICES }
+
+const TABS = [
+  { id: 'executive', label: 'Executive Summary', icon: 'ti-dashboard' },
+  { id: 'profile', label: 'Profile', icon: 'ti-user' },
+  { id: 'security', label: 'Security', icon: 'ti-shield-check' },
+  { id: 'signin', label: 'Sign-in Activity', icon: 'ti-login' },
+  { id: 'licenses', label: 'Licenses', icon: 'ti-license' },
+  { id: 'groups', label: 'Groups', icon: 'ti-users' },
+  { id: 'devices', label: 'Devices', icon: 'ti-device-laptop' },
+  { id: 'apps', label: 'Apps & Access', icon: 'ti-app-window' },
+  { id: 'onedrive', label: 'OneDrive', icon: 'ti-cloud' },
+  { id: 'teams', label: 'Teams', icon: 'ti-brand-teams' },
+  { id: 'approvals', label: 'Pending Approvals', icon: 'ti-check' },
+  { id: 'copilot', label: 'Copilot Insights', icon: 'ti-robot' },
+]
+
+export async function initMyAccount() {
+  const el = document.getElementById('page-myaccount')
+  if (!el) return
+
+  // Fetch real data from backend
+  try {
+    console.log('📡 Fetching My Account data from backend...')
+    const [profile, security, signin, licenses, groups, onedrive, teams, devices] = await Promise.allSettled([
+      fetch(`${api}/me/profile`).then(r => r.json()),
+      fetch(`${api}/me/security`).then(r => r.json()),
+      fetch(`${api}/me/signin-activity`).then(r => r.json()),
+      fetch(`${api}/me/licenses`).then(r => r.json()),
+      fetch(`${api}/me/groups`).then(r => r.json()),
+      fetch(`${api}/me/onedrive`).then(r => r.json()),
+      fetch(`${api}/me/teams`).then(r => r.json()),
+      fetch(`${api}/me/devices`).then(r => r.json())
+    ])
+
+    // Use real data if successful, fallback to simulated
+    userData.profile = profile.status === 'fulfilled' && profile.value.success ? profile.value.data : USER_PROFILE
+    userData.security = security.status === 'fulfilled' && security.value.success ? security.value.data : SECURITY_DASHBOARD
+    userData.signin = signin.status === 'fulfilled' && signin.value.success ? signin.value.data.recentSignins : SIGNIN_ACTIVITY
+    userData.licenses = licenses.status === 'fulfilled' && licenses.value.success ? licenses.value.data : LICENSES
+    userData.groups = groups.status === 'fulfilled' && groups.value.success ? groups.value.data : GROUP_MEMBERSHIPS
+    userData.onedrive = onedrive.status === 'fulfilled' && onedrive.value.success ? onedrive.value.data : ONEDRIVE_INFO
+    userData.teams = teams.status === 'fulfilled' && teams.value.success ? teams.value.data : TEAMS_INFO
+    userData.devices = devices.status === 'fulfilled' && devices.value.success ? devices.value.data : DEVICES
+
+    console.log('✓ My Account data loaded')
+  } catch (error) {
+    console.warn('⚠️ Using simulated data:', error.message)
+  }
+
+  render(el)
+}
+
+function render(el) {
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-user-circle"></i> My Account</div>
+        <div class="page-subtitle">Your Microsoft 365 profile, security status, and assigned resources</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn" id="myacc-refresh"><i class="ti ti-refresh"></i> Refresh</button>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="intune-subnav" id="myacc-subnav">
+      ${TABS.map(t => `
+        <button class="intune-tab-btn ${activeTab === t.id ? 'active' : ''}" data-tab="${t.id}">
+          <i class="ti ${t.icon}"></i><span>${t.label}</span>
+          ${t.id === 'approvals' && PENDING_APPROVALS.length > 0 ? `<span class="intune-tab-badge red">${PENDING_APPROVALS.length}</span>` : ''}
+        </button>
+      `).join('')}
+    </div>
+
+    <!-- Content -->
+    <div id="myacc-content" style="margin-top:16px">${renderTab()}</div>
+  `
+
+  el.querySelectorAll('.intune-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeTab = btn.dataset.tab
+      el.querySelector('#myacc-content').innerHTML = renderTab()
+    })
+  })
+
+  el.querySelector('#myacc-refresh')?.addEventListener('click', () => {
+    const btn = el.querySelector('#myacc-refresh')
+    btn.innerHTML = `<span class="spinner dark"></span> Refreshing...`
+    btn.disabled = true
+    setTimeout(() => {
+      btn.innerHTML = `<i class="ti ti-refresh"></i> Refresh`
+      btn.disabled = false
+      showToast('Your profile has been refreshed.', 'success')
+    }, 1500)
+  })
+}
+
+function renderTab() {
+  const tabs = {
+    executive: renderExecutive,
+    profile: renderProfile,
+    security: renderSecurity,
+    signin: renderSignin,
+    licenses: renderLicenses,
+    groups: renderGroups,
+    devices: renderDevices,
+    apps: renderApps,
+    onedrive: renderOneDrive,
+    teams: renderTeams,
+    approvals: renderApprovals,
+    copilot: renderCopilot,
+  }
+  const fn = tabs[activeTab]
+  return fn ? fn() : ''
+}
+
+function renderExecutive() {
+  const s = EXECUTIVE_SUMMARY
+  return `
+    <div class="kpi-row mb-3">
+      <div class="kpi-tile">
+        <div class="kpi-value success">${s.securityScore}<span style="font-size:10px;font-weight:500">/100</span></div>
+        <div class="kpi-label">Security Score</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value success">✓</div>
+        <div class="kpi-label">MFA Status</div>
+        <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${s.mfaStatus}</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value success">${s.riskLevel}</div>
+        <div class="kpi-label">Risk Level</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value">${s.assignedLicenses}</div>
+        <div class="kpi-label">Licenses</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value">${s.devices}</div>
+        <div class="kpi-label">Devices</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value">${s.groups}</div>
+        <div class="kpi-label">Groups</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-title">Key Metrics</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px;border-top:0.5px solid var(--color-border-secondary)">
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">Teams</div>
+          <div style="font-size:14px;font-weight:600">${s.teams}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">Pending Requests</div>
+          <div style="font-size:14px;font-weight:600;color:var(--clr-warning-text)">${s.pendingRequests}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">OneDrive Usage</div>
+          <div style="font-size:14px;font-weight:600">${s.oneDriveUsage}%</div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">Mailbox Usage</div>
+          <div style="font-size:14px;font-weight:600">${s.mailboxUsage}%</div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderProfile() {
+  const p = userData.profile
+  return `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Profile Information</span></div>
+      <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary)">
+        <div style="display:flex;gap:16px;margin-bottom:16px">
+          <div style="width:72px;height:72px;border-radius:50%;background:var(--clr-info-bg);color:var(--clr-info-text);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;flex-shrink:0">
+            ${p.displayName.split(' ').map(n => n[0]).join('')}
+          </div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600;margin-bottom:2px">${p.displayName}</div>
+            <div style="font-size:11px;color:var(--color-text-secondary)">${p.jobTitle}</div>
+            <div style="font-size:11px;color:var(--color-text-tertiary)">${p.department}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">EMAIL</div>
+            <div style="font-size:11px">${p.email}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">UPN</div>
+            <div style="font-size:11px">${p.upn}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">EMPLOYEE ID</div>
+            <div style="font-size:11px">${p.employeeId}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">MANAGER</div>
+            <div style="font-size:11px">${p.manager}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">OFFICE</div>
+            <div style="font-size:11px">${p.office}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">PHONE</div>
+            <div style="font-size:11px">${p.phone}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderSecurity() {
+  const s = userData.security
+  return `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Security & Risk Status</span></div>
+      <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary)">
+        <div style="padding:12px;background:var(--clr-success-bg);border-left:3px solid var(--clr-success-text);border-radius:var(--border-radius-md);margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;color:var(--color-text-primary)">Your security score is ${s.securityScore}/100 with ${s.riskLevel} risk level.</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">MFA</div>
+            <div style="font-size:12px;color:var(--clr-success-text)">✓ ${s.mfaStatus}</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:2px">${s.mfaDefaultMethod}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">PASSWORD</div>
+            <div style="font-size:12px">Changed ${s.passwordLastChanged}</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:2px">Expires ${s.passwordExpiryDate}</div>
+          </div>
+        </div>
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;margin-bottom:8px">Authentication Methods</div>
+          ${s.authenticationMethods.map(m => `
+            <div style="padding:8px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;justify-content:space-between;font-size:11px">
+              <span>${m.type}</span>
+              <span style="color:${m.status === 'Enabled' ? 'var(--clr-success-text)' : 'var(--color-text-tertiary)'}">${m.status}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;margin-bottom:8px">Risk Detections (Last 30d)</div>
+          ${s.riskDetections.map(r => `
+            <div style="padding:8px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;justify-content:space-between;font-size:11px">
+              <span>${r.type}</span>
+              <span style="color:${r.status === 'No' ? 'var(--clr-success-text)' : 'var(--color-text-tertiary)'}">${r.status}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderSignin() {
+  return `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Sign-in Activity (Last 30 Days)</span></div>
+      <div style="padding:0;overflow:hidden;border-top:0.5px solid var(--color-border-secondary)">
+        <table style="width:100%;border-collapse:collapse">
+          <thead style="background:var(--color-background-secondary)">
+            <tr>
+              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Date/Time</th>
+              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Application</th>
+              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Device</th>
+              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${userData.signin.map(s => `
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                <td style="padding:10px 12px;font-size:11px">${s.date}</td>
+                <td style="padding:10px 12px;font-size:11px">${s.app}</td>
+                <td style="padding:10px 12px;font-size:11px">${s.device}</td>
+                <td style="padding:10px 12px;font-size:11px">${s.location}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+}
+
+function renderLicenses() {
+  return `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Assigned Licenses</span></div>
+      <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
+        ${userData.licenses.map(l => `
+          <div style="padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <div style="font-size:11px;font-weight:600">${l.name}</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:3px">SKU: ${l.sku}</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary)">Assigned ${l.assignmentType} via ${l.assignmentSource}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `
+}
+
+function renderGroups() {
+  return `
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Security Groups (${GROUP_MEMBERSHIPS.securityGroups.length})</span></div>
+        <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
+          ${userData.groups.securityGroups.map(g => `
+            <div style="padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px">
+              <div style="font-weight:600">${g.name}</div>
+              <div style="color:var(--color-text-tertiary);font-size:9px">${g.type} • ${g.membershipType}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Microsoft 365 Groups (${GROUP_MEMBERSHIPS.microsoft365Groups.length})</span></div>
+        <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
+          ${userData.groups.microsoft365Groups.map(g => `
+            <div style="padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px">
+              <div style="font-weight:600">${g.name}</div>
+              <div style="color:var(--color-text-tertiary);font-size:9px">${g.teamConnected ? '✓ Teams' : 'No Teams'} • ${g.dynamicMembership ? 'Dynamic' : 'Static'}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Distribution Lists (${GROUP_MEMBERSHIPS.distributionLists.length})</span></div>
+        <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
+          ${(userData.groups.distributionLists || []).map(d => `
+            <div style="padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px">
+              <div style="font-weight:600">${d.name}</div>
+              <div style="color:var(--color-text-tertiary);font-size:9px">${d.membershipType}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderDevices() {
+  return `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Registered Devices</span></div>
+      <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
+        ${userData.devices.map(d => `
+          <div style="padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <div style="font-weight:600;font-size:11px;margin-bottom:6px">${d.name}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:10px">
+              <div><span style="color:var(--color-text-tertiary)">Type:</span> ${d.type}</div>
+              <div><span style="color:var(--color-text-tertiary)">OS:</span> ${d.osVersion}</div>
+              <div><span style="color:var(--color-text-tertiary)">Status:</span> <span style="color:${d.complianceStatus === 'Compliant' ? 'var(--clr-success-text)' : 'var(--clr-warning-text)'}">${d.complianceStatus}</span></div>
+              <div><span style="color:var(--color-text-tertiary)">Ownership:</span> ${d.ownership}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `
+}
+
+function renderApps() {
+  return `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Applications & Access</span></div>
+      <div style="padding:0;overflow:hidden;border-top:0.5px solid var(--color-border-secondary)">
+        <table style="width:100%;border-collapse:collapse">
+          <thead style="background:var(--color-background-secondary)">
+            <tr>
+              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Application</th>
+              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Last Accessed</th>
+              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Scope</th>
+              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Risk</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(userData.apps || APP_ACCESS).map(a => `
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                <td style="padding:10px 12px;font-size:11px">${a.name}</td>
+                <td style="padding:10px 12px;font-size:11px">${a.lastAccessed}</td>
+                <td style="padding:10px 12px;font-size:11px">${a.permissionScope}</td>
+                <td style="padding:10px 12px;font-size:11px;color:${a.riskLevel === 'Low' ? 'var(--clr-success-text)' : 'var(--clr-warning-text)'}">${a.riskLevel}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+}
+
+function renderOneDrive() {
+  const o = userData.onedrive
+  return `
+    <div class="card">
+      <div class="card-header"><span class="card-title">OneDrive for Business Storage</span></div>
+      <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary)">
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;margin-bottom:8px">Storage Usage</div>
+          <div style="background:var(--color-border-tertiary);border-radius:var(--border-radius-md);height:20px;overflow:hidden;margin-bottom:6px">
+            <div style="background:var(--clr-primary);height:100%;width:${o.percentageUsed}%"></div>
+          </div>
+          <div style="font-size:10px;color:var(--color-text-secondary)">${o.usedStorage} of ${o.totalStorage} used (${o.percentageUsed}%)</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary)">
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">FILES</div>
+            <div style="font-size:12px;font-weight:600">${o.fileCount}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">SHARED ITEMS</div>
+            <div style="font-size:12px;font-weight:600">${o.sharedItems}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">EXTERNAL SHARES</div>
+            <div style="font-size:12px;font-weight:600;color:var(--clr-warning-text)">${o.externalShares}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">ANONYMOUS LINKS</div>
+            <div style="font-size:12px;font-weight:600;color:var(--clr-warning-text)">${o.anonymousLinks}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderTeams() {
+  const t = userData.teams
+  return `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Microsoft Teams</span></div>
+      <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary)">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">TEAMS</div>
+            <div style="font-size:14px;font-weight:600">${t.teamsMembership}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">OWNED</div>
+            <div style="font-size:14px;font-weight:600">${t.teamsOwned}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">GUEST ACCESS</div>
+            <div style="font-size:14px;font-weight:600">${t.guestAccessTeams}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">PHONE</div>
+            <div style="font-size:12px;font-weight:600;color:${t.teamsPhoneLicense ? 'var(--clr-success-text)' : 'var(--color-text-tertiary)'}">${t.teamsPhoneLicense ? '✓ Licensed' : 'Not Licensed'}</div>
+          </div>
+        </div>
+        ${t.teamsPhoneLicense ? `
+          <div style="padding:12px;background:var(--clr-info-bg);border-radius:var(--border-radius-md);margin-bottom:12px">
+            <div style="font-size:10px;font-weight:600;margin-bottom:4px">Phone Details</div>
+            <div style="font-size:10px"><strong>Number:</strong> ${t.assignedNumber}</div>
+            <div style="font-size:10px"><strong>Plan:</strong> ${t.callingPlan}</div>
+          </div>
+        ` : ''}
+        <div style="font-size:11px;font-weight:600">My Teams</div>
+        <div>
+          ${t.teams.map(tm => `
+            <div style="padding:8px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px">
+              <div style="font-weight:600">${tm.name}</div>
+              <div style="color:var(--color-text-tertiary);font-size:9px">${tm.role} • Owner: ${tm.owner}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderApprovals() {
+  if (!PENDING_APPROVALS || PENDING_APPROVALS.length === 0) {
+    return `
+      <div class="card">
+        <div style="padding:32px;text-align:center;color:var(--color-text-secondary);font-size:12px">
+          ✓ No pending approvals
+        </div>
+      </div>
+    `
+  }
+  return `
+    <div class="card">
+      <div class="card-header"><span class="card-title">Pending Approvals</span></div>
+      <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
+        ${PENDING_APPROVALS.map(a => `
+          <div style="padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px">
+              <div>
+                <div style="font-weight:600;font-size:11px">${a.type}</div>
+                <div style="font-size:10px;color:var(--color-text-secondary)">${a.group || a.list}</div>
+              </div>
+              <span style="background:var(--clr-warning-bg);color:var(--clr-warning-text);padding:2px 6px;border-radius:var(--border-radius-sm);font-size:9px;font-weight:600">${a.status}</span>
+            </div>
+            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${a.description}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `
+}
+
+function renderCopilot() {
+  const c = COPILOT_READINESS
+  return `
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Copilot Readiness Score</span></div>
+        <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary);text-align:center">
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:8px">Personal AI Readiness</div>
+          <div style="font-size:32px;font-weight:700;color:var(--clr-primary)">${c.personalAIReadinessScore}<span style="font-size:14px;color:var(--color-text-tertiary)">/100</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Service Usage</span></div>
+        <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary);display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">EXCHANGE</div>
+            <div style="font-size:14px;font-weight:600">${c.exchangeUsage}%</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">TEAMS</div>
+            <div style="font-size:14px;font-weight:600">${c.teamsUsage}%</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">ONEDRIVE</div>
+            <div style="font-size:14px;font-weight:600">${c.oneDriveUsage}%</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:4px">SHAREPOINT</div>
+            <div style="font-size:14px;font-weight:600">${c.sharePointUsage}%</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Recommendations</span></div>
+        <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
+          ${c.recommendations.map(r => `
+            <div style="padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+              <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px">
+                <div style="font-weight:600;font-size:11px">${r.title}</div>
+                <span style="background:${r.priority === 'High' ? 'var(--clr-danger-bg)' : 'var(--clr-warning-bg)'};color:${r.priority === 'High' ? 'var(--clr-danger-text)' : 'var(--clr-warning-text)'};padding:2px 6px;border-radius:var(--border-radius-sm);font-size:9px;font-weight:600">${r.priority}</span>
+              </div>
+              <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${r.impact}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `
+}

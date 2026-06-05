@@ -6,7 +6,7 @@ export const USERS = [
     role: 'user',
     initials: 'PK',
     color: '#0C447C',
-    navAccess: ['portal', 'myreqs', 'chat'],
+    navAccess: ['portal', 'myreqs', 'myaccount', 'chat'],
   },
   {
     id: 'sanjay',
@@ -15,7 +15,7 @@ export const USERS = [
     role: 'manager',
     initials: 'SK',
     color: '#3C3489',
-    navAccess: ['approvals', 'portal', 'myreqs', 'chat'],
+    navAccess: ['requests', 'approvals', 'msgcenter', 'portal', 'myreqs', 'myaccount', 'chat'],
     pendingApprovals: 3,
   },
   {
@@ -28,7 +28,7 @@ export const USERS = [
     navAccess: [
       'dashboard', 'requests', 'security', 'zerotrust', 'privaccts',
       'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune',
-      'portal', 'myreqs', 'chat',
+      'portal', 'myreqs', 'myaccount', 'chat',
       'audit', 'settings'
     ],
   },
@@ -42,7 +42,7 @@ export const USERS = [
     navAccess: [
       'dashboard', 'requests', 'security', 'zerotrust', 'privaccts',
       'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune',
-      'portal', 'myreqs', 'chat',
+      'portal', 'myreqs', 'myaccount', 'chat',
       'audit', 'settings',
       'graphapi', 'sso'
     ],
