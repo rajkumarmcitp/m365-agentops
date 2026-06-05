@@ -92,6 +92,12 @@ app.post('/api/user/role', async (req, res) => {
 
     console.log(`Determining role for user: ${userId}`)
 
+    // If graphClient is not initialized, default to 'user' role
+    if (!graphClient) {
+      console.log('ℹ️ Graph Client not available - defaulting to user role')
+      return res.json({ success: true, userId, role: 'user' })
+    }
+
     // Get user's group memberships
     const memberOf = await graphClient
       .api(`/users/${userId}/memberOf`)
@@ -115,11 +121,8 @@ app.post('/api/user/role', async (req, res) => {
     res.json({ success: true, userId, role })
   } catch (error) {
     console.error('✗ Error determining user role:', error.message)
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      hint: 'Ensure group IDs are configured in AZURE_GROUP_* environment variables'
-    })
+    console.log('ℹ️ Falling back to default user role')
+    res.json({ success: true, userId, role: 'user' })
   }
 })
 
