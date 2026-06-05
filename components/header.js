@@ -1,4 +1,5 @@
 import { state, go } from '../app.js'
+import { logout } from '../lib/auth.js'
 
 export function renderHeader() {
   const header = document.getElementById('app-header')
@@ -31,12 +32,13 @@ export function renderHeader() {
     if (state.currentUser?.navAccess.includes('settings')) await go('settings')
   })
 
-  document.getElementById('hdr-signout').addEventListener('click', () => {
+  document.getElementById('hdr-signout').addEventListener('click', async () => {
+    console.log('📤 Signing out...')
     state.currentUser = null
-    // Re-render login
-    import('../app.js').then(m => {
-      document.getElementById('app').innerHTML = ''
-      window.location.reload()
-    })
+    // Clear MSAL session
+    await logout()
+    // Clear app and reload to show login screen
+    document.getElementById('app').innerHTML = ''
+    window.location.reload()
   })
 }
