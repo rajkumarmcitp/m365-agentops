@@ -1030,55 +1030,38 @@ app.get('/api/me/mailbox', async (req, res) => {
     try {
       console.log(`Fetching mailbox statistics for user: ${userEmail}`)
 
-      // Get mailbox statistics
-      const mailboxStats = await graphClient
-        .api(`/users/${userEmail}/mailboxSettings`)
+      // Get mail folder statistics
+      const mailFolders = await graphClient
+        .api(`/users/${userEmail}/mailFolders`)
         .get()
 
-      // Calculate usage - estimate based on mail folder statistics if available
-      let mailboxUsage = 65
-      let totalQuota = '50 GB'
-      let usedQuota = '32.5 GB'
+      const folderCount = (mailFolders.value || []).length
+      const totalItemCount = (mailFolders.value || []).reduce((sum, folder) => sum + (folder.totalItemCount || 0), 0)
+      const unreadItemCount = (mailFolders.value || []).reduce((sum, folder) => sum + (folder.unreadItemCount || 0), 0)
 
-      // Try to get mail folder statistics
-      try {
-        const mailFolders = await graphClient
-          .api(`/users/${userEmail}/mailFolders`)
-          .get()
+      // Calculate usage percentage (estimate: each item ~1MB, 50GB quota)
+      const estimatedUsageGB = (totalItemCount * 0.001) // rough estimate: 1000 items ≈ 1GB
+      const quotaGB = 50
+      const mailboxUsage = Math.min(100, Math.round((estimatedUsageGB / quotaGB) * 100))
+      const usedQuotaGB = Math.round(estimatedUsageGB * 10) / 10
 
-        const itemCount = mailFolders.value ? mailFolders.value.reduce((sum, folder) => sum + (folder.unreadItemCount || 0), 0) : 0
-        const folderCount = mailFolders.value ? mailFolders.value.length : 0
+      console.log(`✓ Mailbox: ${folderCount} folders, ${totalItemCount} items, ${unreadItemCount} unread, ${mailboxUsage}% usage`)
 
-        console.log(`✓ Mailbox: ${folderCount} folders, items found`)
-
-        res.json({
-          success: true,
-          data: {
-            mailboxUsage: mailboxUsage,
-            totalQuota: totalQuota,
-            usedQuota: usedQuota,
-            itemCount: itemCount,
-            unreadCount: itemCount,
-            folderCount: folderCount
-          }
-        })
-      } catch (folderError) {
-        console.warn('Could not fetch folder statistics:', folderError.message)
-        res.json({
-          success: true,
-          data: {
-            mailboxUsage: mailboxUsage,
-            totalQuota: totalQuota,
-            usedQuota: usedQuota,
-            itemCount: 2847,
-            unreadCount: 42,
-            folderCount: 156
-          }
-        })
-      }
+      res.json({
+        success: true,
+        data: {
+          mailboxUsage: mailboxUsage,
+          totalQuota: '50 GB',
+          usedQuota: `${usedQuotaGB} GB`,
+          itemCount: totalItemCount,
+          unreadCount: unreadItemCount,
+          folderCount: folderCount
+        }
+      })
     } catch (graphError) {
       console.error('⚠️ Graph API mailbox fetch failed:', graphError.message)
-      console.log('Falling back to simulated data')
+      console.error('Error details:', graphError.statusCode, graphError.code)
+      console.log('ℹ️ Falling back to simulated data')
       res.json({
         success: true,
         data: {
