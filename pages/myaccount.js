@@ -299,12 +299,6 @@ function renderSignin() {
 
   return `
     <div style="display:flex;flex-direction:column;gap:16px">
-      <!-- Map View -->
-      <div class="card" style="overflow:hidden">
-        <div class="card-header"><span class="card-title">Sign-in Locations (Last 24 Hours)</span></div>
-        <div id="signin-map" style="width:100%;height:300px;border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)"></div>
-      </div>
-
       <!-- Sign-in Summary -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="card" style="padding:16px;text-align:center">
@@ -320,30 +314,50 @@ function renderSignin() {
       <!-- Sign-in Details Table -->
       <div class="card">
         <div class="card-header"><span class="card-title">Latest Sign-in Per App (Last 24 Hours)</span></div>
-        <div style="padding:0;overflow:hidden;border-top:0.5px solid var(--color-border-secondary)">
-          <table style="width:100%;border-collapse:collapse">
-            <thead style="background:var(--color-background-secondary)">
+        <div style="padding:0;overflow-x:auto;border-top:0.5px solid var(--color-border-secondary)">
+          <table style="width:100%;border-collapse:collapse;font-size:10px">
+            <thead style="background:var(--color-background-secondary);position:sticky;top:0">
               <tr>
-                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Date/Time</th>
-                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Application</th>
-                <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Location</th>
-                <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:600">Status</th>
+                <th style="padding:10px 8px;text-align:left;font-weight:600;white-space:nowrap">Date/Time</th>
+                <th style="padding:10px 8px;text-align:left;font-weight:600;white-space:nowrap">App</th>
+                <th style="padding:10px 8px;text-align:left;font-weight:600;white-space:nowrap">IP Address</th>
+                <th style="padding:10px 8px;text-align:left;font-weight:600;white-space:nowrap">Device</th>
+                <th style="padding:10px 8px;text-align:left;font-weight:600;white-space:nowrap">OS</th>
+                <th style="padding:10px 8px;text-align:left;font-weight:600;white-space:nowrap">Browser</th>
+                <th style="padding:10px 8px;text-align:center;font-weight:600;white-space:nowrap">Compliant</th>
+                <th style="padding:10px 8px;text-align:left;font-weight:600;white-space:nowrap">Trust Type</th>
+                <th style="padding:10px 8px;text-align:left;font-weight:600;white-space:nowrap">Location</th>
+                <th style="padding:10px 8px;text-align:center;font-weight:600;white-space:nowrap">Status</th>
               </tr>
             </thead>
             <tbody>
               ${userData.signin.map(s => `
                 <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-                  <td style="padding:10px 12px;font-size:11px">${s.date}</td>
-                  <td style="padding:10px 12px;font-size:11px"><strong>${s.app}</strong></td>
-                  <td style="padding:10px 12px;font-size:10px">${s.location}</td>
-                  <td style="padding:10px 12px;text-align:center">
-                    <span style="padding:2px 8px;border-radius:3px;font-size:9px;font-weight:600;${s.result === 'Success' ? 'background:var(--clr-success-bg);color:var(--clr-success-text)' : 'background:var(--clr-error-bg);color:var(--clr-error-text)'}">${s.result}</span>
+                  <td style="padding:8px;white-space:nowrap">${s.date}</td>
+                  <td style="padding:8px;font-weight:600">${s.app}</td>
+                  <td style="padding:8px;font-family:monospace;font-size:9px">${s.ip}</td>
+                  <td style="padding:8px">${s.device}</td>
+                  <td style="padding:8px">${s.operatingSystem}</td>
+                  <td style="padding:8px">${s.browser}</td>
+                  <td style="padding:8px;text-align:center">
+                    <span style="padding:2px 6px;border-radius:3px;font-size:9px;font-weight:600;${s.isCompliant === 'Yes' ? 'background:var(--clr-success-bg);color:var(--clr-success-text)' : 'background:var(--clr-warning-bg);color:var(--clr-warning-text)'}">${s.isCompliant}</span>
+                  </td>
+                  <td style="padding:8px">${s.trustType}</td>
+                  <td style="padding:8px">${s.location}</td>
+                  <td style="padding:8px;text-align:center">
+                    <span style="padding:2px 6px;border-radius:3px;font-size:9px;font-weight:600;${s.result === 'Success' ? 'background:var(--clr-success-bg);color:var(--clr-success-text)' : 'background:var(--clr-error-bg);color:var(--clr-error-text)'}">${s.result}</span>
                   </td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- Location Map -->
+      <div class="card" style="overflow:hidden">
+        <div class="card-header"><span class="card-title">Sign-in Locations Map</span></div>
+        <div id="signin-map" style="width:100%;height:300px;border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)"></div>
       </div>
     </div>
   `
@@ -623,66 +637,89 @@ function initSigninMap(el) {
   const mapEl = el.querySelector('#signin-map')
   if (!mapEl) return
 
-  // Load Leaflet library if not already loaded
-  if (!window.L) {
+  // Check if Leaflet is already loaded
+  if (window.L) {
+    renderSigninMapContent(mapEl)
+  } else {
+    // Load CSS first
     const link = document.createElement('link')
     link.rel = 'stylesheet'
     link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'
+    link.onload = () => {
+      // Then load JS
+      const script = document.createElement('script')
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'
+      script.onload = () => {
+        console.log('✓ Leaflet loaded')
+        renderSigninMapContent(mapEl)
+      }
+      script.onerror = () => {
+        console.error('Failed to load Leaflet')
+        mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary)">Map failed to load</div>'
+      }
+      document.head.appendChild(script)
+    }
     document.head.appendChild(link)
-
-    const script = document.createElement('script')
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'
-    script.onload = () => renderSigninMapContent(mapEl)
-    document.head.appendChild(script)
-  } else {
-    renderSigninMapContent(mapEl)
   }
 }
 
 function renderSigninMapContent(mapEl) {
-  // Get coordinates from sign-in data
-  const signinLocations = userData.signin.filter(s => s.latitude && s.longitude)
+  try {
+    // Get coordinates from sign-in data
+    const signinLocations = userData.signin.filter(s => s.latitude && s.longitude)
 
-  if (signinLocations.length === 0) {
-    mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary)">No location data available</div>'
-    return
-  }
+    if (signinLocations.length === 0) {
+      mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary)">No location data available for map</div>'
+      return
+    }
 
-  // Initialize map centered on first location or world
-  const map = window.L.map(mapEl).setView([20, 0], 2)
+    // Clear any existing map
+    mapEl.innerHTML = ''
 
-  // Add OpenStreetMap tiles
-  window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 19
-  }).addTo(map)
+    // Calculate bounds for all locations
+    const lats = signinLocations.map(s => s.latitude)
+    const lons = signinLocations.map(s => s.longitude)
+    const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2
+    const centerLon = (Math.max(...lons) + Math.min(...lons)) / 2
 
-  // Add markers for each sign-in location
-  signinLocations.forEach(signin => {
-    const color = signin.result === 'Success' ? '#10b981' : '#ef4444'
-    const icon = window.L.divIcon({
-      html: `<div style="background:${color};width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>`,
-      iconSize: [20, 20],
-      className: 'signin-marker'
-    })
+    // Initialize map
+    const map = window.L.map(mapEl).setView([centerLat, centerLon], 4)
 
-    const marker = window.L.marker([signin.latitude, signin.longitude], { icon })
-    marker.bindPopup(`
-      <div style="font-size:11px">
-        <strong>${signin.app}</strong><br>
-        ${signin.location}<br>
-        ${signin.date}<br>
-        <span style="color:${color}">${signin.result}</span>
-      </div>
-    `)
-    marker.addTo(map)
-  })
+    // Add tiles
+    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+      maxZoom: 19
+    }).addTo(map)
 
-  // Fit map to all markers
-  if (signinLocations.length > 0) {
-    const group = new window.L.featureGroup(window.L.map(mapEl)._layers)
+    // Add markers
     signinLocations.forEach(signin => {
-      group.addLayer(window.L.marker([signin.latitude, signin.longitude]))
+      const isSuccess = signin.result === 'Success'
+      const color = isSuccess ? '#10b981' : '#ef4444'
+
+      const marker = window.L.circleMarker([signin.latitude, signin.longitude], {
+        radius: 8,
+        fillColor: color,
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.8
+      })
+
+      marker.bindPopup(`
+        <div style="font-size:10px">
+          <strong>${signin.app}</strong><br>
+          ${signin.location}<br>
+          ${signin.date}<br>
+          <strong>${signin.result}</strong>
+        </div>
+      `)
+
+      marker.addTo(map)
     })
+
+    console.log(`✓ Map rendered with ${signinLocations.length} markers`)
+  } catch (error) {
+    console.error('Map rendering error:', error)
+    mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary)">Error loading map: ' + error.message + '</div>'
   }
 }
