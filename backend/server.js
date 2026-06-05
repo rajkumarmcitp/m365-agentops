@@ -486,28 +486,58 @@ app.get('/api/me/signin-activity', async (req, res) => {
         .api('/auditLogs/signIns')
         .filter(filterQuery)
         .orderby('createdDateTime desc')
-        .top(30)
+        .top(100)
         .get()
 
       console.log(`✓ API returned ${signIns.value?.length || 0} sign-in records`)
 
-      const recentSignins = (signIns.value || []).map(signin => ({
+      // Filter to last 24 hours and group by app (keep only latest per app)
+      const now = new Date()
+      const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+      const appSignins = new Map()
+
+      ;(signIns.value || []).forEach(signin => {
+        const signInTime = new Date(signin.createdDateTime)
+
+        // Only include sign-ins from last 24 hours
+        if (signInTime < last24h) return
+
+        const appName = signin.appDisplayName || 'Unknown App'
+
+        // Keep only the latest sign-in per app
+        if (!appSignins.has(appName)) {
+          appSignins.set(appName, signin)
+        }
+      })
+
+      console.log(`✓ Found ${appSignins.size} unique apps in last 24 hours`)
+
+      const recentSignins = Array.from(appSignins.values()).map(signin => ({
         date: signin.createdDateTime ? new Date(signin.createdDateTime).toLocaleString('en-US', { month: 'short', day: 'numeric', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Unknown',
         app: signin.appDisplayName || 'Unknown App',
-        device: signin.deviceDetail?.displayName || 'Unknown Device',
+        device: signin.deviceDetail?.displayName || signin.deviceDetail?.browser || 'Unknown Device',
         browser: signin.deviceDetail?.browser || 'Unknown',
         location: `${signin.location?.city || 'Unknown'}, ${signin.location?.state || 'Unknown'}`,
+        locationCity: signin.location?.city || 'Unknown',
+        locationState: signin.location?.state || 'Unknown',
+        country: signin.location?.countryOrRegion || 'Unknown',
+        latitude: signin.location?.geoCoordinates?.latitude || null,
+        longitude: signin.location?.geoCoordinates?.longitude || null,
         ip: signin.ipAddress || 'Unknown',
         result: signin.status?.errorCode === 0 || !signin.status?.errorCode ? 'Success' : 'Failed'
       }))
 
-      console.log(`✓ Processed ${recentSignins.length} sign-in records for display`)
+      // Sort by date descending
+      recentSignins.sort((a, b) => new Date(b.date) - new Date(a.date))
+
+      console.log(`✓ Processed ${recentSignins.length} unique app sign-ins for display`)
 
       res.json({
         success: true,
         data: {
           recentSignins: recentSignins.length > 0 ? recentSignins : [
-            { date: 'Today 08:45', app: 'Microsoft 365 Portal', device: 'Windows-Laptop', browser: 'Chrome', location: 'Seattle, WA', ip: '203.0.113.45', result: 'Success' }
+            { date: 'Today 08:45', app: 'Microsoft 365 Portal', device: 'Windows-Laptop', browser: 'Chrome', location: 'Seattle, WA', locationCity: 'Seattle', locationState: 'WA', country: 'US', latitude: 47.6062, longitude: -122.3321, ip: '203.0.113.45', result: 'Success' }
           ]
         }
       })
