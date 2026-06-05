@@ -685,10 +685,11 @@ function renderSigninMapContent(mapEl) {
     // Initialize map
     const map = window.L.map(mapEl).setView([centerLat, centerLon], 4)
 
-    // Add tiles
-    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-      maxZoom: 19
+    // Add CartoDB tiles (more reliable than OpenStreetMap)
+    window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© CartoDB',
+      maxZoom: 19,
+      subdomains: 'abcd'
     }).addTo(map)
 
     // Add markers

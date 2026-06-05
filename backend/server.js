@@ -516,7 +516,7 @@ app.get('/api/me/signin-activity', async (req, res) => {
       const recentSignins = Array.from(appSignins.values()).map(signin => ({
         date: signin.createdDateTime ? new Date(signin.createdDateTime).toLocaleString('en-US', { month: 'short', day: 'numeric', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Unknown',
         app: signin.appDisplayName || 'Unknown App',
-        device: signin.deviceDetail?.displayName || signin.deviceDetail?.browser || 'Unknown Device',
+        device: signin.deviceDetail?.displayName || '',
         browser: signin.deviceDetail?.browser || 'Unknown',
         operatingSystem: signin.deviceDetail?.operatingSystem || 'Unknown',
         isCompliant: signin.deviceDetail?.isCompliant ? 'Yes' : 'No',
