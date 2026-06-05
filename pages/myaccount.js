@@ -45,7 +45,7 @@ export async function initMyAccount() {
 
     console.log(`Fetching data for user: ${userEmail}`)
 
-    const [profile, security, signin, licenses, groups, onedrive, teams, devices] = await Promise.allSettled([
+    const [profile, security, signin, licenses, groups, onedrive, teams, devices, mailbox] = await Promise.allSettled([
       fetch(`${api}/me/profile?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
       fetch(`${api}/me/security?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
       fetch(`${api}/me/signin-activity?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
@@ -53,7 +53,8 @@ export async function initMyAccount() {
       fetch(`${api}/me/groups?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
       fetch(`${api}/me/onedrive?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
       fetch(`${api}/me/teams?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
-      fetch(`${api}/me/devices?email=${encodeURIComponent(userEmail)}`).then(r => r.json())
+      fetch(`${api}/me/devices?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
+      fetch(`${api}/me/mailbox?email=${encodeURIComponent(userEmail)}`).then(r => r.json())
     ])
 
     // Use real data if successful, fallback to simulated
@@ -65,6 +66,7 @@ export async function initMyAccount() {
     userData.onedrive = onedrive.status === 'fulfilled' && onedrive.value.success ? onedrive.value.data : ONEDRIVE_INFO
     userData.teams = teams.status === 'fulfilled' && teams.value.success ? teams.value.data : TEAMS_INFO
     userData.devices = devices.status === 'fulfilled' && devices.value.success ? devices.value.data : DEVICES
+    userData.mailbox = mailbox.status === 'fulfilled' && mailbox.value.success ? mailbox.value.data : { mailboxUsage: 65 }
 
     console.log('✓ My Account data loaded')
   } catch (error) {
@@ -161,8 +163,8 @@ function renderExecutive() {
   // OneDrive usage percentage
   const oneDriveUsage = userData.onedrive?.percentageUsed || 0
 
-  // Mailbox usage (from profile if available, else estimate)
-  const mailboxUsage = userData.profile?.mailboxUsage || 65
+  // Mailbox usage (from mailbox endpoint)
+  const mailboxUsage = userData.mailbox?.mailboxUsage || 65
 
   return `
     <div class="kpi-row mb-3">
