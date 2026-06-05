@@ -34,15 +34,19 @@ export async function initMyAccount() {
   // Fetch real data from backend
   try {
     console.log('📡 Fetching My Account data from backend...')
+
+    // Get current user's UPN from MSAL if available
+    const userEmail = window.userEmail || 'rajkumar.duraisami@contoso.com'
+
     const [profile, security, signin, licenses, groups, onedrive, teams, devices] = await Promise.allSettled([
-      fetch(`${api}/me/profile`).then(r => r.json()),
-      fetch(`${api}/me/security`).then(r => r.json()),
-      fetch(`${api}/me/signin-activity`).then(r => r.json()),
-      fetch(`${api}/me/licenses`).then(r => r.json()),
-      fetch(`${api}/me/groups`).then(r => r.json()),
-      fetch(`${api}/me/onedrive`).then(r => r.json()),
-      fetch(`${api}/me/teams`).then(r => r.json()),
-      fetch(`${api}/me/devices`).then(r => r.json())
+      fetch(`${api}/me/profile?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
+      fetch(`${api}/me/security?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
+      fetch(`${api}/me/signin-activity?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
+      fetch(`${api}/me/licenses?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
+      fetch(`${api}/me/groups?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
+      fetch(`${api}/me/onedrive?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
+      fetch(`${api}/me/teams?email=${encodeURIComponent(userEmail)}`).then(r => r.json()),
+      fetch(`${api}/me/devices?email=${encodeURIComponent(userEmail)}`).then(r => r.json())
     ])
 
     // Use real data if successful, fallback to simulated

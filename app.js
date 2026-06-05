@@ -318,6 +318,9 @@ async function doLoginWithEntraID(account) {
     navAccess: roleNavAccess[role] || roleNavAccess.user
   }
 
+  // Store user email globally for backend API calls
+  window.userEmail = account.username
+
   state.currentUser = entraUser
   renderShell()
   const defaultPage = entraUser.navAccess[0]

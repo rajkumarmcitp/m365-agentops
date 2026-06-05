@@ -363,6 +363,7 @@ app.get('/api/me', async (req, res) => {
 // ============================================================
 
 // Get user profile with extended properties
+// Note: With application credentials, we use /users/{id} instead of /me
 app.get('/api/me/profile', async (req, res) => {
   try {
     if (!graphClient) {
@@ -384,8 +385,11 @@ app.get('/api/me/profile', async (req, res) => {
     }
 
     console.log('📋 Fetching user profile...')
+    // Get current user's email from query param or use a default admin user
+    const userEmail = req.query.email || 'rajkumar.duraisami@contoso.com'
+
     const user = await graphClient
-      .api('/me')
+      .api(`/users/${userEmail}`)
       .select('id,displayName,userPrincipalName,mail,jobTitle,department,manager,officeLocation,mobilePhone,accountEnabled,createdDateTime,lastPasswordChangeDateTime,passwordPolicies')
       .expand('manager($select=id,displayName)')
       .get()
@@ -518,27 +522,29 @@ app.get('/api/me/licenses', async (req, res) => {
 app.get('/api/me/groups', async (req, res) => {
   try {
     console.log('👥 Fetching user groups...')
-    res.json({
-      success: true,
-      data: {
-        securityGroups: [
-          { name: 'Cloud Architects', type: 'Security', membershipType: 'Member' },
-          { name: 'M365-Admins', type: 'Security', membershipType: 'Member' },
-          { name: 'Security Review Board', type: 'Security', membershipType: 'Member' },
-          { name: 'Global Readers', type: 'Security', membershipType: 'Member' }
-        ],
-        microsoft365Groups: [
-          { name: 'Engineering Team', type: 'Microsoft 365', teamConnected: true, dynamicMembership: false },
-          { name: 'Cloud Solutions Architects', type: 'Microsoft 365', teamConnected: true, dynamicMembership: true },
-          { name: 'Product Innovation', type: 'Microsoft 365', teamConnected: false, dynamicMembership: false }
-        ],
-        distributionLists: [
-          { name: 'Cloud-Engineering@contoso.com', type: 'Distribution List', membershipType: 'Member' },
-          { name: 'Security-Team@contoso.com', type: 'Distribution List', membershipType: 'Owner' }
-        ]
-      }
-    })
-    return
+
+    if (!graphClient) {
+      return res.json({
+        success: true,
+        data: {
+          securityGroups: [
+            { name: 'Cloud Architects', type: 'Security', membershipType: 'Member' },
+            { name: 'M365-Admins', type: 'Security', membershipType: 'Member' },
+            { name: 'Security Review Board', type: 'Security', membershipType: 'Member' },
+            { name: 'Global Readers', type: 'Security', membershipType: 'Member' }
+          ],
+          microsoft365Groups: [
+            { name: 'Engineering Team', type: 'Microsoft 365', teamConnected: true, dynamicMembership: false },
+            { name: 'Cloud Solutions Architects', type: 'Microsoft 365', teamConnected: true, dynamicMembership: true },
+            { name: 'Product Innovation', type: 'Microsoft 365', teamConnected: false, dynamicMembership: false }
+          ],
+          distributionLists: [
+            { name: 'Cloud-Engineering@contoso.com', type: 'Distribution List', membershipType: 'Member' },
+            { name: 'Security-Team@contoso.com', type: 'Distribution List', membershipType: 'Owner' }
+          ]
+        }
+      })
+    }
 
     const groups = await graphClient
       .api('/me/memberOf')
