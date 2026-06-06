@@ -2473,6 +2473,12 @@ app.get('/api/audit-logs/consents', async (req, res) => {
         resourceId: log.resources?.[0]?.id || 'N/A'
       }
 
+      // Debug: Show ConsentAction.Permissions for each entry
+      const consentActionProp = allProps.find(p => p.displayName === 'ConsentAction.Permissions')
+      if (idx < 5) {
+        console.log(`Entry ${idx}: app=${appName}, extracted=${permissions.substring(0, 40)}, full ConsentAction=${consentActionProp?.newValue?.substring(0, 100)}...`)
+      }
+
       // Include all modified properties for first entry (for debugging)
       if (idx === 0) {
         consentEntry._debugAllProps = allProps.map(p => ({
