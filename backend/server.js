@@ -2476,13 +2476,23 @@ app.get('/api/audit-logs/consents', async (req, res) => {
         }
       }
 
-      // Debug log first 3 entries to see exact property structure
-      if (idx < 3) {
-        const detailedProps = allProps.map(p => {
-          const val = typeof p.newValue === 'string' ? p.newValue.substring(0, 40) : JSON.stringify(p.newValue).substring(0, 40)
-          return `${p.displayName}=${val}`
-        }).join(' | ')
-        console.log(`🔍 Consent #${idx} [${log.activityDisplayName}]: app=${appName}, extracted=${permissions.substring(0,50)}, props=[${detailedProps}]`)
+      // Debug log first entry with FULL structure
+      if (idx === 0) {
+        console.log(`🔍 FULL AUDIT LOG #0:`)
+        console.log(`  activityDisplayName: ${log.activityDisplayName}`)
+        console.log(`  result: ${log.result}`)
+        console.log(`  targetResources[0].displayName: ${appName}`)
+        console.log(`  targetResources[0].modifiedProperties:`)
+        allProps.forEach(p => {
+          console.log(`    - ${p.displayName}: oldValue=${p.oldValue}, newValue=${p.newValue}`)
+        })
+        console.log(`  Full log keys: ${Object.keys(log).join(', ')}`)
+        if (log.additionalDetails) {
+          console.log(`  additionalDetails:`, log.additionalDetails)
+        }
+        if (log.initiatedBy) {
+          console.log(`  initiatedBy:`, log.initiatedBy)
+        }
       }
 
       consents.push({
