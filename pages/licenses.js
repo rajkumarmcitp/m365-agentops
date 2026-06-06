@@ -344,8 +344,7 @@ function renderGroups() {
               return `
               <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
                 <td style="padding:12px">
-                  <div><strong style="font-size:11px">${g.displayName || '—'}</strong></div>
-                  <div style="font-size:10px;color:var(--color-text-tertiary)">${g.mail || g.mailNickname || '—'}</div>
+                  <strong style="font-size:11px">${g.displayName || '—'}</strong>
                 </td>
                 <td style="padding:12px;font-size:10px"><span class="badge info">${g.groupType || 'Static'}</span></td>
                 <td style="padding:12px;font-size:10px">
