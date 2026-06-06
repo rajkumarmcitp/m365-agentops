@@ -720,6 +720,27 @@ app.get('/api/secrets-certificates', async (req, res) => {
   }
 })
 
+// Common permission ID to name mapping
+const PERMISSION_NAMES = {
+  '06da0dbc-49b3-46f5-8355-3f5e604861d7': 'Directory.Read.All',
+  '62a82d76-70ea-41e2-9197-370581155b63': 'Directory.ReadWrite.All',
+  '9e640839-a198-48fb-8b9a-1cfb66806e5d': 'User.Read.All',
+  'b0afded3-3588-46ce-8c02-f016dd98bace': 'User.ReadWrite.All',
+  'c7fbd983-d9aa-41f6-a61f-71ec186494c7': 'Mail.Read',
+  '024d486e-b451-40bb-833d-3b7649d3bfa3': 'Mail.ReadWrite',
+  'e1fe6dd8-ba31-4d61-89e7-88639da4683d': 'openid',
+  '37f7f235-527c-4136-accd-4a02d197296e': 'openid profile',
+  '14dad69e-099b-42c9-810b-df8970720e7f': 'AppRoleAssignment.ReadWrite.All',
+  '9a5d68dd-52b0-4cc0-ba3a-9525078d4f3d': 'Domain.ReadWrite.All',
+  '62ade113-d7b7-4dd0-8f4c-61e6e48f21cb': 'Organization.ReadWrite.All',
+  'a02657d3-baac-4b4a-ba2c-fc7e12bea492': 'Application.ReadWrite.All',
+  '218d78b6-acb7-447d-aa17-92b5b5313519': 'ServicePrincipal.ReadWrite.All'
+}
+
+function getPermissionName(id) {
+  return PERMISSION_NAMES[id] || id
+}
+
 // ============================================================
 // API Permissions
 // ============================================================
@@ -742,7 +763,9 @@ app.get('/api/permissions', async (req, res) => {
         app.requiredResourceAccess.forEach(resource => {
           if (resource.resourceAccess) {
             resource.resourceAccess.forEach(access => {
-              if (access.id) perms.push(access.id)
+              if (access.id) {
+                perms.push(getPermissionName(access.id))
+              }
             })
           }
         })
