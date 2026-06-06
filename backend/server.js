@@ -2316,6 +2316,51 @@ app.use((req, res) => {
 })
 
 // ============================================================
+// Audit Logs - Consents (for comparison)
+// ============================================================
+app.get('/api/audit-logs/consents', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    // Query audit logs for consent-related activities
+    const auditLogs = await graphClient
+      .api('/auditLogs/directoryAudits')
+      .filter("activityDisplayName eq 'Consent to application' or activityDisplayName eq 'Add Oauth2PermissionGrant'")
+      .top(100)
+      .get()
+
+    const consents = []
+    auditLogs.value?.forEach(log => {
+      const appName = log.targetResources?.[0]?.displayName || 'Unknown'
+      const appId = log.targetResources?.[0]?.modifiedProperties?.find(p => p.displayName === 'AppId')?.newValue?.replace(/"/g, '') || 'N/A'
+
+      consents.push({
+        id: log.id,
+        activityDateTime: log.activityDateTime,
+        activityDisplayName: log.activityDisplayName,
+        appName: appName,
+        appId: appId,
+        initiatedBy: log.initiatedBy?.user?.userPrincipalName || log.initiatedBy?.app?.displayName || 'Unknown',
+        result: log.result,
+        resourceId: log.resources?.[0]?.id || 'N/A'
+      })
+    })
+
+    console.log(`✓ Found ${consents.length} consent activities in audit logs`)
+    res.json({
+      success: true,
+      count: consents.length,
+      data: consents
+    })
+  } catch (error) {
+    console.warn('⚠️ Audit logs fetch failed:', error.message)
+    res.json({ success: true, count: 0, data: [] })
+  }
+})
+
+// ============================================================
 // Start Server
 // ============================================================
 app.listen(PORT, () => {

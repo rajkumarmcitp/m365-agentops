@@ -16,6 +16,7 @@ let realServicePrincipals = []
 let realSecrets = []
 let realPermissions = []
 let realConsents = []
+let auditConsents = []
 let recentConsents = []
 let realUsage = []
 let realRisks = []
@@ -28,6 +29,7 @@ const APP_TABS = [
   { id: 'secrets',          label: 'Secrets & Certs',    icon: 'ti-lock' },
   { id: 'permissions',      label: 'Permissions',        icon: 'ti-shield-check' },
   { id: 'consents',         label: 'Admin Consents',     icon: 'ti-user-check' },
+  { id: 'auditconsents',    label: 'Audit Consents',     icon: 'ti-history' },
   { id: 'owners',           label: 'Owners',             icon: 'ti-users' },
   { id: 'usage',            label: 'Usage Analytics',    icon: 'ti-chart-line' },
   { id: 'risk',             label: 'Risk Assessment',    icon: 'ti-alert-triangle' },
@@ -116,6 +118,18 @@ export async function initApplications() {
     }
   } catch (e) {
     console.warn('⚠️ Recent Consents error:', e.message)
+  }
+
+  // Load audit logs consents
+  try {
+    const r = await fetch(`${api}/audit-logs/consents`)
+    const d = await r.json()
+    if (d?.success) {
+      auditConsents = d.data || []
+      console.log(`✅ Audit Consents: ${auditConsents.length}`)
+    }
+  } catch (e) {
+    console.warn('⚠️ Audit Consents error:', e.message)
   }
 
   // Load usage
@@ -289,6 +303,7 @@ function renderSection() {
     secrets:          renderSecrets,
     permissions:      renderPermissions,
     consents:         renderConsents,
+    auditconsents:    renderAuditConsents,
     owners:           renderOwners,
     usage:            renderUsage,
     risk:             renderRisk,
@@ -670,6 +685,53 @@ function renderConsents() {
         <div style="font-size:10px;color:var(--color-text-secondary)">${consent.permissions}</div>
       </div>
     `).join('')}
+  `
+}
+
+// ============================================================
+// AUDIT LOGS CONSENTS (Comparison)
+// ============================================================
+function renderAuditConsents() {
+  return `
+    <div class="alert-banner info mb-3">
+      <i class="ti ti-info-circle"></i>
+      <span>Application information pulled from <strong>Azure AD Audit Logs</strong> (Consent to application activities) for comparison with Admin Consents tab</span>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px;border-bottom:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)">
+        <span style="font-weight:600;font-size:12px">Consent Activities from Audit Logs (${auditConsents.length})</span>
+      </div>
+      ${auditConsents.length === 0 ? `
+        <div style="padding:20px;text-align:center;color:var(--color-text-tertiary)">
+          <i class="ti ti-inbox" style="font-size:28px;margin-bottom:8px;display:block"></i>
+          No consent activities found in audit logs
+        </div>
+      ` : `
+        <table style="width:100%">
+          <thead style="background:var(--color-background-secondary)">
+            <tr>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:20%">Application Name</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:15%">App ID</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:20%">Activity</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:25%">Date/Time</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:20%">Initiated By</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${auditConsents.map(consent => `
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                <td style="padding:10px 12px;font-weight:600;font-size:11px">${consent.appName || '—'}</td>
+                <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${consent.appId?.substring(0, 20) || '—'}...</td>
+                <td style="padding:10px 12px;font-size:10px"><span class="badge info">${consent.activityDisplayName}</span></td>
+                <td style="padding:10px 12px;font-size:10px">${new Date(consent.activityDateTime).toLocaleString() || '—'}</td>
+                <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${consent.initiatedBy || '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `}
+    </div>
   `
 }
 
