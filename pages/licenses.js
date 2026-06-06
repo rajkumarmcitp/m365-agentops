@@ -339,7 +339,9 @@ function renderGroups() {
             <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Assignment</th>
           </tr></thead>
           <tbody>
-            ${groupLicensing.map(g => `
+            ${groupLicensing.map((g, idx) => {
+              console.log(`📊 Group ${idx}: ${g.displayName}, memberCount=${g.memberCount}, type=${typeof g.memberCount}`)
+              return `
               <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
                 <td style="padding:12px">
                   <div><strong style="font-size:11px">${g.displayName || '—'}</strong></div>
@@ -355,12 +357,13 @@ function renderGroups() {
                     : '<span style="color:var(--color-text-tertiary)">—</span>'
                   }
                 </td>
-                <td style="padding:12px;text-align:center;font-weight:600;color:${g.memberCount > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)'}">${g.memberCount > 0 ? g.memberCount : '0'}</td>
+                <td style="padding:12px;text-align:center;font-weight:600;color:var(--color-text-primary)">${g.memberCount || 0}</td>
                 <td style="padding:12px;font-size:10px">
                   <span class="badge secondary">${g.assignmentMethod || 'Group-Based'}</span>
                 </td>
               </tr>
-            `).join('')}
+            `
+            }).join('')}
           </tbody>
         </table>
       `}

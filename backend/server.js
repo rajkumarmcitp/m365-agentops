@@ -1264,12 +1264,14 @@ app.get('/api/licenses/groups', async (req, res) => {
           assignmentMethod: (group.groupTypes || []).includes('DynamicMembership') ? 'Dynamic Group' : 'Direct Assignment'
         })
 
-        if (groupLicensing.length < 2) {  // Log first group for debugging
-          console.log(`✓ Found group with license: ${group.displayName}`)
-          console.log(`  - Member count: ${memberCount}`)
-          console.log(`  - Licenses: ${JSON.stringify(licenseInfo)}`)
-        } else {
-          console.log(`✓ Found group with license: ${group.displayName} (${memberCount} members, ${licenses.length} licenses)`)
+        console.log(`✓ Group: "${group.displayName}" | Members: ${memberCount} | Licenses: ${licenses.length} | GroupID: ${group.id}`)
+        if (groupLicensing.length === 0) {  // Log first group for detailed debugging
+          console.log(`  📋 First group details:`)
+          console.log(`     - displayName: ${group.displayName}`)
+          console.log(`     - groupId: ${group.id}`)
+          console.log(`     - mail: ${group.mail}`)
+          console.log(`     - memberCount: ${memberCount}`)
+          console.log(`     - licenses: ${JSON.stringify(licenseInfo, null, 2)}`)
         }
       } catch (error) {
         console.warn(`⚠️ Error fetching details for group ${group.displayName}:`, error.message)
