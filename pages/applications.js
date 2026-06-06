@@ -732,7 +732,7 @@ function renderAuditConsents() {
                 <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${permissions !== '—' ? permissions.substring(0, 70) + (permissions.length > 70 ? '...' : '') : '—'}</td>
                 <td style="padding:10px 12px;font-size:10px"><span class="badge secondary">Application</span></td>
                 <td style="padding:10px 12px;font-size:10px"><span class="badge ${isHighRisk ? 'danger' : 'success'}">${isHighRisk ? 'High Risk' : 'Safe'}</span></td>
-                <td style="padding:10px 12px;font-size:10px"><span class="badge ${consent.result === 'Success' ? 'success' : 'danger'}">${consent.result || 'Success'}</span></td>
+                <td style="padding:10px 12px;font-size:10px"><span class="badge ${(consent.result || '').toLowerCase() === 'success' ? 'success' : 'danger'}">${consent.result || '—'}</span></td>
               </tr>
             `
             }).join('')}
