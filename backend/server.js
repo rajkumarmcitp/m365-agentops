@@ -347,10 +347,11 @@ app.post('/api/user/role', async (req, res) => {
   try {
     const { userId } = req.body
     if (!userId) {
-      return res.status(400).json({ error: 'userId required' })
+      console.warn('⚠️ No userId provided')
+      return res.status(400).json({ success: false, error: 'userId required' })
     }
 
-    console.log(`Determining role for user: ${userId}`)
+    console.log(`📋 Determining role for user: ${userId}`)
 
     // If graphClient is not initialized, default to 'user' role
     if (!graphClient) {
@@ -358,31 +359,43 @@ app.post('/api/user/role', async (req, res) => {
       return res.json({ success: true, userId, role: 'user' })
     }
 
-    // Get user's group memberships
-    const memberOf = await graphClient
-      .api(`/users/${userId}/memberOf`)
-      .get()
+    // Get user's group memberships - with try-catch for better error handling
+    let memberOf
+    try {
+      memberOf = await graphClient
+        .api(`/users/${userId}/memberOf`)
+        .get()
+    } catch (graphError) {
+      console.warn(`⚠️ Failed to fetch group memberships: ${graphError.message}`)
+      // If we can't fetch groups, default to 'user' but log it
+      return res.json({ success: true, userId, role: 'user', warning: 'Could not fetch group memberships' })
+    }
 
-    const groupIds = memberOf.value.map(g => g.id)
-    console.log(`User is member of ${groupIds.length} groups`)
+    const groupIds = (memberOf?.value || []).map(g => g.id)
+    console.log(`✓ User is member of ${groupIds.length} groups: ${groupIds.join(', ')}`)
 
     // Check which role group the user belongs to (priority: super > admin > manager > user)
     let role = 'user' // default role
 
     if (ROLE_GROUPS.super && groupIds.includes(ROLE_GROUPS.super)) {
       role = 'super'
+      console.log(`✓ User is SUPER ADMIN`)
     } else if (ROLE_GROUPS.admin && groupIds.includes(ROLE_GROUPS.admin)) {
       role = 'admin'
+      console.log(`✓ User is ADMIN`)
     } else if (ROLE_GROUPS.manager && groupIds.includes(ROLE_GROUPS.manager)) {
       role = 'manager'
+      console.log(`✓ User is MANAGER`)
+    } else {
+      console.log(`✓ User is regular USER`)
     }
 
-    console.log(`✓ User role determined: ${role}`)
+    console.log(`✓ Role determination complete: ${role}`)
     res.json({ success: true, userId, role })
   } catch (error) {
-    console.error('✗ Error determining user role:', error.message)
-    console.log('ℹ️ Falling back to default user role')
-    res.json({ success: true, userId, role: 'user' })
+    console.error('❌ Error determining user role:', error.message)
+    console.error('Stack:', error.stack)
+    res.status(500).json({ success: false, error: error.message, role: 'user' })
   }
 })
 
