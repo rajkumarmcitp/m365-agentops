@@ -2,9 +2,9 @@ import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getApplications, getServicePrincipals } from '../lib/api-client.js'
 import {
-  APPS_SUMMARY, APP_REGISTRATIONS, ENTERPRISE_APPLICATIONS, secretsCerts,
-  apiPermissions, adminConsents, signInAnalytics, riskAssessment,
-  appsRecommendations, APPS_COPILOT_KB
+  APPS_SUMMARY, APP_REGISTRATIONS, ENTERPRISE_APPLICATIONS, SECRETS_CERTIFICATES,
+  API_PERMISSIONS, ADMIN_CONSENTS, SIGN_IN_ANALYTICS, RISK_ASSESSMENT,
+  APPS_RECOMMENDATIONS, APPS_COPILOT_KB
 } from '../data/apps-data.js'
 
 let activeSection = 'executive'
@@ -13,14 +13,6 @@ let copilotMessages = []
 let copilotInit = false
 let realApps = []
 let realServicePrincipals = []
-
-// Use empty arrays instead of static data (to be filled with real Graph API data later)
-const secretsCerts = []
-const apiPermissions = []
-const adminConsents = []
-const signInAnalytics = []
-const riskAssessment = []
-const appsRecommendations = []
 
 const APP_TABS = [
   { id: 'executive',        label: 'Executive',          icon: 'ti-layout-dashboard' },
@@ -76,9 +68,9 @@ export async function initApplications() {
 }
 
 function render(el) {
-  const expiringSecrets = secretsCerts.filter(s => s.status === 'expiring').length
-  const expiredSecrets = secretsCerts.filter(s => s.status === 'expired').length
-  const criticalRisks = riskAssessment.filter(r => r.severity === 'critical').length
+  const expiringSecrets = SECRETS_CERTIFICATES.filter(s => s.status === 'expiring').length
+  const expiredSecrets = SECRETS_CERTIFICATES.filter(s => s.status === 'expired').length
+  const criticalRisks = RISK_ASSESSMENT.filter(r => r.severity === 'critical').length
 
   el.innerHTML = `
     <div class="page-header">
@@ -127,7 +119,7 @@ function render(el) {
           <i class="ti ${t.icon}"></i><span>${t.label}</span>
           ${t.id === 'secrets' && (expiredSecrets + expiringSecrets) > 0 ? `<span class="app-tab-badge red">${expiredSecrets + expiringSecrets}</span>` : ''}
           ${t.id === 'risk' && criticalRisks > 0 ? `<span class="app-tab-badge red">${criticalRisks}</span>` : ''}
-          ${t.id === 'recommendations' ? `<span class="app-tab-badge amber">${appsRecommendations.length}</span>` : ''}
+          ${t.id === 'recommendations' ? `<span class="app-tab-badge amber">${APPS_RECOMMENDATIONS.length}</span>` : ''}
         </button>
       `).join('')}
     </div>
@@ -185,10 +177,10 @@ function renderSection() {
 // ============================================================
 function renderExecutive() {
   const s = APPS_SUMMARY
-  const expSec = secretsCerts.filter(x => x.status === 'expiring').length
-  const expiredSec = secretsCerts.filter(x => x.status === 'expired').length
-  const critRisk = riskAssessment.filter(x => x.severity === 'critical').length
-  const unusedApps = signInAnalytics.filter(x => x.status === 'unused').length
+  const expSec = SECRETS_CERTIFICATES.filter(x => x.status === 'expiring').length
+  const expiredSec = SECRETS_CERTIFICATES.filter(x => x.status === 'expired').length
+  const critRisk = RISK_ASSESSMENT.filter(x => x.severity === 'critical').length
+  const unusedApps = SIGN_IN_ANALYTICS.filter(x => x.status === 'unused').length
 
   return `
     <div class="grid-2 mb-3" style="gap:16px">
@@ -229,7 +221,7 @@ function renderExecutive() {
           <span class="card-title"><i class="ti ti-alert-triangle"></i> Risk Summary</span>
           <span class="badge danger dot">${critRisk} critical</span>
         </div>
-        ${riskAssessment.slice(0, 5).map(r => `
+        ${RISK_ASSESSMENT.slice(0, 5).map(r => `
           <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
             <span class="badge ${r.severity === 'critical' ? 'danger' : r.severity === 'high' ? 'warning' : 'info'}" style="min-width:72px">${r.riskScore}/100</span>
             <div style="flex:1;min-width:0">
@@ -246,7 +238,7 @@ function renderExecutive() {
         <div class="card-header">
           <span class="card-title"><i class="ti ti-checklist"></i> Critical Actions</span>
         </div>
-        ${appsRecommendations.filter(r => r.priority === 'critical').slice(0, 4).map(r => `
+        ${APPS_RECOMMENDATIONS.filter(r => r.priority === 'critical').slice(0, 4).map(r => `
           <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
             <span class="badge danger" style="flex-shrink:0;font-size:9px;min-width:56px;justify-content:center">${r.priority}</span>
             <div style="flex:1">
@@ -371,9 +363,9 @@ function renderEnterpriseApps() {
 // SECRETS & CERTIFICATES
 // ============================================================
 function renderSecrets() {
-  const expired = secretsCerts.filter(s => s.status === 'expired')
-  const expiring = secretsCerts.filter(s => s.status === 'expiring')
-  const healthy = secretsCerts.filter(s => s.status === 'healthy')
+  const expired = SECRETS_CERTIFICATES.filter(s => s.status === 'expired')
+  const expiring = SECRETS_CERTIFICATES.filter(s => s.status === 'expiring')
+  const healthy = SECRETS_CERTIFICATES.filter(s => s.status === 'healthy')
 
   return `
     ${expired.length > 0 ? `
@@ -469,8 +461,8 @@ function renderSecrets() {
 // PERMISSIONS
 // ============================================================
 function renderPermissions() {
-  const critical = apiPermissions.filter(p => p.riskLevel === 'critical')
-  const high = apiPermissions.filter(p => p.riskLevel === 'high')
+  const critical = API_PERMISSIONS.filter(p => p.riskLevel === 'critical')
+  const high = API_PERMISSIONS.filter(p => p.riskLevel === 'high')
 
   return `
     ${critical.length > 0 ? `
@@ -515,8 +507,8 @@ function renderPermissions() {
 // ADMIN CONSENTS
 // ============================================================
 function renderConsents() {
-  const tenantWide = adminConsents.filter(c => c.scope === 'Tenant-wide')
-  const userScoped = adminConsents.filter(c => c.scope === 'User')
+  const tenantWide = ADMIN_CONSENTS.filter(c => c.scope === 'Tenant-wide')
+  const userScoped = ADMIN_CONSENTS.filter(c => c.scope === 'User')
 
   return `
     <div class="alert-banner warning mb-3">
@@ -616,9 +608,9 @@ function renderOwners() {
 // USAGE ANALYTICS
 // ============================================================
 function renderUsage() {
-  const active = signInAnalytics.filter(a => a.status === 'active')
-  const lowuse = signInAnalytics.filter(a => a.status === 'lowuse')
-  const unused = signInAnalytics.filter(a => a.status === 'unused')
+  const active = SIGN_IN_ANALYTICS.filter(a => a.status === 'active')
+  const lowuse = SIGN_IN_ANALYTICS.filter(a => a.status === 'lowuse')
+  const unused = SIGN_IN_ANALYTICS.filter(a => a.status === 'unused')
 
   return `
     <div class="section-heading">Actively Used Applications (${active.length})</div>
@@ -676,8 +668,8 @@ function renderUsage() {
 // RISK ASSESSMENT
 // ============================================================
 function renderRisk() {
-  const critical = riskAssessment.filter(r => r.severity === 'critical')
-  const high = riskAssessment.filter(r => r.severity === 'high')
+  const critical = RISK_ASSESSMENT.filter(r => r.severity === 'critical')
+  const high = RISK_ASSESSMENT.filter(r => r.severity === 'high')
 
   return `
     <div class="alert-banner danger mb-3">
@@ -726,7 +718,7 @@ function renderLifecycle() {
     return created > thirtyDaysAgo
   })
   const orphaned = APP_REGISTRATIONS.filter(a => a.owners.length === 0 || (a.status === 'inactive' && a.risk === 'critical'))
-  const decommission = signInAnalytics.filter(a => a.status === 'unused')
+  const decommission = SIGN_IN_ANALYTICS.filter(a => a.status === 'unused')
 
   return `
     <div class="section-heading">Recently Created (Last 30 Days)</div>
@@ -773,7 +765,7 @@ function renderRecommendations() {
           <th style="width:8%">Action</th>
         </tr></thead>
         <tbody>
-          ${appsRecommendations.map(r => `
+          ${APPS_RECOMMENDATIONS.map(r => `
             <tr>
               <td><span class="badge ${r.priority === 'critical' ? 'danger' : r.priority === 'high' ? 'warning' : 'info'}">${r.priority}</span></td>
               <td style="font-size:11px;font-weight:500">${r.title}</td>
