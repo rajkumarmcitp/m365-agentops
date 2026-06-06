@@ -2416,46 +2416,23 @@ app.get('/api/audit-logs/consents', async (req, res) => {
       let permissions = 'N/A'
       const allProps = log.targetResources?.[0]?.modifiedProperties || []
 
-      // Strategy 1: Look for scope/permission/consent properties directly
-      const possibleNames = ['Scope', 'Scopes', 'Claims', 'Permission', 'Permissions', 'ConsentedScopes', 'ConsentScope']
-      for (const name of possibleNames) {
-        const prop = allProps.find(p => p.displayName === name)
-        if (prop && prop.newValue && prop.newValue !== '[]' && prop.newValue !== '""') {
-          let value = prop.newValue
-          // Remove quotes if present
-          if (typeof value === 'string') {
-            value = value.replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"')
-          }
-          if (value) {
-            permissions = value
-            break
-          }
+      // Strategy 1: Look for ConsentAction.Permissions (contains Scope: values)
+      const consentActionProp = allProps.find(p => p.displayName === 'ConsentAction.Permissions')
+      if (consentActionProp?.newValue) {
+        // Extract Scope value from the complex string format
+        // Format: "... Scope: email openid profile User.Read, ..."
+        const scopeMatch = consentActionProp.newValue.match(/Scope:\s*([^,\]]+)/i)
+        if (scopeMatch && scopeMatch[1]) {
+          permissions = scopeMatch[1].trim()
         }
       }
 
-      // Strategy 2: Look for case-insensitive property names
+      // Strategy 2: Look for direct scope/permission properties
       if (permissions === 'N/A') {
-        const scopeProp = allProps.find(p => {
-          const name = (p.displayName || '').toLowerCase()
-          return name.includes('scope') || name.includes('permission') ||
-                 name.includes('claim') || name.includes('consent')
-        })
-        if (scopeProp?.newValue && scopeProp.newValue !== '[]' && scopeProp.newValue !== '""') {
-          let value = scopeProp.newValue
-          if (typeof value === 'string') {
-            value = value.replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"')
-          }
-          if (value) permissions = value
-        }
-      }
-
-      // Strategy 3: Look for properties with recognizable permission patterns
-      if (permissions === 'N/A') {
-        for (const prop of allProps) {
-          const val = (prop.newValue || '').toLowerCase()
-          if (val.includes('.readwrite') || val.includes('.read') || val.includes('directory') ||
-              val.includes('user.') || val.includes('mail.') || val.includes('group.') ||
-              val.includes('application.') || val.includes('serviceprincipal')) {
+        const possibleNames = ['Scope', 'Scopes', 'Claims', 'Permission', 'Permissions', 'ConsentedScopes', 'ConsentScope']
+        for (const name of possibleNames) {
+          const prop = allProps.find(p => p.displayName === name)
+          if (prop && prop.newValue && prop.newValue !== '[]' && prop.newValue !== '""') {
             let value = prop.newValue
             if (typeof value === 'string') {
               value = value.replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"')
@@ -2468,11 +2445,19 @@ app.get('/api/audit-logs/consents', async (req, res) => {
         }
       }
 
-      // Strategy 4: Look in resources for scope information
-      if (permissions === 'N/A' && log.resources) {
-        const resourceWithScope = log.resources.find(r => r.displayName?.toLowerCase().includes('scope'))
-        if (resourceWithScope?.displayName) {
-          permissions = resourceWithScope.displayName
+      // Strategy 3: Look for case-insensitive property names
+      if (permissions === 'N/A') {
+        const scopeProp = allProps.find(p => {
+          const name = (p.displayName || '').toLowerCase()
+          return name.includes('scope') || name.includes('permission') ||
+                 name.includes('claim') || name.includes('consent')
+        })
+        if (scopeProp?.newValue && scopeProp.newValue !== '[]' && scopeProp.newValue !== '""') {
+          let value = scopeProp.newValue
+          if (typeof value === 'string') {
+            value = value.replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"')
+          }
+          if (value) permissions = value
         }
       }
 
