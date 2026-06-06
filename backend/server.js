@@ -808,11 +808,16 @@ app.get('/api/admin-consents', async (req, res) => {
 
     const mapped = (consents.value || []).map(grant => ({
       id: grant.id,
+      appName: grant.clientId.substring(0, 8),
       clientId: grant.clientId,
       resourceId: grant.resourceId,
-      scope: 'Tenant-wide',
+      scope: grant.scope || 'Tenant-wide',
+      permissions: (grant.scope || '').substring(0, 50),
+      grantedBy: 'Admin',
+      grantDate: new Date().toLocaleDateString(),
       consentType: grant.consentType,
-      principalId: grant.principalId
+      principalId: grant.principalId,
+      riskAlert: false
     }))
 
     console.log(`✓ Found ${mapped.length} admin consents`)

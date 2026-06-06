@@ -605,7 +605,7 @@ function renderConsents() {
           ${consent.riskAlert ? '<span class="badge danger">⚠️ High Risk</span>' : ''}
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
-          ${consent.permissions.split(', ').map(p => `<code style="background:var(--color-background-secondary);padding:2px 6px;border-radius:3px;font-size:10px">${p}</code>`).join('')}
+          ${(consent.permissions ? (Array.isArray(consent.permissions) ? consent.permissions : consent.permissions.split(', ')) : []).map(p => `<code style="background:var(--color-background-secondary);padding:2px 6px;border-radius:3px;font-size:10px">${p || '—'}</code>`).join('')}
         </div>
       </div>
     `).join('')}
