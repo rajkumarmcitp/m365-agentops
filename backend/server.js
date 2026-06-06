@@ -879,24 +879,93 @@ app.get('/api/admin-consents', async (req, res) => {
       }
     })
 
-    // Try to resolve unmapped IDs
+    // Try to resolve unmapped IDs with comprehensive search
     if (unmappedIds.size > 0) {
       console.log(`🔍 Attempting to resolve ${unmappedIds.size} unmapped clientIds...`)
-      for (const clientId of Array.from(unmappedIds).slice(0, 10)) {
-        try {
-          const spResult = await graphClient
-            .api(`/servicePrincipals?$filter=appId eq '${clientId}'`)
-            .get()
-          if (spResult.value?.length > 0) {
-            const displayName = spResult.value[0].displayName
-            appNameMap[clientId] = displayName
-            console.log(`  ✓ Resolved: ${displayName}`)
-          } else {
-            console.log(`  ℹ️ No SP found for ${clientId.substring(0, 20)}...`)
+
+      // Fetch ALL service principals for comprehensive search
+      try {
+        let allServicePrincipals = []
+        let nextLink = null
+        let pageNum = 0
+
+        do {
+          const spQuery = nextLink ?
+            graphClient.api(nextLink) :
+            graphClient.api('/servicePrincipals').top(100)
+
+          const spResult = await spQuery.get()
+          allServicePrincipals = allServicePrincipals.concat(spResult.value || [])
+          nextLink = spResult['@odata.nextLink']
+          pageNum++
+          console.log(`  📄 Fetched SP page ${pageNum}: ${(spResult.value || []).length} items`)
+
+          if (pageNum >= 10) {
+            console.log(`  ⚠️ Pagination limit reached, stopping SP fetch`)
+            break
           }
-        } catch (error) {
-          console.log(`  ⚠️ Query failed for ${clientId.substring(0, 20)}...`)
+        } while (nextLink)
+
+        console.log(`  📊 Total service principals fetched: ${allServicePrincipals.length}`)
+
+        // Search for each unmapped clientId
+        for (const clientId of Array.from(unmappedIds).slice(0, 10)) {
+          let found = false
+
+          // Strategy 1: Match by appId
+          let match = allServicePrincipals.find(sp => sp.appId === clientId)
+          if (match) {
+            appNameMap[clientId] = match.displayName
+            console.log(`  ✓ Found by appId: ${match.displayName}`)
+            found = true
+          }
+
+          // Strategy 2: Match by id
+          if (!found) {
+            match = allServicePrincipals.find(sp => sp.id === clientId)
+            if (match) {
+              appNameMap[clientId] = match.displayName
+              console.log(`  ✓ Found by id: ${match.displayName}`)
+              found = true
+            }
+          }
+
+          // Strategy 3: Match by servicePrincipalNames
+          if (!found) {
+            match = allServicePrincipals.find(sp =>
+              sp.servicePrincipalNames?.includes(clientId)
+            )
+            if (match) {
+              appNameMap[clientId] = match.displayName
+              console.log(`  ✓ Found by servicePrincipalNames: ${match.displayName}`)
+              found = true
+            }
+          }
+
+          // Strategy 4: Partial match on GUID (first 20 chars)
+          if (!found && clientId.length > 20) {
+            const clientIdPrefix = clientId.substring(0, 20)
+            match = allServicePrincipals.find(sp =>
+              sp.appId?.substring(0, 20) === clientIdPrefix ||
+              sp.id?.substring(0, 20) === clientIdPrefix
+            )
+            if (match) {
+              appNameMap[clientId] = match.displayName
+              console.log(`  ✓ Found by partial match: ${match.displayName}`)
+              found = true
+            }
+          }
+
+          if (!found) {
+            console.log(`  ✗ Not found: ${clientId}`)
+            // List first 3 SPs for debugging
+            if (allServicePrincipals.length > 0) {
+              console.log(`    Sample SPs: ${allServicePrincipals.slice(0, 3).map(sp => `${sp.displayName} (${sp.appId?.substring(0, 8)})`).join(', ')}`)
+            }
+          }
         }
+      } catch (error) {
+        console.error(`  ❌ Error fetching all service principals:`, error.message)
       }
     }
 
@@ -1058,22 +1127,70 @@ app.get('/api/recent-consents', async (req, res) => {
       }
     })
 
-    // Try to resolve unmapped IDs with direct queries
+    // Comprehensive search for unmapped IDs
     if (unmappedIds.size > 0) {
-      console.log(`🔍 Attempting to resolve ${unmappedIds.size} unmapped clientIds...`)
-      for (const clientId of Array.from(unmappedIds).slice(0, 5)) {
-        try {
-          const spResult = await graphClient
-            .api(`/servicePrincipals?$filter=appId eq '${clientId}'`)
-            .get()
-          if (spResult.value?.length > 0) {
-            const displayName = spResult.value[0].displayName
-            appNameMap[clientId] = displayName
-            console.log(`  ✓ Resolved: ${displayName}`)
+      console.log(`🔍 Attempting comprehensive search for ${unmappedIds.size} unmapped clientIds...`)
+
+      try {
+        // Fetch ALL service principals with pagination
+        let allSPs = []
+        let nextLink = null
+        const initialQuery = await graphClient.api('/servicePrincipals').top(100).get()
+        allSPs = allSPs.concat(initialQuery.value || [])
+        nextLink = initialQuery['@odata.nextLink']
+
+        let pageNum = 1
+        while (nextLink && pageNum < 10) {
+          try {
+            const pageResult = await graphClient.api(nextLink).get()
+            allSPs = allSPs.concat(pageResult.value || [])
+            nextLink = pageResult['@odata.nextLink']
+            pageNum++
+          } catch (e) {
+            console.log(`  ⚠️ Pagination stopped at page ${pageNum}`)
+            break
           }
-        } catch (error) {
-          console.log(`  ℹ️ Could not resolve ${clientId}`)
         }
+
+        console.log(`  📊 Searched ${allSPs.length} service principals across ${pageNum} pages`)
+
+        // Try multiple matching strategies
+        for (const clientId of Array.from(unmappedIds).slice(0, 10)) {
+          let found = false
+
+          // Strategy 1: Direct appId match
+          let match = allSPs.find(sp => sp.appId === clientId)
+          if (match) {
+            appNameMap[clientId] = match.displayName
+            console.log(`  ✓ ${clientId.substring(0, 20)}... → ${match.displayName} (appId match)`)
+            found = true
+            continue
+          }
+
+          // Strategy 2: Direct id match
+          match = allSPs.find(sp => sp.id === clientId)
+          if (match) {
+            appNameMap[clientId] = match.displayName
+            console.log(`  ✓ ${clientId.substring(0, 20)}... → ${match.displayName} (id match)`)
+            found = true
+            continue
+          }
+
+          // Strategy 3: servicePrincipalNames match
+          match = allSPs.find(sp => sp.servicePrincipalNames?.includes(clientId))
+          if (match) {
+            appNameMap[clientId] = match.displayName
+            console.log(`  ✓ ${clientId.substring(0, 20)}... → ${match.displayName} (SPN match)`)
+            found = true
+            continue
+          }
+
+          if (!found) {
+            console.log(`  ✗ ${clientId.substring(0, 20)}... not found in ${allSPs.length} SPs`)
+          }
+        }
+      } catch (error) {
+        console.log(`  ❌ Comprehensive search error:`, error.message)
       }
     }
 
