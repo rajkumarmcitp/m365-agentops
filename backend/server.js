@@ -1201,43 +1201,46 @@ app.get('/api/licenses/groups', async (req, res) => {
       }
 
       try {
-        // Get member count - try different approaches
+        // Get member count - try multiple approaches
         let memberCount = 0
 
+        console.log(`  🔍 Fetching members for group ID: ${group.id}`)
+
+        // Try method 1: Fetch members and count manually
         try {
-          // Try method 1: Using $count
-          const countResponse = await graphClient
-            .api(`/groups/${group.id}/members/$count`)
+          console.log(`  📍 Method 1: Fetch and count members`)
+          const membersResponse = await graphClient
+            .api(`/groups/${group.id}/members`)
             .get()
-          memberCount = parseInt(countResponse) || 0
-          console.log(`  ✓ Found ${memberCount} members (via $count)`)
+
+          memberCount = (membersResponse.value || []).length
+          console.log(`  ✓ Method 1 success: Found ${memberCount} members`)
         } catch (error1) {
-          console.log(`  ⚠️ $count failed, trying count=true parameter`)
+          console.warn(`  ❌ Method 1 failed (fetch members):`, error1.message)
 
+          // Try method 2: Using $count endpoint
           try {
-            // Try method 2: count=true parameter
-            const membersResponse = await graphClient
-              .api(`/groups/${group.id}/members`)
-              .count(true)
-              .top(1)
+            console.log(`  📍 Method 2: Using $count endpoint`)
+            const countResponse = await graphClient
+              .api(`/groups/${group.id}/members/$count`)
               .get()
-            memberCount = membersResponse['@odata.count'] || 0
-            if (memberCount > 0) {
-              console.log(`  ✓ Found ${memberCount} members (via count param)`)
-            }
+            memberCount = parseInt(countResponse) || 0
+            console.log(`  ✓ Method 2 success: Found ${memberCount} members via $count`)
           } catch (error2) {
-            console.log(`  ⚠️ count param failed, fetching all members`)
+            console.warn(`  ❌ Method 2 failed ($count):`, error2.message)
 
-            // Try method 3: Fetch all members
+            // Try method 3: count=true parameter with headers
             try {
-              const members = await graphClient
+              console.log(`  📍 Method 3: count=true with header`)
+              const membersResponse = await graphClient
                 .api(`/groups/${group.id}/members`)
-                .top(999)
+                .count(true)
                 .get()
-              memberCount = (members.value || []).length
-              console.log(`  ✓ Found ${memberCount} members (via fetch all)`)
+
+              memberCount = membersResponse['@odata.count'] || (membersResponse.value || []).length
+              console.log(`  ✓ Method 3 success: Found ${memberCount} members`)
             } catch (error3) {
-              console.warn(`  ❌ Could not get member count:`, error3.message)
+              console.warn(`  ❌ Method 3 failed (count header):`, error3.message)
               memberCount = 0
             }
           }
