@@ -711,27 +711,31 @@ function renderAuditConsents() {
         <table style="width:100%">
           <thead style="background:var(--color-background-secondary)">
             <tr>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:14%">Event Time</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:12%">Operation</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:16%">Target Application</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:15%">Event Time</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:18%">Target Application</th>
               <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:14%">Performed By</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:22%">Permission/Scope</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:25%">Permission/Scope</th>
               <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:10%">Target Type</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:10%">Risk</th>
               <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:12%">Result Status</th>
             </tr>
           </thead>
           <tbody>
-            ${auditConsents.map(consent => `
-              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            ${auditConsents.map(consent => {
+              const permissions = (consent.scope && consent.scope !== 'N/A') ? consent.scope : '—'
+              const isHighRisk = permissions !== '—' && !permissions.toLowerCase().includes('read')
+              return `
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)${isHighRisk ? ';background:rgba(239, 68, 68, 0.05)' : ''}">
                 <td style="padding:10px 12px;font-size:10px">${new Date(consent.activityDateTime).toLocaleString() || '—'}</td>
-                <td style="padding:10px 12px;font-size:10px"><span class="badge info">${consent.activityDisplayName}</span></td>
                 <td style="padding:10px 12px;font-weight:600;font-size:11px">${consent.appName || '—'}</td>
                 <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${consent.initiatedBy?.substring(0, 20) || '—'}</td>
-                <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${(consent.scope && consent.scope !== 'N/A') ? consent.scope.substring(0, 60) + (consent.scope.length > 60 ? '...' : '') : '—'}</td>
+                <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${permissions !== '—' ? permissions.substring(0, 70) + (permissions.length > 70 ? '...' : '') : '—'}</td>
                 <td style="padding:10px 12px;font-size:10px"><span class="badge secondary">Application</span></td>
+                <td style="padding:10px 12px;font-size:10px"><span class="badge ${isHighRisk ? 'danger' : 'success'}">${isHighRisk ? 'High Risk' : 'Safe'}</span></td>
                 <td style="padding:10px 12px;font-size:10px"><span class="badge ${consent.result === 'Success' ? 'success' : 'danger'}">${consent.result || 'Success'}</span></td>
               </tr>
-            `).join('')}
+            `
+            }).join('')}
           </tbody>
         </table>
       `}
