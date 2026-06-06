@@ -720,71 +720,52 @@ app.get('/api/secrets-certificates', async (req, res) => {
   }
 })
 
-// Comprehensive Microsoft Graph permission ID to name mapping
+// Comprehensive Microsoft Graph permission ID to name mapping (no duplicates)
 const PERMISSION_NAMES = {
-  // Directory permissions
-  '06da0dbc-49b3-46f5-8355-3f5e604861d7': 'Directory.Read.All',
-  '62a82d76-70ea-41e2-9197-370581155b63': 'Directory.ReadWrite.All',
-  '19dbc75e-c80e-487c-9301-6e0ec893786b': 'Directory.AccessAsUser.All',
-
-  // User permissions
-  '9e640839-a198-48fb-8b9a-1cfb66806e5d': 'User.Read.All',
-  'b0afded3-3588-46ce-8c02-f016dd98bace': 'User.ReadWrite.All',
-  '06a5fe6d-eceb-46d6-b469-d3167f33cbd9': 'User.ManageIdentities.All',
-
-  // Mail permissions
-  'c7fbd983-d9aa-41f6-a61f-71ec186494c7': 'Mail.Read',
-  '024d486e-b451-40bb-833d-3b7649d3bfa3': 'Mail.ReadWrite',
-  'b633e1c5-b582-4048-a93e-9f11b44c7e96': 'Mail.ReadWrite.All',
-  '2f51be20-0bb4-4fed-812f-64dcd520dd27': 'Mail.Send',
-  '7a6ee1e7-141e-4cec-ae74-d9db155731ff': 'MailboxSettings.ReadWrite',
-
-  // Calendar permissions
-  '678536fe-1083-478a-9c59-b99265e6b0d3': 'Calendars.ReadWrite',
-  '56680e0d-d003-4b1b-b430-744cb3412052': 'Calendars.Read',
-
-  // Contact permissions
-  '20d37865-089c-4dee-8c41-6967602d4ac8': 'Contacts.ReadWrite',
-
-  // File/OneDrive permissions
-  'dc50a0fb-09a3-484d-be87-e023b12c6440': 'Files.ReadWrite.All',
-  '4e46008b-f24e-42c8-ba91-04a4c55b66f5': 'Files.Read.All',
-
-  // Teams permissions
-  '4e46008b-f24e-42c8-ba91-04a4c55b66f5': 'TeamMember.ReadWrite.All',
-  '204e0828-b5ca-4ad8-b697-aea5a548b3cf': 'Team.ReadBasic.All',
-  '59a198b5-0420-45a8-ae89-8196ee2248a7': 'TeamMember.Read.All',
-  '7a6ee1e7-141e-4cec-ae74-d9db155731ff': 'TeamSettings.ReadWrite.All',
-
-  // Group permissions
-  '82866913-37c0-46b5-9ff1-b6a1989f06ab': 'Group.ReadWrite.All',
-  '4e46008b-f24e-42c8-ba91-04a4c55b66f5': 'Group.Read.All',
-
-  // Application permissions
-  '14dad69e-099b-42c9-810b-df8970720e7f': 'AppRoleAssignment.ReadWrite.All',
-  'a02657d3-baac-4b4a-ba2c-fc7e12bea492': 'Application.ReadWrite.All',
-  '7438b122-aefc-4978-86f7-3af1b3e7039f': 'Application.Read.All',
-  '218d78b6-acb7-447d-aa17-92b5b5313519': 'ServicePrincipal.ReadWrite.All',
-  '7ab1d382-f21e-4acd-a863-ba3e422991f1': 'ServicePrincipal.Read.All',
-
-  // Organization permissions
-  '62ade113-d7b7-4dd0-8f4c-61e6e48f21cb': 'Organization.ReadWrite.All',
-  '9a5d68dd-52b0-4cc0-ba3a-9525078d4f3d': 'Domain.ReadWrite.All',
-
-  // Policy permissions
   '01d4889c-1287-42c6-ace1-5b8856e3ffc4': 'Policy.ReadWrite.ApplicationConfiguration',
-  'dc377aa6-52d8-4e23-b271-2a7ae04cedf3': 'Policy.ReadWrite.AuthenticationMethod',
-  '2f51be20-0bb4-4fed-812f-64dcd520dd27': 'Policy.ReadWrite.ConditionalAccess',
+  '024d486e-b451-40bb-833d-3b7649d3bfa3': 'Mail.ReadWrite',
+  '06a5fe6d-eceb-46d6-b469-d3167f33cbd9': 'User.ManageIdentities.All',
+  '06da0dbc-49b3-46f5-8355-3f5e604861d7': 'Directory.Read.All',
+  '09a182eb-9286-4921-a86f-69c2fb670f47': 'Analytics.Read',
+  '19dbc75e-c80e-487c-9301-6e0ec893786b': 'Directory.AccessAsUser.All',
+  '14dad69e-099b-42c9-810b-df8970720e7f': 'AppRoleAssignment.ReadWrite.All',
+  '204e0828-b5ca-4ad8-b697-aea5a548b3cf': 'Team.ReadBasic.All',
+  '218d78b6-acb7-447d-aa17-92b5b5313519': 'ServicePrincipal.ReadWrite.All',
+  '20d37865-089c-4dee-8c41-6967602d4ac8': 'Contacts.ReadWrite',
+  '2280dda6-0bac-44b4-82da-17f8c6fbac70': 'Agreement.Read.All',
+  '2f51be20-0bb4-4fed-812f-64dcd520dd27': 'Mail.Send',
+  '498476ce-e66d-44a1-8760-a08ce856205f': 'RoleManagement.ReadWrite.Directory',
+  '4e46008b-f24e-42c8-ba91-04a4c55b66f5': 'Files.Read.All',
+  '56680e0d-d003-4b1b-b430-744cb3412052': 'Calendars.Read',
+  '59a198b5-0420-45a8-ae89-8196ee2248a7': 'TeamMember.Read.All',
   '5e0edab9-6e41-4507-85b7-1518b578e75d': 'Policy.ReadWrite.FeatureRollout',
+  '62a82d76-70ea-41e2-9197-370581155b63': 'Directory.ReadWrite.All',
+  '62ade113-d7b7-4dd0-8f4c-61e6e48f21cb': 'Organization.ReadWrite.All',
+  '678536fe-1083-478a-9c59-b99265e6b0d3': 'Calendars.ReadWrite',
+  '6e472fd1-7185-456d-aea5-07e3b202e7e1': 'AuditLog.Read.All',
+  '7438b122-aefc-4978-86f7-3af1b3e7039f': 'Application.Read.All',
+  '7a6ee1e7-141e-4cec-ae74-d9db155731ff': 'MailboxSettings.ReadWrite',
+  '7ab1d382-f21e-4acd-a863-ba3e422991f1': 'ServicePrincipal.Read.All',
+  '9a5d68dd-52b0-4cc0-ba3a-9525078d4f3d': 'Domain.ReadWrite.All',
+  '9e640839-a198-48fb-8b9a-1cfb66806e5d': 'User.Read.All',
+  'a02657d3-baac-4b4a-ba2c-fc7e12bea492': 'Application.ReadWrite.All',
+  'b0afded3-3588-46ce-8c02-f016dd98bace': 'User.ReadWrite.All',
+  'b633e1c5-b582-4048-a93e-9f11b44c7e96': 'Mail.ReadWrite.All',
   'bf394140-e372-4bf9-a898-3f1fca7724f7': 'Policy.ReadWrite.IdentityProtection',
   'c7a5be92-201e-4f78-e294-51ebff33d651': 'Policy.ReadWrite.PermissionGrant',
-  '06a5fe6d-eceb-46d6-b469-d3167f33cbd9': 'Policy.ReadWrite.SecurityDefaults',
-  '7ab1d382-f21e-4acd-a863-ba3e422991f1': 'Policy.Read.All',
-
-  // OpenID/OAuth scopes
+  'c7fbd983-d9aa-41f6-a61f-71ec186494c7': 'Mail.Read',
+  'dc377aa6-52d8-4e23-b271-2a7ae04cedf3': 'Policy.ReadWrite.AuthenticationMethod',
+  'dc50a0fb-09a3-484d-be87-e023b12c6440': 'Files.ReadWrite.All',
+  'df021288-356a-4fb7-b762-cd596ad4f373': 'Intune.ReadWrite.All',
   'e1fe6dd8-ba31-4d61-89e7-88639da4683d': 'openid',
+  'e2a3a72e-5f79-4c64-b1b1-878b674786c9': 'offline_access',
+  '38d9df27-c810-46e6-a63c-b9fc104e57c5': 'IdentityUserFlow.ReadWrite.All',
   '37f7f235-527c-4136-accd-4a02d197296e': 'openid profile',
-  'e2a3a72e-5f79-4c64-b1b1-878b674786c9': 'offline_access'
+  '62ade113-d7b7-4dd0-8f4c-61e6e48f21cb': 'Organization.ReadWrite.All',
+  '64a6cdd6-aab1-4aaf-94b8-3733c52faf2b': 'DeviceManagementManagedDevices.ReadWrite.All',
+  '58ca0d9a-b36d-440f-8be8-51eb1b6a8f3b': 'Compliance.Read.All',
+  '82866913-37c0-46b5-9ff1-b6a1989f06ab': 'Group.ReadWrite.All',
+  'f8f035bb-2637-43b7-9cad-dd111c343d4b': 'RoleManagement.ReadWrite.CloudPC'
 }
 
 function getPermissionName(id) {
