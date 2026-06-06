@@ -2297,35 +2297,81 @@ app.get('/api/audit-logs/m365agentops', async (req, res) => {
     const m365AppId = '04d3be8d-d433-4367-893e-eccc82190a11'
     const m365AppName = 'M365 AgentOps'
 
-    // Query for application-related audit activities
+    // Comprehensive list of application-related activities to search for
+    const activityFilters = [
+      "activityDisplayName eq 'Add application'",
+      "activityDisplayName eq 'Update application'",
+      "activityDisplayName eq 'Delete application'",
+      "activityDisplayName eq 'Consent to application'",
+      "activityDisplayName eq 'Add Oauth2PermissionGrant'",
+      "activityDisplayName eq 'Add app role assignment to service principal'",
+      "activityDisplayName eq 'Add app role assignment grant to user'",
+      "activityDisplayName eq 'Add service principal'",
+      "activityDisplayName eq 'Remove service principal'",
+      "activityDisplayName eq 'Update service principal'",
+      "activityDisplayName eq 'Add service principal credentials'",
+      "activityDisplayName eq 'Remove service principal credentials'",
+      "activityDisplayName eq 'adddelegatedpermissiongrant'",
+      "activityDisplayName eq 'removedelegatedpermissiongrant'"
+    ]
+
+    const filterExpression = activityFilters.join(' or ')
+
+    // Query for all application-related audit activities
     const auditLogs = await graphClient
       .api('/auditLogs/directoryAudits')
-      .filter("category eq 'ApplicationManagement' or activityDisplayName eq 'Add application' or activityDisplayName eq 'Update application' or activityDisplayName eq 'Add service principal credentials' or activityDisplayName eq 'Remove service principal credentials' or activityDisplayName eq 'Add app role assignment'")
-      .top(300)
+      .filter(filterExpression)
+      .top(500)
       .get()
+
+    // Map activity display names to categories
+    const categoryMap = {
+      'Add application': 'Added Applications',
+      'Update application': 'Updated Applications',
+      'Delete application': 'Deleted Applications',
+      'Consent to application': 'Consent to Applications',
+      'Add Oauth2PermissionGrant': 'OAuth2 Permission Grant',
+      'Add app role assignment to service principal': 'App Role Assignments',
+      'Add app role assignment grant to user': 'App Role Assignments',
+      'Add service principal': 'Service Principal Changes',
+      'Remove service principal': 'Service Principal Changes',
+      'Update service principal': 'Service Principal Changes',
+      'Add service principal credentials': 'Credential Changes',
+      'Remove service principal credentials': 'Credential Changes',
+      'adddelegatedpermissiongrant': 'Delegation Changes',
+      'removedelegatedpermissiongrant': 'Delegation Changes'
+    }
 
     const activities = []
     auditLogs.value?.forEach(log => {
       // Filter to only M365 AgentOps related activities
       const targetDisplay = log.targetResources?.[0]?.displayName || ''
       const resourceDisplay = log.resources?.[0]?.displayName || ''
-      const appIdMatch = log.targetResources?.[0]?.modifiedProperties?.some(p =>
-        p.newValue?.includes(m365AppId) || p.oldValue?.includes(m365AppId)
-      ) || resourceDisplay.includes(m365AppName) || targetDisplay.includes(m365AppName)
 
-      if (!appIdMatch) return
+      // Check if this activity is related to M365 AgentOps
+      const isM365Activity =
+        targetDisplay.includes(m365AppName) ||
+        resourceDisplay.includes(m365AppName) ||
+        log.targetResources?.[0]?.modifiedProperties?.some(p =>
+          (p.newValue || '').includes(m365AppId) ||
+          (p.oldValue || '').includes(m365AppId) ||
+          (p.newValue || '').includes(m365AppName) ||
+          (p.oldValue || '').includes(m365AppName)
+        )
+
+      if (!isM365Activity) return
 
       const changes = log.targetResources?.[0]?.modifiedProperties?.map(p => ({
         property: p.displayName,
-        oldValue: p.oldValue?.replace(/"/g, '') || 'N/A',
-        newValue: p.newValue?.replace(/"/g, '') || 'N/A'
+        oldValue: p.oldValue?.replace(/"/g, '').substring(0, 100) || 'N/A',
+        newValue: p.newValue?.replace(/"/g, '').substring(0, 100) || 'N/A'
       })) || []
 
       activities.push({
         id: log.id,
         activityDateTime: log.activityDateTime,
         activityDisplayName: log.activityDisplayName,
-        category: log.category,
+        category: categoryMap[log.activityDisplayName] || 'Other',
         initiatedBy: log.initiatedBy?.user?.userPrincipalName || log.initiatedBy?.app?.displayName || 'System',
         targetResource: targetDisplay || m365AppName,
         changes: changes,
