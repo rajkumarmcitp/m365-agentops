@@ -16,6 +16,7 @@ let realServicePrincipals = []
 let realSecrets = []
 let realPermissions = []
 let realConsents = []
+let recentConsents = []
 let realUsage = []
 let realRisks = []
 let realRecommendations = []
@@ -103,6 +104,18 @@ export async function initApplications() {
     }
   } catch (e) {
     console.warn('⚠️ Consents error:', e.message)
+  }
+
+  // Load recent consents (last 24 hours)
+  try {
+    const r = await fetch(`${api}/recent-consents`)
+    const d = await r.json()
+    if (d?.success) {
+      recentConsents = d.data || []
+      console.log(`✅ Recent Consents: ${recentConsents.length}`)
+    }
+  } catch (e) {
+    console.warn('⚠️ Recent Consents error:', e.message)
   }
 
   // Load usage
@@ -328,6 +341,43 @@ function renderExecutive() {
         <button class="btn btn-primary mt-3" id="exec-view-recs"><i class="ti ti-arrow-right"></i> View all recommendations</button>
       </div>
     </div>
+
+    <!-- Recent Admin Consents -->
+    ${recentConsents.length > 0 ? `
+      <div style="margin-bottom:16px">
+        <div class="alert-banner warning mb-3" style="display:flex;align-items:center;justify-content:space-between">
+          <div style="flex:1">
+            <i class="ti ti-alert-circle" style="margin-right:8px"></i>
+            <strong>${recentConsents.length} new admin consent${recentConsents.length > 1 ? 's' : ''} granted</strong> in the last 24 hours
+          </div>
+          <button style="background:none;border:none;cursor:pointer;font-size:16px;padding:0 8px" id="dismiss-recent-consents">✕</button>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:12px;border-bottom:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)">
+            <span style="font-weight:600;font-size:12px"><i class="ti ti-alert-circle"></i> Recent Admin Consents</span>
+          </div>
+          <table style="width:100%">
+            <thead style="background:var(--color-background-secondary)">
+              <tr>
+                <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:25%">Application</th>
+                <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:15%">Scope</th>
+                <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:60%">Permissions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recentConsents.map(consent => `
+                <tr style="border-bottom:0.5px solid var(--color-border-tertiary);background:rgba(250, 190, 88, 0.05)">
+                  <td style="padding:10px 12px;font-weight:600;font-size:11px">${consent.appName || '—'}</td>
+                  <td style="padding:10px 12px;font-size:10px"><span class="badge warning">${consent.scope || 'Tenant-wide'}</span></td>
+                  <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${consent.permissions || '—'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ` : ''}
   `
 }
 
@@ -940,6 +990,12 @@ function wireSection(el) {
   // Executive nav shortcuts
   content.querySelector('#exec-view-risk')?.addEventListener('click', () => { activeSection = 'risk'; render(el) })
   content.querySelector('#exec-view-recs')?.addEventListener('click', () => { activeSection = 'recommendations'; render(el) })
+
+  // Recent Consents dismiss
+  content.querySelector('#dismiss-recent-consents')?.addEventListener('click', () => {
+    const banner = content.querySelector('.alert-banner.warning')
+    if (banner) banner.parentElement.style.display = 'none'
+  })
 
   // App Copilot
   const copSend = content.querySelector('#app-cop-send')
