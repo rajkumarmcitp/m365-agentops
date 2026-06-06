@@ -1,10 +1,10 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
-import { getApplications, getServicePrincipals } from '../lib/api-client.js'
+import { getApplications, getServicePrincipals, api } from '../lib/api-client.js'
 import {
-  APPS_SUMMARY, APP_REGISTRATIONS, ENTERPRISE_APPLICATIONS, SECRETS_CERTIFICATES,
-  API_PERMISSIONS, ADMIN_CONSENTS, SIGN_IN_ANALYTICS, RISK_ASSESSMENT,
-  APPS_RECOMMENDATIONS, APPS_COPILOT_KB
+  APPS_SUMMARY, APP_REGISTRATIONS, ENTERPRISE_APPLICATIONS, realSecrets,
+  realPermissions, realConsents, realUsage, realRisks,
+  realRecommendations, APPS_COPILOT_KB
 } from '../data/apps-data.js'
 
 let activeSection = 'executive'
@@ -13,6 +13,12 @@ let copilotMessages = []
 let copilotInit = false
 let realApps = []
 let realServicePrincipals = []
+let realSecrets = []
+let realPermissions = []
+let realConsents = []
+let realUsage = []
+let realRisks = []
+let realRecommendations = []
 
 const APP_TABS = [
   { id: 'executive',        label: 'Executive',          icon: 'ti-layout-dashboard' },
@@ -40,37 +46,100 @@ export async function initApplications() {
 
   try {
     console.log('📡 Fetching real application data from backend...')
-    const appsResult = await getApplications()
-    const spResult = await getServicePrincipals()
 
-    if (!appsResult.success) {
-      console.warn('⚠️ Failed to fetch applications, using simulated data:', appsResult.error)
-      realApps = APP_REGISTRATIONS
+    const results = await Promise.allSettled([
+      getApplications(),
+      getServicePrincipals(),
+      fetch(`${api}/secrets-certificates`).then(r => r.json()),
+      fetch(`${api}/permissions`).then(r => r.json()),
+      fetch(`${api}/admin-consents`).then(r => r.json()),
+      fetch(`${api}/usage-analytics`).then(r => r.json()),
+      fetch(`${api}/risk-assessment`).then(r => r.json()),
+      fetch(`${api}/recommendations`).then(r => r.json()),
+    ])
+
+    // Applications
+    if (results[0].status === 'fulfilled' && results[0].value.success) {
+      realApps = results[0].value.data || APP_REGISTRATIONS
+      console.log(`✅ Loaded ${realApps.length} applications`)
     } else {
-      realApps = appsResult.data || APP_REGISTRATIONS
-      console.log(`✅ Loaded ${realApps.length} real applications from API`)
+      realApps = APP_REGISTRATIONS
     }
 
-    if (!spResult.success) {
-      console.warn('⚠️ Failed to fetch service principals, using simulated data')
-      realServicePrincipals = ENTERPRISE_APPLICATIONS
+    // Service Principals
+    if (results[1].status === 'fulfilled' && results[1].value.success) {
+      realServicePrincipals = results[1].value.data || ENTERPRISE_APPLICATIONS
+      console.log(`✅ Loaded ${realServicePrincipals.length} service principals`)
     } else {
-      realServicePrincipals = spResult.data || ENTERPRISE_APPLICATIONS
-      console.log(`✅ Loaded ${realServicePrincipals.length} real service principals from API`)
+      realServicePrincipals = ENTERPRISE_APPLICATIONS
+    }
+
+    // Secrets & Certificates
+    if (results[2].status === 'fulfilled' && results[2].value.success) {
+      realSecrets = results[2].value.data || realSecrets
+      console.log(`✅ Loaded ${realSecrets.length} secrets/certificates`)
+    } else {
+      realSecrets = realSecrets
+    }
+
+    // Permissions
+    if (results[3].status === 'fulfilled' && results[3].value.success) {
+      realPermissions = results[3].value.data || realPermissions
+      console.log(`✅ Loaded ${realPermissions.length} permissions`)
+    } else {
+      realPermissions = realPermissions
+    }
+
+    // Admin Consents
+    if (results[4].status === 'fulfilled' && results[4].value.success) {
+      realConsents = results[4].value.data || realConsents
+      console.log(`✅ Loaded ${realConsents.length} admin consents`)
+    } else {
+      realConsents = realConsents
+    }
+
+    // Usage Analytics
+    if (results[5].status === 'fulfilled' && results[5].value.success) {
+      realUsage = results[5].value.data || realUsage
+      console.log(`✅ Loaded ${realUsage.length} usage records`)
+    } else {
+      realUsage = realUsage
+    }
+
+    // Risk Assessment
+    if (results[6].status === 'fulfilled' && results[6].value.success) {
+      realRisks = results[6].value.data || realRisks
+      console.log(`✅ Loaded ${realRisks.length} risk assessments`)
+    } else {
+      realRisks = realRisks
+    }
+
+    // Recommendations
+    if (results[7].status === 'fulfilled' && results[7].value.success) {
+      realRecommendations = results[7].value.data || realRecommendations
+      console.log(`✅ Loaded ${realRecommendations.length} recommendations`)
+    } else {
+      realRecommendations = realRecommendations
     }
   } catch (error) {
     console.error('❌ Error loading application data:', error)
     realApps = APP_REGISTRATIONS
     realServicePrincipals = ENTERPRISE_APPLICATIONS
+    realSecrets = realSecrets
+    realPermissions = realPermissions
+    realConsents = realConsents
+    realUsage = realUsage
+    realRisks = realRisks
+    realRecommendations = realRecommendations
   }
 
   render(el)
 }
 
 function render(el) {
-  const expiringSecrets = SECRETS_CERTIFICATES.filter(s => s.status === 'expiring').length
-  const expiredSecrets = SECRETS_CERTIFICATES.filter(s => s.status === 'expired').length
-  const criticalRisks = RISK_ASSESSMENT.filter(r => r.severity === 'critical').length
+  const expiringSecrets = realSecrets.filter(s => s.status === 'expiring').length
+  const expiredSecrets = realSecrets.filter(s => s.status === 'expired').length
+  const criticalRisks = realRisks.filter(r => r.severity === 'critical').length
 
   el.innerHTML = `
     <div class="page-header">
@@ -119,7 +188,7 @@ function render(el) {
           <i class="ti ${t.icon}"></i><span>${t.label}</span>
           ${t.id === 'secrets' && (expiredSecrets + expiringSecrets) > 0 ? `<span class="app-tab-badge red">${expiredSecrets + expiringSecrets}</span>` : ''}
           ${t.id === 'risk' && criticalRisks > 0 ? `<span class="app-tab-badge red">${criticalRisks}</span>` : ''}
-          ${t.id === 'recommendations' ? `<span class="app-tab-badge amber">${APPS_RECOMMENDATIONS.length}</span>` : ''}
+          ${t.id === 'recommendations' ? `<span class="app-tab-badge amber">${realRecommendations.length}</span>` : ''}
         </button>
       `).join('')}
     </div>
@@ -177,10 +246,10 @@ function renderSection() {
 // ============================================================
 function renderExecutive() {
   const s = APPS_SUMMARY
-  const expSec = SECRETS_CERTIFICATES.filter(x => x.status === 'expiring').length
-  const expiredSec = SECRETS_CERTIFICATES.filter(x => x.status === 'expired').length
-  const critRisk = RISK_ASSESSMENT.filter(x => x.severity === 'critical').length
-  const unusedApps = SIGN_IN_ANALYTICS.filter(x => x.status === 'unused').length
+  const expSec = realSecrets.filter(x => x.status === 'expiring').length
+  const expiredSec = realSecrets.filter(x => x.status === 'expired').length
+  const critRisk = realRisks.filter(x => x.severity === 'critical').length
+  const unusedApps = realUsage.filter(x => x.status === 'unused').length
 
   return `
     <div class="grid-2 mb-3" style="gap:16px">
@@ -221,7 +290,7 @@ function renderExecutive() {
           <span class="card-title"><i class="ti ti-alert-triangle"></i> Risk Summary</span>
           <span class="badge danger dot">${critRisk} critical</span>
         </div>
-        ${RISK_ASSESSMENT.slice(0, 5).map(r => `
+        ${realRisks.slice(0, 5).map(r => `
           <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
             <span class="badge ${r.severity === 'critical' ? 'danger' : r.severity === 'high' ? 'warning' : 'info'}" style="min-width:72px">${r.riskScore}/100</span>
             <div style="flex:1;min-width:0">
@@ -238,7 +307,7 @@ function renderExecutive() {
         <div class="card-header">
           <span class="card-title"><i class="ti ti-checklist"></i> Critical Actions</span>
         </div>
-        ${APPS_RECOMMENDATIONS.filter(r => r.priority === 'critical').slice(0, 4).map(r => `
+        ${realRecommendations.filter(r => r.priority === 'critical').slice(0, 4).map(r => `
           <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
             <span class="badge danger" style="flex-shrink:0;font-size:9px;min-width:56px;justify-content:center">${r.priority}</span>
             <div style="flex:1">
@@ -363,9 +432,9 @@ function renderEnterpriseApps() {
 // SECRETS & CERTIFICATES
 // ============================================================
 function renderSecrets() {
-  const expired = SECRETS_CERTIFICATES.filter(s => s.status === 'expired')
-  const expiring = SECRETS_CERTIFICATES.filter(s => s.status === 'expiring')
-  const healthy = SECRETS_CERTIFICATES.filter(s => s.status === 'healthy')
+  const expired = realSecrets.filter(s => s.status === 'expired')
+  const expiring = realSecrets.filter(s => s.status === 'expiring')
+  const healthy = realSecrets.filter(s => s.status === 'healthy')
 
   return `
     ${expired.length > 0 ? `
@@ -461,8 +530,8 @@ function renderSecrets() {
 // PERMISSIONS
 // ============================================================
 function renderPermissions() {
-  const critical = API_PERMISSIONS.filter(p => p.riskLevel === 'critical')
-  const high = API_PERMISSIONS.filter(p => p.riskLevel === 'high')
+  const critical = realPermissions.filter(p => p.riskLevel === 'critical')
+  const high = realPermissions.filter(p => p.riskLevel === 'high')
 
   return `
     ${critical.length > 0 ? `
@@ -507,8 +576,8 @@ function renderPermissions() {
 // ADMIN CONSENTS
 // ============================================================
 function renderConsents() {
-  const tenantWide = ADMIN_CONSENTS.filter(c => c.scope === 'Tenant-wide')
-  const userScoped = ADMIN_CONSENTS.filter(c => c.scope === 'User')
+  const tenantWide = realConsents.filter(c => c.scope === 'Tenant-wide')
+  const userScoped = realConsents.filter(c => c.scope === 'User')
 
   return `
     <div class="alert-banner warning mb-3">
@@ -608,9 +677,9 @@ function renderOwners() {
 // USAGE ANALYTICS
 // ============================================================
 function renderUsage() {
-  const active = SIGN_IN_ANALYTICS.filter(a => a.status === 'active')
-  const lowuse = SIGN_IN_ANALYTICS.filter(a => a.status === 'lowuse')
-  const unused = SIGN_IN_ANALYTICS.filter(a => a.status === 'unused')
+  const active = realUsage.filter(a => a.status === 'active')
+  const lowuse = realUsage.filter(a => a.status === 'lowuse')
+  const unused = realUsage.filter(a => a.status === 'unused')
 
   return `
     <div class="section-heading">Actively Used Applications (${active.length})</div>
@@ -668,8 +737,8 @@ function renderUsage() {
 // RISK ASSESSMENT
 // ============================================================
 function renderRisk() {
-  const critical = RISK_ASSESSMENT.filter(r => r.severity === 'critical')
-  const high = RISK_ASSESSMENT.filter(r => r.severity === 'high')
+  const critical = realRisks.filter(r => r.severity === 'critical')
+  const high = realRisks.filter(r => r.severity === 'high')
 
   return `
     <div class="alert-banner danger mb-3">
@@ -718,7 +787,7 @@ function renderLifecycle() {
     return created > thirtyDaysAgo
   })
   const orphaned = APP_REGISTRATIONS.filter(a => a.owners.length === 0 || (a.status === 'inactive' && a.risk === 'critical'))
-  const decommission = SIGN_IN_ANALYTICS.filter(a => a.status === 'unused')
+  const decommission = realUsage.filter(a => a.status === 'unused')
 
   return `
     <div class="section-heading">Recently Created (Last 30 Days)</div>
@@ -765,7 +834,7 @@ function renderRecommendations() {
           <th style="width:8%">Action</th>
         </tr></thead>
         <tbody>
-          ${APPS_RECOMMENDATIONS.map(r => `
+          ${realRecommendations.map(r => `
             <tr>
               <td><span class="badge ${r.priority === 'critical' ? 'danger' : r.priority === 'high' ? 'warning' : 'info'}">${r.priority}</span></td>
               <td style="font-size:11px;font-weight:500">${r.title}</td>
