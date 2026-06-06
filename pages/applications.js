@@ -214,7 +214,7 @@ function render(el) {
     setTimeout(() => {
       btn.innerHTML = `<i class="ti ti-refresh"></i> Refresh`
       btn.disabled = false
-      showToast('Application inventory updated — 87 app registrations, 124 service principals scanned.', 'success')
+      showToast(`Application inventory updated — ${realApps.length} app registrations, ${realServicePrincipals.length} service principals scanned.`, 'success')
     }, 2200)
   })
 
