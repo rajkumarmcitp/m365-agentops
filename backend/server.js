@@ -734,11 +734,17 @@ const PERMISSION_NAMES = {
   '9a5d68dd-52b0-4cc0-ba3a-9525078d4f3d': 'Domain.ReadWrite.All',
   '62ade113-d7b7-4dd0-8f4c-61e6e48f21cb': 'Organization.ReadWrite.All',
   'a02657d3-baac-4b4a-ba2c-fc7e12bea492': 'Application.ReadWrite.All',
-  '218d78b6-acb7-447d-aa17-92b5b5313519': 'ServicePrincipal.ReadWrite.All'
+  '218d78b6-acb7-447d-aa17-92b5b5313519': 'ServicePrincipal.ReadWrite.All',
+  'b633e1c5-b582-4048-a93e-9f11b44c7e96': 'Mail.ReadWrite.All',
+  '678536fe-1083-478a-9c59-b99265e6b0d3': 'Calendars.ReadWrite',
+  '20d37865-089c-4dee-8c41-6967602d4ac8': 'Contacts.ReadWrite',
+  'dc50a0fb-09a3-484d-be87-e023b12c6440': 'Files.ReadWrite.All',
+  'e2a3a72e-5f79-4c64-b1b1-878b674786c9': 'offline_access'
 }
 
 function getPermissionName(id) {
-  return PERMISSION_NAMES[id] || id
+  if (!id) return '—'
+  return PERMISSION_NAMES[id] || `Permission (${id.substring(0, 8)}...)`
 }
 
 // ============================================================
