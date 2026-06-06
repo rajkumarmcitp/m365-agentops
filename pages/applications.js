@@ -87,11 +87,11 @@ function render(el) {
     <!-- Top-5 KPI strip -->
     <div class="kpi-row mb-3">
       <div class="kpi-tile">
-        <div class="kpi-value info">${APPS_SUMMARY.totalAppRegistrations}</div>
+        <div class="kpi-value info">${realApps.length || APPS_SUMMARY.totalAppRegistrations}</div>
         <div class="kpi-label">App Registrations</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value info">${APPS_SUMMARY.totalEnterpriseApplications}</div>
+        <div class="kpi-value info">${realServicePrincipals.length || APPS_SUMMARY.totalEnterpriseApplications}</div>
         <div class="kpi-label">Enterprise Apps</div>
       </div>
       <div class="kpi-tile">
