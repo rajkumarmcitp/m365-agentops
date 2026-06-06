@@ -28,7 +28,6 @@ const APP_TABS = [
   { id: 'enterprise',       label: 'Enterprise Apps',    icon: 'ti-grid-dots' },
   { id: 'secrets',          label: 'Secrets & Certs',    icon: 'ti-lock' },
   { id: 'permissions',      label: 'Permissions',        icon: 'ti-shield-check' },
-  { id: 'consents',         label: 'Admin Consents',     icon: 'ti-user-check' },
   { id: 'auditconsents',    label: 'Audit Consents',     icon: 'ti-history' },
   { id: 'owners',           label: 'Owners',             icon: 'ti-users' },
   { id: 'usage',            label: 'Usage Analytics',    icon: 'ti-chart-line' },
@@ -265,7 +264,6 @@ function renderSection() {
     enterprise:       renderEnterpriseApps,
     secrets:          renderSecrets,
     permissions:      renderPermissions,
-    consents:         renderConsents,
     auditconsents:    renderAuditConsents,
     owners:           renderOwners,
     usage:            renderUsage,
@@ -612,47 +610,8 @@ function renderPermissions() {
 // ============================================================
 // ADMIN CONSENTS
 // ============================================================
-function renderConsents() {
-  const tenantWide = realConsents.filter(c => c.scope === 'Tenant-wide')
-  const userScoped = realConsents.filter(c => c.scope === 'User')
-
-  return `
-    <div class="alert-banner warning mb-3">
-      <i class="ti ti-alert-triangle"></i>
-      <span><strong>${tenantWide.length} tenant-wide admin consents granted</strong> — review quarterly</span>
-    </div>
-
-    <div class="section-heading">Tenant-Wide Consent Grants (${tenantWide.length})</div>
-    ${tenantWide.map(consent => `
-      <div class="card mb-2" style="border-left:3px solid ${consent.riskAlert ? 'var(--clr-danger-text)' : 'var(--color-border-secondary)'}">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
-          <div>
-            <div style="font-weight:700">${consent.appName}</div>
-            <div style="font-size:10px;color:var(--color-text-tertiary)">Granted by ${consent.grantedBy} on ${consent.grantDate}</div>
-          </div>
-          ${consent.riskAlert ? '<span class="badge danger">⚠️ High Risk</span>' : ''}
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
-          ${(consent.permissions ? (Array.isArray(consent.permissions) ? consent.permissions : consent.permissions.split(', ')) : []).map(p => `<code style="background:var(--color-background-secondary);padding:2px 6px;border-radius:3px;font-size:10px">${p || '—'}</code>`).join('')}
-        </div>
-      </div>
-    `).join('')}
-
-    <div class="section-heading mt-4">User-Scoped Consent (${userScoped.length})</div>
-    ${userScoped.map(consent => `
-      <div class="card mb-2">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-weight:700">${consent.appName}</div>
-          <span style="font-size:10px;color:var(--color-text-tertiary)">Granted ${consent.grantDate}</span>
-        </div>
-        <div style="font-size:10px;color:var(--color-text-secondary)">${consent.permissions}</div>
-      </div>
-    `).join('')}
-  `
-}
-
 // ============================================================
-// AUDIT LOGS CONSENTS (Comparison)
+// AUDIT LOGS CONSENTS
 // ============================================================
 function renderAuditConsents() {
   return `
