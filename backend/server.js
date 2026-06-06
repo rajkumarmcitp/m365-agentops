@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import { ClientSecretCredential } from '@azure/identity'
 import { Client } from '@microsoft/microsoft-graph-client'
 import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js'
+import { validateServiceRequest } from './agent.js'
 
 dotenv.config()
 
@@ -92,6 +93,47 @@ app.get('/api/health', (req, res) => {
     service: 'M365 AgentOps Backend',
     version: '1.0.0'
   })
+})
+
+// ============================================================
+// Agent Validation - Validate service requests (rule-based AI)
+// ============================================================
+app.post('/api/agent/validate-request', async (req, res) => {
+  try {
+    const { request, userEmail } = req.body
+
+    if (!request || !request.operationId) {
+      return res.status(400).json({ error: 'Request and operationId required' })
+    }
+
+    console.log(`🤖 Agent validating: ${request.operationId}`)
+
+    const userContext = {
+      email: userEmail,
+      department: 'Engineering', // TODO: Get from Azure AD
+      role: 'user'
+    }
+
+    const validation = await validateServiceRequest(request, userContext)
+
+    res.json({
+      success: true,
+      data: validation
+    })
+  } catch (error) {
+    console.error('✗ Agent validation error:', error.message)
+    res.json({
+      success: true,
+      data: {
+        status: 'PENDING_REVIEW',
+        riskScore: 0,
+        riskLevel: 'MEDIUM',
+        checks: [{ id: 'error', status: 'WARN', message: 'Validation error - defaulting to manual review' }],
+        recommendations: [],
+        autoApprove: false
+      }
+    })
+  }
 })
 
 // ============================================================
