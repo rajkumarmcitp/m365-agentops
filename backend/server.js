@@ -2476,26 +2476,7 @@ app.get('/api/audit-logs/consents', async (req, res) => {
         }
       }
 
-      // Debug log first entry with FULL structure
-      if (idx === 0) {
-        console.log(`🔍 FULL AUDIT LOG #0:`)
-        console.log(`  activityDisplayName: ${log.activityDisplayName}`)
-        console.log(`  result: ${log.result}`)
-        console.log(`  targetResources[0].displayName: ${appName}`)
-        console.log(`  targetResources[0].modifiedProperties:`)
-        allProps.forEach(p => {
-          console.log(`    - ${p.displayName}: oldValue=${p.oldValue}, newValue=${p.newValue}`)
-        })
-        console.log(`  Full log keys: ${Object.keys(log).join(', ')}`)
-        if (log.additionalDetails) {
-          console.log(`  additionalDetails:`, log.additionalDetails)
-        }
-        if (log.initiatedBy) {
-          console.log(`  initiatedBy:`, log.initiatedBy)
-        }
-      }
-
-      consents.push({
+      const consentEntry = {
         id: log.id,
         activityDateTime: log.activityDateTime,
         activityDisplayName: log.activityDisplayName,
@@ -2505,7 +2486,20 @@ app.get('/api/audit-logs/consents', async (req, res) => {
         initiatedBy: log.initiatedBy?.user?.userPrincipalName || log.initiatedBy?.app?.displayName || 'Unknown',
         result: log.result,
         resourceId: log.resources?.[0]?.id || 'N/A'
-      })
+      }
+
+      // Include all modified properties for first entry (for debugging)
+      if (idx === 0) {
+        consentEntry._debugAllProps = allProps.map(p => ({
+          displayName: p.displayName,
+          oldValue: p.oldValue,
+          newValue: p.newValue
+        }))
+        consentEntry._debugLogKeys = Object.keys(log)
+        consentEntry._debugAdditionalDetails = log.additionalDetails
+      }
+
+      consents.push(consentEntry)
     })
 
     console.log(`✓ Found ${consents.length} consent activities in audit logs`)
