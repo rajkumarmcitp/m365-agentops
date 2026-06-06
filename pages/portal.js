@@ -1,5 +1,6 @@
 import { state } from '../app.js'
 import { showToast } from '../components/toast.js'
+import { api } from '../lib/api-client.js'
 import {
   SERVICE_GROUPS, EXCHANGE_SUB, SERVICE_CATALOG, WORKFLOW_STEPS
 } from '../data/portal-services.js'
@@ -536,7 +537,169 @@ function handleSubmit(el, op) {
     if (inp) formValues[f.id] = inp.type === 'checkbox' ? inp.checked : inp.value
   })
 
+  // ============================================================
+  // Call Agent Validation
+  // ============================================================
+  validateWithAgent(el, op)
+}
+
+// ============================================================
+// Agent Validation with UI
+// ============================================================
+async function validateWithAgent(el, op) {
+  const btn = el.querySelector('#form-submit')
+  const formCard = el.querySelector('.card')
+
+  // Show loading state
+  btn.disabled = true
+  btn.innerHTML = '<span class="spinner"></span> Validating with AI Agent...'
+
+  try {
+    // Call backend agent validation endpoint
+    const response = await fetch(`${api}/agent/validate-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        request: {
+          operationId: op.id,
+          fields: formValues
+        },
+        userEmail: window.userEmail
+      })
+    })
+
+    const result = await response.json()
+    const validation = result.data
+
+    console.log('🤖 Agent validation result:', validation)
+
+    // Show validation results in modal/overlay
+    showValidationResults(el, op, validation, formValues)
+  } catch (error) {
+    console.error('⚠️ Validation error:', error)
+    showToast('Agent validation failed. Proceeding with manual review.', 'warning')
+    // Proceed without agent validation
+    completeSubmission(el, op, null)
+  } finally {
+    btn.disabled = false
+    btn.innerHTML = '<i class="ti ti-send"></i> Submit Request'
+  }
+}
+
+// ============================================================
+// Display Validation Results
+// ============================================================
+function showValidationResults(el, op, validation, values) {
+  const { riskLevel, riskScore, checks, recommendations, autoApprove, approvalPath, status } = validation
+
+  // Color map for risk levels
+  const riskColors = {
+    LOW: { bg: 'var(--clr-success-bg)', text: 'var(--clr-success-text)', icon: 'ti-circle-check' },
+    MEDIUM: { bg: 'var(--clr-warning-bg)', text: 'var(--clr-warning-text)', icon: 'ti-alert-circle' },
+    HIGH: { bg: 'var(--clr-danger-bg)', text: 'var(--clr-danger-text)', icon: 'ti-alert-octagon' },
+    CRITICAL: { bg: 'var(--clr-danger-bg)', text: 'var(--clr-danger-text)', icon: 'ti-alert-triangle' }
+  }
+
+  const color = riskColors[riskLevel]
+
+  // Create overlay
+  const overlay = document.createElement('div')
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px'
+
+  const modal = document.createElement('div')
+  modal.style.cssText = 'background:white;border-radius:8px;max-width:600px;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,0.3)'
+
+  modal.innerHTML = `
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="display:inline-flex;align-items:center;justify-content:center;width:60px;height:60px;border-radius:50%;background:${color.bg};margin-bottom:12px">
+        <i class="ti ${color.icon}" style="font-size:28px;color:${color.text}"></i>
+      </div>
+      <h2 style="font-size:18px;font-weight:600;margin:0;color:var(--color-text-primary)">Agent Validation Complete</h2>
+      <p style="font-size:12px;color:var(--color-text-secondary);margin:8px 0 0">Risk Level: <strong style="color:${color.text}">${riskLevel}</strong> (${riskScore}/100)</p>
+    </div>
+
+    <!-- Validation Checks -->
+    <div style="margin-bottom:20px">
+      <h3 style="font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-tertiary);margin-bottom:10px">Validation Checks</h3>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${checks.map(check => `
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--color-background-secondary);border-radius:4px">
+            <div style="flex-shrink:0;margin-top:2px">
+              ${check.status === 'PASS' ? '<i class="ti ti-circle-check" style="color:var(--clr-success-text);font-size:14px"></i>' :
+                check.status === 'FAIL' ? '<i class="ti ti-circle-x" style="color:var(--clr-danger-text);font-size:14px"></i>' :
+                '<i class="ti ti-alert-circle" style="color:var(--clr-warning-text);font-size:14px"></i>'}
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--color-text-primary)">${check.message}</div>
+              ${check.suggestion ? `<div style="font-size:10px;color:var(--color-text-secondary);margin-top:3px">💡 ${check.suggestion}</div>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Recommendations -->
+    ${recommendations && recommendations.length > 0 ? `
+      <div style="margin-bottom:20px;padding:12px;background:var(--clr-info-bg);border-left:3px solid var(--clr-info-text);border-radius:4px">
+        <div style="font-size:12px;font-weight:600;color:var(--clr-info-text);margin-bottom:8px">🤖 Agent Recommendations</div>
+        <ul style="margin:0;padding-left:20px;font-size:11px;color:var(--clr-info-text)">
+          ${recommendations.map(r => `<li style="margin-bottom:4px">${r.message}</li>`).join('')}
+        </ul>
+      </div>
+    ` : ''}
+
+    <!-- Auto-Approval Badge -->
+    ${autoApprove ? `
+      <div style="margin-bottom:20px;padding:12px;background:var(--clr-success-bg);border-radius:4px;text-align:center">
+        <div style="font-size:14px;font-weight:600;color:var(--clr-success-text)">✓ AUTO-APPROVED</div>
+        <div style="font-size:10px;color:var(--clr-success-text);margin-top:4px">Your request meets all requirements and will be provisioned immediately</div>
+      </div>
+    ` : `
+      <div style="margin-bottom:20px;padding:12px;background:var(--clr-info-bg);border-radius:4px">
+        <div style="font-size:12px;font-weight:600;color:var(--clr-info-text);margin-bottom:6px">📋 Approval Required</div>
+        <div style="font-size:11px;color:var(--clr-info-text)">
+          This request will be routed through:
+          <div style="margin-top:6px;font-family:var(--font-mono);font-size:10px;padding:8px;background:rgba(0,0,0,0.1);border-radius:3px">
+            ${approvalPath.map((step, idx) => `${step}${idx < approvalPath.length - 1 ? ' → ' : ''}`).join('')}
+          </div>
+        </div>
+      </div>
+    `}
+
+    <!-- Action Buttons -->
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button id="val-cancel" class="btn" style="padding:8px 16px;font-size:12px">Cancel</button>
+      <button id="val-submit" class="btn btn-primary" style="padding:8px 16px;font-size:12px">
+        <i class="ti ti-send"></i> Confirm & Submit
+      </button>
+    </div>
+  `
+
+  overlay.appendChild(modal)
+  document.body.appendChild(overlay)
+
+  // Event handlers
+  document.getElementById('val-cancel').addEventListener('click', () => {
+    overlay.remove()
+  })
+
+  document.getElementById('val-submit').addEventListener('click', () => {
+    overlay.remove()
+    completeSubmission(el, op, validation)
+  })
+}
+
+// ============================================================
+// Complete Submission
+// ============================================================
+function completeSubmission(el, op, validation) {
   reqCounter++
+
+  // Store validation result with request
+  if (validation) {
+    formValues._validation = validation
+  }
+
   portalView = 'submitted'
   render(el)
 }
