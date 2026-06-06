@@ -148,7 +148,7 @@ function render(el) {
     <div class="page-header">
       <div>
         <div class="page-title"><i class="ti ti-app-window"></i> Entra Applications</div>
-        <div class="page-subtitle">Application Registrations & Enterprise Apps · ${APPS_SUMMARY.totalAppRegistrations} app registrations · Last sync: Today 08:45</div>
+        <div class="page-subtitle">Application Registrations & Enterprise Apps · ${realApps.length} app registrations · Last sync: Today 08:45</div>
       </div>
       <div class="page-actions">
         <button class="btn" id="app-refresh"><i class="ti ti-refresh"></i> Refresh</button>
@@ -248,7 +248,6 @@ function renderSection() {
 // EXECUTIVE DASHBOARD
 // ============================================================
 function renderExecutive() {
-  const s = APPS_SUMMARY
   const expSec = realSecrets.filter(x => x.status === 'expiring').length
   const expiredSec = realSecrets.filter(x => x.status === 'expired').length
   const critRisk = realRisks.filter(x => x.severity === 'critical').length
@@ -261,11 +260,11 @@ function renderExecutive() {
           <span class="card-title"><i class="ti ti-app-window"></i> Application Inventory</span>
         </div>
         ${metricGrid([
-          { label: 'Total App Registrations',      val: s.totalAppRegistrations, cls: 'info' },
-          { label: 'Enterprise Applications',      val: s.totalEnterpriseApplications, cls: 'info' },
-          { label: 'Multi-Tenant Apps',            val: s.multiTenantApps, cls: 'warning' },
-          { label: 'High Privilege Apps',          val: s.highPrivilegeApps, cls: 'danger' },
-          { label: 'Certificate-Based',            val: s.certificateBasedApps, cls: 'success' },
+          { label: 'Total App Registrations',      val: realApps.length, cls: 'info' },
+          { label: 'Enterprise Applications',      val: realServicePrincipals.length, cls: 'info' },
+          { label: 'Multi-Tenant Apps',            val: (realApps.filter(a => a.signInAudience === 'AzureADMultipleOrgs') || []).length, cls: 'warning' },
+          { label: 'High Privilege Apps',          val: realPermissions.filter(p => p.riskLevel === 'critical').length, cls: 'danger' },
+          { label: 'Certificate-Based',            val: realSecrets.filter(s => s.type === 'Certificate').length, cls: 'success' },
           { label: 'Unused (90+ days)',            val: unusedApps, cls: 'warning' },
         ])}
       </div>
@@ -281,8 +280,8 @@ function renderExecutive() {
         ${metricGrid([
           { label: 'Expired Secrets',              val: expiredSec, cls: 'danger' },
           { label: 'Expiring (30 days)',           val: expSec, cls: 'warning' },
-          { label: 'Expiring (60 days)',           val: s.expiringSecrets60d, cls: 'warning' },
-          { label: 'Apps Requiring Admin Consent', val: s.appsRequiringConsent, cls: 'warning' },
+          { label: 'Expiring (60 days)',           val: realSecrets.filter(s => s.daysRemaining <= 60 && s.daysRemaining > 30).length, cls: 'warning' },
+          { label: 'Apps Requiring Admin Consent', val: realConsents.length, cls: 'warning' },
         ])}
       </div>
     </div>
