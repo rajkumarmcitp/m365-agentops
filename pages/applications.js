@@ -17,7 +17,6 @@ let realSecrets = []
 let realPermissions = []
 let realConsents = []
 let auditConsents = []
-let m365AppAudit = []
 let recentConsents = []
 let realUsage = []
 let realRisks = []
@@ -31,7 +30,6 @@ const APP_TABS = [
   { id: 'permissions',      label: 'Permissions',        icon: 'ti-shield-check' },
   { id: 'consents',         label: 'Admin Consents',     icon: 'ti-user-check' },
   { id: 'auditconsents',    label: 'Audit Consents',     icon: 'ti-history' },
-  { id: 'm365audit',        label: 'M365 App Audit',     icon: 'ti-audit' },
   { id: 'owners',           label: 'Owners',             icon: 'ti-users' },
   { id: 'usage',            label: 'Usage Analytics',    icon: 'ti-chart-line' },
   { id: 'risk',             label: 'Risk Assessment',    icon: 'ti-alert-triangle' },
@@ -132,18 +130,6 @@ export async function initApplications() {
     }
   } catch (e) {
     console.warn('⚠️ Audit Consents error:', e.message)
-  }
-
-  // Load M365 AgentOps app audit logs
-  try {
-    const r = await fetch(`${api}/audit-logs/m365agentops`)
-    const d = await r.json()
-    if (d?.success) {
-      m365AppAudit = d.data || []
-      console.log(`✅ M365 App Audit: ${m365AppAudit.length}`)
-    }
-  } catch (e) {
-    console.warn('⚠️ M365 App Audit error:', e.message)
   }
 
   // Load usage
@@ -318,7 +304,6 @@ function renderSection() {
     permissions:      renderPermissions,
     consents:         renderConsents,
     auditconsents:    renderAuditConsents,
-    m365audit:        renderM365AppAudit,
     owners:           renderOwners,
     usage:            renderUsage,
     risk:             renderRisk,
@@ -726,75 +711,25 @@ function renderAuditConsents() {
         <table style="width:100%">
           <thead style="background:var(--color-background-secondary)">
             <tr>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:18%">Application Name</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:12%">App ID</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:15%">Activity</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:30%">Permissions/Scope Consented</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:15%">Date/Time</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:10%">By</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:14%">Event Time</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:12%">Operation</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:16%">Target Application</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:14%">Performed By</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:22%">Permission/Scope</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:10%">Target Type</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:12%">Result Status</th>
             </tr>
           </thead>
           <tbody>
             ${auditConsents.map(consent => `
               <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-                <td style="padding:10px 12px;font-weight:600;font-size:11px">${consent.appName || '—'}</td>
-                <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${consent.appId?.substring(0, 15) || '—'}...</td>
-                <td style="padding:10px 12px;font-size:10px"><span class="badge info">${consent.activityDisplayName}</span></td>
-                <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${(consent.scope && consent.scope !== 'N/A') ? consent.scope.substring(0, 80) + (consent.scope.length > 80 ? '...' : '') : '—'}</td>
                 <td style="padding:10px 12px;font-size:10px">${new Date(consent.activityDateTime).toLocaleString() || '—'}</td>
-                <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${consent.initiatedBy?.substring(0, 12) || '—'}...</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `}
-    </div>
-  `
-}
-
-// ============================================================
-// M365 AGENTOPS APP AUDIT LOGS
-// ============================================================
-function renderM365AppAudit() {
-  return `
-    <div class="alert-banner info mb-3">
-      <i class="ti ti-info-circle"></i>
-      <span>All <strong>M365 AgentOps</strong> application-related activities from Azure AD Audit Logs (creation, updates, credential changes, consent, etc.)</span>
-    </div>
-
-    <div class="card" style="padding:0;overflow:hidden">
-      <div style="padding:12px;border-bottom:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)">
-        <span style="font-weight:600;font-size:12px">Application Activities (${m365AppAudit.length})</span>
-      </div>
-      ${m365AppAudit.length === 0 ? `
-        <div style="padding:20px;text-align:center;color:var(--color-text-tertiary)">
-          <i class="ti ti-inbox" style="font-size:28px;margin-bottom:8px;display:block"></i>
-          No application audit activities found
-        </div>
-      ` : `
-        <table style="width:100%">
-          <thead style="background:var(--color-background-secondary)">
-            <tr>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:20%">Activity</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:15%">Category</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:40%">Changes</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:15%">Date/Time</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:10%">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${m365AppAudit.map(activity => `
-              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-                <td style="padding:10px 12px;font-weight:600;font-size:11px">${activity.activityDisplayName || '—'}</td>
-                <td style="padding:10px 12px;font-size:10px"><span class="badge info">${activity.category || 'Application'}</span></td>
-                <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">
-                  ${activity.changes && activity.changes.length > 0 ? `
-                    ${activity.changes.slice(0, 2).map(c => `<div>${c.property}: ${c.oldValue} → ${c.newValue}</div>`).join('')}
-                    ${activity.changes.length > 2 ? `<div><strong>+${activity.changes.length - 2} more</strong></div>` : ''}
-                  ` : '—'}
-                </td>
-                <td style="padding:10px 12px;font-size:10px">${new Date(activity.activityDateTime).toLocaleString() || '—'}</td>
-                <td style="padding:10px 12px;font-size:10px"><span class="badge ${activity.result === 'Success' ? 'success' : 'danger'}">${activity.result || 'Success'}</span></td>
+                <td style="padding:10px 12px;font-size:10px"><span class="badge info">${consent.activityDisplayName}</span></td>
+                <td style="padding:10px 12px;font-weight:600;font-size:11px">${consent.appName || '—'}</td>
+                <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${consent.initiatedBy?.substring(0, 20) || '—'}</td>
+                <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${(consent.scope && consent.scope !== 'N/A') ? consent.scope.substring(0, 60) + (consent.scope.length > 60 ? '...' : '') : '—'}</td>
+                <td style="padding:10px 12px;font-size:10px"><span class="badge secondary">Application</span></td>
+                <td style="padding:10px 12px;font-size:10px"><span class="badge ${consent.result === 'Success' ? 'success' : 'danger'}">${consent.result || 'Success'}</span></td>
               </tr>
             `).join('')}
           </tbody>
