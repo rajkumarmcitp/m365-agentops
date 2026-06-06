@@ -2413,44 +2413,76 @@ app.get('/api/audit-logs/consents', async (req, res) => {
       const appName = log.targetResources?.[0]?.displayName || 'Unknown'
       const appId = log.targetResources?.[0]?.modifiedProperties?.find(p => p.displayName === 'AppId')?.newValue?.replace(/"/g, '') || 'N/A'
 
-      // Extract permissions/scope from audit log - comprehensive search
       let permissions = 'N/A'
-
       const allProps = log.targetResources?.[0]?.modifiedProperties || []
 
-      // Strategy 1: Look for properties with scope/permission/consent in the name
-      const scopeProp = allProps.find(p => {
-        const displayName = (p.displayName || '').toLowerCase()
-        return displayName.includes('scope') ||
-               displayName.includes('permission') ||
-               displayName.includes('consent') ||
-               displayName.includes('oauth')
-      })
-
-      if (scopeProp) {
-        const value = scopeProp.newValue?.replace(/"/g, '') || scopeProp.newValue
-        if (value && value !== '[]') {
-          permissions = value
+      // Strategy 1: Look for scope/permission/consent properties directly
+      const possibleNames = ['Scope', 'Scopes', 'Claims', 'Permission', 'Permissions', 'ConsentedScopes', 'ConsentScope']
+      for (const name of possibleNames) {
+        const prop = allProps.find(p => p.displayName === name)
+        if (prop && prop.newValue && prop.newValue !== '[]' && prop.newValue !== '""') {
+          let value = prop.newValue
+          // Remove quotes if present
+          if (typeof value === 'string') {
+            value = value.replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"')
+          }
+          if (value) {
+            permissions = value
+            break
+          }
         }
       }
 
-      // Strategy 2: Look for any property containing common permission patterns
-      if (permissions === 'N/A' || permissions === '[]') {
-        const permProp = allProps.find(p => {
-          const value = (p.newValue || '').toLowerCase()
-          return value.includes('readwrite') || value.includes('read.all') ||
-                 value.includes('directory') || value.includes('user.') ||
-                 value.includes('app') || value.includes('mail')
+      // Strategy 2: Look for case-insensitive property names
+      if (permissions === 'N/A') {
+        const scopeProp = allProps.find(p => {
+          const name = (p.displayName || '').toLowerCase()
+          return name.includes('scope') || name.includes('permission') ||
+                 name.includes('claim') || name.includes('consent')
         })
-        if (permProp) {
-          permissions = permProp.newValue?.replace(/"/g, '') || 'N/A'
+        if (scopeProp?.newValue && scopeProp.newValue !== '[]' && scopeProp.newValue !== '""') {
+          let value = scopeProp.newValue
+          if (typeof value === 'string') {
+            value = value.replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"')
+          }
+          if (value) permissions = value
         }
       }
 
-      // Debug log first few entries to see property structure
-      if (idx < 2) {
-        const propNames = allProps.map(p => `${p.displayName}:${(p.newValue || '').substring(0, 30)}...`).join(' | ')
-        console.log(`🔍 Consent #${idx}: app=${appName}, props=[${propNames}]`)
+      // Strategy 3: Look for properties with recognizable permission patterns
+      if (permissions === 'N/A') {
+        for (const prop of allProps) {
+          const val = (prop.newValue || '').toLowerCase()
+          if (val.includes('.readwrite') || val.includes('.read') || val.includes('directory') ||
+              val.includes('user.') || val.includes('mail.') || val.includes('group.') ||
+              val.includes('application.') || val.includes('serviceprincipal')) {
+            let value = prop.newValue
+            if (typeof value === 'string') {
+              value = value.replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"')
+            }
+            if (value) {
+              permissions = value
+              break
+            }
+          }
+        }
+      }
+
+      // Strategy 4: Look in resources for scope information
+      if (permissions === 'N/A' && log.resources) {
+        const resourceWithScope = log.resources.find(r => r.displayName?.toLowerCase().includes('scope'))
+        if (resourceWithScope?.displayName) {
+          permissions = resourceWithScope.displayName
+        }
+      }
+
+      // Debug log first 3 entries to see exact property structure
+      if (idx < 3) {
+        const detailedProps = allProps.map(p => {
+          const val = typeof p.newValue === 'string' ? p.newValue.substring(0, 40) : JSON.stringify(p.newValue).substring(0, 40)
+          return `${p.displayName}=${val}`
+        }).join(' | ')
+        console.log(`🔍 Consent #${idx} [${log.activityDisplayName}]: app=${appName}, extracted=${permissions.substring(0,50)}, props=[${detailedProps}]`)
       }
 
       consents.push({
