@@ -838,19 +838,25 @@ app.get('/api/admin-consents', async (req, res) => {
       .api('/oauth2PermissionGrants')
       .get()
 
-    const mapped = (consents.value || []).map(grant => ({
-      id: grant.id,
-      appName: grant.clientId.substring(0, 8),
-      clientId: grant.clientId,
-      resourceId: grant.resourceId,
-      scope: grant.scope || 'Tenant-wide',
-      permissions: (grant.scope || '').substring(0, 50),
-      grantedBy: 'Admin',
-      grantDate: new Date().toLocaleDateString(),
-      consentType: grant.consentType,
-      principalId: grant.principalId,
-      riskAlert: false
-    }))
+    const mapped = (consents.value || []).map(grant => {
+      // Determine if this is tenant-wide (no principalId) or user-scoped (has principalId)
+      const isTenantWide = !grant.principalId
+      const scopeCategory = isTenantWide ? 'Tenant-wide' : 'User'
+
+      return {
+        id: grant.id,
+        appName: grant.clientId ? grant.clientId.substring(0, 20) : 'Unknown App',
+        clientId: grant.clientId,
+        resourceId: grant.resourceId,
+        scope: scopeCategory,
+        permissions: grant.scope || '',
+        grantedBy: 'Admin',
+        grantDate: new Date().toLocaleDateString(),
+        consentType: grant.consentType,
+        principalId: grant.principalId,
+        riskAlert: false
+      }
+    })
 
     console.log(`✓ Found ${mapped.length} admin consents`)
     res.json({
