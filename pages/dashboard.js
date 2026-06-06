@@ -5,6 +5,16 @@ import { MC_MESSAGES, SVC_HEALTH, SVC_META } from '../data/msgcenter-data.js'
 let realDeviceCount = 0
 let realUserCount = 0
 let realSecureScore = null
+let recentAdminConsents = []
+
+function isDismissedRecently() {
+  const dismissedTime = localStorage.getItem('dashboard_consents_dismissed')
+  if (!dismissedTime) return false
+  const now = new Date().getTime()
+  const dismissedAt = parseInt(dismissedTime)
+  const hoursAgo = (now - dismissedAt) / (1000 * 60 * 60)
+  return hoursAgo < 24 // Show again after 24 hours
+}
 
 export async function initDashboard() {
   const el = document.getElementById('page-dashboard')
@@ -24,6 +34,22 @@ export async function initDashboard() {
     realUserCount = (usersResult.success && usersResult.count) ? usersResult.count : 1000
     realSecureScore = scoreResult.success ? scoreResult.data : null
 
+    // Fetch recent admin consents (last 24 hours)
+    try {
+      const consentsResult = await api.get('/api/audit-logs/consents')
+      if (consentsResult.success && consentsResult.data) {
+        const now = new Date()
+        const last24hrs = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        recentAdminConsents = consentsResult.data
+          .filter(c => new Date(c.activityDateTime) >= last24hrs)
+          .sort((a, b) => new Date(b.activityDateTime) - new Date(a.activityDateTime))
+          .slice(0, 5)
+        console.log(`✅ Loaded ${recentAdminConsents.length} recent admin consents (last 24 hours)`)
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not fetch recent admin consents:', error.message)
+    }
+
     console.log(`✅ Loaded dashboard data: ${realDeviceCount} devices, ${realUserCount} users`)
   } catch (error) {
     console.error('❌ Error loading dashboard data:', error)
@@ -40,6 +66,47 @@ export async function initDashboard() {
         <button class="btn btn-primary"><i class="ti ti-download"></i> Export</button>
       </div>
     </div>
+
+    <!-- Recent Admin Consents Alert -->
+    ${recentAdminConsents.length > 0 && !isDismissedRecently() ? `
+    <div class="alert-banner warning" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+      <div style="flex:1">
+        <i class="ti ti-alert-triangle"></i>
+        <span><strong>${recentAdminConsents.length} new admin consent${recentAdminConsents.length !== 1 ? 's' : ''}</strong> granted in the last 24 hours. Review for suspicious activity.</span>
+      </div>
+      <button class="btn btn-sm" id="dash-consents-view" style="margin-right:8px"><i class="ti ti-arrow-right"></i> View Details</button>
+      <button class="btn btn-sm" id="dash-consents-dismiss" style="padding:6px 12px"><i class="ti ti-x"></i></button>
+    </div>
+
+    <!-- Recent Admin Consents Table -->
+    <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
+      <div style="padding:12px;border-bottom:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)">
+        <span style="font-weight:600;font-size:12px">Recent Admin Consents (Last 24 Hours)</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:18%">Time</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:20%">Application</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:30%">Permissions</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:15%">Performed By</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:17%">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${recentAdminConsents.map(consent => `
+            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+              <td style="padding:10px 12px;font-size:10px">${new Date(consent.activityDateTime).toLocaleString()}</td>
+              <td style="padding:10px 12px;font-weight:600;font-size:11px">${consent.appName || '—'}</td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${(consent.scope || '—').substring(0, 40)}${(consent.scope || '—').length > 40 ? '...' : ''}</td>
+              <td style="padding:10px 12px;font-size:10px">${(consent.initiatedBy || '—').substring(0, 25)}</td>
+              <td style="padding:10px 12px;font-size:10px"><span class="badge ${(consent.result || '').toLowerCase() === 'success' ? 'success' : 'danger'}">${consent.result || '—'}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    ` : ''}
 
     <!-- KPI Tiles -->
     <div class="kpi-row">
@@ -260,6 +327,16 @@ export async function initDashboard() {
   el.querySelector('#dash-to-zt')?.addEventListener('click', async () => await go('zerotrust'))
   el.querySelector('#dash-to-audit')?.addEventListener('click', async () => await go('audit'))
   el.querySelector('#dash-to-msgcenter')?.addEventListener('click', async () => await go('msgcenter'))
+
+  // Recent admin consents actions
+  el.querySelector('#dash-consents-view')?.addEventListener('click', async () => await go('applications'))
+  el.querySelector('#dash-consents-dismiss')?.addEventListener('click', () => {
+    const alertEl = el.querySelector('.alert-banner')
+    const tableEl = el.querySelector('.card')
+    if (alertEl) alertEl.style.display = 'none'
+    if (tableEl && tableEl.querySelector('table')) tableEl.style.display = 'none'
+    localStorage.setItem('dashboard_consents_dismissed', new Date().getTime())
+  })
 }
 
 function buildChangeIntelWidget() {
