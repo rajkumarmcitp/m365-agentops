@@ -734,16 +734,27 @@ app.get('/api/permissions', async (req, res) => {
       .top(50)
       .get()
 
+    // Critical permission IDs that indicate high-risk access
+    const criticalPerms = [
+      'Directory.ReadWrite.All', 'User.ReadWrite.All', 'AppRoleAssignment.ReadWrite.All',
+      'Application.ReadWrite.All', 'Domain.ReadWrite.All', 'Organization.ReadWrite.All'
+    ]
+
     const permissions = apps.value
       .filter(a => a.requiredResourceAccess && a.requiredResourceAccess.length > 0)
-      .map(app => ({
-        appId: app.id,
-        appName: app.displayName,
-        resourceAccess: app.requiredResourceAccess || [],
-        riskLevel: 'high',
-        permissions: (app.requiredResourceAccess || []).flatMap(r => r.resourceAccess?.map(ra => ra.id) || []),
-        requiredGrant: true
-      }))
+      .map(app => {
+        const permList = (app.requiredResourceAccess || []).flatMap(r => r.resourceAccess?.map(ra => ra.id) || [])
+        const hasCriticalPerms = permList.some(p => criticalPerms.some(c => p?.includes(c)))
+
+        return {
+          appId: app.id,
+          appName: app.displayName,
+          resourceAccess: app.requiredResourceAccess || [],
+          riskLevel: hasCriticalPerms ? 'critical' : 'high',
+          permissions: permList,
+          requiredGrant: true
+        }
+      })
 
     console.log(`✓ Found ${permissions.length} apps with permissions`)
     res.json({
