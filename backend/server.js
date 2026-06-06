@@ -855,12 +855,9 @@ app.get('/api/admin-consents', async (req, res) => {
       graphClient.api('/applications').top(200).get()
     ])
 
-    const appNameMap = {
-      // Known app mappings
-      '841aeab1-08d2-48b6-8f8f-1c70ff39cdbc': 'M365 AgentOps'
-    }
+    const appNameMap = {}
 
-    // Map by id (clientId is usually the object ID)
+    // Map by id (clientId can be object ID or appId)
     servicePrincipals.value?.forEach(sp => {
       if (sp.id) appNameMap[sp.id] = sp.displayName
       if (sp.appId) appNameMap[sp.appId] = sp.displayName
@@ -1067,11 +1064,7 @@ app.get('/api/recent-consents', async (req, res) => {
       graphClient.api('/applications').top(200).get()
     ])
 
-    const appNameMap = {
-      // Known app mappings
-      '841aeab1-08d2-48b6-8f8f-1c70ff39cdbc': 'M365 AgentOps'
-    }
-    const unmappedClientIds = new Set()
+    const appNameMap = {}
 
     // Map by appId and object ID from service principals
     servicePrincipals.value?.forEach(sp => {
