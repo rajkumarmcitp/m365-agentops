@@ -985,6 +985,8 @@ app.get('/api/recent-consents', async (req, res) => {
       .slice(0, 5)
       .map(grant => {
         let appName = appNameMap[grant.clientId]
+        console.log(`📋 Consent clientId: ${grant.clientId}, mapped name: ${appName || 'NOT FOUND'}`)
+
         if (!appName && grant.clientId) {
           // Try alternative lookups if direct lookup failed
           const altLookup = Object.keys(appNameMap).find(key =>
@@ -992,10 +994,11 @@ app.get('/api/recent-consents', async (req, res) => {
             grant.clientId.includes(key.substring(0, 20))
           )
           appName = altLookup ? appNameMap[altLookup] : null
+          if (appName) console.log(`  ✓ Found via alt lookup: ${appName}`)
         }
         // Fallback to truncated GUID with label if still not found
         if (!appName && grant.clientId) {
-          appName = `[Unknown] ${grant.clientId.substring(0, 20)}...`
+          appName = `[Unknown] ${grant.clientId}...`
         }
         return {
           id: grant.id,
