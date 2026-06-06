@@ -561,11 +561,28 @@ app.get('/api/applications', async (req, res) => {
       .top(50)
       .get()
 
-    console.log(`✓ Found ${apps.value.length} applications`)
+    // Map Graph data to include frontend properties
+    const mapped = apps.value.map(app => ({
+      id: app.id,
+      appId: app.appId,
+      displayName: app.displayName,
+      name: app.displayName,
+      publisherName: app.publisherName,
+      createdDateTime: app.createdDateTime,
+      created: app.createdDateTime,
+      owners: undefined,
+      category: 'app',
+      type: 'Application',
+      status: 'active',
+      risk: undefined,
+      category: 'App Registration'
+    }))
+
+    console.log(`✓ Found ${mapped.length} applications`)
     res.json({
       success: true,
-      count: apps.value.length,
-      data: apps.value
+      count: mapped.length,
+      data: mapped
     })
   } catch (graphError) {
     console.warn('⚠️ Graph API failed, returning simulated data:', graphError.message)
@@ -601,11 +618,28 @@ app.get('/api/service-principals', async (req, res) => {
       .top(50)
       .get()
 
-    console.log(`✓ Found ${sps.value.length} service principals`)
+    // Map Graph data to include frontend properties
+    const mapped = sps.value.map(sp => ({
+      id: sp.id,
+      appId: sp.appId,
+      displayName: sp.displayName,
+      publisherName: sp.publisherName,
+      name: sp.displayName,
+      publisher: sp.publisherName,
+      servicePrincipalType: sp.servicePrincipalType,
+      riskLevel: 'low',
+      usersAssigned: undefined,
+      lastSignIn: undefined,
+      signInCount30d: undefined,
+      adminConsent: false,
+      category: sp.servicePrincipalType === 'Application' ? 'enterprise' : 'other'
+    }))
+
+    console.log(`✓ Found ${mapped.length} service principals`)
     res.json({
       success: true,
-      count: sps.value.length,
-      data: sps.value
+      count: mapped.length,
+      data: mapped
     })
   } catch (graphError) {
     console.warn('⚠️ Graph API failed, returning simulated data:', graphError.message)
