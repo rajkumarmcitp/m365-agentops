@@ -838,6 +838,17 @@ app.get('/api/admin-consents', async (req, res) => {
       .api('/oauth2PermissionGrants')
       .get()
 
+    // Get service principals to map clientId to app names
+    const servicePrincipals = await graphClient
+      .api('/servicePrincipals')
+      .top(200)
+      .get()
+
+    const appNameMap = {}
+    servicePrincipals.value?.forEach(sp => {
+      if (sp.appId) appNameMap[sp.appId] = sp.displayName
+    })
+
     const mapped = (consents.value || []).map(grant => {
       // Determine if this is tenant-wide (no principalId) or user-scoped (has principalId)
       const isTenantWide = !grant.principalId
@@ -845,7 +856,7 @@ app.get('/api/admin-consents', async (req, res) => {
 
       return {
         id: grant.id,
-        appName: grant.clientId ? grant.clientId.substring(0, 20) : 'Unknown App',
+        appName: appNameMap[grant.clientId] || grant.clientId?.substring(0, 20) || 'Unknown App',
         clientId: grant.clientId,
         resourceId: grant.resourceId,
         scope: scopeCategory,
