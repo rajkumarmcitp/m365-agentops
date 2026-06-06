@@ -2286,6 +2286,57 @@ app.use((err, req, res, next) => {
 })
 
 // ============================================================
+// Audit Logs - M365 AgentOps Application Activities
+// ============================================================
+app.get('/api/audit-logs/m365agentops', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const m365AppId = '04d3be8d-d433-4367-893e-eccc82190a11'
+
+    // Query for all M365 AgentOps related audit activities
+    const auditLogs = await graphClient
+      .api('/auditLogs/directoryAudits')
+      .filter(`resources/any(s:s/id eq '${m365AppId}')`)
+      .top(200)
+      .get()
+
+    const activities = []
+    auditLogs.value?.forEach(log => {
+      const changes = log.targetResources?.[0]?.modifiedProperties?.map(p => ({
+        property: p.displayName,
+        oldValue: p.oldValue?.replace(/"/g, '') || 'N/A',
+        newValue: p.newValue?.replace(/"/g, '') || 'N/A'
+      })) || []
+
+      activities.push({
+        id: log.id,
+        activityDateTime: log.activityDateTime,
+        activityDisplayName: log.activityDisplayName,
+        category: log.category,
+        initiatedBy: log.initiatedBy?.user?.userPrincipalName || log.initiatedBy?.app?.displayName || 'System',
+        targetResource: log.targetResources?.[0]?.displayName || 'M365 AgentOps',
+        changes: changes,
+        result: log.result,
+        resultReason: log.result === 'Failure' ? log.failureReason : 'Success'
+      })
+    })
+
+    console.log(`✓ Found ${activities.length} M365 AgentOps related activities in audit logs`)
+    res.json({
+      success: true,
+      count: activities.length,
+      data: activities
+    })
+  } catch (error) {
+    console.warn('⚠️ M365 AgentOps audit logs fetch failed:', error.message)
+    res.json({ success: true, count: 0, data: [] })
+  }
+})
+
+// ============================================================
 // Audit Logs - Consents (for comparison)
 // ============================================================
 app.get('/api/audit-logs/consents', async (req, res) => {
@@ -2306,12 +2357,19 @@ app.get('/api/audit-logs/consents', async (req, res) => {
       const appName = log.targetResources?.[0]?.displayName || 'Unknown'
       const appId = log.targetResources?.[0]?.modifiedProperties?.find(p => p.displayName === 'AppId')?.newValue?.replace(/"/g, '') || 'N/A'
 
+      // Extract permissions/scope from audit log
+      const scopeProp = log.targetResources?.[0]?.modifiedProperties?.find(p =>
+        p.displayName === 'Scope' || p.displayName === 'scope' || p.displayName === 'Permissions'
+      )
+      const permissions = scopeProp?.newValue?.replace(/"/g, '') || scopeProp?.newValue || 'N/A'
+
       consents.push({
         id: log.id,
         activityDateTime: log.activityDateTime,
         activityDisplayName: log.activityDisplayName,
         appName: appName,
         appId: appId,
+        scope: permissions,
         initiatedBy: log.initiatedBy?.user?.userPrincipalName || log.initiatedBy?.app?.displayName || 'Unknown',
         result: log.result,
         resourceId: log.resources?.[0]?.id || 'N/A'
@@ -2356,7 +2414,8 @@ app.use((req, res) => {
       '/api/me/teams',
       '/api/me/devices',
       '/api/me/security',
-      '/api/audit-logs/consents'
+      '/api/audit-logs/consents',
+      '/api/audit-logs/m365agentops'
     ]
   })
 })
