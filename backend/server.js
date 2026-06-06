@@ -956,6 +956,8 @@ app.get('/api/recent-consents', async (req, res) => {
     ])
 
     const appNameMap = {}
+    const unmappedClientIds = new Set()
+
     // Map by appId and object ID from service principals
     servicePrincipals.value?.forEach(sp => {
       if (sp.appId) appNameMap[sp.appId] = sp.displayName || sp.appId
@@ -974,8 +976,66 @@ app.get('/api/recent-consents', async (req, res) => {
 
     console.log(`📊 App name map created with ${Object.keys(appNameMap).length} entries`)
 
-    const now = new Date()
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    // Helper function to resolve app name with multiple strategies
+    const resolveAppName = async (clientId) => {
+      // Strategy 1: Direct lookup in map
+      if (appNameMap[clientId]) {
+        return appNameMap[clientId]
+      }
+
+      // Strategy 2: Query for specific service principal by appId
+      try {
+        const sp = await graphClient
+          .api(`/servicePrincipals?$filter=appId eq '${clientId}'`)
+          .get()
+        if (sp.value?.length > 0) {
+          return sp.value[0].displayName || clientId
+        }
+      } catch (e) {
+        console.warn(`  Could not query SP for ${clientId}:`, e.message)
+      }
+
+      // Strategy 3: Check if it's an application (not service principal)
+      try {
+        const app = await graphClient
+          .api(`/applications?$filter=appId eq '${clientId}'`)
+          .get()
+        if (app.value?.length > 0) {
+          return app.value[0].displayName || clientId
+        }
+      } catch (e) {
+        console.warn(`  Could not query app for ${clientId}:`, e.message)
+      }
+
+      return null
+    }
+
+    // Identify unmapped clientIds and try additional lookups
+    const unmappedIds = new Set()
+    consents.value?.forEach(grant => {
+      if (!appNameMap[grant.clientId]) {
+        unmappedIds.add(grant.clientId)
+      }
+    })
+
+    // Try to resolve unmapped IDs with direct queries
+    if (unmappedIds.size > 0) {
+      console.log(`🔍 Attempting to resolve ${unmappedIds.size} unmapped clientIds...`)
+      for (const clientId of Array.from(unmappedIds).slice(0, 5)) {
+        try {
+          const spResult = await graphClient
+            .api(`/servicePrincipals?$filter=appId eq '${clientId}'`)
+            .get()
+          if (spResult.value?.length > 0) {
+            const displayName = spResult.value[0].displayName
+            appNameMap[clientId] = displayName
+            console.log(`  ✓ Resolved: ${displayName}`)
+          }
+        } catch (error) {
+          console.log(`  ℹ️ Could not resolve ${clientId}`)
+        }
+      }
+    }
 
     const recentConsents = (consents.value || [])
       .filter(grant => {
@@ -984,22 +1044,9 @@ app.get('/api/recent-consents', async (req, res) => {
       })
       .slice(0, 5)
       .map(grant => {
-        let appName = appNameMap[grant.clientId]
-        console.log(`📋 Consent clientId: ${grant.clientId}, mapped name: ${appName || 'NOT FOUND'}`)
+        const appName = appNameMap[grant.clientId] || `[Unknown] ${grant.clientId}`
+        console.log(`📋 Final: ${grant.clientId} → ${appName}`)
 
-        if (!appName && grant.clientId) {
-          // Try alternative lookups if direct lookup failed
-          const altLookup = Object.keys(appNameMap).find(key =>
-            key.includes(grant.clientId.substring(0, 20)) ||
-            grant.clientId.includes(key.substring(0, 20))
-          )
-          appName = altLookup ? appNameMap[altLookup] : null
-          if (appName) console.log(`  ✓ Found via alt lookup: ${appName}`)
-        }
-        // Fallback to truncated GUID with label if still not found
-        if (!appName && grant.clientId) {
-          appName = `[Unknown] ${grant.clientId}...`
-        }
         return {
           id: grant.id,
           appName: appName || 'Unknown App',
