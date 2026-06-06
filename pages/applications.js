@@ -330,23 +330,23 @@ function renderEnterpriseApps() {
         <div class="card">
           <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:8px">
             <div style="flex:1">
-              <div style="font-size:12px;font-weight:700">${app.name}</div>
-              <div style="font-size:10px;color:var(--color-text-tertiary)">${app.publisher}</div>
+              <div style="font-size:12px;font-weight:700">${app.displayName || app.name || '—'}</div>
+              <div style="font-size:10px;color:var(--color-text-tertiary)">${app.publisherName || app.publisher || '—'}</div>
             </div>
-            <span class="badge ${app.riskLevel === 'low' ? 'success' : app.riskLevel === 'high' ? 'danger' : 'info'}">${app.riskLevel}</span>
+            <span class="badge ${app.riskLevel === 'low' ? 'success' : app.riskLevel === 'high' ? 'danger' : 'info'}">${app.riskLevel || '—'}</span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:10px">
             <div>
               <div style="color:var(--color-text-tertiary)">Users Assigned</div>
-              <div style="font-weight:700;font-size:14px">${app.usersAssigned}</div>
+              <div style="font-weight:700;font-size:14px">${app.usersAssigned || '—'}</div>
             </div>
             <div>
               <div style="color:var(--color-text-tertiary)">Last Sign-in</div>
-              <div style="font-weight:600">${app.lastSignIn}</div>
+              <div style="font-weight:600">${app.lastSignIn || '—'}</div>
             </div>
             <div>
               <div style="color:var(--color-text-tertiary)">Sign-ins (30d)</div>
-              <div style="font-weight:700">${app.signInCount30d.toLocaleString()}</div>
+              <div style="font-weight:700">${(app.signInCount30d ? app.signInCount30d.toLocaleString() : '—')}</div>
             </div>
             <div>
               <div style="color:var(--color-text-tertiary)">Admin Consent</div>
