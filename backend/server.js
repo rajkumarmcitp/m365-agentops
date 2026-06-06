@@ -922,11 +922,11 @@ app.get('/api/admin-consents', async (req, res) => {
 
         console.log(`  📊 Total service principals fetched: ${allServicePrincipals.length}`)
 
-        // Search for each unmapped clientId
-        for (const clientId of Array.from(unmappedIds).slice(0, 10)) {
+        // Search for ALL unmapped clientIds
+        for (const clientId of Array.from(unmappedIds)) {
           let found = false
 
-          // Strategy 1: Match by appId
+          // Strategy 1: Direct match by appId
           let match = allServicePrincipals.find(sp => sp.appId === clientId)
           if (match) {
             appNameMap[clientId] = match.displayName
@@ -934,7 +934,7 @@ app.get('/api/admin-consents', async (req, res) => {
             found = true
           }
 
-          // Strategy 2: Match by id
+          // Strategy 2: Direct match by id
           if (!found) {
             match = allServicePrincipals.find(sp => sp.id === clientId)
             if (match) {
@@ -956,7 +956,20 @@ app.get('/api/admin-consents', async (req, res) => {
             }
           }
 
-          // Strategy 4: Partial match on GUID (first 20 chars)
+          // Strategy 4: Case-insensitive match
+          if (!found) {
+            match = allServicePrincipals.find(sp =>
+              sp.appId?.toLowerCase() === clientId.toLowerCase() ||
+              sp.id?.toLowerCase() === clientId.toLowerCase()
+            )
+            if (match) {
+              appNameMap[clientId] = match.displayName
+              console.log(`  ✓ Found by case-insensitive match: ${match.displayName}`)
+              found = true
+            }
+          }
+
+          // Strategy 5: Partial match on GUID (first 20 chars)
           if (!found && clientId.length > 20) {
             const clientIdPrefix = clientId.substring(0, 20)
             match = allServicePrincipals.find(sp =>
@@ -971,11 +984,7 @@ app.get('/api/admin-consents', async (req, res) => {
           }
 
           if (!found) {
-            console.log(`  ✗ Not found: ${clientId}`)
-            // List first 3 SPs for debugging
-            if (allServicePrincipals.length > 0) {
-              console.log(`    Sample SPs: ${allServicePrincipals.slice(0, 3).map(sp => `${sp.displayName} (${sp.appId?.substring(0, 8)})`).join(', ')}`)
-            }
+            console.log(`  ✗ Unable to resolve clientId: ${clientId}`)
           }
         }
       } catch (error) {
