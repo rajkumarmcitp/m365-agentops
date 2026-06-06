@@ -692,16 +692,45 @@ function showValidationResults(el, op, validation, values) {
 // ============================================================
 // Complete Submission
 // ============================================================
-function completeSubmission(el, op, validation) {
+async function completeSubmission(el, op, validation) {
   reqCounter++
 
-  // Store validation result with request
-  if (validation) {
-    formValues._validation = validation
-  }
+  try {
+    // Submit request to backend
+    const submitBtn = el.querySelector('#val-submit')
+    if (submitBtn) {
+      submitBtn.disabled = true
+      submitBtn.innerHTML = '<span class="spinner"></span> Submitting...'
+    }
 
-  portalView = 'submitted'
-  render(el)
+    const response = await fetch(`${api}/requests/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operationId: op.id,
+        fields: formValues,
+        userEmail: window.userEmail,
+        validation: validation || {}
+      })
+    })
+
+    const result = await response.json()
+    if (result.success) {
+      console.log('✓ Request submitted:', result.data.id)
+      showToast('Request submitted successfully', 'success')
+      portalView = 'submitted'
+      render(el)
+    } else {
+      showToast('Failed to submit request: ' + result.error, 'error')
+      if (submitBtn) {
+        submitBtn.disabled = false
+        submitBtn.innerHTML = '<i class="ti ti-send"></i> Confirm & Submit'
+      }
+    }
+  } catch (error) {
+    console.error('Submission error:', error)
+    showToast('Error submitting request. Please try again.', 'error')
+  }
 }
 
 // ============================================================

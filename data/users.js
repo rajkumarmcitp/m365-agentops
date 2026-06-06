@@ -15,7 +15,7 @@ export const USERS = [
     role: 'manager',
     initials: 'SK',
     color: '#3C3489',
-    navAccess: ['requests', 'approvals', 'msgcenter', 'portal', 'myreqs', 'myaccount', 'chat'],
+    navAccess: ['requests', 'msgcenter', 'portal', 'myreqs', 'myaccount', 'chat'],
     pendingApprovals: 3,
   },
   {
@@ -27,7 +27,7 @@ export const USERS = [
     color: '#633806',
     navAccess: [
       'dashboard', 'requests', 'security', 'zerotrust', 'privaccts',
-      'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune',
+      'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune',
       'portal', 'myreqs', 'myaccount', 'chat',
       'audit', 'settings'
     ],
@@ -41,7 +41,7 @@ export const USERS = [
     color: '#791F1F',
     navAccess: [
       'dashboard', 'requests', 'security', 'zerotrust', 'privaccts',
-      'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune',
+      'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune',
       'portal', 'myreqs', 'myaccount', 'chat',
       'audit', 'settings',
       'graphapi', 'sso'

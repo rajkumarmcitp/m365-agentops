@@ -65,11 +65,11 @@ export function renderNav() {
     html += `<div class="nav-section"><div class="nav-section-label">Administration</div>${adminItems}</div>`
   }
 
-  // Manager approvals
-  if (u.role === 'manager') {
-    const mgrItems = buildItems(NAV_ITEMS.manager)
-    if (mgrItems) {
-      html += `<div class="nav-section"><div class="nav-section-label">Approvals</div>${mgrItems}</div>`
+  // Approvals section (for admin and super only)
+  if (['admin', 'super'].includes(u.role) && access.includes('approvals')) {
+    const approvalsItem = NAV_ITEMS.manager.find(it => it.id === 'approvals')
+    if (approvalsItem) {
+      html += `<div class="nav-section"><div class="nav-section-label">Approvals</div>${buildItems([approvalsItem])}</div>`
     }
   }
 

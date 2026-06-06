@@ -5,6 +5,14 @@ import { ClientSecretCredential } from '@azure/identity'
 import { Client } from '@microsoft/microsoft-graph-client'
 import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js'
 import { validateServiceRequest } from './agent.js'
+import {
+  createRequest, getRequestById, listRequests, approveRequest, rejectRequest,
+  addComment, getRequestStats, markProvisioning, markProvisioningSuccess, markProvisioningFailed
+} from './requests.js'
+import {
+  createAuditLog, listAuditLogs, searchAuditLogs, getAuditStats,
+  generateComplianceReport, exportAuditLogs, pruneAuditLogs
+} from './audit.js'
 
 dotenv.config()
 
@@ -14,21 +22,26 @@ const PORT = process.env.PORT || 3000
 // ============================================================
 // Middleware
 // ============================================================
-// CORS configuration - allow all origins (can restrict later)
-app.use(cors({
-  origin: '*',
-  credentials: false,
-  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 3600
-}))
-
-// Additional CORS headers for all responses
+// CORS configuration - allow localhost and production origins
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*')
+  const origin = req.headers.origin || ''
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'https://proud-river-0f55f1e10.7.azurestaticapps.net'
+  ]
+
+  if (allowedOrigins.includes(origin) || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    res.header('Access-Control-Allow-Origin', origin)
+    res.header('Access-Control-Allow-Credentials', 'true')
+  }
+
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   res.header('Access-Control-Max-Age', '3600')
+
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200)
   }
@@ -133,6 +146,197 @@ app.post('/api/agent/validate-request', async (req, res) => {
         autoApprove: false
       }
     })
+  }
+})
+
+// ============================================================
+// Service Requests Management
+// ============================================================
+app.post('/api/requests/submit', async (req, res) => {
+  try {
+    const { operationId, fields, validation } = req.body
+    const userEmail = req.query.email || 'unknown@contoso.com'
+
+    const request = createRequest(operationId, fields, userEmail, validation)
+
+    res.json({
+      success: true,
+      data: request
+    })
+  } catch (error) {
+    console.error('✗ Request submission error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+app.get('/api/requests', async (req, res) => {
+  try {
+    const filters = {
+      status: req.query.status,
+      operationId: req.query.operationId,
+      submittedBy: req.query.submittedBy,
+      pendingApprovalBy: req.query.pendingApprovalBy,
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 20
+    }
+
+    const requests = listRequests(filters)
+
+    res.json({
+      success: true,
+      data: requests,
+      stats: getRequestStats()
+    })
+  } catch (error) {
+    console.error('✗ Request list error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+app.get('/api/requests/:id', async (req, res) => {
+  try {
+    const request = getRequestById(req.params.id)
+    if (!request) {
+      return res.status(404).json({ success: false, error: 'Request not found' })
+    }
+
+    res.json({
+      success: true,
+      data: request
+    })
+  } catch (error) {
+    console.error('✗ Request detail error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+app.post('/api/requests/:id/approve', async (req, res) => {
+  try {
+    const { approverEmail, approverRole, comment } = req.body
+    const request = approveRequest(req.params.id, approverEmail, approverRole, comment)
+
+    res.json({
+      success: true,
+      data: request
+    })
+  } catch (error) {
+    console.error('✗ Approval error:', error.message)
+    res.status(400).json({ success: false, error: error.message })
+  }
+})
+
+app.post('/api/requests/:id/reject', async (req, res) => {
+  try {
+    const { rejectorEmail, rejectorRole, reason } = req.body
+    const request = rejectRequest(req.params.id, rejectorEmail, rejectorRole, reason)
+
+    res.json({
+      success: true,
+      data: request
+    })
+  } catch (error) {
+    console.error('✗ Rejection error:', error.message)
+    res.status(400).json({ success: false, error: error.message })
+  }
+})
+
+app.post('/api/requests/:id/comment', async (req, res) => {
+  try {
+    const { userEmail, userName, text } = req.body
+    const request = addComment(req.params.id, userEmail, userName, text)
+
+    res.json({
+      success: true,
+      data: request
+    })
+  } catch (error) {
+    console.error('✗ Comment error:', error.message)
+    res.status(400).json({ success: false, error: error.message })
+  }
+})
+
+// ============================================================
+// Audit Logging
+// ============================================================
+app.get('/api/audit-logs', async (req, res) => {
+  try {
+    const filters = {
+      action: req.query.action,
+      user: req.query.user,
+      requestId: req.query.requestId,
+      category: req.query.category,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 100
+    }
+
+    const logs = listAuditLogs(filters)
+
+    res.json({
+      success: true,
+      data: logs,
+      stats: getAuditStats()
+    })
+  } catch (error) {
+    console.error('✗ Audit log error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+app.get('/api/audit-logs/search', async (req, res) => {
+  try {
+    const query = req.query.q
+    if (!query || query.length < 2) {
+      return res.status(400).json({ success: false, error: 'Query too short' })
+    }
+
+    const results = searchAuditLogs(query)
+
+    res.json({
+      success: true,
+      data: results
+    })
+  } catch (error) {
+    console.error('✗ Audit search error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+app.get('/api/audit-logs/report/compliance', async (req, res) => {
+  try {
+    const startDate = req.query.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const endDate = req.query.endDate || new Date().toISOString()
+
+    const report = generateComplianceReport(startDate, endDate)
+
+    res.json({
+      success: true,
+      data: report
+    })
+  } catch (error) {
+    console.error('✗ Compliance report error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+app.get('/api/audit-logs/export', async (req, res) => {
+  try {
+    const format = req.query.format || 'json'
+    const logs = exportAuditLogs(format)
+
+    if (format === 'csv') {
+      res.type('text/csv')
+      res.send([logs.headers.join(','), ...logs.rows.map(row => row.join(','))].join('\n'))
+    } else {
+      res.json({
+        success: true,
+        data: logs
+      })
+    }
+  } catch (error) {
+    console.error('✗ Export error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
   }
 })
 

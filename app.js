@@ -266,6 +266,7 @@ async function doLogin(userId) {
   const user = USERS.find(u => u.id === userId)
   if (!user) return
   state.currentUser = user
+  window.userEmail = user.email
   renderShell()
   const defaultPage = user.navAccess[0]
   await go(defaultPage)
@@ -300,9 +301,9 @@ async function doLoginWithEntraID(account) {
 
   // Determine nav access based on role
   const roleNavAccess = {
-    super: ['dashboard', 'requests', 'security', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'audit', 'settings'],
-    admin: ['dashboard', 'requests', 'security', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings'],
-    manager: ['requests', 'approvals', 'msgcenter', 'portal', 'myreqs', 'myaccount', 'chat'],
+    super: ['dashboard', 'requests', 'security', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'audit', 'settings'],
+    admin: ['dashboard', 'requests', 'security', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings'],
+    manager: ['requests', 'msgcenter', 'portal', 'myreqs', 'myaccount', 'chat'],
     user: ['portal', 'myreqs', 'myaccount', 'chat']
   }
 
@@ -338,13 +339,6 @@ function renderShell() {
       <nav id="sidebar"></nav>
       <div id="main-content">
         <header id="app-header"></header>
-        ${state.currentUser?.role === 'manager' ? `
-          <div class="manager-alert-bar">
-            <i class="ti ti-alert-triangle"></i>
-            <strong>3 requests pending your approval</strong> — including 1 overdue.
-            <a href="#" id="alert-approvals-link" style="margin-left:4px;text-decoration:underline;cursor:pointer;">Review now</a>
-          </div>
-        ` : ''}
         <div id="page-area">
           ${renderAllPages()}
         </div>
@@ -354,11 +348,6 @@ function renderShell() {
 
   renderHeader()
   renderNav()
-
-  if (state.currentUser?.role === 'manager') {
-    const lnk = document.getElementById('alert-approvals-link')
-    if (lnk) lnk.addEventListener('click', async e => { e.preventDefault(); await go('approvals') })
-  }
 }
 
 function renderAllPages() {
