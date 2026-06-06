@@ -720,7 +720,7 @@ app.get('/api/secrets-certificates', async (req, res) => {
   }
 })
 
-// Comprehensive Microsoft Graph permission ID to name mapping (no duplicates)
+// Comprehensive Microsoft Graph permission ID to name mapping
 const PERMISSION_NAMES = {
   '01d4889c-1287-42c6-ace1-5b8856e3ffc4': 'Policy.ReadWrite.ApplicationConfiguration',
   '024d486e-b451-40bb-833d-3b7649d3bfa3': 'Mail.ReadWrite',
@@ -761,11 +761,22 @@ const PERMISSION_NAMES = {
   'e2a3a72e-5f79-4c64-b1b1-878b674786c9': 'offline_access',
   '38d9df27-c810-46e6-a63c-b9fc104e57c5': 'IdentityUserFlow.ReadWrite.All',
   '37f7f235-527c-4136-accd-4a02d197296e': 'openid profile',
-  '62ade113-d7b7-4dd0-8f4c-61e6e48f21cb': 'Organization.ReadWrite.All',
   '64a6cdd6-aab1-4aaf-94b8-3733c52faf2b': 'DeviceManagementManagedDevices.ReadWrite.All',
   '58ca0d9a-b36d-440f-8be8-51eb1b6a8f3b': 'Compliance.Read.All',
   '82866913-37c0-46b5-9ff1-b6a1989f06ab': 'Group.ReadWrite.All',
-  'f8f035bb-2637-43b7-9cad-dd111c343d4b': 'RoleManagement.ReadWrite.CloudPC'
+  'f8f035bb-2637-43b7-9cad-dd111c343d4b': 'RoleManagement.ReadWrite.CloudPC',
+  // Additional common permissions
+  '17dde5f0-6ea6-4d1b-b5a5-ae36bf046953': 'AppCatalog.Submit',
+  '0c9cda19-e669-4c1b-beac-41e02639501d': 'AppCatalog.Read.All',
+  '243cded2-bd16-4fd6-a953-ff8e5c25524e': 'Channel.ReadBasic.All',
+  '6e3195ee-6824-4579-b236-2ea08531dab4': 'User.Read',
+  '14dad69e-099b-42c9-810b-df8970720e7f': 'User.ReadBasic.All',
+  '19dbc75e-c80e-487c-9301-6e0ec893786b': 'Files.ReadWrite.All',
+  '5df07973-7d5d-46ed-9847-1271055cbd51': 'TermStore.ReadWrite.All',
+  '640dac16-e5b7-43ec-9159-cdc7521ff1d9': 'Sites.ReadWrite.All',
+  '02e97684-e7b3-426f-8350-2b8ddb007a0e': 'Report.Read.All',
+  'c37f70ae-a8eb-4e60-a1f6-82e8a06dcd2d': 'UserState.ReadWrite.All',
+  '07410204-174a-4384-97e1-1a7e57caf79a': 'Dataset.Read.All'
 }
 
 function getPermissionName(id) {
@@ -859,6 +870,35 @@ app.get('/api/admin-consents', async (req, res) => {
     })
 
     console.log(`📊 App name map has ${Object.keys(appNameMap).length} entries`)
+
+    // Identify unmapped clientIds and attempt direct resolution
+    const unmappedIds = new Set()
+    consents.value?.forEach(grant => {
+      if (!appNameMap[grant.clientId]) {
+        unmappedIds.add(grant.clientId)
+      }
+    })
+
+    // Try to resolve unmapped IDs
+    if (unmappedIds.size > 0) {
+      console.log(`🔍 Attempting to resolve ${unmappedIds.size} unmapped clientIds...`)
+      for (const clientId of Array.from(unmappedIds).slice(0, 10)) {
+        try {
+          const spResult = await graphClient
+            .api(`/servicePrincipals?$filter=appId eq '${clientId}'`)
+            .get()
+          if (spResult.value?.length > 0) {
+            const displayName = spResult.value[0].displayName
+            appNameMap[clientId] = displayName
+            console.log(`  ✓ Resolved: ${displayName}`)
+          } else {
+            console.log(`  ℹ️ No SP found for ${clientId.substring(0, 20)}...`)
+          }
+        } catch (error) {
+          console.log(`  ⚠️ Query failed for ${clientId.substring(0, 20)}...`)
+        }
+      }
+    }
 
     const mapped = (consents.value || []).map(grant => {
       // Determine if this is tenant-wide (no principalId) or user-scoped (has principalId)
