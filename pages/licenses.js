@@ -279,6 +279,12 @@ function renderAssignments() {
 }
 
 function renderGroups() {
+  // Helper to get license name from skuId
+  const getLicenseName = (skuId) => {
+    const license = realLicenses.find(l => l.id === skuId)
+    return license?.name || skuId || '—'
+  }
+
   return `
     <div class="card" style="padding:0;overflow:hidden">
       ${groupLicensing.length === 0 ? `
@@ -291,17 +297,27 @@ function renderGroups() {
           <thead><tr>
             <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Group Name</th>
             <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Type</th>
+            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Assigned Licenses</th>
             <th style="padding:12px;text-align:center;font-weight:600;font-size:11px">Members</th>
-            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Method</th>
+            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Assignment</th>
           </tr></thead>
           <tbody>
             ${groupLicensing.map(g => `
               <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-                <td style="padding:12px"><strong style="font-size:11px">${g.displayName || '—'}</strong></td>
+                <td style="padding:12px">
+                  <div><strong style="font-size:11px">${g.displayName || '—'}</strong></div>
+                  <div style="font-size:10px;color:var(--color-text-tertiary)">${g.mail || g.mailNickname || '—'}</div>
+                </td>
                 <td style="padding:12px;font-size:10px"><span class="badge info">${g.groupType || 'Static'}</span></td>
+                <td style="padding:12px;font-size:10px">
+                  ${(g.assignedLicenses || []).length > 0 ?
+                    (g.assignedLicenses.map(lic => `<span class="badge secondary" style="margin-right:4px;margin-bottom:4px">${getLicenseName(lic.skuId)}</span>`).join(''))
+                    : '—'
+                  }
+                </td>
                 <td style="padding:12px;text-align:center;font-weight:600">${g.memberCount || 0}</td>
                 <td style="padding:12px;font-size:10px">
-                  <span class="badge secondary">${g.licenseMethod || 'Group-Based'}</span>
+                  <span class="badge secondary">${g.assignmentMethod || 'Group-Based'}</span>
                 </td>
               </tr>
             `).join('')}

@@ -1182,33 +1182,53 @@ app.get('/api/licenses/groups', async (req, res) => {
       throw new Error('Graph Client not initialized')
     }
 
-    // Get groups with assigned licenses
-    const groups = await graphClient
+    // Get all groups and filter for those with licenses
+    console.log('📋 Fetching all groups to find those with licenses...')
+    const allGroups = await graphClient
       .api('/groups')
-      .filter("assignedLicenses/$count ne 0")
-      .select(['id', 'displayName', 'mailNickname', 'membershipRule', 'groupTypes'])
+      .select(['id', 'displayName', 'mailNickname', 'membershipRule', 'groupTypes', 'assignedLicenses', 'mail'])
       .top(200)
       .get()
 
     const groupLicensing = []
-    for (const group of (groups.value || []).slice(0, 50)) {
+
+    for (const group of (allGroups.value || [])) {
+      // Check if group has assignedLicenses
+      if (!group.assignedLicenses || group.assignedLicenses.length === 0) {
+        continue
+      }
+
       try {
-        const members = await graphClient
+        // Get member count
+        const membersResponse = await graphClient
           .api(`/groups/${group.id}/members`)
+          .count(true)
           .top(1)
           .get()
 
+        const memberCount = membersResponse['@odata.count'] || 0
+
+        // Get license details
+        const licenses = group.assignedLicenses || []
+        const licenseNames = licenses.map(lic => lic.skuId).join(', ')
+
         groupLicensing.push({
           groupId: group.id,
-          displayName: group.displayName,
+          displayName: group.displayName || 'Unknown Group',
           mailNickname: group.mailNickname,
+          mail: group.mail,
           groupType: (group.groupTypes || []).includes('DynamicMembership') ? 'Dynamic' : 'Static',
-          memberCount: members['@odata.count'] || 0,
+          memberCount: memberCount,
+          assignedLicenses: licenses,
+          licenseCount: licenses.length,
           isLicenseGroup: true,
-          licenseMethod: 'Group-Based'
+          licenseMethod: 'Group-Based',
+          assignmentMethod: (group.groupTypes || []).includes('DynamicMembership') ? 'Dynamic Group' : 'Direct Assignment'
         })
+
+        console.log(`✓ Found group with license: ${group.displayName} (${memberCount} members, ${licenses.length} licenses)`)
       } catch (error) {
-        console.warn(`⚠️ Could not fetch group ${group.displayName}:`, error.message)
+        console.warn(`⚠️ Error fetching details for group ${group.displayName}:`, error.message)
       }
     }
 
@@ -1219,7 +1239,8 @@ app.get('/api/licenses/groups', async (req, res) => {
       data: groupLicensing
     })
   } catch (error) {
-    console.warn('⚠️ License groups fetch failed:', error.message)
+    console.error('❌ License groups fetch failed:', error.message)
+    console.error('Stack:', error.stack)
     res.json({ success: true, count: 0, data: [] })
   }
 })
