@@ -2479,15 +2479,18 @@ app.get('/api/audit-logs/consents', async (req, res) => {
         console.log(`Entry ${idx}: app=${appName}, extracted=${permissions.substring(0, 40)}, full ConsentAction=${consentActionProp?.newValue?.substring(0, 100)}...`)
       }
 
-      // Include all modified properties for first entry (for debugging)
-      if (idx === 0) {
+      // Include all modified properties for first 3 entries (for debugging)
+      if (idx < 3) {
         consentEntry._debugAllProps = allProps.map(p => ({
           displayName: p.displayName,
           oldValue: p.oldValue,
           newValue: p.newValue
         }))
-        consentEntry._debugLogKeys = Object.keys(log)
-        consentEntry._debugAdditionalDetails = log.additionalDetails
+        consentEntry._debugConsentActionRaw = consentActionProp?.newValue?.substring(0, 200)
+        if (idx === 0) {
+          consentEntry._debugLogKeys = Object.keys(log)
+          consentEntry._debugAdditionalDetails = log.additionalDetails
+        }
       }
 
       consents.push(consentEntry)
