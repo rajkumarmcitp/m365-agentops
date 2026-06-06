@@ -725,6 +725,7 @@ app.get('/api/secrets-certificates', async (req, res) => {
 // ============================================================
 app.get('/api/permissions', async (req, res) => {
   try {
+    console.log('📱 Fetching permissions from Graph API...')
     if (!graphClient) {
       throw new Error('Graph Client not initialized')
     }
@@ -734,36 +735,27 @@ app.get('/api/permissions', async (req, res) => {
       .top(50)
       .get()
 
-    // Critical permission IDs that indicate high-risk access
-    const criticalPerms = [
-      'Directory.ReadWrite.All', 'User.ReadWrite.All', 'AppRoleAssignment.ReadWrite.All',
-      'Application.ReadWrite.All', 'Domain.ReadWrite.All', 'Organization.ReadWrite.All'
-    ]
+    const permissions = []
+    apps.value.forEach(app => {
+      if (app.requiredResourceAccess && app.requiredResourceAccess.length > 0) {
+        const perms = []
+        app.requiredResourceAccess.forEach(resource => {
+          if (resource.resourceAccess) {
+            resource.resourceAccess.forEach(access => {
+              if (access.id) perms.push(access.id)
+            })
+          }
+        })
 
-    const permissions = apps.value
-      .filter(a => a.requiredResourceAccess && a.requiredResourceAccess.length > 0)
-      .map(app => {
-        const permList = []
-        if (app.requiredResourceAccess) {
-          app.requiredResourceAccess.forEach(r => {
-            if (r.resourceAccess) {
-              r.resourceAccess.forEach(ra => {
-                if (ra.id) permList.push(ra.id)
-              })
-            }
-          })
-        }
-        const hasCriticalPerms = permList.some(p => p && criticalPerms.some(c => p.includes(c)))
-
-        return {
+        permissions.push({
           appId: app.id,
           appName: app.displayName,
-          resourceAccess: app.requiredResourceAccess || [],
-          riskLevel: hasCriticalPerms ? 'critical' : 'high',
-          permissions: permList,
+          riskLevel: 'high',
+          permissions: perms,
           requiredGrant: true
-        }
-      })
+        })
+      }
+    })
 
     console.log(`✓ Found ${permissions.length} apps with permissions`)
     res.json({
@@ -772,7 +764,7 @@ app.get('/api/permissions', async (req, res) => {
       data: permissions
     })
   } catch (error) {
-    console.warn('⚠️ Graph API failed, returning empty:', error.message)
+    console.warn('⚠️ Permissions fetch failed:', error.message)
     res.json({ success: true, count: 0, data: [] })
   }
 })
