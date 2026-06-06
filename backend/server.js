@@ -1045,6 +1045,77 @@ app.get('/api/admin-consents', async (req, res) => {
 })
 
 // ============================================================
+// Licenses
+// ============================================================
+app.get('/api/licenses', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    // Get subscription SKUs (licenses)
+    const skus = await graphClient
+      .api('/subscribedSkus')
+      .get()
+
+    const licenses = (skus.value || []).map(sku => {
+      const consumed = sku.prepaidUnits?.enabled || 0
+      const warning = sku.prepaidUnits?.warning || 0
+      const suspended = sku.prepaidUnits?.suspended || 0
+      const available = (sku.prepaidUnits?.enabled || 0) - (sku.consumedUnits || 0)
+
+      // Determine health status
+      let status = 'healthy'
+      let statusCls = 'success'
+      const utilizationPct = consumed > 0 ? ((sku.consumedUnits || 0) / consumed * 100) : 0
+
+      if (utilizationPct >= 95) {
+        status = 'critical'
+        statusCls = 'danger'
+      } else if (utilizationPct >= 80) {
+        status = 'monitor'
+        statusCls = 'warning'
+      }
+
+      return {
+        id: sku.id,
+        name: sku.skuPartNumber || sku.skuId || 'Unknown License',
+        total: consumed,
+        consumed: sku.consumedUnits || 0,
+        available: Math.max(0, available),
+        status: status,
+        statusCls: statusCls,
+        utilizationPct: Math.round(utilizationPct)
+      }
+    })
+
+    // Sort by utilization percentage descending
+    licenses.sort((a, b) => b.utilizationPct - a.utilizationPct)
+
+    // Calculate totals
+    const totalLicenses = licenses.reduce((sum, l) => sum + l.total, 0)
+    const totalConsumed = licenses.reduce((sum, l) => sum + l.consumed, 0)
+    const totalAvailable = licenses.reduce((sum, l) => sum + l.available, 0)
+
+    console.log(`✓ Found ${licenses.length} license SKUs`)
+    res.json({
+      success: true,
+      count: licenses.length,
+      data: licenses,
+      summary: {
+        total: totalLicenses,
+        consumed: totalConsumed,
+        available: totalAvailable,
+        utilizationPct: totalLicenses > 0 ? Math.round(totalConsumed / totalLicenses * 100) : 0
+      }
+    })
+  } catch (error) {
+    console.warn('⚠️ Licenses fetch failed:', error.message)
+    res.json({ success: true, count: 0, data: [], summary: { total: 0, consumed: 0, available: 0, utilizationPct: 0 } })
+  }
+})
+
+// ============================================================
 // Usage Analytics
 // ============================================================
 app.get('/api/usage-analytics', async (req, res) => {
