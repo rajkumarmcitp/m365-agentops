@@ -2285,36 +2285,6 @@ app.use((err, req, res, next) => {
   })
 })
 
-// 404 Handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Endpoint not found',
-    path: req.path,
-    availableEndpoints: [
-      '/api/health',
-      '/api/user/role',
-      '/api/devices',
-      '/api/device-compliance-policies',
-      '/api/security/score',
-      '/api/users',
-      '/api/identity/risky-users',
-      '/api/applications',
-      '/api/service-principals',
-      '/api/threat-assessment',
-      '/api/me',
-      '/api/me/profile',
-      '/api/me/signin-activity',
-      '/api/me/licenses',
-      '/api/me/groups',
-      '/api/me/onedrive',
-      '/api/me/teams',
-      '/api/me/devices',
-      '/api/me/security'
-    ]
-  })
-})
-
 // ============================================================
 // Audit Logs - Consents (for comparison)
 // ============================================================
@@ -2358,6 +2328,37 @@ app.get('/api/audit-logs/consents', async (req, res) => {
     console.warn('⚠️ Audit logs fetch failed:', error.message)
     res.json({ success: true, count: 0, data: [] })
   }
+})
+
+// 404 Handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Endpoint not found',
+    path: req.path,
+    availableEndpoints: [
+      '/api/health',
+      '/api/user/role',
+      '/api/devices',
+      '/api/device-compliance-policies',
+      '/api/security/score',
+      '/api/users',
+      '/api/identity/risky-users',
+      '/api/applications',
+      '/api/service-principals',
+      '/api/threat-assessment',
+      '/api/me',
+      '/api/me/profile',
+      '/api/me/signin-activity',
+      '/api/me/licenses',
+      '/api/me/groups',
+      '/api/me/onedrive',
+      '/api/me/teams',
+      '/api/me/devices',
+      '/api/me/security',
+      '/api/audit-logs/consents'
+    ]
+  })
 })
 
 // ============================================================
