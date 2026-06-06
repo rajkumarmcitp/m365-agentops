@@ -869,7 +869,6 @@ app.get('/api/admin-consents', async (req, res) => {
       if (app.appId) appNameMap[app.appId] = app.displayName
     })
 
-    console.log(`📊 Initial app name map: ${Object.keys(appNameMap).length} entries`)
 
     console.log(`📊 App name map has ${Object.keys(appNameMap).length} entries`)
 
@@ -1085,10 +1084,6 @@ app.get('/api/recent-consents', async (req, res) => {
     })
 
     console.log(`📊 App name map created with ${Object.keys(appNameMap).length} entries`)
-
-    // Log M365 AgentOps lookup
-    const m365AppId = '04d3be8d-d433-4367-893e-eccc82190a11'
-    console.log(`🔍 M365 AgentOps lookup: ${appNameMap[m365AppId] || 'NOT FOUND in initial map'}`)
 
     // Helper function to resolve app name with multiple strategies
     const resolveAppName = async (clientId) => {
