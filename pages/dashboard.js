@@ -1,10 +1,11 @@
 import { go } from '../app.js'
-import { getDevices, getUsers, getSecurityScore } from '../lib/api-client.js'
+import { getDevices, getUsers, getSecurityScore, api } from '../lib/api-client.js'
 import { MC_MESSAGES, SVC_HEALTH, SVC_META } from '../data/msgcenter-data.js'
 
 let realDeviceCount = 0
 let realUserCount = 0
 let realSecureScore = null
+let recentConsents = []
 
 export async function initDashboard() {
   const el = document.getElementById('page-dashboard')
@@ -19,12 +20,23 @@ export async function initDashboard() {
     const usersResult = await getUsers()
     const scoreResult = await getSecurityScore()
 
+    // Fetch recent consents
+    try {
+      const consentsRes = await fetch(`${api}/recent-consents`)
+      const consentsData = await consentsRes.json()
+      if (consentsData.success) {
+        recentConsents = consentsData.data || []
+      }
+    } catch (e) {
+      console.warn('⚠️ Failed to fetch recent consents:', e.message)
+    }
+
     // Set real counts with fallback
     realDeviceCount = (devicesResult.success && devicesResult.count) ? devicesResult.count : 847
     realUserCount = (usersResult.success && usersResult.count) ? usersResult.count : 1000
     realSecureScore = scoreResult.success ? scoreResult.data : null
 
-    console.log(`✅ Loaded dashboard data: ${realDeviceCount} devices, ${realUserCount} users`)
+    console.log(`✅ Loaded dashboard data: ${realDeviceCount} devices, ${realUserCount} users, ${recentConsents.length} recent consents`)
   } catch (error) {
     console.error('❌ Error loading dashboard data:', error)
   }
@@ -40,6 +52,18 @@ export async function initDashboard() {
         <button class="btn btn-primary"><i class="ti ti-download"></i> Export</button>
       </div>
     </div>
+
+    <!-- Recent Admin Consents Alert -->
+    ${recentConsents.length > 0 ? `
+      <div class="alert-banner warning mb-3" id="recent-consents-alert" style="display:flex;align-items:center;justify-content:space-between">
+        <div style="flex:1">
+          <i class="ti ti-alert-circle" style="margin-right:8px"></i>
+          <strong>${recentConsents.length} new admin consent${recentConsents.length > 1 ? 's' : ''} granted</strong>
+          ${recentConsents.length > 0 ? `<div style="font-size:10px;margin-top:4px;color:var(--color-text-secondary)">${recentConsents.map(c => c.appName).join(', ')}</div>` : ''}
+        </div>
+        <button style="background:none;border:none;cursor:pointer;font-size:16px;padding:0 8px" onclick="document.getElementById('recent-consents-alert').style.display='none'">✕</button>
+      </div>
+    ` : ''}
 
     <!-- KPI Tiles -->
     <div class="kpi-row">
