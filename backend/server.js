@@ -846,32 +846,33 @@ app.get('/api/admin-consents', async (req, res) => {
 
     const appNameMap = {}
 
-    // Map by appId from service principals
+    // Map by id (clientId is usually the object ID)
     servicePrincipals.value?.forEach(sp => {
+      if (sp.id) appNameMap[sp.id] = sp.displayName
       if (sp.appId) appNameMap[sp.appId] = sp.displayName
     })
 
-    // Map by appId from applications
+    // Map by id and appId from applications
     applications.value?.forEach(app => {
+      if (app.id) appNameMap[app.id] = app.displayName
       if (app.appId) appNameMap[app.appId] = app.displayName
     })
 
-    // Also map by id (in case clientId is the object ID not appId)
-    servicePrincipals.value?.forEach(sp => {
-      if (sp.id) appNameMap[sp.id] = sp.displayName
-    })
-    applications.value?.forEach(app => {
-      if (app.id) appNameMap[app.id] = app.displayName
-    })
+    console.log(`📊 App name map has ${Object.keys(appNameMap).length} entries`)
 
     const mapped = (consents.value || []).map(grant => {
       // Determine if this is tenant-wide (no principalId) or user-scoped (has principalId)
       const isTenantWide = !grant.principalId
       const scopeCategory = isTenantWide ? 'Tenant-wide' : 'User'
 
+      const appName = appNameMap[grant.clientId]
+      if (!appName) {
+        console.warn(`⚠️ Could not find app name for clientId: ${grant.clientId}`)
+      }
+
       return {
         id: grant.id,
-        appName: appNameMap[grant.clientId] || 'Unknown App',
+        appName: appName || 'Unknown App',
         clientId: grant.clientId,
         resourceId: grant.resourceId,
         scope: scopeCategory,
