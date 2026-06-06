@@ -248,6 +248,8 @@ function renderSection() {
 // EXECUTIVE DASHBOARD
 // ============================================================
 function renderExecutive() {
+  console.log(`📊 Executive: Apps=${realApps.length}, SPs=${realServicePrincipals.length}, Secrets=${realSecrets.length}`)
+
   const expSec = realSecrets.filter(x => x.status === 'expiring').length
   const expiredSec = realSecrets.filter(x => x.status === 'expired').length
   const critRisk = realRisks.filter(x => x.severity === 'critical').length
