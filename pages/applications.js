@@ -87,11 +87,11 @@ function render(el) {
     <!-- Top-5 KPI strip -->
     <div class="kpi-row mb-3">
       <div class="kpi-tile">
-        <div class="kpi-value info">${realApps.length || APPS_SUMMARY.totalAppRegistrations}</div>
+        <div class="kpi-value info">${realApps.length}</div>
         <div class="kpi-label">App Registrations</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value info">${realServicePrincipals.length || APPS_SUMMARY.totalEnterpriseApplications}</div>
+        <div class="kpi-value info">${realServicePrincipals.length}</div>
         <div class="kpi-label">Enterprise Apps</div>
       </div>
       <div class="kpi-tile">
@@ -257,7 +257,7 @@ function renderExecutive() {
 // APP REGISTRATIONS
 // ============================================================
 function renderAppRegistrations() {
-  const apps = realApps.length > 0 ? realApps : APP_REGISTRATIONS
+  const apps = realApps.length > 0 ? realApps : []
   const filtered = apps.filter(app => {
     if (appFilter.type !== 'all' && app.category !== appFilter.type) return false
     if (appFilter.status !== 'all' && app.status !== appFilter.status) return false
@@ -296,12 +296,12 @@ function renderAppRegistrations() {
         <tbody>
           ${filtered.map(app => `
             <tr>
-              <td style="font-weight:600">${app.name}${app.risk ? ` <span class="badge danger" style="font-size:8px">${app.risk}</span>` : ''}</td>
-              <td><code style="font-size:10px;color:var(--clr-info-text)">${app.appId.substring(0,8)}...</code></td>
-              <td style="font-size:11px">${app.created}</td>
-              <td style="font-size:10px">${app.owners.length === 0 ? '<span class="badge danger">No owner</span>' : app.owners.join(', ')}</td>
-              <td><span class="pill">${app.type}</span></td>
-              <td><span class="badge ${app.status === 'active' ? 'success' : 'warning'}">${app.status}</span></td>
+              <td style="font-weight:600">${app.displayName || app.name || '—'}${app.risk ? ` <span class="badge danger" style="font-size:8px">${app.risk}</span>` : ''}</td>
+              <td><code style="font-size:10px;color:var(--clr-info-text)">${(app.appId || '').substring(0,8) || '—'}</code></td>
+              <td style="font-size:11px">${app.createdDateTime ? new Date(app.createdDateTime).toLocaleDateString() : '—'}</td>
+              <td style="font-size:10px">${(app.owners && app.owners.length > 0) ? app.owners.join(', ') : '—'}</td>
+              <td><span class="pill">${app.type || '—'}</span></td>
+              <td><span class="badge ${app.status === 'active' ? 'success' : 'warning'}">${app.status || '—'}</span></td>
               <td style="text-align:center;font-size:16px">${app.risk === 'critical' ? '🔴' : app.risk === 'high' ? '🟠' : '🟢'}</td>
             </tr>
           `).join('')}
@@ -315,7 +315,7 @@ function renderAppRegistrations() {
 // ENTERPRISE APPLICATIONS
 // ============================================================
 function renderEnterpriseApps() {
-  const sps = realServicePrincipals.length > 0 ? realServicePrincipals : ENTERPRISE_APPLICATIONS
+  const sps = realServicePrincipals.length > 0 ? realServicePrincipals : []
   const cats = [...new Set(sps.map(a => a.category || 'Other'))]
   return `
     <div class="filter-bar mb-3">
