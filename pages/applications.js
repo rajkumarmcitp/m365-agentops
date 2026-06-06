@@ -44,88 +44,96 @@ export async function initApplications() {
 
   el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading real M365 application data...</p></div>`
 
+  console.log('📡 Fetching real application data from backend...')
+
+  // Load applications
+  const appsResult = await getApplications()
+  if (appsResult?.success) {
+    realApps = appsResult.data || APP_REGISTRATIONS
+    console.log(`✅ Apps: ${realApps.length}`)
+  } else {
+    realApps = APP_REGISTRATIONS
+  }
+
+  // Load service principals
+  const spResult = await getServicePrincipals()
+  if (spResult?.success) {
+    realServicePrincipals = spResult.data || ENTERPRISE_APPLICATIONS
+    console.log(`✅ SPs: ${realServicePrincipals.length}`)
+  } else {
+    realServicePrincipals = ENTERPRISE_APPLICATIONS
+  }
+
+  // Load secrets
   try {
-    console.log('📡 Fetching real application data from backend...')
-
-    const results = await Promise.allSettled([
-      getApplications(),
-      getServicePrincipals(),
-      fetch(`${api}/secrets-certificates`).then(r => r.json()),
-      fetch(`${api}/permissions`).then(r => r.json()),
-      fetch(`${api}/admin-consents`).then(r => r.json()),
-      fetch(`${api}/usage-analytics`).then(r => r.json()),
-      fetch(`${api}/risk-assessment`).then(r => r.json()),
-      fetch(`${api}/recommendations`).then(r => r.json()),
-    ])
-
-    // Applications
-    if (results[0].status === 'fulfilled' && results[0].value.success) {
-      realApps = results[0].value.data || APP_REGISTRATIONS
-      console.log(`✅ Loaded ${realApps.length} applications`)
-    } else {
-      realApps = APP_REGISTRATIONS
+    const r = await fetch(`${api}/secrets-certificates`)
+    const d = await r.json()
+    if (d?.success) {
+      realSecrets = d.data || []
+      console.log(`✅ Secrets: ${realSecrets.length}`)
     }
+  } catch (e) {
+    console.warn('⚠️ Secrets error:', e.message)
+  }
 
-    // Service Principals
-    if (results[1].status === 'fulfilled' && results[1].value.success) {
-      realServicePrincipals = results[1].value.data || ENTERPRISE_APPLICATIONS
-      console.log(`✅ Loaded ${realServicePrincipals.length} service principals`)
-    } else {
-      realServicePrincipals = ENTERPRISE_APPLICATIONS
+  // Load permissions
+  try {
+    const r = await fetch(`${api}/permissions`)
+    const d = await r.json()
+    if (d?.success) {
+      realPermissions = d.data || []
+      console.log(`✅ Permissions: ${realPermissions.length}`)
     }
+  } catch (e) {
+    console.warn('⚠️ Permissions error:', e.message)
+  }
 
-    // Secrets & Certificates
-    if (results[2].status === 'fulfilled' && results[2].value.success) {
-      realSecrets = results[2].value.data || realSecrets
-      console.log(`✅ Loaded ${realSecrets.length} secrets/certificates`)
-    } else {
-      realSecrets = realSecrets
+  // Load consents
+  try {
+    const r = await fetch(`${api}/admin-consents`)
+    const d = await r.json()
+    if (d?.success) {
+      realConsents = d.data || []
+      console.log(`✅ Consents: ${realConsents.length}`)
     }
+  } catch (e) {
+    console.warn('⚠️ Consents error:', e.message)
+  }
 
-    // Permissions
-    if (results[3].status === 'fulfilled' && results[3].value.success) {
-      realPermissions = results[3].value.data || realPermissions
-      console.log(`✅ Loaded ${realPermissions.length} permissions`)
-    } else {
-      realPermissions = realPermissions
+  // Load usage
+  try {
+    const r = await fetch(`${api}/usage-analytics`)
+    const d = await r.json()
+    if (d?.success) {
+      realUsage = d.data || []
+      console.log(`✅ Usage: ${realUsage.length}`)
     }
+  } catch (e) {
+    console.warn('⚠️ Usage error:', e.message)
+  }
 
-    // Admin Consents
-    if (results[4].status === 'fulfilled' && results[4].value.success) {
-      realConsents = results[4].value.data || realConsents
-      console.log(`✅ Loaded ${realConsents.length} admin consents`)
-    } else {
-      realConsents = realConsents
+  // Load risks
+  try {
+    const r = await fetch(`${api}/risk-assessment`)
+    const d = await r.json()
+    if (d?.success) {
+      realRisks = d.data || []
+      console.log(`✅ Risks: ${realRisks.length}`)
     }
+  } catch (e) {
+    console.warn('⚠️ Risk error:', e.message)
+  }
 
-    // Usage Analytics
-    if (results[5].status === 'fulfilled' && results[5].value.success) {
-      realUsage = results[5].value.data || realUsage
-      console.log(`✅ Loaded ${realUsage.length} usage records`)
-    } else {
-      realUsage = realUsage
+  // Load recommendations
+  try {
+    const r = await fetch(`${api}/recommendations`)
+    const d = await r.json()
+    if (d?.success) {
+      realRecommendations = d.data || []
+      console.log(`✅ Recs: ${realRecommendations.length}`)
     }
-
-    // Risk Assessment
-    if (results[6].status === 'fulfilled' && results[6].value.success) {
-      realRisks = results[6].value.data || realRisks
-      console.log(`✅ Loaded ${realRisks.length} risk assessments`)
-    } else {
-      realRisks = realRisks
-    }
-
-    // Recommendations
-    if (results[7].status === 'fulfilled' && results[7].value.success) {
-      realRecommendations = results[7].value.data || realRecommendations
-      console.log(`✅ Loaded ${realRecommendations.length} recommendations`)
-    } else {
-      realRecommendations = realRecommendations
-    }
-  } catch (error) {
-    console.error('❌ Error loading application data:', error)
-    realApps = APP_REGISTRATIONS || []
-    realServicePrincipals = ENTERPRISE_APPLICATIONS || []
-    // Keep real* arrays as-is if fetch failed
+  } catch (e) {
+    console.warn('⚠️ Recs error:', e.message)
   }
 
   render(el)
