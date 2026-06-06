@@ -743,8 +743,17 @@ app.get('/api/permissions', async (req, res) => {
     const permissions = apps.value
       .filter(a => a.requiredResourceAccess && a.requiredResourceAccess.length > 0)
       .map(app => {
-        const permList = (app.requiredResourceAccess || []).flatMap(r => r.resourceAccess?.map(ra => ra.id) || [])
-        const hasCriticalPerms = permList.some(p => criticalPerms.some(c => p?.includes(c)))
+        const permList = []
+        if (app.requiredResourceAccess) {
+          app.requiredResourceAccess.forEach(r => {
+            if (r.resourceAccess) {
+              r.resourceAccess.forEach(ra => {
+                if (ra.id) permList.push(ra.id)
+              })
+            }
+          })
+        }
+        const hasCriticalPerms = permList.some(p => p && criticalPerms.some(c => p.includes(c)))
 
         return {
           appId: app.id,
