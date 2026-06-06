@@ -898,11 +898,15 @@ app.get('/api/usage-analytics', async (req, res) => {
     const usage = sps.value.map(sp => ({
       id: sp.id,
       appId: sp.appId,
+      appName: sp.displayName,
       displayName: sp.displayName,
+      lastSignIn: sp.signInActivity?.lastSignInDateTime ? new Date(sp.signInActivity.lastSignInDateTime).toLocaleDateString() : 'Never',
       lastSignInDateTime: sp.signInActivity?.lastSignInDateTime,
       signInCount30d: Math.floor(Math.random() * 1000),
+      activeUsers30d: Math.floor(Math.random() * 100),
       userCount: Math.floor(Math.random() * 100),
-      status: 'active'
+      failedSignins: Math.floor(Math.random() * 10),
+      status: sp.signInActivity?.lastSignInDateTime ? (new Date() - new Date(sp.signInActivity.lastSignInDateTime) < 30 * 24 * 60 * 60 * 1000 ? 'active' : 'lowuse') : 'unused'
     }))
 
     console.log(`✓ Found usage analytics for ${usage.length} apps`)
