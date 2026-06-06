@@ -123,23 +123,18 @@ export async function initApplications() {
     }
   } catch (error) {
     console.error('❌ Error loading application data:', error)
-    realApps = APP_REGISTRATIONS
-    realServicePrincipals = ENTERPRISE_APPLICATIONS
-    realSecrets = realSecrets
-    realPermissions = realPermissions
-    realConsents = realConsents
-    realUsage = realUsage
-    realRisks = realRisks
-    realRecommendations = realRecommendations
+    realApps = APP_REGISTRATIONS || []
+    realServicePrincipals = ENTERPRISE_APPLICATIONS || []
+    // Keep real* arrays as-is if fetch failed
   }
 
   render(el)
 }
 
 function render(el) {
-  const expiringSecrets = realSecrets.filter(s => s.status === 'expiring').length
-  const expiredSecrets = realSecrets.filter(s => s.status === 'expired').length
-  const criticalRisks = realRisks.filter(r => r.severity === 'critical').length
+  const expiringSecrets = (realSecrets || []).filter(s => s.status === 'expiring').length
+  const expiredSecrets = (realSecrets || []).filter(s => s.status === 'expired').length
+  const criticalRisks = (realRisks || []).filter(r => r.severity === 'critical').length
 
   el.innerHTML = `
     <div class="page-header">
