@@ -279,24 +279,42 @@ function renderAssignments() {
 }
 
 function renderGroups() {
+  // Debug: Log realLicenses structure
+  if (realLicenses.length > 0) {
+    console.log('📊 realLicenses structure:', realLicenses[0])
+  }
+
   // Helper to get license name from skuId
   const getLicenseName = (skuId) => {
     if (!skuId) return '—'
 
-    // Try multiple ways to find the license
-    let license = realLicenses.find(l =>
-      l.id === skuId ||
-      l.skuId === skuId ||
-      l.name === skuId ||
-      (l.name && l.name.toLowerCase().includes(skuId.toLowerCase()))
+    console.log(`🔍 Looking for license with skuId: ${skuId}`)
+
+    // Direct match attempts
+    let license = realLicenses.find(l => {
+      const matches = l.id === skuId || l.skuId === skuId
+      if (matches) console.log(`✓ Matched by ID/skuId: ${l.name}`)
+      return matches
+    })
+
+    if (license) {
+      return license.name || license.skuPartNumber || skuId.substring(0, 20)
+    }
+
+    // Partial match attempt
+    license = realLicenses.find(l =>
+      skuId.includes(l.id) || skuId.includes(l.skuId) ||
+      (l.id && l.id.substring(0, 8) === skuId.substring(0, 8))
     )
 
     if (license) {
-      return license.name || license.skuId || skuId
+      console.log(`✓ Matched by partial: ${license.name}`)
+      return license.name || license.skuPartNumber || skuId.substring(0, 20)
     }
 
+    console.log(`✗ No match found for: ${skuId}`)
     // If not found, return the skuId truncated for display
-    return skuId.substring(0, 30) + (skuId.length > 30 ? '...' : '')
+    return skuId.substring(0, 20) + (skuId.length > 20 ? '...' : '')
   }
 
   return `

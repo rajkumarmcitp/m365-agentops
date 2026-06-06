@@ -1079,6 +1079,8 @@ app.get('/api/licenses', async (req, res) => {
 
       return {
         id: sku.id,
+        skuId: sku.id,  // Include skuId for matching in group licensing
+        skuPartNumber: sku.skuPartNumber,
         name: sku.skuPartNumber || sku.skuId || 'Unknown License',
         total: consumed,
         consumed: sku.consumedUnits || 0,
@@ -1240,7 +1242,13 @@ app.get('/api/licenses/groups', async (req, res) => {
           assignmentMethod: (group.groupTypes || []).includes('DynamicMembership') ? 'Dynamic Group' : 'Direct Assignment'
         })
 
-        console.log(`✓ Found group with license: ${group.displayName} (${memberCount} members, ${licenses.length} licenses)`)
+        if (groupLicensing.length < 2) {  // Log first group for debugging
+          console.log(`✓ Found group with license: ${group.displayName}`)
+          console.log(`  - Member count: ${memberCount}`)
+          console.log(`  - Licenses: ${JSON.stringify(licenseInfo)}`)
+        } else {
+          console.log(`✓ Found group with license: ${group.displayName} (${memberCount} members, ${licenses.length} licenses)`)
+        }
       } catch (error) {
         console.warn(`⚠️ Error fetching details for group ${group.displayName}:`, error.message)
       }
