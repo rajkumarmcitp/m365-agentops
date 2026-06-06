@@ -956,14 +956,23 @@ app.get('/api/recent-consents', async (req, res) => {
     ])
 
     const appNameMap = {}
+    // Map by appId and object ID from service principals
     servicePrincipals.value?.forEach(sp => {
-      if (sp.appId) appNameMap[sp.appId] = sp.displayName
-      if (sp.id) appNameMap[sp.id] = sp.displayName
+      if (sp.appId) appNameMap[sp.appId] = sp.displayName || sp.appId
+      if (sp.id) appNameMap[sp.id] = sp.displayName || sp.id
+      if (sp.servicePrincipalNames?.length) {
+        sp.servicePrincipalNames.forEach(name => {
+          if (!appNameMap[name]) appNameMap[name] = sp.displayName
+        })
+      }
     })
+    // Map by appId and object ID from applications
     applications.value?.forEach(app => {
-      if (app.appId) appNameMap[app.appId] = app.displayName
-      if (app.id) appNameMap[app.id] = app.displayName
+      if (app.appId) appNameMap[app.appId] = app.displayName || app.appId
+      if (app.id) appNameMap[app.id] = app.displayName || app.id
     })
+
+    console.log(`📊 App name map created with ${Object.keys(appNameMap).length} entries`)
 
     const now = new Date()
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
@@ -974,16 +983,31 @@ app.get('/api/recent-consents', async (req, res) => {
         return true
       })
       .slice(0, 5)
-      .map(grant => ({
-        id: grant.id,
-        appName: appNameMap[grant.clientId] || appNameMap[grant.clientId?.substring(0, 36)] || grant.clientId?.substring(0, 20) || 'Unknown App',
-        clientId: grant.clientId,
-        scope: !grant.principalId ? 'Tenant-wide' : 'User',
-        permissions: (grant.scope || '').split(' ').slice(0, 3).join(' '),
-        grantedBy: 'Admin',
-        grantDate: new Date().toLocaleDateString(),
-        isNew: true
-      }))
+      .map(grant => {
+        let appName = appNameMap[grant.clientId]
+        if (!appName && grant.clientId) {
+          // Try alternative lookups if direct lookup failed
+          const altLookup = Object.keys(appNameMap).find(key =>
+            key.includes(grant.clientId.substring(0, 20)) ||
+            grant.clientId.includes(key.substring(0, 20))
+          )
+          appName = altLookup ? appNameMap[altLookup] : null
+        }
+        // Fallback to truncated GUID with label if still not found
+        if (!appName && grant.clientId) {
+          appName = `[Unknown] ${grant.clientId.substring(0, 20)}...`
+        }
+        return {
+          id: grant.id,
+          appName: appName || 'Unknown App',
+          clientId: grant.clientId,
+          scope: !grant.principalId ? 'Tenant-wide' : 'User',
+          permissions: (grant.scope || '').split(' ').slice(0, 3).join(' '),
+          grantedBy: 'Admin',
+          grantDate: new Date().toLocaleDateString(),
+          isNew: true
+        }
+      })
 
     console.log(`✓ Found ${recentConsents.length} recent admin consents`)
     res.json({
