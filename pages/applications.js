@@ -78,14 +78,19 @@ export async function initApplications() {
 
   // Load permissions
   try {
+    console.log(`🔄 Fetching permissions from ${api}/permissions`)
     const r = await fetch(`${api}/permissions`)
+    console.log(`📦 Permissions response status: ${r.status}`)
     const d = await r.json()
+    console.log(`📊 Permissions response:`, d)
     if (d?.success) {
       realPermissions = d.data || []
-      console.log(`✅ Permissions: ${realPermissions.length}`)
+      console.log(`✅ Permissions: ${realPermissions.length} items`)
+    } else {
+      console.warn('⚠️ Permissions endpoint returned success=false')
     }
   } catch (e) {
-    console.warn('⚠️ Permissions error:', e.message)
+    console.warn('⚠️ Permissions error:', e.message, e.stack)
   }
 
   // Load consents
