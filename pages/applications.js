@@ -627,9 +627,11 @@ function renderConsents() {
 // OWNERS
 // ============================================================
 function renderOwners() {
-  const noOwner = APP_REGISTRATIONS.filter(a => a.owners.length === 0)
-  const singleOwner = APP_REGISTRATIONS.filter(a => a.owners.length === 1)
-  const multiOwner = APP_REGISTRATIONS.filter(a => a.owners.length > 1)
+  // Use real apps, group by owner count (fallback to 0 if no owners property)
+  const apps = realApps.length > 0 ? realApps : []
+  const noOwner = apps.filter(a => !a.owners || a.owners.length === 0)
+  const singleOwner = apps.filter(a => a.owners && a.owners.length === 1)
+  const multiOwner = apps.filter(a => a.owners && a.owners.length > 1)
 
   return `
     ${noOwner.length > 0 ? `
@@ -647,9 +649,9 @@ function renderOwners() {
           <tbody>
             ${noOwner.map(app => `
               <tr>
-                <td style="font-weight:700;color:var(--clr-danger-text)">${app.name}</td>
-                <td>${app.created}</td>
-                <td><span class="badge warning">${app.status}</span></td>
+                <td style="font-weight:700;color:var(--clr-danger-text)">${app.displayName || app.name || '—'}</td>
+                <td>${app.createdDateTime ? new Date(app.createdDateTime).toLocaleDateString() : '—'}</td>
+                <td><span class="badge warning">${app.status || 'active'}</span></td>
                 <td><button class="btn btn-xs btn-danger">Assign owner</button></td>
               </tr>
             `).join('')}
@@ -663,8 +665,8 @@ function renderOwners() {
     ${singleOwner.slice(0, 5).map(app => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-bottom:4px;font-size:11px">
         <div>
-          <div style="font-weight:600">${app.name}</div>
-          <div style="color:var(--color-text-tertiary)">Owner: ${app.owners[0]}</div>
+          <div style="font-weight:600">${app.displayName || app.name || '—'}</div>
+          <div style="color:var(--color-text-tertiary)">Owner: ${(app.owners && app.owners.length > 0 ? app.owners[0] : '—')}</div>
         </div>
         <button class="btn btn-xs">Add owner</button>
       </div>
@@ -674,8 +676,8 @@ function renderOwners() {
     ${multiOwner.map(app => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:var(--clr-success-bg);border-radius:var(--border-radius-md);margin-bottom:4px;font-size:11px">
         <div>
-          <div style="font-weight:600">${app.name}</div>
-          <div style="color:var(--color-text-tertiary)">${app.owners.join(', ')}</div>
+          <div style="font-weight:600">${app.displayName || app.name || '—'}</div>
+          <div style="color:var(--color-text-tertiary)">${(app.owners && app.owners.length > 0) ? app.owners.join(', ') : '—'}</div>
         </div>
       </div>
     `).join('')}
