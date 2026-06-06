@@ -290,30 +290,35 @@ function renderGroups() {
 
     console.log(`🔍 Looking for license with skuId: ${skuId}`)
 
-    // Direct match attempts
+    // The license id is composite: tenantId_skuId, so extract the skuId part (after underscore)
     let license = realLicenses.find(l => {
-      const matches = l.id === skuId || l.skuId === skuId
-      if (matches) console.log(`✓ Matched by ID/skuId: ${l.name}`)
-      return matches
+      // Match by exact skuId
+      if (l.skuId === skuId) {
+        console.log(`✓ Matched by skuId: ${l.name}`)
+        return true
+      }
+      // Match by extracting skuId from composite id (format: tenantId_skuId)
+      const compositeIdPart = l.id?.split('_')?.[1]
+      if (compositeIdPart === skuId) {
+        console.log(`✓ Matched by composite ID: ${l.name}`)
+        return true
+      }
+      // Direct id match
+      if (l.id === skuId) {
+        console.log(`✓ Matched by id: ${l.name}`)
+        return true
+      }
+      return false
     })
 
     if (license) {
       return license.name || license.skuPartNumber || skuId.substring(0, 20)
     }
 
-    // Partial match attempt
-    license = realLicenses.find(l =>
-      skuId.includes(l.id) || skuId.includes(l.skuId) ||
-      (l.id && l.id.substring(0, 8) === skuId.substring(0, 8))
-    )
-
-    if (license) {
-      console.log(`✓ Matched by partial: ${license.name}`)
-      return license.name || license.skuPartNumber || skuId.substring(0, 20)
-    }
-
     console.log(`✗ No match found for: ${skuId}`)
-    // If not found, return the skuId truncated for display
+    console.log(`   Available licenses: ${realLicenses.map(l => `${l.name}(${l.id.split('_')[1] || l.id})`).join(', ')}`)
+
+    // If not found, return the name in a readable format
     return skuId.substring(0, 20) + (skuId.length > 20 ? '...' : '')
   }
 

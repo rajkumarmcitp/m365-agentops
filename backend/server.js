@@ -1203,22 +1203,44 @@ app.get('/api/licenses/groups', async (req, res) => {
       try {
         // Get member count - try different approaches
         let memberCount = 0
+
         try {
-          const membersResponse = await graphClient
-            .api(`/groups/${group.id}/members`)
-            .count(true)
+          // Try method 1: Using $count
+          const countResponse = await graphClient
+            .api(`/groups/${group.id}/members/$count`)
             .get()
-          memberCount = membersResponse['@odata.count'] || 0
-          console.log(`  ✓ Found ${memberCount} members in group ${group.displayName}`)
-        } catch (countError) {
-          console.warn(`  ⚠️ Could not get count for group, trying alternative method:`, countError.message)
-          // Fallback: fetch members without count
-          const members = await graphClient
-            .api(`/groups/${group.id}/members`)
-            .top(999)
-            .get()
-          memberCount = (members.value || []).length
-          console.log(`  ✓ Found ${memberCount} members using fallback`)
+          memberCount = parseInt(countResponse) || 0
+          console.log(`  ✓ Found ${memberCount} members (via $count)`)
+        } catch (error1) {
+          console.log(`  ⚠️ $count failed, trying count=true parameter`)
+
+          try {
+            // Try method 2: count=true parameter
+            const membersResponse = await graphClient
+              .api(`/groups/${group.id}/members`)
+              .count(true)
+              .top(1)
+              .get()
+            memberCount = membersResponse['@odata.count'] || 0
+            if (memberCount > 0) {
+              console.log(`  ✓ Found ${memberCount} members (via count param)`)
+            }
+          } catch (error2) {
+            console.log(`  ⚠️ count param failed, fetching all members`)
+
+            // Try method 3: Fetch all members
+            try {
+              const members = await graphClient
+                .api(`/groups/${group.id}/members`)
+                .top(999)
+                .get()
+              memberCount = (members.value || []).length
+              console.log(`  ✓ Found ${memberCount} members (via fetch all)`)
+            } catch (error3) {
+              console.warn(`  ❌ Could not get member count:`, error3.message)
+              memberCount = 0
+            }
+          }
         }
 
         // Get license details and map to subscription SKUs
