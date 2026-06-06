@@ -871,7 +871,7 @@ app.get('/api/admin-consents', async (req, res) => {
 
       return {
         id: grant.id,
-        appName: appNameMap[grant.clientId] || grant.clientId?.substring(0, 20) || 'Unknown App',
+        appName: appNameMap[grant.clientId] || 'Unknown App',
         clientId: grant.clientId,
         resourceId: grant.resourceId,
         scope: scopeCategory,

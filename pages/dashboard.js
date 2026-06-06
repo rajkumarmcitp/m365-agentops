@@ -53,15 +53,31 @@ export async function initDashboard() {
       </div>
     </div>
 
-    <!-- Recent Admin Consents Alert -->
+    <!-- Recent Admin Consents Table Alert -->
     ${recentConsents.length > 0 ? `
-      <div class="alert-banner warning mb-3" id="recent-consents-alert" style="display:flex;align-items:center;justify-content:space-between">
-        <div style="flex:1">
-          <i class="ti ti-alert-circle" style="margin-right:8px"></i>
-          <strong>${recentConsents.length} new admin consent${recentConsents.length > 1 ? 's' : ''} granted</strong>
-          ${recentConsents.length > 0 ? `<div style="font-size:10px;margin-top:4px;color:var(--color-text-secondary)">${recentConsents.map(c => c.appName).join(', ')}</div>` : ''}
+      <div id="recent-consents-alert" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+            <span class="card-title"><i class="ti ti-alert-circle"></i> Recent Admin Consents</span>
+            <button style="background:none;border:none;cursor:pointer;font-size:18px;padding:0" onclick="document.getElementById('recent-consents-alert').style.display='none'">✕</button>
+          </div>
+          <table style="width:100%">
+            <thead><tr style="background:var(--color-background-secondary)">
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:30%">Application</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:20%">Scope</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:50%">Permissions</th>
+            </tr></thead>
+            <tbody>
+              ${recentConsents.map(consent => `
+                <tr style="border-bottom:0.5px solid var(--color-border-tertiary);background:rgba(250, 190, 88, 0.05)">
+                  <td style="padding:10px 12px;font-weight:600;font-size:11px">${consent.appName}</td>
+                  <td style="padding:10px 12px;font-size:10px"><span class="badge warning">${consent.scope}</span></td>
+                  <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${consent.permissions}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         </div>
-        <button style="background:none;border:none;cursor:pointer;font-size:16px;padding:0 8px" onclick="document.getElementById('recent-consents-alert').style.display='none'">✕</button>
       </div>
     ` : ''}
 
