@@ -2353,15 +2353,40 @@ app.get('/api/audit-logs/consents', async (req, res) => {
       .get()
 
     const consents = []
-    auditLogs.value?.forEach(log => {
+    auditLogs.value?.forEach((log, idx) => {
       const appName = log.targetResources?.[0]?.displayName || 'Unknown'
       const appId = log.targetResources?.[0]?.modifiedProperties?.find(p => p.displayName === 'AppId')?.newValue?.replace(/"/g, '') || 'N/A'
 
-      // Extract permissions/scope from audit log
-      const scopeProp = log.targetResources?.[0]?.modifiedProperties?.find(p =>
-        p.displayName === 'Scope' || p.displayName === 'scope' || p.displayName === 'Permissions'
+      // Extract permissions/scope from audit log - try multiple property names
+      let permissions = 'N/A'
+
+      // Try to find scope in modifiedProperties
+      const allProps = log.targetResources?.[0]?.modifiedProperties || []
+      const scopeProp = allProps.find(p =>
+        (p.displayName || '').toLowerCase().includes('scope') ||
+        (p.displayName || '').toLowerCase().includes('permission') ||
+        (p.displayName || '').toLowerCase().includes('consent')
       )
-      const permissions = scopeProp?.newValue?.replace(/"/g, '') || scopeProp?.newValue || 'N/A'
+
+      if (scopeProp) {
+        permissions = scopeProp.newValue?.replace(/"/g, '') || scopeProp.newValue || 'N/A'
+      } else {
+        // Try to find in targetResources displayName or other properties
+        if (allProps.length > 0) {
+          const scopeValues = allProps
+            .filter(p => p.newValue && p.newValue !== '""')
+            .map(p => `${p.displayName}: ${p.newValue?.replace(/"/g, '').substring(0, 50)}`)
+            .slice(0, 3)
+          if (scopeValues.length > 0) {
+            permissions = scopeValues.join(' | ')
+          }
+        }
+      }
+
+      // Debug log first few entries
+      if (idx < 2) {
+        console.log(`🔍 Consent #${idx}: appName=${appName}, props=${allProps.map(p => p.displayName).join(',')}`)
+      }
 
       consents.push({
         id: log.id,
