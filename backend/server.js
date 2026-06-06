@@ -997,14 +997,29 @@ app.get('/api/admin-consents', async (req, res) => {
       const isTenantWide = !grant.principalId
       const scopeCategory = isTenantWide ? 'Tenant-wide' : 'User'
 
-      const appName = appNameMap[grant.clientId]
+      let appName = appNameMap[grant.clientId]
+
+      // If not found by initial mapping, try direct lookup in all service principals
+      if (!appName && allServicePrincipals && allServicePrincipals.length > 0) {
+        const spMatch = allServicePrincipals.find(sp =>
+          sp.id === grant.clientId ||
+          sp.appId === grant.clientId ||
+          sp.id?.toLowerCase() === grant.clientId?.toLowerCase() ||
+          sp.appId?.toLowerCase() === grant.clientId?.toLowerCase()
+        )
+        if (spMatch) {
+          appName = spMatch.displayName
+          console.log(`✓ Found by direct SP search: ${appName} (clientId: ${grant.clientId})`)
+        }
+      }
+
       if (!appName) {
         console.warn(`⚠️ Could not find app name for clientId: ${grant.clientId}`)
       }
 
       return {
         id: grant.id,
-        appName: appName || 'Unknown App',
+        appName: appName || `Unknown App (${grant.clientId?.substring(0, 8)}...)`,
         clientId: grant.clientId,
         resourceId: grant.resourceId,
         scope: scopeCategory,
