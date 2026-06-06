@@ -1,5 +1,5 @@
 import { go } from '../app.js'
-import { getDevices, getUsers, getSecurityScore, api } from '../lib/api-client.js'
+import { getDevices, getUsers, getSecurityScore, callAPI } from '../lib/api-client.js'
 import { MC_MESSAGES, SVC_HEALTH, SVC_META } from '../data/msgcenter-data.js'
 
 let realDeviceCount = 0
@@ -36,7 +36,7 @@ export async function initDashboard() {
 
     // Fetch recent admin consents (last 24 hours)
     try {
-      const consentsResult = await api.get('/api/audit-logs/consents')
+      const consentsResult = await callAPI('/api/audit-logs/consents')
       if (consentsResult.success && consentsResult.data) {
         const now = new Date()
         const last24hrs = new Date(now.getTime() - 24 * 60 * 60 * 1000)
