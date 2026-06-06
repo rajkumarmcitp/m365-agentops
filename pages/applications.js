@@ -16,7 +16,6 @@ let realServicePrincipals = []
 let realSecrets = []
 let realPermissions = []
 let realConsents = []
-let recentConsents = []
 let realUsage = []
 let realRisks = []
 let realRecommendations = []
@@ -104,18 +103,6 @@ export async function initApplications() {
     }
   } catch (e) {
     console.warn('⚠️ Consents error:', e.message)
-  }
-
-  // Load recent consents (last 24 hours)
-  try {
-    const r = await fetch(`${api}/recent-consents`)
-    const d = await r.json()
-    if (d?.success) {
-      recentConsents = d.data || []
-      console.log(`✅ Recent Consents: ${recentConsents.length}`)
-    }
-  } catch (e) {
-    console.warn('⚠️ Recent Consents error:', e.message)
   }
 
   // Load usage
@@ -602,46 +589,6 @@ function renderConsents() {
   const userScoped = realConsents.filter(c => c.scope === 'User')
 
   return `
-    <!-- Recent Admin Consents Alert Banner -->
-    ${recentConsents.length > 0 ? `
-      <div id="recent-consents-banner" style="margin-bottom:12px">
-        <div class="alert-banner warning" style="display:flex;align-items:center;justify-content:space-between;padding:12px">
-          <span><i class="ti ti-alert-circle"></i> <strong>${recentConsents.length} new admin consent${recentConsents.length > 1 ? 's' : ''} granted</strong> in the last 24 hours</span>
-          <button style="background:none;border:none;cursor:pointer;font-size:16px;padding:0;color:var(--color-text-secondary)" onclick="document.getElementById('recent-consents-banner').style.display='none'; document.getElementById('recent-consents-table').style.display='none'">✕</button>
-        </div>
-      </div>
-    ` : ''}
-
-    <!-- Recent Admin Consents Table -->
-    ${recentConsents.length > 0 ? `
-      <div id="recent-consents-table" style="margin-bottom:16px">
-        <div class="card" style="padding:0;overflow:hidden">
-          <div style="padding:12px;border-bottom:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);display:flex;align-items:center;justify-content:space-between">
-            <span style="font-weight:600;font-size:12px"><i class="ti ti-alert-circle"></i> Recent Admin Consents</span>
-            <button style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 4px" onclick="document.getElementById('recent-consents-table').style.display='none'; document.getElementById('recent-consents-banner').style.display='none'">✕</button>
-          </div>
-          <table style="width:100%">
-            <thead style="background:var(--color-background-secondary)">
-              <tr>
-                <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:25%">Application</th>
-                <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:15%">Scope</th>
-                <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:60%">Permissions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${recentConsents.map(consent => `
-                <tr style="border-bottom:0.5px solid var(--color-border-tertiary);background:rgba(250, 190, 88, 0.05)">
-                  <td style="padding:10px 12px;font-weight:600;font-size:11px">${consent.appName || '—'}</td>
-                  <td style="padding:10px 12px;font-size:10px"><span class="badge warning">${consent.scope || 'Tenant-wide'}</span></td>
-                  <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${consent.permissions || '—'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    ` : ''}
-
     <div class="alert-banner warning mb-3">
       <i class="ti ti-alert-triangle"></i>
       <span><strong>${tenantWide.length} tenant-wide admin consents granted</strong> — review quarterly</span>
