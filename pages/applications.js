@@ -2,9 +2,9 @@ import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getApplications, getServicePrincipals, api } from '../lib/api-client.js'
 import {
-  APPS_SUMMARY, APP_REGISTRATIONS, ENTERPRISE_APPLICATIONS, realSecrets,
-  realPermissions, realConsents, realUsage, realRisks,
-  realRecommendations, APPS_COPILOT_KB
+  APPS_SUMMARY, APP_REGISTRATIONS, ENTERPRISE_APPLICATIONS, SECRETS_CERTIFICATES,
+  API_PERMISSIONS, ADMIN_CONSENTS, SIGN_IN_ANALYTICS, RISK_ASSESSMENT,
+  APPS_RECOMMENDATIONS, APPS_COPILOT_KB
 } from '../data/apps-data.js'
 
 let activeSection = 'executive'
