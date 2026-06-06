@@ -36,7 +36,7 @@ export async function initDashboard() {
 
     // Fetch recent admin consents (last 24 hours)
     try {
-      const consentsResult = await callAPI('/api/audit-logs/consents')
+      const consentsResult = await callAPI('/audit-logs/consents')
       if (consentsResult.success && consentsResult.data) {
         const now = new Date()
         const last24hrs = new Date(now.getTime() - 24 * 60 * 60 * 1000)
