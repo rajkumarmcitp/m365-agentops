@@ -792,12 +792,14 @@ function renderRisk() {
 // LIFECYCLE MANAGEMENT
 // ============================================================
 function renderLifecycle() {
-  const recent = APP_REGISTRATIONS.filter(a => {
-    const created = new Date(a.created)
+  const apps = realApps.length > 0 ? realApps : []
+  const recent = apps.filter(a => {
+    const created = a.createdDateTime ? new Date(a.createdDateTime) : null
+    if (!created) return false
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     return created > thirtyDaysAgo
   })
-  const orphaned = APP_REGISTRATIONS.filter(a => a.owners.length === 0 || (a.status === 'inactive' && a.risk === 'critical'))
+  const orphaned = apps.filter(a => !a.owners || a.owners.length === 0)
   const decommission = realUsage.filter(a => a.status === 'unused')
 
   return `
@@ -805,19 +807,21 @@ function renderLifecycle() {
     ${recent.length === 0 ? '<p style="font-size:11px;color:var(--color-text-tertiary)">No new applications created.</p>' : `
       ${recent.map(app => `
         <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-bottom:8px">
-          <div style="font-weight:700">${app.name}</div>
-          <div style="font-size:10px;color:var(--color-text-tertiary)">Created ${app.created} · Owners: ${app.owners.length > 0 ? app.owners.join(', ') : 'NONE'}</div>
+          <div style="font-weight:700">${app.displayName || '—'}</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary)">Created ${app.createdDateTime ? new Date(app.createdDateTime).toLocaleDateString() : '—'} · Owners: ${(app.owners && app.owners.length > 0) ? app.owners.length : '—'}</div>
         </div>
       `).join('')}
     `}
 
     <div class="section-heading mt-4">Orphaned Applications</div>
-    ${orphaned.map(app => `
-      <div class="alert-banner danger mb-2">
-        <i class="ti ti-alert-triangle"></i>
-        <span><strong>${app.name}</strong> — no owner, unused, or expired credentials</span>
-      </div>
-    `).join('')}
+    ${orphaned.length === 0 ? '<p style="font-size:11px;color:var(--color-text-tertiary)">No orphaned applications.</p>' : `
+      ${orphaned.map(app => `
+        <div class="alert-banner danger mb-2">
+          <i class="ti ti-alert-triangle"></i>
+          <span><strong>${app.displayName || '—'}</strong> — no owner assigned</span>
+        </div>
+      `).join('')}
+    `}
 
     <div class="section-heading mt-4">Decommission Candidates (${decommission.length})</div>
     ${decommission.map(app => `
