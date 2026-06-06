@@ -2295,16 +2295,26 @@ app.get('/api/audit-logs/m365agentops', async (req, res) => {
     }
 
     const m365AppId = '04d3be8d-d433-4367-893e-eccc82190a11'
+    const m365AppName = 'M365 AgentOps'
 
-    // Query for all M365 AgentOps related audit activities
+    // Query for application-related audit activities
     const auditLogs = await graphClient
       .api('/auditLogs/directoryAudits')
-      .filter(`resources/any(s:s/id eq '${m365AppId}')`)
-      .top(200)
+      .filter("category eq 'ApplicationManagement' or activityDisplayName eq 'Add application' or activityDisplayName eq 'Update application' or activityDisplayName eq 'Add service principal credentials' or activityDisplayName eq 'Remove service principal credentials' or activityDisplayName eq 'Add app role assignment'")
+      .top(300)
       .get()
 
     const activities = []
     auditLogs.value?.forEach(log => {
+      // Filter to only M365 AgentOps related activities
+      const targetDisplay = log.targetResources?.[0]?.displayName || ''
+      const resourceDisplay = log.resources?.[0]?.displayName || ''
+      const appIdMatch = log.targetResources?.[0]?.modifiedProperties?.some(p =>
+        p.newValue?.includes(m365AppId) || p.oldValue?.includes(m365AppId)
+      ) || resourceDisplay.includes(m365AppName) || targetDisplay.includes(m365AppName)
+
+      if (!appIdMatch) return
+
       const changes = log.targetResources?.[0]?.modifiedProperties?.map(p => ({
         property: p.displayName,
         oldValue: p.oldValue?.replace(/"/g, '') || 'N/A',
@@ -2317,7 +2327,7 @@ app.get('/api/audit-logs/m365agentops', async (req, res) => {
         activityDisplayName: log.activityDisplayName,
         category: log.category,
         initiatedBy: log.initiatedBy?.user?.userPrincipalName || log.initiatedBy?.app?.displayName || 'System',
-        targetResource: log.targetResources?.[0]?.displayName || 'M365 AgentOps',
+        targetResource: targetDisplay || m365AppName,
         changes: changes,
         result: log.result,
         resultReason: log.result === 'Failure' ? log.failureReason : 'Success'
