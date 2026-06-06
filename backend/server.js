@@ -855,10 +855,7 @@ app.get('/api/admin-consents', async (req, res) => {
       graphClient.api('/applications').top(200).get()
     ])
 
-    const appNameMap = {
-      // Known app mappings
-      '04d3be8d-d433-4367-893e-eccc82190a11': 'M365 AgentOps'
-    }
+    const appNameMap = {}
 
     // Map by id (clientId can be object ID or appId)
     servicePrincipals.value?.forEach(sp => {
@@ -871,6 +868,8 @@ app.get('/api/admin-consents', async (req, res) => {
       if (app.id) appNameMap[app.id] = app.displayName
       if (app.appId) appNameMap[app.appId] = app.displayName
     })
+
+    console.log(`📊 Initial app name map: ${Object.keys(appNameMap).length} entries`)
 
     console.log(`📊 App name map has ${Object.keys(appNameMap).length} entries`)
 
@@ -1067,10 +1066,7 @@ app.get('/api/recent-consents', async (req, res) => {
       graphClient.api('/applications').top(200).get()
     ])
 
-    const appNameMap = {
-      // Known app mappings
-      '04d3be8d-d433-4367-893e-eccc82190a11': 'M365 AgentOps'
-    }
+    const appNameMap = {}
 
     // Map by appId and object ID from service principals
     servicePrincipals.value?.forEach(sp => {
@@ -1089,6 +1085,10 @@ app.get('/api/recent-consents', async (req, res) => {
     })
 
     console.log(`📊 App name map created with ${Object.keys(appNameMap).length} entries`)
+
+    // Log M365 AgentOps lookup
+    const m365AppId = '04d3be8d-d433-4367-893e-eccc82190a11'
+    console.log(`🔍 M365 AgentOps lookup: ${appNameMap[m365AppId] || 'NOT FOUND in initial map'}`)
 
     // Helper function to resolve app name with multiple strategies
     const resolveAppName = async (clientId) => {
