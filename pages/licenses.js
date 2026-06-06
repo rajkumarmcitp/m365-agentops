@@ -281,8 +281,22 @@ function renderAssignments() {
 function renderGroups() {
   // Helper to get license name from skuId
   const getLicenseName = (skuId) => {
-    const license = realLicenses.find(l => l.id === skuId)
-    return license?.name || skuId || '—'
+    if (!skuId) return '—'
+
+    // Try multiple ways to find the license
+    let license = realLicenses.find(l =>
+      l.id === skuId ||
+      l.skuId === skuId ||
+      l.name === skuId ||
+      (l.name && l.name.toLowerCase().includes(skuId.toLowerCase()))
+    )
+
+    if (license) {
+      return license.name || license.skuId || skuId
+    }
+
+    // If not found, return the skuId truncated for display
+    return skuId.substring(0, 30) + (skuId.length > 30 ? '...' : '')
   }
 
   return `
@@ -310,12 +324,15 @@ function renderGroups() {
                 </td>
                 <td style="padding:12px;font-size:10px"><span class="badge info">${g.groupType || 'Static'}</span></td>
                 <td style="padding:12px;font-size:10px">
-                  ${(g.assignedLicenses || []).length > 0 ?
-                    (g.assignedLicenses.map(lic => `<span class="badge secondary" style="margin-right:4px;margin-bottom:4px">${getLicenseName(lic.skuId)}</span>`).join(''))
-                    : '—'
+                  ${(g.assignedLicenses && g.assignedLicenses.length > 0) ?
+                    (g.assignedLicenses.map(lic => {
+                      const licName = getLicenseName(lic.skuId || lic.licenseId)
+                      return `<span class="badge secondary" style="margin-right:4px;margin-bottom:4px">${licName}</span>`
+                    }).join(''))
+                    : '<span style="color:var(--color-text-tertiary)">—</span>'
                   }
                 </td>
-                <td style="padding:12px;text-align:center;font-weight:600">${g.memberCount || 0}</td>
+                <td style="padding:12px;text-align:center;font-weight:600;color:${g.memberCount > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)'}">${g.memberCount > 0 ? g.memberCount : '0'}</td>
                 <td style="padding:12px;font-size:10px">
                   <span class="badge secondary">${g.assignmentMethod || 'Group-Based'}</span>
                 </td>

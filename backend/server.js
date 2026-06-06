@@ -1199,18 +1199,32 @@ app.get('/api/licenses/groups', async (req, res) => {
       }
 
       try {
-        // Get member count
-        const membersResponse = await graphClient
-          .api(`/groups/${group.id}/members`)
-          .count(true)
-          .top(1)
-          .get()
+        // Get member count - try different approaches
+        let memberCount = 0
+        try {
+          const membersResponse = await graphClient
+            .api(`/groups/${group.id}/members`)
+            .count(true)
+            .get()
+          memberCount = membersResponse['@odata.count'] || 0
+          console.log(`  ✓ Found ${memberCount} members in group ${group.displayName}`)
+        } catch (countError) {
+          console.warn(`  ⚠️ Could not get count for group, trying alternative method:`, countError.message)
+          // Fallback: fetch members without count
+          const members = await graphClient
+            .api(`/groups/${group.id}/members`)
+            .top(999)
+            .get()
+          memberCount = (members.value || []).length
+          console.log(`  ✓ Found ${memberCount} members using fallback`)
+        }
 
-        const memberCount = membersResponse['@odata.count'] || 0
-
-        // Get license details
+        // Get license details and map to subscription SKUs
         const licenses = group.assignedLicenses || []
-        const licenseNames = licenses.map(lic => lic.skuId).join(', ')
+        const licenseInfo = licenses.map(lic => ({
+          skuId: lic.skuId,
+          licenseId: lic.skuId
+        }))
 
         groupLicensing.push({
           groupId: group.id,
@@ -1218,8 +1232,8 @@ app.get('/api/licenses/groups', async (req, res) => {
           mailNickname: group.mailNickname,
           mail: group.mail,
           groupType: (group.groupTypes || []).includes('DynamicMembership') ? 'Dynamic' : 'Static',
-          memberCount: memberCount,
-          assignedLicenses: licenses,
+          memberCount: Math.max(0, memberCount),
+          assignedLicenses: licenseInfo,
           licenseCount: licenses.length,
           isLicenseGroup: true,
           licenseMethod: 'Group-Based',
