@@ -409,26 +409,30 @@ function renderDeviceHealth() {
 // COMPLIANCE
 // ============================================================
 function renderCompliance() {
+  const s = intuneData.summary
+  const compliantDevices = Math.max(0, (s.totalManagedDevices || 0) - (s.nonCompliant || 0))
+  const compliancePercentage = s.totalManagedDevices > 0 ? Math.round((compliantDevices / s.totalManagedDevices) * 100) : 0
+
   return `
     <div class="kpi-row mb-3">
       <div class="kpi-tile">
-        <div class="kpi-value success">${INTUNE_SUMMARY.compliancePercentage}%</div>
+        <div class="kpi-value success">${compliancePercentage}%</div>
         <div class="kpi-label">Overall Compliance</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value success">${821}</div>
+        <div class="kpi-value success">${compliantDevices}</div>
         <div class="kpi-label">Compliant Devices</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value danger">${INTUNE_SUMMARY.nonCompliant}</div>
+        <div class="kpi-value danger">${s.nonCompliant || 0}</div>
         <div class="kpi-label">Non-Compliant</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value info">${0}</div>
+        <div class="kpi-value info">0</div>
         <div class="kpi-label">Pending Evaluation</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value warning">${INTUNE_SUMMARY.unmanaged}</div>
+        <div class="kpi-value warning">0</div>
         <div class="kpi-label">Unmanaged Devices</div>
       </div>
     </div>
@@ -444,7 +448,7 @@ function renderCompliance() {
           <th style="width:10%">Coverage</th>
         </tr></thead>
         <tbody>
-          ${(realPolicies.length > 0 ? realPolicies : DEVICE_COMPLIANCE_POLICIES).map(p => `
+          ${realPolicies.map(p => `
             <tr>
               <td style="font-weight:600">${p.name}</td>
               <td>${p.assignedDevices}</td>
@@ -454,6 +458,7 @@ function renderCompliance() {
               <td><span class="badge success">${p.coverage}%</span></td>
             </tr>
           `).join('')}
+          ${realPolicies.length === 0 ? '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--color-text-tertiary)">No compliance policies found - Real data from tenant</td></tr>' : ''}
         </tbody>
       </table>
     </div>
