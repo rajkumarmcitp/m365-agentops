@@ -494,7 +494,7 @@ function renderInventory() {
           <th style="width:7%">Risk</th>
         </tr></thead>
         <tbody>
-          ${(realDevices.length > 0 ? realDevices : DEVICE_INVENTORY).slice(0, 50).map(d => `
+          ${realDevices.slice(0, 50).map(d => `
             <tr>
               <td style="font-weight:600">${d.deviceName || d.name || 'Unknown'}</td>
               <td>${d.operatingSystem || d.type || 'N/A'}</td>
@@ -507,6 +507,7 @@ function renderInventory() {
               <td><span style="font-weight:700;color:var(--clr-success-text)">🟢</span></td>
             </tr>
           `).join('')}
+          ${realDevices.length === 0 ? '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--color-text-tertiary)">No devices enrolled in Intune - Real data from tenant</td></tr>' : ''}
         </tbody>
       </table>
     </div>
