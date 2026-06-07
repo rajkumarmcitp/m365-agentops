@@ -138,9 +138,9 @@ export async function initIntune() {
 }
 
 function render(el) {
-  const s = INTUNE_SUMMARY
-  const criticalRisks = DEVICE_RISK_ASSESSMENT.filter(d => d.severity === 'critical').length
-  const highRisks = DEVICE_RISK_ASSESSMENT.filter(d => d.severity === 'high').length
+  const s = intuneData.summary
+  const criticalRisks = intuneData.riskAssessment.criticalRiskCount || 0
+  const highRisks = intuneData.riskAssessment.highRiskCount || 0
 
   el.innerHTML = `
     <div class="page-header">
@@ -167,9 +167,9 @@ function render(el) {
         <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${s.nonCompliant} non-compliant</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value warning">${s.patchCompliance}%</div>
+        <div class="kpi-value warning">${intuneData.patchManagement.compliancePercentage || 0}%</div>
         <div class="kpi-label">Patch Status</div>
-        <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${PATCH_MANAGEMENT.criticalUpdatesMissing} critical</div>
+        <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${intuneData.patchManagement.criticalUpdatesMissing || 0} critical</div>
       </div>
       <div class="kpi-tile">
         <div class="kpi-value ${s.encryptionCoverage >= 95 ? 'success' : 'warning'}">${s.encryptionCoverage}%</div>
@@ -194,8 +194,8 @@ function render(el) {
           <i class="ti ${t.icon}"></i><span>${t.label}</span>
           ${t.id === 'risk' && criticalRisks > 0 ? `<span class="intune-tab-badge red">${criticalRisks}</span>` : ''}
           ${t.id === 'compliance' && s.nonCompliant > 0 ? `<span class="intune-tab-badge red">${s.nonCompliant}</span>` : ''}
-          ${t.id === 'patches' && PATCH_MANAGEMENT.criticalUpdatesMissing > 0 ? `<span class="intune-tab-badge red">${PATCH_MANAGEMENT.criticalUpdatesMissing}</span>` : ''}
-          ${t.id === 'recommendations' ? `<span class="intune-tab-badge amber">${INTUNE_RECOMMENDATIONS.length}</span>` : ''}
+          ${t.id === 'patches' && (intuneData.patchManagement.criticalUpdatesMissing || 0) > 0 ? `<span class="intune-tab-badge red">${intuneData.patchManagement.criticalUpdatesMissing || 0}</span>` : ''}
+          ${t.id === 'recommendations' ? `<span class="intune-tab-badge amber">${intuneData.recommendations.length || 0}</span>` : ''}
         </button>
       `).join('')}
     </div>
@@ -330,12 +330,13 @@ function renderExecutive() {
         <div class="card-header">
           <span class="card-title"><i class="ti ti-chart-line"></i> Top Recommendations</span>
         </div>
-        ${INTUNE_RECOMMENDATIONS.filter(r => r.priority === 'critical').slice(0, 4).map(r => `
+        ${(intuneData.recommendations || []).filter(r => r.priority === 'critical').slice(0, 4).map(r => `
           <div style="display:flex;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px">
             <span class="badge danger" style="flex-shrink:0;min-width:56px;justify-content:center">${r.priority}</span>
             <span style="flex:1">${r.title}</span>
           </div>
         `).join('')}
+        ${(intuneData.recommendations || []).length === 0 ? '<div style="padding:10px;text-align:center;font-size:11px;color:var(--color-text-tertiary)">No critical recommendations</div>' : ''}
       </div>
     </div>
   `
