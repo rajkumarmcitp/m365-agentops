@@ -18,7 +18,11 @@ let intuneData = {
   summary: INTUNE_SUMMARY,
   endpointSecurity: ENDPOINT_SECURITY_ASSESSMENT,
   patchManagement: PATCH_MANAGEMENT,
-  riskAssessment: DEVICE_RISK_ASSESSMENT
+  riskAssessment: DEVICE_RISK_ASSESSMENT,
+  deviceHealth: [],
+  applications: [],
+  policies: { configurationPolicies: [], conditionalAccessPolicies: [] },
+  recommendations: []
 }
 
 const INTUNE_TABS = [
@@ -45,13 +49,17 @@ export async function initIntune() {
   // Fetch all real data from backend in parallel
   console.log('📡 Fetching comprehensive Intune data from backend...')
   try {
-    const [devicesResult, policiesResult, summaryResult, securityResult, patchResult, riskResult] = await Promise.all([
+    const [devicesResult, policiesResult, summaryResult, securityResult, patchResult, riskResult, healthResult, appsResult, policiesDataResult, recommendationsResult] = await Promise.all([
       getDevices(),
       getDeviceCompliancePolicies(),
       callAPI('/intune/summary'),
       callAPI('/intune/endpoint-security'),
       callAPI('/intune/patch-management'),
-      callAPI('/intune/risk-assessment')
+      callAPI('/intune/risk-assessment'),
+      callAPI('/intune/device-health'),
+      callAPI('/intune/applications'),
+      callAPI('/intune/policies'),
+      callAPI('/intune/recommendations')
     ])
 
     // Handle device data
@@ -94,6 +102,30 @@ export async function initIntune() {
     if (riskResult.success && riskResult.data) {
       intuneData.riskAssessment = riskResult.data
       console.log(`✅ Loaded risk assessment data`)
+    }
+
+    // Handle device health data
+    if (healthResult.success && healthResult.data) {
+      intuneData.deviceHealth = healthResult.data
+      console.log(`✅ Loaded device health data`)
+    }
+
+    // Handle applications data
+    if (appsResult.success && appsResult.data) {
+      intuneData.applications = appsResult.data
+      console.log(`✅ Loaded applications data`)
+    }
+
+    // Handle policies data
+    if (policiesDataResult.success && policiesDataResult.data) {
+      intuneData.policies = policiesDataResult.data
+      console.log(`✅ Loaded policies data`)
+    }
+
+    // Handle recommendations data
+    if (recommendationsResult.success && recommendationsResult.data) {
+      intuneData.recommendations = recommendationsResult.data
+      console.log(`✅ Loaded recommendations data`)
     }
 
     console.log('✅ All Intune data loaded successfully')
@@ -314,7 +346,8 @@ function renderExecutive() {
 // ============================================================
 function renderDeviceHealth() {
   const s = intuneData.summary
-  const avgHealth = Math.round(DEVICE_HEALTH_CALCULATION.reduce((a, d) => a + d.healthScore, 0) / DEVICE_HEALTH_CALCULATION.length)
+  const devices = intuneData.deviceHealth || []
+  const avgHealth = devices.length > 0 ? Math.round(devices.reduce((a, d) => a + d.healthScore, 0) / devices.length) : 0
 
   return `
     <div class="kpi-row mb-3">
@@ -354,17 +387,18 @@ function renderDeviceHealth() {
           <th style="width:15%">Risk Level</th>
         </tr></thead>
         <tbody>
-          ${DEVICE_HEALTH_CALCULATION.map(d => `
+          ${devices.map(d => `
             <tr>
-              <td style="font-weight:600">${d.name}</td>
-              <td>${d.encryptionScore}</td>
-              <td>${d.complianceScore}</td>
-              <td>${d.patchScore}</td>
-              <td>${d.epScore}</td>
+              <td style="font-weight:600">${d.name || 'Unknown'}</td>
+              <td>${d.encryptionScore}%</td>
+              <td>${d.complianceScore}%</td>
+              <td>${d.patchScore}%</td>
+              <td>${d.epScore}%</td>
               <td><span class="badge ${d.healthScore >= 80 ? 'success' : d.healthScore >= 60 ? 'warning' : 'danger'}">${d.healthScore}/100</span></td>
               <td><span class="badge ${d.riskLevel === 'low' ? 'success' : d.riskLevel === 'high' ? 'danger' : 'warning'}">${d.riskLevel}</span></td>
             </tr>
           `).join('')}
+          ${devices.length === 0 ? '<tr><td colspan="7" style="text-align:center;padding:20px">No devices with health data</td></tr>' : ''}
         </tbody>
       </table>
     </div>
@@ -584,18 +618,19 @@ function renderPatchManagement() {
 // APPLICATIONS
 // ============================================================
 function renderApplications() {
+  const apps = intuneData.applications || []
   return `
     <div class="grid-2 mb-3" style="gap:16px">
-      ${APPLICATION_INVENTORY.map(app => `
+      ${apps.map(app => `
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <div style="font-weight:700">${app.name}</div>
-            <span class="badge ${app.status === 'compliant' ? 'success' : app.status === 'warning' ? 'warning' : 'danger'}">${app.status}</span>
+            <span class="badge success">${app.status}</span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:10px">
-            <div><div style="color:var(--color-text-tertiary)">Deployed</div><div style="font-weight:700">${app.deployedDevices}</div></div>
-            <div><div style="color:var(--color-text-tertiary)">Outdated</div><div style="font-weight:700;color:${app.outdated > 0 ? 'var(--clr-warning-text)' : 'var(--clr-success-text)'}">${app.outdated}</div></div>
-            <div><div style="color:var(--color-text-tertiary)">Unauthorized</div><div style="font-weight:700;color:${app.unauthorized > 0 ? 'var(--clr-danger-text)' : 'var(--clr-success-text)'}">${app.unauthorized}</div></div>
+            <div><div style="color:var(--color-text-tertiary)">Users</div><div style="font-weight:700">${app.users}</div></div>
+            <div><div style="color:var(--color-text-tertiary)">Devices</div><div style="font-weight:700">${app.devices}</div></div>
+            <div><div style="color:var(--color-text-tertiary)">Publisher</div><div style="font-weight:700;font-size:9px">${app.publisher}</div></div>
           </div>
         </div>
       `).join('')}
@@ -644,9 +679,13 @@ function renderRiskAssessment() {
 // POLICIES
 // ============================================================
 function renderPolicies() {
+  const policies = intuneData.policies || { configurationPolicies: [], conditionalAccessPolicies: [] }
+  const configPolicies = policies.configurationPolicies || []
+  const caPolicies = policies.conditionalAccessPolicies || []
+
   return `
-    <div class="section-heading">Configuration Policies (${CONFIGURATION_POLICIES.length})</div>
-    ${CONFIGURATION_POLICIES.map(p => `
+    <div class="section-heading">Configuration Policies (${configPolicies.length})</div>
+    ${configPolicies.map(p => `
       <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;font-weight:700;margin-bottom:4px">${p.name}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:10px">
@@ -656,9 +695,10 @@ function renderPolicies() {
         </div>
       </div>
     `).join('')}
+    ${configPolicies.length === 0 ? '<div style="padding:10px;text-align:center;color:var(--color-text-tertiary)">No configuration policies found</div>' : ''}
 
-    <div class="section-heading mt-4">Conditional Access Policies</div>
-    ${CONDITIONAL_ACCESS_POLICIES.map(p => `
+    <div class="section-heading mt-4">Conditional Access Policies (${caPolicies.length})</div>
+    ${caPolicies.map(p => `
       <div style="padding:10px;background:${p.enabled ? 'var(--clr-success-bg)' : 'var(--color-background-secondary)'};border-radius:var(--border-radius-md);margin-bottom:6px">
         <div style="display:flex;justify-content:space-between">
           <span style="font-weight:700">${p.name}</span>
@@ -666,6 +706,7 @@ function renderPolicies() {
         </div>
       </div>
     `).join('')}
+    ${caPolicies.length === 0 ? '<div style="padding:10px;text-align:center;color:var(--color-text-tertiary)">No conditional access policies found</div>' : ''}
   `
 }
 
@@ -673,6 +714,8 @@ function renderPolicies() {
 // RECOMMENDATIONS
 // ============================================================
 function renderRecommendations() {
+  const recommendations = intuneData.recommendations || []
+
   return `
     <div class="card" style="padding:0;overflow:hidden">
       <table>
@@ -685,16 +728,17 @@ function renderRecommendations() {
           <th style="width:15%">Status</th>
         </tr></thead>
         <tbody>
-          ${INTUNE_RECOMMENDATIONS.map(r => `
+          ${recommendations.map(r => `
             <tr>
               <td><span class="badge ${r.priority === 'critical' ? 'danger' : r.priority === 'high' ? 'warning' : 'info'}">${r.priority}</span></td>
               <td style="font-size:11px;font-weight:500">${r.title}</td>
               <td><span class="pill">${r.category}</span></td>
               <td style="font-size:11px">${r.impact}</td>
               <td><span class="pill">${r.effort}</span></td>
-              <td><span class="badge warning">${r.status}</span></td>
+              <td><span class="badge ${r.status === 'Pending' ? 'warning' : r.status === 'In Progress' ? 'info' : 'neutral'}">${r.status}</span></td>
             </tr>
           `).join('')}
+          ${recommendations.length === 0 ? '<tr><td colspan="6" style="text-align:center;padding:20px">No recommendations available</td></tr>' : ''}
         </tbody>
       </table>
     </div>
