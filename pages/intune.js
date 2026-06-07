@@ -757,9 +757,11 @@ function renderRecommendations() {
 // ============================================================
 function renderIntuneCopilot() {
   if (!copilotInit) {
+    const s = intuneData.summary || {}
+    const r = intuneData.riskAssessment || {}
     copilotMessages = [{
       role: 'ai',
-      text: `**Intune Security Advisor** — Ask me about device health, compliance, security posture, patch status, or remediation recommendations.\n\n**Current state:** 847 managed devices, 98.2% compliant, 74/100 health score, 2 critical risks`
+      text: `**Intune Security Advisor** — Ask me about device health, compliance, security posture, patch status, or remediation recommendations.\n\n**Current state:** ${s.totalManagedDevices || 0} managed devices, ${s.compliancePercentage || 0}% compliant, ${s.deviceHealthScore || 0}/100 health score, ${r.criticalRiskCount || 0} critical risks`
     }]
     copilotInit = true
   }
@@ -851,8 +853,31 @@ function sendCopilotMsg(el, input) {
 
   setTimeout(() => {
     const q = text.toLowerCase()
-    const match = INTUNE_COPILOT_KB.find(r => r.keywords.some(k => q.includes(k)))
-    const response = match?.response || `Searching Intune data for **"${text}"**...\n\nBased on your question, navigate to the relevant section above. Current status: 847 devices, 98.2% compliant, 2 critical risks.`
+    const s = intuneData.summary || {}
+    const r = intuneData.riskAssessment || {}
+    const p = intuneData.patchManagement || {}
+    const e = intuneData.endpointSecurity || {}
+
+    let response = `Based on your question about Intune, here's the current tenant status:\n\n`
+
+    // Generate dynamic responses based on real tenant data
+    if (q.includes('health') || q.includes('device health')) {
+      response += `**Device Health Summary:**\n• Total Managed: ${s.totalManagedDevices || 0}\n• Active: ${s.activeDevices || 0}\n• Health Score: ${s.deviceHealthScore || 0}/100\n• Encryption: ${s.encryptionCoverage || 0}%`
+    } else if (q.includes('compliance') || q.includes('compliant')) {
+      response += `**Compliance Status:**\n• Overall Compliance: ${s.compliancePercentage || 0}%\n• Non-Compliant: ${s.nonCompliant || 0}\n• Devices: ${s.totalManagedDevices || 0} managed`
+    } else if (q.includes('patch') || q.includes('update')) {
+      response += `**Patch Management:**\n• Patch Compliance: ${p.compliancePercentage || 0}%\n• Critical Updates Missing: ${p.criticalUpdatesMissing || 0}\n• Devices Needing Patches: ${p.devicesNeedingPatches || 0}`
+    } else if (q.includes('security') || q.includes('protection') || q.includes('firewall')) {
+      response += `**Endpoint Security:**\n• Antivirus Coverage: ${e.antivirus?.coverage || 0}%\n• Firewall Coverage: ${e.firewall?.coverage || 0}%\n• SmartScreen Coverage: ${e.smartscreen?.coverage || 0}%\n• BitLocker Coverage: ${e.bitlocker?.coverage || 0}%`
+    } else if (q.includes('risk') || q.includes('critical')) {
+      response += `**Risk Assessment:**\n• Critical Risk Devices: ${r.criticalRiskCount || 0}\n• High Risk Devices: ${r.highRiskCount || 0}\n• Non-Compliant: ${r.deviceRisks?.length || 0}`
+    } else if (q.includes('recommendation') || q.includes('suggest')) {
+      const recs = intuneData.recommendations || []
+      const criticalRecs = recs.filter(x => x.priority === 'critical')
+      response += `**Top Recommendations:**\n${criticalRecs.slice(0, 3).map(r => `• **${r.priority.toUpperCase()}:** ${r.title}`).join('\n') || '• No critical recommendations'}`
+    } else {
+      response += `**Tenant Overview:**\n• Managed Devices: ${s.totalManagedDevices || 0}\n• Compliance: ${s.compliancePercentage || 0}%\n• Health Score: ${s.deviceHealthScore || 0}/100\n• Critical Risks: ${r.criticalRiskCount || 0}\n\nAsk me about device health, compliance, security, patches, or recommendations!`
+    }
 
     copilotMessages.push({ role: 'ai', text: response })
     if (msgs) {
