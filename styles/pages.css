@@ -1607,10 +1607,10 @@ td.sla-overdue { color: var(--clr-danger-text); font-weight: 600; }
 
 /* INTUNE */
 .intune-subnav {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(6, auto);
   gap: 4px;
   margin-bottom: 12px;
-  overflow-x: auto;
   padding: 0 0 4px;
   border-bottom: 0.5px solid var(--color-border-secondary);
   padding-bottom: 8px;

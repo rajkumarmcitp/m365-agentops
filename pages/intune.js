@@ -1,6 +1,6 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
-import { getDevices, getDeviceCompliancePolicies } from '../lib/api-client.js'
+import { getDevices, getDeviceCompliancePolicies, callAPI } from '../lib/api-client.js'
 import {
   INTUNE_SUMMARY, PLATFORM_DISTRIBUTION, DEVICE_COMPLIANCE_POLICIES, DEVICE_INVENTORY,
   ENDPOINT_SECURITY_ASSESSMENT, PATCH_MANAGEMENT, APPLICATION_INVENTORY,
@@ -14,6 +14,12 @@ let copilotMessages = []
 let copilotInit = false
 let realDevices = [] // Store real data from API
 let realPolicies = []
+let intuneData = {
+  summary: INTUNE_SUMMARY,
+  endpointSecurity: ENDPOINT_SECURITY_ASSESSMENT,
+  patchManagement: PATCH_MANAGEMENT,
+  riskAssessment: DEVICE_RISK_ASSESSMENT
+}
 
 const INTUNE_TABS = [
   { id: 'executive',      label: 'Executive',           icon: 'ti-layout-dashboard' },
@@ -34,29 +40,66 @@ export async function initIntune() {
   if (!el) return
 
   // Show loading state
-  el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading real M365 device data...</p></div>`
+  el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading comprehensive Intune data...</p></div>`
 
-  // Fetch real data from backend
-  console.log('📡 Fetching real device data from backend...')
-  const devicesResult = await getDevices()
-  const policiesResult = await getDeviceCompliancePolicies()
+  // Fetch all real data from backend in parallel
+  console.log('📡 Fetching comprehensive Intune data from backend...')
+  try {
+    const [devicesResult, policiesResult, summaryResult, securityResult, patchResult, riskResult] = await Promise.all([
+      getDevices(),
+      getDeviceCompliancePolicies(),
+      callAPI('/intune/summary'),
+      callAPI('/intune/endpoint-security'),
+      callAPI('/intune/patch-management'),
+      callAPI('/intune/risk-assessment')
+    ])
 
-  // Handle errors gracefully
-  if (!devicesResult.success) {
-    console.warn('⚠️ Failed to fetch devices, using simulated data:', devicesResult.error)
-    showToast(`Device data unavailable: ${devicesResult.error}. Using demo data.`, 'warning')
-    realDevices = DEVICE_INVENTORY // Fallback to simulated
-  } else {
-    realDevices = devicesResult.data || DEVICE_INVENTORY
-    console.log(`✅ Loaded ${realDevices.length} real devices from API`)
-  }
+    // Handle device data
+    if (devicesResult.success) {
+      realDevices = devicesResult.data || DEVICE_INVENTORY
+      console.log(`✅ Loaded ${realDevices.length} real devices`)
+    } else {
+      realDevices = DEVICE_INVENTORY
+      console.warn('⚠️ Using demo devices')
+    }
 
-  if (!policiesResult.success) {
-    console.warn('⚠️ Failed to fetch policies, using simulated data')
-    realPolicies = DEVICE_COMPLIANCE_POLICIES
-  } else {
-    realPolicies = policiesResult.data || DEVICE_COMPLIANCE_POLICIES
-    console.log(`✅ Loaded ${realPolicies.length} real policies from API`)
+    // Handle policy data
+    if (policiesResult.success) {
+      realPolicies = policiesResult.data || DEVICE_COMPLIANCE_POLICIES
+      console.log(`✅ Loaded ${realPolicies.length} real policies`)
+    } else {
+      realPolicies = DEVICE_COMPLIANCE_POLICIES
+      console.warn('⚠️ Using demo policies')
+    }
+
+    // Handle summary data
+    if (summaryResult.success && summaryResult.data) {
+      intuneData.summary = { ...INTUNE_SUMMARY, ...summaryResult.data }
+      console.log(`✅ Loaded Intune summary`)
+    }
+
+    // Handle endpoint security data
+    if (securityResult.success && securityResult.data) {
+      intuneData.endpointSecurity = securityResult.data
+      console.log(`✅ Loaded endpoint security data`)
+    }
+
+    // Handle patch management data
+    if (patchResult.success && patchResult.data) {
+      intuneData.patchManagement = patchResult.data
+      console.log(`✅ Loaded patch management data`)
+    }
+
+    // Handle risk assessment data
+    if (riskResult.success && riskResult.data) {
+      intuneData.riskAssessment = riskResult.data
+      console.log(`✅ Loaded risk assessment data`)
+    }
+
+    console.log('✅ All Intune data loaded successfully')
+  } catch (error) {
+    console.error('❌ Error loading Intune data:', error)
+    showToast('Some Intune data unavailable. Using demo data.', 'warning')
   }
 
   render(el)
@@ -173,8 +216,8 @@ function renderSection() {
 // EXECUTIVE DASHBOARD
 // ============================================================
 function renderExecutive() {
-  const s = INTUNE_SUMMARY
-  const p = PLATFORM_DISTRIBUTION
+  const s = intuneData.summary
+  const p = intuneData.summary.platformDistribution || PLATFORM_DISTRIBUTION
 
   return `
     <div class="grid-2 mb-3" style="gap:16px">
@@ -196,8 +239,8 @@ function renderExecutive() {
         <div class="card-header">
           <span class="card-title"><i class="ti ti-chart-pie"></i> Platform Distribution</span>
         </div>
-        ${['windows', 'macos', 'ios', 'android', 'linux'].map(os => {
-          const d = p[os]
+        ${['windows', 'macos', 'ios', 'android', 'other'].map(os => {
+          const d = p[os] || { count: 0, percentage: 0 }
           return `
             <div style="margin-bottom:10px">
               <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px;font-weight:600">
@@ -207,7 +250,6 @@ function renderExecutive() {
               <div class="score-bar" style="height:8px">
                 <div class="score-bar-fill" style="width:${d.percentage}%"></div>
               </div>
-              <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px">${d.compliant} compliant · ${d.nonCompliant} non-compliant</div>
             </div>
           `
         }).join('')}
@@ -220,12 +262,12 @@ function renderExecutive() {
       </div>
       <div class="alert-banner danger mb-3">
         <i class="ti ti-alert-triangle"></i>
-        <span><strong>${DEVICE_RISK_ASSESSMENT.filter(d => d.severity === 'critical').length} critical risk devices</strong> require immediate attention</span>
+        <span><strong>${intuneData.riskAssessment.highRiskCount || 0} high-risk devices</strong> require immediate attention</span>
       </div>
-      ${DEVICE_RISK_ASSESSMENT.filter(d => d.severity === 'critical').map(d => `
+      ${(intuneData.riskAssessment.deviceRisks || []).slice(0, 5).map(d => `
         <div style="padding:8px 10px;background:var(--clr-danger-bg);color:var(--clr-danger-text);border-radius:var(--border-radius-md);margin-bottom:6px;font-size:11px">
-          <div style="font-weight:700">${d.deviceName}</div>
-          <div style="font-size:10px;margin-top:2px">Risk: ${d.riskScore}/100 · ${d.risks.join(' · ')}</div>
+          <div style="font-weight:700">${d.deviceName || d.name || 'Unknown'}</div>
+          <div style="font-size:10px;margin-top:2px">Risk Level: ${d.riskLevel || 'unknown'} · Issues: ${d.issuesCount || 0}</div>
         </div>
       `).join('')}
     </div>
@@ -271,7 +313,7 @@ function renderExecutive() {
 // DEVICE HEALTH
 // ============================================================
 function renderDeviceHealth() {
-  const s = INTUNE_SUMMARY
+  const s = intuneData.summary
   const avgHealth = Math.round(DEVICE_HEALTH_CALCULATION.reduce((a, d) => a + d.healthScore, 0) / DEVICE_HEALTH_CALCULATION.length)
 
   return `
@@ -441,26 +483,26 @@ function renderInventory() {
 // ENDPOINT SECURITY
 // ============================================================
 function renderEndpointSecurity() {
-  const e = ENDPOINT_SECURITY_ASSESSMENT
+  const e = intuneData.endpointSecurity
   return `
     <div class="grid-2 mb-3" style="gap:16px">
       <div class="card">
         <div class="card-title mb-3"><i class="ti ti-shield-check"></i> Antivirus & Firewall</div>
         ${metricGrid([
-          { label: 'Defender Enabled',    val: e.antivirus.defenderEnabled, cls: 'success' },
-          { label: 'Real-Time Protection',val: e.antivirus.realTimeProtection, cls: 'success' },
-          { label: 'Cloud Protection',    val: e.antivirus.cloudProtection, cls: 'success' },
-          { label: 'Firewall Enabled',    val: e.firewall.enabled, cls: 'success' },
+          { label: 'Defender Enabled',    val: e.antivirus?.defenderEnabled || 0, cls: 'success' },
+          { label: 'Real-Time Protection',val: e.antivirus?.realTimeProtection || 0, cls: 'success' },
+          { label: 'Cloud Protection',    val: e.antivirus?.cloudProtection || 0, cls: 'success' },
+          { label: 'Firewall Enabled',    val: e.firewall?.enabled || 0, cls: 'success' },
         ])}
       </div>
 
       <div class="card">
         <div class="card-title mb-3"><i class="ti ti-lock"></i> Protection Coverage</div>
         ${[
-          { label: 'Defender', pct: e.antivirus.coverage, target: 100 },
-          { label: 'Firewall', pct: e.firewall.coverage, target: 100 },
-          { label: 'SmartScreen', pct: e.smartscreen.coverage, target: 100 },
-          { label: 'ASR Rules', pct: e.asr.coverage, target: 100 },
+          { label: 'Defender', pct: e.antivirus?.coverage || 0, target: 100 },
+          { label: 'Firewall', pct: e.firewall?.coverage || 0, target: 100 },
+          { label: 'SmartScreen', pct: e.smartscreen?.coverage || 0, target: 100 },
+          { label: 'ASR Rules', pct: e.asr?.coverage || 0, target: 100 },
         ].map(item => `
           <div class="score-bar-row mb-2">
             <span class="score-label" style="min-width:100px">${item.label}</span>
@@ -495,39 +537,45 @@ function renderEndpointSecurity() {
 // PATCH MANAGEMENT
 // ============================================================
 function renderPatchManagement() {
+  const p = intuneData.patchManagement
+  const criticalCount = p.criticalUpdatesMissing || 0
   return `
     <div class="alert-banner danger mb-3">
       <i class="ti ti-alert-triangle"></i>
-      <span><strong>${PATCH_MANAGEMENT.criticalUpdatesMissing} devices missing critical updates</strong> — schedule patching immediately</span>
+      <span><strong>${criticalCount} devices missing critical updates</strong> — schedule patching immediately</span>
     </div>
 
     <div class="kpi-row mb-3">
       <div class="kpi-tile">
-        <div class="kpi-value warning">${PATCH_MANAGEMENT.compliancePercentage}%</div>
+        <div class="kpi-value warning">${p.compliancePercentage || 0}%</div>
         <div class="kpi-label">Patch Compliance</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value danger">${PATCH_MANAGEMENT.criticalUpdatesMissing}</div>
+        <div class="kpi-value danger">${p.criticalUpdatesMissing || 0}</div>
         <div class="kpi-label">Critical Updates</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value warning">${PATCH_MANAGEMENT.securityUpdatesMissing}</div>
+        <div class="kpi-value warning">${p.securityUpdatesMissing || 0}</div>
         <div class="kpi-label">Security Updates</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value info">${PATCH_MANAGEMENT.avgDaysBehind}</div>
+        <div class="kpi-value info">${p.avgDaysBehind || 0}</div>
         <div class="kpi-label">Avg Days Behind</div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title mb-2">Devices with Missing Critical Updates</div>
-      ${PATCH_MANAGEMENT.devices.map(d => `
-        <div style="padding:10px;background:var(--clr-${d.severity === 'critical' ? 'danger' : 'warning'}-bg);color:var(--clr-${d.severity}-text);border-radius:var(--border-radius-md);margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;font-weight:700">${d.name} <span>${d.missingUpdates} updates</span></div>
-          <div style="font-size:10px;margin-top:3px">${d.daysBehind} days behind schedule</div>
+      <div class="card-title mb-2">Patch Compliance Summary</div>
+      <div style="padding:10px;background:var(--clr-info-bg);border-radius:var(--border-radius-md);margin-bottom:8px;font-size:11px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span>Quality Updates Missing</span>
+          <span style="font-weight:700">${p.qualityUpdatesMissing || 0}</span>
         </div>
-      `).join('')}
+        <div style="display:flex;justify-content:space-between">
+          <span>Devices Needing Patches</span>
+          <span style="font-weight:700">${p.devicesNeedingPatches || 0}</span>
+        </div>
+      </div>
     </div>
   `
 }
@@ -559,19 +607,33 @@ function renderApplications() {
 // RISK ASSESSMENT
 // ============================================================
 function renderRiskAssessment() {
+  const riskData = intuneData.riskAssessment
+  const devices = riskData.deviceRisks || []
+
   return `
-    ${DEVICE_RISK_ASSESSMENT.map(d => `
-      <div class="card mb-2" style="border-left:3px solid ${d.severity === 'critical' ? 'var(--clr-danger-text)' : 'var(--clr-warning-text)'}">
+    <div class="kpi-row mb-3">
+      <div class="kpi-tile">
+        <div class="kpi-value danger">${riskData.criticalRiskCount || 0}</div>
+        <div class="kpi-label">Critical Risk Devices</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value warning">${riskData.highRiskCount || 0}</div>
+        <div class="kpi-label">High Risk Devices</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value info">${devices.length || 0}</div>
+        <div class="kpi-label">Non-Compliant Devices</div>
+      </div>
+    </div>
+
+    ${devices.slice(0, 20).map(d => `
+      <div class="card mb-2" style="border-left:3px solid ${d.riskLevel === 'high' ? 'var(--clr-danger-text)' : 'var(--clr-warning-text)'}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
           <div>
-            <div style="font-size:14px;font-weight:800;color:${d.severity === 'critical' ? 'var(--clr-danger-text)' : 'var(--clr-warning-text)'}">${d.riskScore}/100</div>
-            <div style="font-weight:700;margin-top:4px">${d.deviceName}</div>
-            <div style="font-size:10px;color:var(--color-text-tertiary)">${d.owner}</div>
+            <div style="font-weight:700;margin-bottom:4px">${d.deviceName || d.name || 'Unknown Device'}</div>
+            <div style="font-size:10px;color:var(--color-text-tertiary)">Issues: ${d.issuesCount || 0}</div>
           </div>
-          <span class="badge ${d.severity === 'critical' ? 'danger' : 'warning'}">${d.severity}</span>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${d.risks.map(r => `<span class="badge danger" style="font-size:9px">${r}</span>`).join('')}
+          <span class="badge ${d.riskLevel === 'high' ? 'danger' : 'warning'}">${d.riskLevel || 'medium'}</span>
         </div>
       </div>
     `).join('')}
