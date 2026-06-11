@@ -3823,175 +3823,112 @@ app.get('/api/tenantguard/users/:userId/investigation', async (req, res) => {
       }
     }
 
-    const user = userMap[userId] || { id: userId, displayName: 'Unknown User', mail: 'unknown@contoso.com' }
+    if (!user) {
+      user = userMap[userId] || { id: userId, displayName: 'Unknown User', mail: 'unknown@contoso.com' }
+    }
 
-    // Mock sign-in logs grouped by application
-    const applicationAccess = [
-      {
-        appName: 'Microsoft Teams',
-        appId: 'app-teams',
-        lastAccessTime: '2026-06-11T14:30:00Z',
-        successCount: 12,
-        failureCount: 0,
-        status: 'SUCCESS',
-        locations: ['Seattle, WA', 'Redmond, WA'],
-        devices: ['Windows 10', 'iPhone']
-      },
-      {
-        appName: 'Exchange Online',
-        appId: 'app-exchange',
-        lastAccessTime: '2026-06-11T13:15:00Z',
-        successCount: 8,
-        failureCount: 0,
-        status: 'SUCCESS',
-        locations: ['Seattle, WA'],
-        devices: ['Windows 10']
-      },
-      {
-        appName: 'SharePoint Online',
-        appId: 'app-sharepoint',
-        lastAccessTime: '2026-06-10T15:45:00Z',
-        successCount: 5,
-        failureCount: 1,
-        status: 'SUCCESS',
-        locations: ['Seattle, WA', 'San Francisco, CA'],
-        devices: ['Windows 10', 'Mac OS']
-      },
-      {
-        appName: 'Azure Portal',
-        appId: 'app-azure',
-        lastAccessTime: '2026-06-11T10:20:00Z',
-        successCount: 3,
-        failureCount: 2,
-        status: 'FAILURE',
-        locations: ['Seattle, WA'],
-        devices: ['Windows 10'],
-        lastFailure: '2026-06-11T10:05:00Z'
-      },
-      {
-        appName: 'Microsoft 365 Admin Center',
-        appId: 'app-m365admin',
-        lastAccessTime: '2026-06-09T09:30:00Z',
-        successCount: 2,
-        failureCount: 0,
-        status: 'SUCCESS',
-        locations: ['Seattle, WA'],
-        devices: ['Windows 10']
-      }
-    ]
+    // Fetch REAL sign-in logs from Graph API
+    let signInLogs = []
+    if (graphClient && user.mail) {
+      try {
+        const userUPN = user.mail.includes('@') ? user.mail : `${user.mail}@contoso.com`
+        const signIns = await graphClient
+          .api('/auditLogs/signIns')
+          .filter(`userPrincipalName eq '${userUPN}' and createdDateTime gt ${start.toISOString()}`)
+          .top(50)
+          .get()
 
-    // Mock sign-in logs
-    const signInLogs = [
-      {
-        timestamp: '2026-06-11T14:30:00Z',
-        application: 'Microsoft Teams',
-        location: 'Seattle, WA',
-        ipAddress: '203.0.113.45',
-        device: 'Windows 10',
-        deviceName: 'LAPTOP-ABC123',
-        riskLevel: 'low',
-        status: 'success'
-      },
-      {
-        timestamp: '2026-06-11T13:15:00Z',
-        application: 'Exchange Online',
-        location: 'Seattle, WA',
-        ipAddress: '203.0.113.45',
-        device: 'Windows 10',
-        deviceName: 'LAPTOP-ABC123',
-        riskLevel: 'low',
-        status: 'success'
-      },
-      {
-        timestamp: '2026-06-11T10:20:00Z',
-        application: 'Azure Portal',
-        location: 'Seattle, WA',
-        ipAddress: '203.0.113.46',
-        device: 'Windows 10',
-        deviceName: '',
-        riskLevel: 'high',
-        status: 'failure',
-        reason: 'Invalid credentials'
-      },
-      {
-        timestamp: '2026-06-11T10:05:00Z',
-        application: 'Azure Portal',
-        location: 'Seattle, WA',
-        ipAddress: '203.0.113.46',
-        device: 'Windows 10',
-        deviceName: '',
-        riskLevel: 'high',
-        status: 'failure',
-        reason: 'Invalid credentials'
-      },
-      {
-        timestamp: '2026-06-10T15:45:00Z',
-        application: 'SharePoint Online',
-        location: 'San Francisco, CA',
-        ipAddress: '198.51.100.55',
-        device: 'Mac OS',
-        deviceName: 'Johns-MacBook-Pro',
-        riskLevel: 'low',
-        status: 'success'
-      }
-    ]
+        signInLogs = (signIns.value || []).map(s => ({
+          timestamp: s.createdDateTime,
+          application: s.appDisplayName || 'Unknown App',
+          location: s.location?.city ? `${s.location.city}, ${s.location.state}` : 'Unknown',
+          ipAddress: s.ipAddress || 'N/A',
+          device: s.deviceDetail?.operatingSystem || 'Unknown',
+          deviceName: s.deviceDetail?.displayName || '',
+          riskLevel: s.riskLevelDuringSignIn?.toLowerCase() || 'low',
+          status: s.status?.errorCode === 0 ? 'success' : 'failure',
+          reason: s.status?.failureReason || ''
+        }))
 
-    // Mock audit logs
-    const auditLogs = [
-      {
-        timestamp: '2026-06-11T11:00:00Z',
-        operation: 'Reset user password',
-        target: 'alice@contoso.com',
-        result: 'success',
-        severity: 'HIGH'
-      },
-      {
-        timestamp: '2026-06-10T14:30:00Z',
-        operation: 'Add user to group',
-        target: 'Global Administrators',
-        result: 'success',
-        severity: 'CRITICAL'
-      },
-      {
-        timestamp: '2026-06-09T10:15:00Z',
-        operation: 'Update policy',
-        target: 'Conditional Access Policy',
-        result: 'success',
-        severity: 'HIGH'
-      },
-      {
-        timestamp: '2026-06-08T16:45:00Z',
-        operation: 'Create security group',
-        target: 'Security-Team-Alpha',
-        result: 'success',
-        severity: 'MEDIUM'
+        console.log(`✓ Fetched ${signInLogs.length} sign-in logs for ${user.displayName}`)
+      } catch (apiError) {
+        console.warn(`⚠️ Error fetching sign-in logs:`, apiError.message)
       }
-    ]
+    }
 
-    // Mock actions on other accounts
-    const actionsOnOtherAccounts = [
-      {
-        timestamp: '2026-06-11T11:00:00Z',
-        targetUser: 'alice.johnson@contoso.com',
-        targetName: 'Alice Johnson',
-        action: 'Reset password',
-        severity: 'HIGH'
-      },
-      {
-        timestamp: '2026-06-10T14:30:00Z',
-        targetUser: 'bob.davis@contoso.com',
-        targetName: 'Bob Davis',
-        action: 'Added to Global Administrators',
-        severity: 'CRITICAL'
-      },
-      {
-        timestamp: '2026-06-09T09:20:00Z',
-        targetUser: 'carol.williams@contoso.com',
-        targetName: 'Carol Williams',
-        action: 'Assigned license',
-        severity: 'LOW'
+    // Fetch REAL audit logs from our collection
+    const db = getDatabase()
+    let auditLogs = []
+    if (db) {
+      try {
+        const userEmail = user.mail
+        const allAudits = db.prepare('SELECT * FROM audit_logs_cache ORDER BY timestamp DESC LIMIT 100').all()
+
+        // Filter for audits involving this user
+        auditLogs = allAudits
+          .filter(a => {
+            const rawData = JSON.parse(a.raw_data || '{}')
+            return a.actor === userEmail ||
+                   rawData.initiatedBy?.user?.userPrincipalName === userEmail ||
+                   a.target === userEmail
+          })
+          .map(a => ({
+            timestamp: a.timestamp,
+            operation: a.operation_name || 'Unknown Operation',
+            target: a.target || 'N/A',
+            result: 'success',
+            severity: a.severity || 'MEDIUM'
+          }))
+          .slice(0, 20)
+
+        console.log(`✓ Found ${auditLogs.length} audit logs for ${user.displayName}`)
+      } catch (dbError) {
+        console.warn(`⚠️ Error fetching audit logs:`, dbError.message)
       }
-    ]
+    }
+
+    // Group sign-in logs by application
+    const appMap = new Map()
+    signInLogs.forEach(log => {
+      if (!appMap.has(log.application)) {
+        appMap.set(log.application, {
+          appName: log.application,
+          appId: log.application.toLowerCase().replace(/ /g, '-'),
+          lastAccessTime: log.timestamp,
+          successCount: log.status === 'success' ? 1 : 0,
+          failureCount: log.status === 'failure' ? 1 : 0,
+          status: log.status === 'success' ? 'SUCCESS' : 'FAILURE',
+          locations: new Set([log.location]),
+          devices: new Set([log.device])
+        })
+      } else {
+        const app = appMap.get(log.application)
+        if (log.timestamp > app.lastAccessTime) app.lastAccessTime = log.timestamp
+        if (log.status === 'success') app.successCount++
+        else app.failureCount++
+        app.status = app.failureCount > 0 ? 'FAILURE' : 'SUCCESS'
+        app.locations.add(log.location)
+        app.devices.add(log.device)
+      }
+    })
+
+    const applicationAccess = Array.from(appMap.values()).map(app => ({
+      ...app,
+      locations: Array.from(app.locations),
+      devices: Array.from(app.devices)
+    }))
+
+    // Mock actions on other accounts (for now)
+    const actionsOnOtherAccounts = auditLogs
+      .filter(a => a.severity === 'CRITICAL' || a.severity === 'HIGH')
+      .map(a => ({
+        timestamp: a.timestamp,
+        targetUser: a.target,
+        targetName: a.target,
+        action: a.operation,
+        severity: a.severity
+      }))
+      .slice(0, 3)
 
     // Calculate risk score
     const failureCount = signInLogs.filter(l => l.status === 'failure').length
