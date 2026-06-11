@@ -4201,23 +4201,24 @@ app.use((req, res) => {
 // ============================================================
 // Start Server
 // ============================================================
-(async () => {
-  await initializeTenantGuard()
+const server = app.listen(PORT, () => {
+  console.log('')
+  console.log('╔════════════════════════════════════════════════════╗')
+  console.log('║  M365 AgentOps Backend API                         ║')
+  console.log('╚════════════════════════════════════════════════════╝')
+  console.log(`✓ Server running on port ${PORT}`)
+  console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`)
+  console.log(`✓ CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`)
+  console.log(`✓ Health check: http://localhost:${PORT}/api/health`)
+  console.log('')
+  console.log('📋 Role Group Configuration:')
+  console.log(`  Super Admins: ${ROLE_GROUPS.super || '❌ NOT CONFIGURED'}`)
+  console.log(`  Admins: ${ROLE_GROUPS.admin || '❌ NOT CONFIGURED'}`)
+  console.log(`  Managers: ${ROLE_GROUPS.manager || '❌ NOT CONFIGURED'}`)
+  console.log('')
 
-  app.listen(PORT, () => {
-    console.log('')
-    console.log('╔════════════════════════════════════════════════════╗')
-    console.log('║  M365 AgentOps Backend API                         ║')
-    console.log('╚════════════════════════════════════════════════════╝')
-    console.log(`✓ Server running on port ${PORT}`)
-    console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`)
-    console.log(`✓ CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`)
-    console.log(`✓ Health check: http://localhost:${PORT}/api/health`)
-    console.log('')
-    console.log('📋 Role Group Configuration:')
-    console.log(`  Super Admins: ${ROLE_GROUPS.super || '❌ NOT CONFIGURED'}`)
-    console.log(`  Admins: ${ROLE_GROUPS.admin || '❌ NOT CONFIGURED'}`)
-    console.log(`  Managers: ${ROLE_GROUPS.manager || '❌ NOT CONFIGURED'}`)
-    console.log('')
+  // Initialize TenantGuard in background after server starts
+  initializeTenantGuard().catch(err => {
+    console.error('❌ TenantGuard initialization failed:', err.message)
   })
-})()
+})
