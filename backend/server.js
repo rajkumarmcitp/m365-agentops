@@ -3376,6 +3376,47 @@ app.get('/api/tenantguard/alerts/:id', (req, res) => {
 })
 
 /**
+ * GET /api/security/incidents
+ * Get active security incidents from alerts
+ */
+app.get('/api/security/incidents', (req, res) => {
+  try {
+    const db = getDatabase()
+
+    // Fetch recent alerts that haven't been dismissed
+    const alerts = db.prepare(`
+      SELECT * FROM alerts
+      WHERE dismissed = 0
+      ORDER BY action_timestamp DESC
+      LIMIT 50
+    `).all()
+
+    // Transform alerts to incidents format
+    const incidents = (alerts || []).map(alert => ({
+      id: alert.id,
+      title: alert.headline,
+      description: alert.description,
+      severity: alert.severity?.toLowerCase() || 'medium',
+      status: alert.investigation_status || 'open',
+      timestamp: alert.action_timestamp,
+      actor: alert.actor || 'Unknown',
+      lastUpdated: alert.updated_at,
+      riskScore: alert.score || 50
+    }))
+
+    console.log(`✓ Fetched ${incidents.length} incidents from alerts`)
+    res.json({
+      success: true,
+      data: incidents,
+      count: incidents.length
+    })
+  } catch (error) {
+    console.error('Error fetching incidents:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
  * POST /api/tenantguard/alerts/:id/dismiss
  * Dismiss an alert
  */

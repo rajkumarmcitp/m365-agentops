@@ -1,13 +1,14 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
-import { getSecurityScore } from '../lib/api-client.js'
+import { getSecurityScore, getIncidents } from '../lib/api-client.js'
 import {
   SECURE_SCORE, IDENTITY, EMAIL, ENDPOINT, TEAMS_SEC, SHAREPOINT_SEC,
-  DATA_PROTECTION, PRIV_ACCESS, GUEST_GOVERNANCE, INCIDENTS, RECOMMENDATIONS,
+  DATA_PROTECTION, PRIV_ACCESS, GUEST_GOVERNANCE, realIncidents as STATIC_realIncidents, RECOMMENDATIONS,
   API_REFERENCE, SECURITY_COPILOT_KB
 } from '../data/security-data.js'
 
 let realSecureScore = SECURE_SCORE
+let realIncidents = STATIC_realIncidents
 
 // ============================================================
 // Sub-navigation
@@ -44,22 +45,35 @@ export async function initSecurity() {
 
   try {
     console.log('📡 Fetching real security data from backend...')
+
+    // Fetch secure score
     const scoreResult = await getSecurityScore()
     if (scoreResult.success) {
       realSecureScore = scoreResult.data || SECURE_SCORE
       console.log('✅ Loaded real secure score from API')
     }
+
+    // Fetch incidents (from alerts)
+    const incidentsResult = await getIncidents()
+    if (incidentsResult.success && incidentsResult.data.length > 0) {
+      realIncidents = incidentsResult.data
+      console.log(`✅ Loaded ${realIncidents.length} real incidents from alerts`)
+    } else {
+      console.warn('⚠️ No active incidents, using static data')
+      realIncidents = STATIC_realIncidents
+    }
   } catch (error) {
-    console.warn('⚠️ Using simulated secure score:', error.message)
+    console.warn('⚠️ Using simulated data:', error.message)
     realSecureScore = SECURE_SCORE
+    realIncidents = STATIC_realIncidents
   }
 
   render(el)
 }
 
 function render(el) {
-  const critCount = INCIDENTS.filter(i => i.severity === 'critical').length
-  const highCount = INCIDENTS.filter(i => i.severity === 'high' && i.status !== 'resolved').length
+  const critCount = realIncidents.filter(i => i.severity === 'critical').length
+  const highCount = realIncidents.filter(i => i.severity === 'high' && i.status !== 'resolved').length
   const openRec   = RECOMMENDATIONS.filter(r => r.priority === 'critical' || r.priority === 'high').length
 
   el.innerHTML = `
@@ -126,7 +140,7 @@ function topFiveKpi() {
   const ss = realSecureScore || SECURE_SCORE
   const pct = ss.percentOf100
   const ssColor = pct >= 80 ? 'success' : pct >= 60 ? 'warning' : 'danger'
-  const critical = INCIDENTS.filter(i => i.severity === 'critical' && i.status !== 'resolved').length
+  const critical = realIncidents.filter(i => i.severity === 'critical' && i.status !== 'resolved').length
 
   return `
     <div class="kpi-tile sec-kpi-primary" style="min-width:160px">
@@ -144,7 +158,7 @@ function topFiveKpi() {
     <div class="kpi-tile">
       <div class="kpi-value ${critical > 0 ? 'danger' : 'success'}">${critical > 0 ? critical : '✓'}</div>
       <div class="kpi-label">Critical Incidents</div>
-      <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${INCIDENTS.filter(i => i.status !== 'resolved').length} open total</div>
+      <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${realIncidents.filter(i => i.status !== 'resolved').length} open total</div>
     </div>
     <div class="kpi-tile">
       <div class="kpi-value ${IDENTITY.highRiskUsers > 0 ? 'danger' : 'success'}">${IDENTITY.highRiskUsers}</div>
@@ -341,7 +355,7 @@ function renderExecutive() {
           <span class="card-title"><i class="ti ti-alert-triangle"></i> Active Incidents</span>
           <button class="btn btn-xs btn-primary" id="exec-view-incidents">View all</button>
         </div>
-        ${INCIDENTS.filter(i => i.status !== 'resolved').slice(0, 4).map(inc => `
+        ${realIncidents.filter(i => i.status !== 'resolved').slice(0, 4).map(inc => `
           <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
             <span class="badge ${inc.severity === 'critical' ? 'danger' : inc.severity === 'high' ? 'danger' : 'warning'}" style="flex-shrink:0;min-width:56px;justify-content:center">${inc.severity}</span>
             <div style="flex:1;min-width:0">
@@ -352,7 +366,7 @@ function renderExecutive() {
         `).join('')}
         <div style="margin-top:10px;padding:8px 10px;background:var(--clr-danger-bg);border-radius:var(--border-radius-md);font-size:11px;color:var(--clr-danger-text);line-height:1.5">
           <i class="ti ti-robot"></i> <strong>AI Summary:</strong>
-          ${INCIDENTS.filter(i => i.severity === 'critical').length} critical incident${INCIDENTS.filter(i => i.severity === 'critical').length !== 1 ? 's' : ''} detected.
+          ${realIncidents.filter(i => i.severity === 'critical').length} critical incident${realIncidents.filter(i => i.severity === 'critical').length !== 1 ? 's' : ''} detected.
           Ransomware indicators found on MBX-LAPTOP-047 — isolate device immediately.
           3 high-severity incidents include BEC attempt and risky sign-ins from unfamiliar locations.
         </div>
@@ -877,15 +891,15 @@ function renderGuests() {
 }
 
 // ============================================================
-// INCIDENTS & THREATS
+// realIncidents & THREATS
 // ============================================================
 function renderIncidents() {
-  const active = INCIDENTS.filter(i => i.status !== 'resolved')
-  const resolved = INCIDENTS.filter(i => i.status === 'resolved')
-  const critical = INCIDENTS.filter(i => i.severity === 'critical').length
-  const high = INCIDENTS.filter(i => i.severity === 'high').length
-  const med = INCIDENTS.filter(i => i.severity === 'medium').length
-  const low = INCIDENTS.filter(i => i.severity === 'low').length
+  const active = realIncidents.filter(i => i.status !== 'resolved')
+  const resolved = realIncidents.filter(i => i.status === 'resolved')
+  const critical = realIncidents.filter(i => i.severity === 'critical').length
+  const high = realIncidents.filter(i => i.severity === 'high').length
+  const med = realIncidents.filter(i => i.severity === 'medium').length
+  const low = realIncidents.filter(i => i.severity === 'low').length
 
   return `
     <div class="kpi-row mb-3">
@@ -1017,7 +1031,7 @@ function renderSecurityCopilot() {
   if (!copilotInit || copilotMessages.length === 0) {
     copilotMessages = [{
       role: 'ai',
-      text: `**M365 Security Copilot** — I have full context of your security posture across all 15 data sources.\n\nCurrent tenant: **Contoso.com** · Secure Score: **64/95** · ${INCIDENTS.filter(i => i.status !== 'resolved').length} active incidents\n\nAsk me anything about your security posture, specific risks, or recommended actions.`
+      text: `**M365 Security Copilot** — I have full context of your security posture across all 15 data sources.\n\nCurrent tenant: **Contoso.com** · Secure Score: **64/95** · ${realIncidents.filter(i => i.status !== 'resolved').length} active incidents\n\nAsk me anything about your security posture, specific risks, or recommended actions.`
     }]
     copilotInit = true
   }
@@ -1204,7 +1218,7 @@ function sendCopilotMsg(el, input) {
   setTimeout(() => {
     const q = text.toLowerCase()
     const match = SECURITY_COPILOT_KB.find(r => r.keywords.some(k => q.includes(k)))
-    const response = match?.response || `Analysing your query across all 15 security data sources...\n\nFor **"${text}"**: Based on current tenant data, navigate to the relevant section in the Security Command Center for detailed information. Use the Recommendations tab for prioritised action items, or check the Incidents section for active threats.\n\nCurrent status: Secure Score 64/95 · ${INCIDENTS.filter(i => i.status !== 'resolved').length} active incidents · ${IDENTITY.highRiskUsers} high-risk users.`
+    const response = match?.response || `Analysing your query across all 15 security data sources...\n\nFor **"${text}"**: Based on current tenant data, navigate to the relevant section in the Security Command Center for detailed information. Use the Recommendations tab for prioritised action items, or check the Incidents section for active threats.\n\nCurrent status: Secure Score 64/95 · ${realIncidents.filter(i => i.status !== 'resolved').length} active incidents · ${IDENTITY.highRiskUsers} high-risk users.`
 
     copilotMessages.push({ role: 'ai', text: response })
     if (msgs) {
