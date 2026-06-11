@@ -26,7 +26,7 @@ export class AuditCollector {
         const audits = await this.graphClient
           .api('/auditLogs/directoryAudits')
           .filter(`activityDateTime gt ${thirtyMinutesAgo.toISOString()}`)
-          .select('id,operationName,activityDateTime,initiatedBy,targetResources,additionalDetails,result')
+          .select('id,activity,activityDateTime,initiatedBy,targetResources,additionalDetails,result')
           .top(100)
           .get()
 
@@ -42,7 +42,7 @@ export class AuditCollector {
             stmt.run(
               logId,
               'graph',
-              audit.operationName,
+              audit.activity,
               audit.initiatedBy?.user?.userPrincipalName || 'System',
               audit.targetResources?.[0]?.displayName || '',
               audit.activityDateTime,
