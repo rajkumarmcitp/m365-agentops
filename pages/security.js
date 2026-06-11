@@ -60,12 +60,12 @@ export async function initSecurity() {
       console.log(`✅ Loaded ${realIncidents.length} real incidents from alerts`)
     } else {
       console.warn('⚠️ No active incidents, using static data')
-      realIncidents = STATIC_realIncidents
+      realIncidents = STATIC_INCIDENTS
     }
   } catch (error) {
     console.warn('⚠️ Using simulated data:', error.message)
     realSecureScore = SECURE_SCORE
-    realIncidents = STATIC_realIncidents
+    realIncidents = STATIC_INCIDENTS
   }
 
   render(el)
