@@ -3862,13 +3862,21 @@ app.get('/api/tenantguard/users/:userId/investigation', async (req, res) => {
         const userEmail = user.mail
         const allAudits = db.prepare('SELECT * FROM audit_logs_cache ORDER BY timestamp DESC LIMIT 100').all()
 
-        // Filter for audits involving this user
+        console.log(`📊 Total audits in DB: ${allAudits.length}, looking for user: ${userEmail}`)
+
+        // Filter for audits involving this user (more lenient filtering)
         auditLogs = allAudits
           .filter(a => {
             const rawData = JSON.parse(a.raw_data || '{}')
-            return a.actor === userEmail ||
-                   rawData.initiatedBy?.user?.userPrincipalName === userEmail ||
-                   a.target === userEmail
+            const matches =
+              (a.actor && a.actor.toLowerCase().includes(userEmail.toLowerCase())) ||
+              (rawData.initiatedBy?.user?.userPrincipalName && rawData.initiatedBy.user.userPrincipalName.toLowerCase().includes(userEmail.toLowerCase())) ||
+              (a.target && a.target.toLowerCase().includes(userEmail.toLowerCase()))
+
+            if (matches) {
+              console.log(`  ✓ Match found: ${a.operation_name} (actor: ${a.actor}, target: ${a.target})`)
+            }
+            return matches
           })
           .map(a => ({
             timestamp: a.timestamp,
