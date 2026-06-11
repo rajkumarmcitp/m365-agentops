@@ -24,16 +24,16 @@ const SEC_TABS = [
   { id: 'executive',      label: 'Executive',       icon: 'ti-layout-dashboard' },
   { id: 'securescore',    label: 'Secure Score',    icon: 'ti-shield-check' },
   { id: 'identity',       label: 'Identity',        icon: 'ti-user-check' },
-  { id: 'email',          label: 'Email',           icon: 'ti-mail' },
-  { id: 'endpoint',       label: 'Endpoint',        icon: 'ti-device-laptop' },
-  { id: 'teams',          label: 'Teams',           icon: 'ti-brand-teams' },
-  { id: 'sharepoint',     label: 'SharePoint',      icon: 'ti-brand-sharepoint' },
-  { id: 'dataprotection', label: 'Data Protection', icon: 'ti-lock' },
-  { id: 'privaccess',     label: 'Priv. Access',    icon: 'ti-crown' },
-  { id: 'guests',         label: 'Guests',          icon: 'ti-user-plus' },
   { id: 'incidents',      label: 'Incidents',       icon: 'ti-alert-triangle' },
-  { id: 'recommendations',label: 'Recommendations', icon: 'ti-checklist' },
-  { id: 'copilot',        label: 'Security Copilot',icon: 'ti-robot' },
+  // Real data sections above; demo/static sections commented out
+  // { id: 'email',          label: 'Email',           icon: 'ti-mail' },
+  // { id: 'endpoint',       label: 'Endpoint',        icon: 'ti-device-laptop' },
+  // { id: 'teams',          label: 'Teams',           icon: 'ti-brand-teams' },
+  // { id: 'sharepoint',     label: 'SharePoint',      icon: 'ti-brand-sharepoint' },
+  // { id: 'dataprotection', label: 'Data Protection', icon: 'ti-lock' },
+  // { id: 'privaccess',     label: 'Priv. Access',    icon: 'ti-crown' },
+  // { id: 'guests',         label: 'Guests',          icon: 'ti-user-plus' },
+  // { id: 'recommendations',label: 'Recommendations', icon: 'ti-checklist' },
   { id: 'apiref',         label: 'API Reference',   icon: 'ti-api' },
 ]
 
@@ -323,17 +323,13 @@ function renderSection() {
 // EXECUTIVE DASHBOARD
 // ============================================================
 function renderExecutive() {
-  const ss = SECURE_SCORE
+  const ss = realSecureScore || SECURE_SCORE
   return `
-    <!-- Secondary KPI row -->
+    <!-- Secondary KPI row - Real data only -->
     <div class="kpi-row mb-3">
       <div class="kpi-tile">
         <div class="kpi-value warning">${realIdentityPosture.identitySecureScore}</div>
         <div class="kpi-label">Identity Score</div>
-      </div>
-      <div class="kpi-tile">
-        <div class="kpi-value warning">${DATA_PROTECTION.complianceScore}</div>
-        <div class="kpi-label">Compliance Score</div>
       </div>
       <div class="kpi-tile">
         <div class="kpi-value ${realIdentityPosture.mfaEnabled / realIdentityPosture.totalUsers >= 0.95 ? 'success' : 'warning'}">${Math.round(realIdentityPosture.mfaEnabled / realIdentityPosture.totalUsers * 100)}%</div>
@@ -344,12 +340,12 @@ function renderExecutive() {
         <div class="kpi-label">Risky Sign-ins (30d)</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value ${ENDPOINT.nonCompliant === 0 ? 'success' : 'warning'}">${ENDPOINT.nonCompliant}</div>
-        <div class="kpi-label">Non-Compliant Devices</div>
+        <div class="kpi-value info">${realIdentityPosture.caPoliciesEnabled}</div>
+        <div class="kpi-label">CA Policies Enabled</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value ${GUEST_GOVERNANCE.dormantGuests90d > 10 ? 'warning' : 'success'}">${GUEST_GOVERNANCE.dormantGuests90d}</div>
-        <div class="kpi-label">Dormant Guests</div>
+        <div class="kpi-value info">${realIdentityPosture.totalUsers}</div>
+        <div class="kpi-label">Total Users</div>
       </div>
     </div>
 
@@ -398,14 +394,9 @@ function renderExecutive() {
         </div>
         <div class="sec-svc-grid">
           ${[
-            { name: 'Identity',    icon: 'ti-user-check',        score: 68, color: '#0C447C', bg:'#E6F1FB', issues: realIdentityPosture.highRiskUsers },
-            { name: 'Email',       icon: 'ti-mail',               score: 71, color: '#854F0B', bg:'#FAEEDA', issues: EMAIL.externalForwardingRules + (EMAIL.dmarc !== 'reject' ? 1 : 0) },
-            { name: 'Endpoint',    icon: 'ti-device-laptop',      score: 58, color: '#3B6D11', bg:'#EAF3DE', issues: ENDPOINT.vulnerable },
-            { name: 'Teams',       icon: 'ti-brand-teams',        score: 74, color: '#3C3489', bg:'#EEEDFE', issues: TEAMS_SEC.publicTeams },
-            { name: 'SharePoint',  icon: 'ti-brand-sharepoint',   score: 66, color: '#3B6D11', bg:'#EAF3DE', issues: SHAREPOINT_SEC.anonymousLinks },
-            { name: 'Data',        icon: 'ti-database',           score: 61, color: '#3C3489', bg:'#EEEDFE', issues: DATA_PROTECTION.dlpViolations30d },
-            { name: 'Priv Access', icon: 'ti-crown',              score: 78, color: '#854F0B', bg:'#FAEEDA', issues: PRIV_ACCESS.permanentAssignments },
-            { name: 'Guests',      icon: 'ti-user-plus',          score: 72, color: '#633806', bg:'#FAEEDA', issues: GUEST_GOVERNANCE.dormantGuests90d },
+            { name: 'Identity',    icon: 'ti-user-check',        score: realIdentityPosture.identitySecureScore || 72, color: '#0C447C', bg:'#E6F1FB', issues: realIdentityPosture.highRiskUsers },
+            { name: 'Secure Score',icon: 'ti-shield-check',      score: Math.round(ss.percentOf100), color: '#854F0B', bg:'#FAEEDA', issues: 0 },
+            { name: 'Incidents',   icon: 'ti-alert-triangle',    score: realIncidents.filter(i => i.status !== 'resolved').length === 0 ? 100 : 50, color: realIncidents.filter(i => i.status !== 'resolved').length === 0 ? '#3B6D11' : '#A32D2D', bg: realIncidents.filter(i => i.status !== 'resolved').length === 0 ? '#EAF3DE' : '#FDEBEB', issues: realIncidents.filter(i => i.status !== 'resolved').length },
           ].map(s => {
             const cls = s.score >= 80 ? 'success' : s.score >= 65 ? 'warning' : 'danger'
             return `<div class="sec-svc-tile" data-goto="${s.name.toLowerCase().replace(' ','').replace('.','')}" style="cursor:pointer">
@@ -423,42 +414,43 @@ function renderExecutive() {
       </div>
     </div>
 
-    <!-- Incidents summary + Top recommendations -->
+    <!-- Real Incidents only -->
     <div class="grid-2" style="gap:16px">
       <div class="card">
         <div class="card-header">
           <span class="card-title"><i class="ti ti-alert-triangle"></i> Active Incidents</span>
           <button class="btn btn-xs btn-primary" id="exec-view-incidents">View all</button>
         </div>
-        ${realIncidents.filter(i => i.status !== 'resolved').slice(0, 4).map(inc => `
-          <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
-            <span class="badge ${inc.severity === 'critical' ? 'danger' : inc.severity === 'high' ? 'danger' : 'warning'}" style="flex-shrink:0;min-width:56px;justify-content:center">${inc.severity}</span>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inc.title}</div>
-              <div style="font-size:9px;color:var(--color-text-tertiary)">${inc.id} · ${inc.category} · ${inc.created}</div>
+        ${realIncidents.filter(i => i.status !== 'resolved').length > 0 ? `
+          ${realIncidents.filter(i => i.status !== 'resolved').slice(0, 4).map(inc => `
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+              <span class="badge ${inc.severity === 'critical' ? 'danger' : inc.severity === 'high' ? 'danger' : 'warning'}" style="flex-shrink:0;min-width:56px;justify-content:center">${inc.severity}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inc.title}</div>
+                <div style="font-size:9px;color:var(--color-text-tertiary)">${inc.id} · ${inc.category} · ${inc.created}</div>
+              </div>
             </div>
+          `).join('')}
+        ` : `
+          <div style="padding:16px;text-align:center;color:var(--clr-success-text)">
+            <i class="ti ti-circle-check" style="font-size:24px;display:block;margin-bottom:8px"></i>
+            <strong>No active incidents</strong><br/>
+            <span style="font-size:11px">Your tenant is secure</span>
           </div>
-        `).join('')}
-        <div style="margin-top:10px;padding:8px 10px;background:var(--clr-danger-bg);border-radius:var(--border-radius-md);font-size:11px;color:var(--clr-danger-text);line-height:1.5">
-          <i class="ti ti-robot"></i> <strong>AI Summary:</strong>
-          ${realIncidents.filter(i => i.severity === 'critical').length} critical incident${realIncidents.filter(i => i.severity === 'critical').length !== 1 ? 's' : ''} detected.
-          Ransomware indicators found on MBX-LAPTOP-047 — isolate device immediately.
-          3 high-severity incidents include BEC attempt and risky sign-ins from unfamiliar locations.
-        </div>
+        `}
       </div>
 
       <div class="card">
         <div class="card-header">
-          <span class="card-title"><i class="ti ti-checklist"></i> Top Recommendations</span>
-          <button class="btn btn-xs btn-primary" id="exec-view-recs">View all</button>
+          <span class="card-title"><i class="ti ti-shield-check"></i> Identity Security</span>
         </div>
-        ${RECOMMENDATIONS.filter(r => r.priority === 'critical' || r.priority === 'high').slice(0, 5).map(r => `
-          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
-            <span class="badge ${r.priority === 'critical' ? 'danger' : 'warning'}" style="flex-shrink:0;font-size:9px">${r.priority}</span>
-            <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title}</span>
-            <span class="badge success" style="flex-shrink:0;font-size:9px">+${r.scoreGain}pts</span>
-          </div>
-        `).join('')}
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-bottom:12px">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px;text-transform:uppercase;font-weight:600">Real-time Metrics</div>
+          <div style="font-size:12px"><strong>${realIdentityPosture.totalUsers}</strong> users</div>
+          <div style="font-size:12px"><strong>${realIdentityPosture.globalAdmins}</strong> global admins</div>
+          <div style="font-size:12px"><strong>${realIdentityPosture.highRiskUsers}</strong> high-risk users</div>
+          <div style="font-size:12px"><strong>${realIdentityPosture.caPoliciesEnabled}</strong> CA policies enabled</div>
+        </div>
       </div>
     </div>
   `
