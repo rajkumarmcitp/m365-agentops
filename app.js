@@ -6,6 +6,8 @@ import { initMSAL, loginWithMicrosoft, getCurrentUser, getUserEmail, logout } fr
 import { initDashboard } from './pages/dashboard.js'
 import { initRequests } from './pages/requests.js'
 import { initSecurity } from './pages/security.js'
+import { initTenantGuard } from './pages/tenantguard.js'
+import { initUserInvestigation } from './pages/user-investigation.js'
 import { initZeroTrust } from './pages/zerotrust.js'
 import { initM365Config } from './pages/m365config.js'
 import { initPrivAccts } from './pages/privaccts.js'
@@ -110,6 +112,12 @@ export function resetSettings() {
 // ============================================================
 export function hasAccess(pageId) {
   if (!state.currentUser) return false
+
+  // Special case: user-investigation is available for super/admin users
+  if (pageId === 'user-investigation') {
+    return ['super', 'admin'].includes(state.currentUser.role)
+  }
+
   return state.currentUser.navAccess.includes(pageId)
 }
 
@@ -127,6 +135,8 @@ const PAGE_INIT = {
   intune: initIntune,
   requests: initRequests,
   security: initSecurity,
+  tenantguard: initTenantGuard,
+  'user-investigation': initUserInvestigation,
   zerotrust: initZeroTrust,
   m365config: initM365Config,
   privaccts: initPrivAccts,
@@ -301,10 +311,17 @@ async function doLoginWithEntraID(account) {
 
   // Determine nav access based on role
   const roleNavAccess = {
-    super: ['dashboard', 'requests', 'security', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'audit', 'settings'],
-    admin: ['dashboard', 'requests', 'security', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings'],
+    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'audit', 'settings'],
+    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings'],
     manager: ['requests', 'msgcenter', 'portal', 'myreqs', 'myaccount', 'chat'],
     user: ['portal', 'myreqs', 'myaccount', 'chat']
+  }
+
+  let navAccess = roleNavAccess[role] || roleNavAccess.user
+
+  // Ensure user-investigation is available for super/admin users
+  if (['super', 'admin'].includes(role) && !navAccess.includes('user-investigation')) {
+    navAccess = [...navAccess, 'user-investigation']
   }
 
   const entraUser = {
@@ -316,7 +333,7 @@ async function doLoginWithEntraID(account) {
     color: '#0C447C',
     isEntraID: true,
     account: account,
-    navAccess: roleNavAccess[role] || roleNavAccess.user
+    navAccess: navAccess
   }
 
   // Store user email globally for backend API calls
@@ -352,7 +369,7 @@ function renderShell() {
 
 function renderAllPages() {
   const pages = [
-    'dashboard','requests','security','zerotrust','privaccts','m365config',
+    'dashboard','requests','security','tenantguard','user-investigation','zerotrust','privaccts','m365config',
     'msgcenter','applications','intune','licenses','agents','approvals','portal','myreqs','myaccount','chat',
     'graphapi','sso','audit','settings'
   ]

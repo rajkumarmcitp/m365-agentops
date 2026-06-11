@@ -3,6 +3,7 @@ import { showToast } from '../components/toast.js'
 import { createToggle } from '../components/toggle.js'
 import { refreshM365ConfigView } from './m365config.js'
 import { SERVICE_GROUPS, EXCHANGE_SUB } from '../data/portal-services.js'
+import { getClaudeStatus, setClaudeApiKey, removeClaudeApiKey } from '../lib/tenantguard-settings-client.js'
 
 export function initSettings() {
   const el = document.getElementById('page-settings')
@@ -42,6 +43,54 @@ function renderSettings(el) {
       <div class="form-group">
         <label class="form-label">Alert email</label>
         <input type="email" class="form-input" id="settings-alert-email" value="${s.agentAlertEmail}">
+      </div>
+    </div>
+
+    <!-- TenantGuard AI Investigation -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="ti ti-robot"></i> TenantGuard — AI Investigation Agent</span>
+        <span id="claude-status-badge" class="badge info">Loading...</span>
+      </div>
+
+      <div class="alert-banner info mb-3" style="margin-top:8px">
+        <i class="ti ti-info-circle"></i>
+        <span>
+          <strong>Optional:</strong> Configure your Claude API key to enable AI-powered security investigations.
+          Without this, the system uses intelligent mock responses.
+          <a href="https://console.anthropic.com" target="_blank" style="color:var(--clr-primary);text-decoration:underline">Get your API key →</a>
+        </span>
+      </div>
+
+      <div id="claude-settings-section">
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div class="form-group">
+            <label class="form-label">Claude API Key</label>
+            <input type="password" class="form-input" id="settings-claude-key" placeholder="sk-..." style="font-family:monospace">
+            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">
+              Your API key is stored securely and never shared. Get one free at console.anthropic.com
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:12px">
+            <label class="form-label">About Claude Integration</label>
+            <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.6">
+              <strong>What it does:</strong> Enables real Claude AI to analyze security incidents, answer questions naturally, and generate incident reports.<br>
+              <strong>Cost:</strong> ~$0.19 per investigation (Sonnet) or $0.57 (Opus). Free tier: $5 credits.<br>
+              <strong>Without it:</strong> System uses intelligent mock responses (fully functional, good for testing).<br>
+              <strong>Status:</strong> <span id="claude-mode-text">Checking...</span>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-primary" id="claude-save-btn">
+              <i class="ti ti-device-floppy"></i> Save API Key
+            </button>
+            <button class="btn btn-danger" id="claude-remove-btn" style="display:none">
+              <i class="ti ti-trash"></i> Remove API Key
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -232,4 +281,79 @@ function renderSettings(el) {
     showToast('Settings reset to defaults.', 'info')
     refreshM365ConfigView()
   })
+
+  // ---- Claude API Configuration ----
+  loadClaudeStatus(el)
+
+  el.querySelector('#claude-save-btn').addEventListener('click', async () => {
+    const apiKey = el.querySelector('#settings-claude-key').value
+    if (!apiKey || apiKey.trim() === '') {
+      showToast('Please enter a Claude API key', 'warning')
+      return
+    }
+
+    const btn = el.querySelector('#claude-save-btn')
+    btn.disabled = true
+    btn.innerHTML = '<span class="spinner dark"></span> Saving...'
+
+    try {
+      const result = await setClaudeApiKey(apiKey)
+      if (result.success) {
+        showToast('Claude API key configured successfully!', 'success')
+        el.querySelector('#settings-claude-key').value = ''
+        loadClaudeStatus(el)
+      } else {
+        showToast('Failed to save: ' + result.error, 'error')
+      }
+    } catch (error) {
+      showToast('Error saving API key: ' + error.message, 'error')
+    }
+
+    btn.disabled = false
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save API Key'
+  })
+
+  el.querySelector('#claude-remove-btn').addEventListener('click', async () => {
+    const btn = el.querySelector('#claude-remove-btn')
+    btn.disabled = true
+    btn.innerHTML = '<span class="spinner dark"></span> Removing...'
+
+    try {
+      const result = await removeClaudeApiKey()
+      if (result.success) {
+        showToast('Claude API key removed', 'success')
+        loadClaudeStatus(el)
+      } else {
+        showToast('Failed to remove: ' + result.error, 'error')
+      }
+    } catch (error) {
+      showToast('Error removing API key: ' + error.message, 'error')
+    }
+
+    btn.disabled = false
+    btn.innerHTML = '<i class="ti ti-trash"></i> Remove API Key'
+  })
+}
+
+async function loadClaudeStatus(el) {
+  try {
+    const status = await getClaudeStatus()
+    if (status) {
+      const badge = el.querySelector('#claude-status-badge')
+      const modeText = el.querySelector('#claude-mode-text')
+      const removeBtn = el.querySelector('#claude-remove-btn')
+
+      if (status.available) {
+        badge.innerHTML = '<span style="background:var(--clr-success-bg);color:var(--clr-success-text);padding:2px 8px;border-radius:3px;font-size:9px;font-weight:600">ACTIVE</span>'
+        modeText.innerHTML = '<strong style="color:var(--clr-success-text)">✓ Claude API Active</strong> - Real AI investigations enabled'
+        removeBtn.style.display = 'inline-flex'
+      } else {
+        badge.innerHTML = '<span style="background:var(--clr-info-bg);color:var(--clr-info-text);padding:2px 8px;border-radius:3px;font-size:9px;font-weight:600">MOCK MODE</span>'
+        modeText.innerHTML = '<strong style="color:var(--clr-info-text)">✓ Mock Mode</strong> - Using intelligent fallback responses (fully functional for testing)'
+        removeBtn.style.display = 'none'
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load Claude status:', error)
+  }
 }

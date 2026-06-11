@@ -5,6 +5,8 @@ const NAV_ITEMS = {
     { id: 'dashboard',  label: 'Dashboard',            icon: 'ti-layout-dashboard' },
     { id: 'requests',   label: 'Requests',             icon: 'ti-inbox',              badge: '7',  badgeCls: 'blue' },
     { id: 'security',   label: 'Security',             icon: 'ti-shield-exclamation', badge: '3',  badgeCls: 'red' },
+    { id: 'tenantguard',label: 'TenantGuard',          icon: 'ti-alert-triangle',     badge: 'Alert' },
+    { id: 'user-investigation',label: 'User Investigation',icon: 'ti-shield-check' },
     { id: 'zerotrust',  label: 'Zero Trust',           icon: 'ti-lock-check',         badge: '2',  badgeCls: 'amber' },
     { id: 'privaccts',  label: 'Privileged Accounts',  icon: 'ti-crown',              badge: '2',  badgeCls: 'red' },
     { id: 'm365config', label: 'M365 Config',          icon: 'ti-settings-2',         badge: '4',  badgeCls: 'amber' },
@@ -38,7 +40,13 @@ export function renderNav() {
   const u = state.currentUser
   if (!u || !sidebar) return
 
-  const access = u.navAccess
+  let access = u.navAccess
+
+  // Ensure user-investigation is in access for super/admin users
+  if (['super', 'admin'].includes(u.role) && !access.includes('user-investigation')) {
+    access = [...access, 'user-investigation']
+  }
+
   let html = `
     <div class="nav-logo">
       <div class="nav-logo-icon"><i class="ti ti-shield-bolt"></i></div>

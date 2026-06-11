@@ -13,6 +13,12 @@ import {
   createAuditLog, listAuditLogs, searchAuditLogs, getAuditStats,
   generateComplianceReport, exportAuditLogs, pruneAuditLogs
 } from './audit.js'
+import { initDatabase, getDatabase } from './tenantguard/database.js'
+import { startAuditCollectionJob } from './tenantguard/jobs.js'
+import { startCorrelationJobs } from './tenantguard/correlation-jobs.js'
+import { InvestigationService } from './tenantguard/investigation-service.js'
+import { createInvestigationTables } from './tenantguard/investigation-schema.js'
+import { SettingsService } from './tenantguard/settings-service.js'
 
 dotenv.config()
 
@@ -94,6 +100,37 @@ const ROLE_GROUPS = {
   'super': process.env.AZURE_GROUP_SUPER_ADMINS,      // M365-Super-Admins group ID
   'admin': process.env.AZURE_GROUP_ADMINS,            // M365-Admins group ID
   'manager': process.env.AZURE_GROUP_MANAGERS,        // M365-Managers group ID
+}
+
+// ============================================================
+// TenantGuard Alert Engine
+// ============================================================
+console.log('🔧 Initializing TenantGuard...')
+let investigationService = null
+try {
+  initDatabase()
+  const db = getDatabase()
+  createInvestigationTables(db)
+
+  // Load Claude API key from settings
+  const claudeApiKey = SettingsService.getClaudeApiKey()
+  const claudeClient = claudeApiKey ? InvestigationService.initializeWithApiKey(claudeApiKey) : null
+
+  investigationService = new InvestigationService(claudeClient)
+  const status = investigationService.getStatus()
+  console.log(`   ${status.message}`)
+
+  if (graphClient) {
+    startAuditCollectionJob(graphClient)
+  } else {
+    console.log('⚠️ Graph Client not available - TenantGuard will not collect audit data')
+  }
+
+  startCorrelationJobs()
+
+  console.log('✅ TenantGuard ready')
+} catch (error) {
+  console.error('❌ TenantGuard initialization failed:', error.message)
 }
 
 // ============================================================
@@ -3242,6 +3279,730 @@ app.get('/api/audit-logs/consents', async (req, res) => {
 })
 
 // 404 Handler
+// ============================================================
+// TenantGuard API Endpoints
+// ============================================================
+
+/**
+ * GET /api/tenantguard/alerts
+ * Returns all active alerts
+ */
+app.get('/api/tenantguard/alerts', (req, res) => {
+  try {
+    const severity = req.query.severity || 'all'
+    const limit = parseInt(req.query.limit) || 50
+    const db = getDatabase()
+
+    let query = `
+      SELECT * FROM alerts
+      WHERE dismissed = 0
+    `
+
+    if (severity !== 'all') {
+      query += ` AND severity = '${severity}'`
+    }
+
+    query += ' ORDER BY score DESC, action_timestamp DESC LIMIT ' + limit
+
+    const alerts = db.prepare(query).all()
+
+    // Parse JSON fields
+    const parsed = alerts.map(alert => ({
+      ...alert,
+      riskAssessment: JSON.parse(alert.risk_assessment || '{}'),
+      recommendations: JSON.parse(alert.recommendations || '[]')
+    }))
+
+    res.json({
+      success: true,
+      data: parsed,
+      count: parsed.length
+    })
+  } catch (error) {
+    console.error('Error fetching alerts:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/alerts/summary
+ * Returns alert counts by severity
+ */
+app.get('/api/tenantguard/alerts/summary', (req, res) => {
+  try {
+    const db = getDatabase()
+
+    const summary = {
+      critical: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'CRITICAL' AND dismissed = 0").get().count,
+      high: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'HIGH' AND dismissed = 0").get().count,
+      medium: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'MEDIUM' AND dismissed = 0").get().count,
+      info: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'INFO' AND dismissed = 0").get().count,
+    }
+
+    summary.total = summary.critical + summary.high + summary.medium + summary.info
+
+    res.json({ success: true, data: summary })
+  } catch (error) {
+    console.error('Error fetching summary:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/alerts/:id
+ * Get alert details
+ */
+app.get('/api/tenantguard/alerts/:id', (req, res) => {
+  try {
+    const db = getDatabase()
+    const alert = db.prepare('SELECT * FROM alerts WHERE id = ?').get(req.params.id)
+
+    if (!alert) {
+      return res.status(404).json({ success: false, error: 'Alert not found' })
+    }
+
+    alert.riskAssessment = JSON.parse(alert.risk_assessment || '{}')
+    alert.recommendations = JSON.parse(alert.recommendations || '[]')
+
+    res.json({ success: true, data: alert })
+  } catch (error) {
+    console.error('Error fetching alert:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/alerts/:id/dismiss
+ * Dismiss an alert
+ */
+app.post('/api/tenantguard/alerts/:id/dismiss', (req, res) => {
+  try {
+    const db = getDatabase()
+    const { reason } = req.body
+
+    db.prepare(`
+      UPDATE alerts
+      SET dismissed = 1, dismissed_at = CURRENT_TIMESTAMP, dismissed_by = ?
+      WHERE id = ?
+    `).run(reason || 'User dismissed', req.params.id)
+
+    res.json({ success: true, message: 'Alert dismissed' })
+  } catch (error) {
+    console.error('Error dismissing alert:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// ============================================================
+/**
+ * GET /api/tenantguard/settings
+ */
+app.get('/api/tenantguard/settings', (req, res) => {
+  try {
+    const settings = SettingsService.getAllSettings()
+    res.json({ success: true, data: settings })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/settings/claude-status
+ */
+app.get('/api/tenantguard/settings/claude-status', (req, res) => {
+  try {
+    const status = investigationService.getStatus()
+    res.json({ success: true, data: status })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/settings/claude-api-key
+ */
+app.post('/api/tenantguard/settings/claude-api-key', (req, res) => {
+  try {
+    const { apiKey } = req.body
+
+    if (!apiKey || apiKey.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'API key cannot be empty'
+      })
+    }
+
+    // Basic validation: Claude API keys start with 'sk-'
+    if (!apiKey.startsWith('sk-')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid Claude API key format (should start with sk-)'
+      })
+    }
+
+    // Save setting
+    const result = SettingsService.setClaudeApiKey(apiKey, 'admin')
+
+    if (result.success) {
+      // Reinitialize investigation service with new API key
+      const claudeClient = InvestigationService.initializeWithApiKey(apiKey)
+      investigationService = new InvestigationService(claudeClient)
+
+      res.json({
+        success: true,
+        message: 'Claude API key configured successfully',
+        status: investigationService.getStatus()
+      })
+    } else {
+      res.status(500).json({ success: false, error: result.error })
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * DELETE /api/tenantguard/settings/claude-api-key
+ */
+app.delete('/api/tenantguard/settings/claude-api-key', (req, res) => {
+  try {
+    const result = SettingsService.setSetting('claude_api_key', '', 'Disabled', 'admin')
+
+    if (result.success) {
+      // Reinitialize investigation service without API key
+      investigationService = new InvestigationService(null)
+
+      res.json({
+        success: true,
+        message: 'Claude API key removed',
+        status: investigationService.getStatus()
+      })
+    } else {
+      res.status(500).json({ success: false, error: result.error })
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/investigate
+ */
+app.post('/api/tenantguard/investigate', async (req, res) => {
+  try {
+    if (!investigationService) {
+      return res.status(503).json({ success: false, error: 'TenantGuard service not initialized' })
+    }
+
+    const { alertId, correlationId, title } = req.body
+
+    const investigation = await investigationService.startInvestigation(alertId, correlationId, title)
+    res.json({ success: true, data: investigation })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/investigations/:id/chat
+ */
+app.post('/api/tenantguard/investigations/:id/chat', async (req, res) => {
+  try {
+    if (!investigationService) {
+      return res.status(503).json({ success: false, error: 'TenantGuard service not initialized' })
+    }
+
+    const { message } = req.body
+    const response = await investigationService.chat(req.params.id, message)
+
+    res.json({ success: true, data: { response } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/investigations/:id
+ */
+app.get('/api/tenantguard/investigations/:id', (req, res) => {
+  try {
+    if (!investigationService) {
+      return res.status(503).json({ success: false, error: 'TenantGuard service not initialized' })
+    }
+
+    const investigation = investigationService.getInvestigation(req.params.id)
+
+    if (!investigation) {
+      return res.status(404).json({ success: false, error: 'Investigation not found' })
+    }
+
+    res.json({ success: true, data: investigation })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/investigations/:id/report
+ */
+app.post('/api/tenantguard/investigations/:id/report', async (req, res) => {
+  try {
+    if (!investigationService) {
+      return res.status(503).json({ success: false, error: 'TenantGuard service not initialized' })
+    }
+
+    const report = await investigationService.generateReport(req.params.id)
+    res.json({ success: true, data: { report } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/correlations
+ */
+app.get('/api/tenantguard/correlations', (req, res) => {
+  try {
+    const db = getDatabase()
+    const severity = req.query.severity || 'all'
+
+    let query = 'SELECT * FROM alert_correlations WHERE dismissed = 0'
+    if (severity !== 'all') {
+      query += ` AND risk_level = '${severity}'`
+    }
+    query += ' ORDER BY correlation_score DESC LIMIT 50'
+
+    const correlations = db.prepare(query).all()
+
+    res.json({
+      success: true,
+      data: correlations,
+      count: correlations.length
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/correlations/:id
+ */
+app.get('/api/tenantguard/correlations/:id', (req, res) => {
+  try {
+    const db = getDatabase()
+    const corr = db.prepare(
+      'SELECT * FROM alert_correlations WHERE id = ?'
+    ).get(req.params.id)
+
+    if (!corr) return res.status(404).json({ success: false, error: 'Correlation not found' })
+
+    // Get related alerts
+    const alertIds = corr.alert_ids.split(',')
+    const placeholders = alertIds.map(() => '?').join(',')
+    const alerts = db.prepare(
+      `SELECT * FROM alerts WHERE id IN (${placeholders})`
+    ).all(...alertIds)
+
+    res.json({
+      success: true,
+      data: {
+        ...corr,
+        alerts: alerts,
+        metadata: JSON.parse(corr.metadata || '{}')
+      }
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/patterns
+ */
+app.get('/api/tenantguard/patterns', (req, res) => {
+  try {
+    const db = getDatabase()
+    const patterns = db.prepare(`
+      SELECT pattern_type, COUNT(*) as count, MAX(correlation_score) as max_score
+      FROM alert_correlations
+      WHERE dismissed = 0
+      GROUP BY pattern_type
+      ORDER BY max_score DESC
+    `).all()
+
+    res.json({
+      success: true,
+      data: patterns
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * ============================================================
+ * TenantGuard User Investigation Endpoints
+ * ============================================================
+ */
+
+/**
+ * GET /api/tenantguard/users
+ * Get list of Entra ID users for selection
+ */
+app.get('/api/tenantguard/users', (req, res) => {
+  try {
+    // Mock user data - replace with real Graph API call if credentials available
+    const mockUsers = [
+      {
+        id: 'user-001',
+        displayName: 'John Smith',
+        mail: 'john.smith@contoso.com',
+        jobTitle: 'IT Administrator',
+        department: 'Information Technology',
+        lastSignIn: '2026-06-11T14:30:00Z',
+        riskLevel: 'MEDIUM'
+      },
+      {
+        id: 'user-002',
+        displayName: 'Alice Johnson',
+        mail: 'alice.johnson@contoso.com',
+        jobTitle: 'Security Engineer',
+        department: 'Security',
+        lastSignIn: '2026-06-11T09:15:00Z',
+        riskLevel: 'LOW'
+      },
+      {
+        id: 'user-003',
+        displayName: 'Bob Davis',
+        mail: 'bob.davis@contoso.com',
+        jobTitle: 'Exchange Administrator',
+        department: 'Messaging',
+        lastSignIn: '2026-06-10T16:45:00Z',
+        riskLevel: 'HIGH'
+      },
+      {
+        id: 'user-004',
+        displayName: 'Carol Williams',
+        mail: 'carol.williams@contoso.com',
+        jobTitle: 'Global Administrator',
+        department: 'Information Technology',
+        lastSignIn: '2026-06-11T11:20:00Z',
+        riskLevel: 'HIGH'
+      },
+      {
+        id: 'user-005',
+        displayName: 'David Lee',
+        mail: 'david.lee@contoso.com',
+        jobTitle: 'SharePoint Administrator',
+        department: 'Collaboration',
+        lastSignIn: '2026-06-09T13:00:00Z',
+        riskLevel: 'LOW'
+      }
+    ]
+
+    res.json({
+      success: true,
+      data: mockUsers
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/users/:userId/investigation
+ * Get comprehensive user activity investigation data
+ */
+app.get('/api/tenantguard/users/:userId/investigation', (req, res) => {
+  try {
+    const { userId } = req.params
+    const { startDate, endDate } = req.query
+
+    // Parse dates (default to last 7 days if not provided)
+    let start = startDate ? new Date(startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    let end = endDate ? new Date(endDate) : new Date()
+
+    // Mock user data
+    const userMap = {
+      'user-001': {
+        id: 'user-001',
+        displayName: 'John Smith',
+        mail: 'john.smith@contoso.com',
+        jobTitle: 'IT Administrator',
+        department: 'Information Technology'
+      },
+      'user-002': {
+        id: 'user-002',
+        displayName: 'Alice Johnson',
+        mail: 'alice.johnson@contoso.com',
+        jobTitle: 'Security Engineer',
+        department: 'Security'
+      },
+      'user-003': {
+        id: 'user-003',
+        displayName: 'Bob Davis',
+        mail: 'bob.davis@contoso.com',
+        jobTitle: 'Exchange Administrator',
+        department: 'Messaging'
+      },
+      'user-004': {
+        id: 'user-004',
+        displayName: 'Carol Williams',
+        mail: 'carol.williams@contoso.com',
+        jobTitle: 'Global Administrator',
+        department: 'Information Technology'
+      },
+      'user-005': {
+        id: 'user-005',
+        displayName: 'David Lee',
+        mail: 'david.lee@contoso.com',
+        jobTitle: 'SharePoint Administrator',
+        department: 'Collaboration'
+      }
+    }
+
+    const user = userMap[userId] || { id: userId, displayName: 'Unknown User', mail: 'unknown@contoso.com' }
+
+    // Mock sign-in logs grouped by application
+    const applicationAccess = [
+      {
+        appName: 'Microsoft Teams',
+        appId: 'app-teams',
+        lastAccessTime: '2026-06-11T14:30:00Z',
+        successCount: 12,
+        failureCount: 0,
+        status: 'SUCCESS',
+        locations: ['Seattle, WA', 'Redmond, WA'],
+        devices: ['Windows 10', 'iPhone']
+      },
+      {
+        appName: 'Exchange Online',
+        appId: 'app-exchange',
+        lastAccessTime: '2026-06-11T13:15:00Z',
+        successCount: 8,
+        failureCount: 0,
+        status: 'SUCCESS',
+        locations: ['Seattle, WA'],
+        devices: ['Windows 10']
+      },
+      {
+        appName: 'SharePoint Online',
+        appId: 'app-sharepoint',
+        lastAccessTime: '2026-06-10T15:45:00Z',
+        successCount: 5,
+        failureCount: 1,
+        status: 'SUCCESS',
+        locations: ['Seattle, WA', 'San Francisco, CA'],
+        devices: ['Windows 10', 'Mac OS']
+      },
+      {
+        appName: 'Azure Portal',
+        appId: 'app-azure',
+        lastAccessTime: '2026-06-11T10:20:00Z',
+        successCount: 3,
+        failureCount: 2,
+        status: 'FAILURE',
+        locations: ['Seattle, WA'],
+        devices: ['Windows 10'],
+        lastFailure: '2026-06-11T10:05:00Z'
+      },
+      {
+        appName: 'Microsoft 365 Admin Center',
+        appId: 'app-m365admin',
+        lastAccessTime: '2026-06-09T09:30:00Z',
+        successCount: 2,
+        failureCount: 0,
+        status: 'SUCCESS',
+        locations: ['Seattle, WA'],
+        devices: ['Windows 10']
+      }
+    ]
+
+    // Mock sign-in logs
+    const signInLogs = [
+      {
+        timestamp: '2026-06-11T14:30:00Z',
+        application: 'Microsoft Teams',
+        location: 'Seattle, WA',
+        ipAddress: '203.0.113.45',
+        device: 'Windows 10',
+        deviceName: 'LAPTOP-ABC123',
+        riskLevel: 'low',
+        status: 'success'
+      },
+      {
+        timestamp: '2026-06-11T13:15:00Z',
+        application: 'Exchange Online',
+        location: 'Seattle, WA',
+        ipAddress: '203.0.113.45',
+        device: 'Windows 10',
+        deviceName: 'LAPTOP-ABC123',
+        riskLevel: 'low',
+        status: 'success'
+      },
+      {
+        timestamp: '2026-06-11T10:20:00Z',
+        application: 'Azure Portal',
+        location: 'Seattle, WA',
+        ipAddress: '203.0.113.46',
+        device: 'Windows 10',
+        deviceName: '',
+        riskLevel: 'high',
+        status: 'failure',
+        reason: 'Invalid credentials'
+      },
+      {
+        timestamp: '2026-06-11T10:05:00Z',
+        application: 'Azure Portal',
+        location: 'Seattle, WA',
+        ipAddress: '203.0.113.46',
+        device: 'Windows 10',
+        deviceName: '',
+        riskLevel: 'high',
+        status: 'failure',
+        reason: 'Invalid credentials'
+      },
+      {
+        timestamp: '2026-06-10T15:45:00Z',
+        application: 'SharePoint Online',
+        location: 'San Francisco, CA',
+        ipAddress: '198.51.100.55',
+        device: 'Mac OS',
+        deviceName: 'Johns-MacBook-Pro',
+        riskLevel: 'low',
+        status: 'success'
+      }
+    ]
+
+    // Mock audit logs
+    const auditLogs = [
+      {
+        timestamp: '2026-06-11T11:00:00Z',
+        operation: 'Reset user password',
+        target: 'alice@contoso.com',
+        result: 'success',
+        severity: 'HIGH'
+      },
+      {
+        timestamp: '2026-06-10T14:30:00Z',
+        operation: 'Add user to group',
+        target: 'Global Administrators',
+        result: 'success',
+        severity: 'CRITICAL'
+      },
+      {
+        timestamp: '2026-06-09T10:15:00Z',
+        operation: 'Update policy',
+        target: 'Conditional Access Policy',
+        result: 'success',
+        severity: 'HIGH'
+      },
+      {
+        timestamp: '2026-06-08T16:45:00Z',
+        operation: 'Create security group',
+        target: 'Security-Team-Alpha',
+        result: 'success',
+        severity: 'MEDIUM'
+      }
+    ]
+
+    // Mock actions on other accounts
+    const actionsOnOtherAccounts = [
+      {
+        timestamp: '2026-06-11T11:00:00Z',
+        targetUser: 'alice.johnson@contoso.com',
+        targetName: 'Alice Johnson',
+        action: 'Reset password',
+        severity: 'HIGH'
+      },
+      {
+        timestamp: '2026-06-10T14:30:00Z',
+        targetUser: 'bob.davis@contoso.com',
+        targetName: 'Bob Davis',
+        action: 'Added to Global Administrators',
+        severity: 'CRITICAL'
+      },
+      {
+        timestamp: '2026-06-09T09:20:00Z',
+        targetUser: 'carol.williams@contoso.com',
+        targetName: 'Carol Williams',
+        action: 'Assigned license',
+        severity: 'LOW'
+      }
+    ]
+
+    // Calculate risk score
+    const failureCount = signInLogs.filter(l => l.status === 'failure').length
+    const highRiskCount = signInLogs.filter(l => l.riskLevel === 'high').length
+    const auditCritical = auditLogs.filter(l => l.severity === 'CRITICAL').length
+    const riskScore = Math.min(100, failureCount * 5 + highRiskCount * 8 + auditCritical * 15)
+
+    // Determine risk level
+    let riskLevel = 'LOW'
+    if (riskScore >= 75) riskLevel = 'CRITICAL'
+    else if (riskScore >= 50) riskLevel = 'HIGH'
+    else if (riskScore >= 25) riskLevel = 'MEDIUM'
+
+    // Build timeline
+    const timeline = []
+    auditLogs.forEach(log => {
+      if (log.severity === 'CRITICAL' || log.severity === 'HIGH') {
+        timeline.push({
+          timestamp: log.timestamp,
+          type: 'audit',
+          description: `${log.operation} on ${log.target}`,
+          severity: log.severity
+        })
+      }
+    })
+    signInLogs.filter(l => l.status === 'failure').forEach(log => {
+      timeline.push({
+        timestamp: log.timestamp,
+        type: 'signin_failure',
+        description: `Failed sign-in to ${log.application}`,
+        severity: 'HIGH'
+      })
+    })
+    timeline.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          ...user,
+          riskScore,
+          riskLevel,
+          lastActive: signInLogs[0]?.timestamp || new Date().toISOString()
+        },
+        dateRange: {
+          startDate: start.toISOString(),
+          endDate: end.toISOString()
+        },
+        applicationAccess,
+        signInLogs,
+        auditLogs,
+        actionsOnOtherAccounts,
+        timeline,
+        summary: {
+          totalSignIns: signInLogs.length,
+          successfulSignIns: signInLogs.filter(l => l.status === 'success').length,
+          failedSignIns: signInLogs.filter(l => l.status === 'failure').length,
+          totalApplications: applicationAccess.length,
+          riskyApplications: applicationAccess.filter(a => a.status === 'FAILURE').length,
+          totalAuditActions: auditLogs.length,
+          criticalActions: auditLogs.filter(l => l.severity === 'CRITICAL').length,
+          accountsModified: actionsOnOtherAccounts.length,
+          suspiciousActivity: riskScore > 25 ? ['Multiple failed authentication attempts', 'High-risk administrative actions'] : []
+        }
+      }
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// 404 Handler
+// ============================================================
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -3268,7 +4029,21 @@ app.use((req, res) => {
       '/api/me/devices',
       '/api/me/security',
       '/api/audit-logs/consents',
-      '/api/audit-logs/m365agentops'
+      '/api/audit-logs/m365agentops',
+      '/api/tenantguard/alerts',
+      '/api/tenantguard/alerts/summary',
+      '/api/tenantguard/alerts/:id',
+      '/api/tenantguard/alerts/:id/dismiss',
+      '/api/tenantguard/correlations',
+      '/api/tenantguard/correlations/:id',
+      '/api/tenantguard/patterns',
+      '/api/tenantguard/investigate',
+      '/api/tenantguard/investigations/:id',
+      '/api/tenantguard/investigations/:id/chat',
+      '/api/tenantguard/investigations/:id/report',
+      '/api/tenantguard/settings',
+      '/api/tenantguard/settings/claude-status',
+      '/api/tenantguard/settings/claude-api-key'
     ]
   })
 })
