@@ -25,6 +25,22 @@ class DatabaseWrapper {
   }
 
   run(sql, params = []) {
+    // Handle INSERT statements
+    if (sql.includes('INSERT') && sql.includes('audit_logs_cache')) {
+      const [id, source, operation, actor, target, timestamp, rawData] = params
+      this.store.auditLogs = this.store.auditLogs || {}
+      this.store.auditLogs[id] = {
+        id,
+        source,
+        operation_name: operation,
+        actor,
+        target,
+        timestamp,
+        raw_data: rawData
+      }
+      console.log(`✓ Stored audit log: ${operation}`)
+      return { lastID: 1, changes: 1 }
+    }
     return { lastID: 1, changes: 1 }
   }
 
@@ -52,8 +68,25 @@ class DatabaseWrapper {
     const tableMatch = sql.match(/FROM\s+(\w+)/i)
     if (tableMatch) {
       const table = tableMatch[1]
-      const data = this.store[table] || {}
-      return Object.values(data)
+
+      // Map table names to store keys
+      const tableMap = {
+        'audit_logs_cache': 'auditLogs',
+        'alerts': 'alerts'
+      }
+
+      const storeKey = tableMap[table] || table
+      const data = this.store[storeKey] || {}
+
+      let results = Object.values(data)
+
+      // Handle LIMIT clause
+      const limitMatch = sql.match(/LIMIT\s+(\d+)/i)
+      if (limitMatch) {
+        results = results.slice(0, parseInt(limitMatch[1]))
+      }
+
+      return results
     }
     return []
   }
