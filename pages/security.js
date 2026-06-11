@@ -1,6 +1,6 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
-import { getSecurityScore, getIncidents } from '../lib/api-client.js'
+import { getSecurityScore, getIncidents, getDevices } from '../lib/api-client.js'
 import {
   SECURE_SCORE, IDENTITY, EMAIL, ENDPOINT, TEAMS_SEC, SHAREPOINT_SEC,
   DATA_PROTECTION, PRIV_ACCESS, GUEST_GOVERNANCE, INCIDENTS as STATIC_INCIDENTS, RECOMMENDATIONS,
@@ -55,9 +55,51 @@ export async function initSecurity() {
 
     // Fetch incidents (from alerts)
     const incidentsResult = await getIncidents()
+    let devicesData = []
+
     if (incidentsResult.success && incidentsResult.data.length > 0) {
       realIncidents = incidentsResult.data
       console.log(`✅ Loaded ${realIncidents.length} real incidents from alerts`)
+
+      // Fetch real devices to enrich incidents
+      try {
+        const devicesResult = await getDevices()
+        if (devicesResult.success && devicesResult.data) {
+          devicesData = devicesResult.data
+          console.log(`✅ Loaded ${devicesData.length} real devices from Intune`)
+
+          // Enrich incidents with real device data
+          realIncidents = realIncidents.map(incident => {
+            // Try to match device from incident description
+            const deviceMatch = incident.description?.match(/([A-Z0-9-]+)/) || incident.title?.match(/([A-Z0-9-]+)/)
+            if (deviceMatch) {
+              const deviceName = deviceMatch[1]
+              const realDevice = devicesData.find(d =>
+                d.deviceName?.includes(deviceName) ||
+                d.id === deviceName ||
+                d.serialNumber?.includes(deviceName)
+              )
+
+              if (realDevice) {
+                return {
+                  ...incident,
+                  deviceId: realDevice.id,
+                  deviceName: realDevice.deviceName,
+                  deviceOS: realDevice.operatingSystem,
+                  compliant: realDevice.complianceState === 'Compliant',
+                  managed: true,
+                  owner: realDevice.userDisplayName
+                }
+              }
+            }
+            return incident
+          })
+          console.log('✅ Enriched incidents with real device data')
+        }
+      } catch (deviceError) {
+        console.warn('⚠️ Could not fetch device data:', deviceError.message)
+        // Continue with incidents without device data
+      }
     } else {
       console.warn('⚠️ No active incidents, using static data')
       realIncidents = STATIC_INCIDENTS
