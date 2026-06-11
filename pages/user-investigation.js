@@ -282,9 +282,11 @@ function renderInvestigation(el, data) {
             <th>Timestamp</th>
             <th>Application</th>
             <th>Location</th>
-            <th>Device</th>
+            <th>Browser / OS</th>
             <th>Device Name</th>
             <th>IP Address</th>
+            <th>Compliant</th>
+            <th>Managed</th>
             <th>Status</th>
             <th>Risk</th>
           </tr>
@@ -295,9 +297,22 @@ function renderInvestigation(el, data) {
               <td>${formatTime(log.timestamp)}</td>
               <td><strong>${log.application}</strong></td>
               <td>${log.location}</td>
-              <td style="font-size:11px">${log.device}</td>
+              <td style="font-size:10px">
+                <div>${log.browser}</div>
+                <div style="color:var(--color-text-secondary)">${log.operatingSystem}</div>
+              </td>
               <td style="font-size:11px;color:${log.deviceName ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)'}">${log.deviceName || '-'}</td>
               <td style="font-family:monospace;font-size:10px;color:var(--color-text-secondary)">${log.ipAddress}</td>
+              <td>
+                <span style="padding:2px 6px;border-radius:3px;font-size:9px;font-weight:600;background:${log.compliant === 'Yes' ? 'var(--clr-success-bg)' : 'var(--clr-warning-bg)'};color:${log.compliant === 'Yes' ? 'var(--clr-success-text)' : 'var(--clr-warning-text)'}">
+                  ${log.compliant}
+                </span>
+              </td>
+              <td>
+                <span style="padding:2px 6px;border-radius:3px;font-size:9px;font-weight:600;background:${log.managed === 'Yes' ? 'var(--clr-success-bg)' : 'var(--clr-info-bg)'};color:${log.managed === 'Yes' ? 'var(--clr-success-text)' : 'var(--clr-info-text)'}">
+                  ${log.managed}
+                </span>
+              </td>
               <td>
                 <span style="padding:2px 6px;border-radius:3px;font-size:9px;font-weight:600;background:${log.status === 'success' ? 'var(--clr-success-bg)' : 'var(--clr-danger-bg)'};color:${log.status === 'success' ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'}">
                   ${log.status.toUpperCase()}

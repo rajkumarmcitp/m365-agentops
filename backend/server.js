@@ -3843,6 +3843,11 @@ app.get('/api/tenantguard/users/:userId/investigation', async (req, res) => {
           ipAddress: s.ipAddress || 'N/A',
           device: s.deviceDetail?.operatingSystem || 'Unknown',
           deviceName: s.deviceDetail?.displayName || '',
+          browser: s.deviceDetail?.browser || 'Unknown',
+          operatingSystem: s.deviceDetail?.operatingSystem || 'Unknown',
+          compliant: s.deviceDetail?.isCompliant ? 'Yes' : 'No',
+          managed: s.deviceDetail?.isManaged ? 'Yes' : 'No',
+          joinType: s.deviceDetail?.trustType || 'Unknown',
           riskLevel: s.riskLevelDuringSignIn?.toLowerCase() || 'low',
           status: s.status?.errorCode === 0 ? 'success' : 'failure',
           reason: s.status?.failureReason || ''
