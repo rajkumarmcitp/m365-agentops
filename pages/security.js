@@ -101,13 +101,13 @@ export async function initSecurity() {
 
     // Fetch incidents (from alerts)
     const incidentsResult = await getIncidents()
-    if (incidentsResult.success && incidentsResult.data.length > 0) {
+    if (incidentsResult.success && Array.isArray(incidentsResult.data) && incidentsResult.data.length > 0) {
       realIncidents = enrichIncidents(incidentsResult.data)
       console.log(`✅ Loaded ${realIncidents.length} real incidents from alerts (enriched with device data)`)
     } else {
-      console.warn('⚠️ No active incidents, using static data (enriched with real devices)')
-      // Enrich static incidents with real device data
-      realIncidents = enrichIncidents(STATIC_INCIDENTS)
+      console.warn('⚠️ No active incidents found')
+      // Show empty state instead of static data
+      realIncidents = []
     }
 
     // Fetch identity posture
@@ -324,6 +324,7 @@ function renderSection() {
 // ============================================================
 function renderExecutive() {
   const ss = realSecureScore || SECURE_SCORE
+  const incidents = Array.isArray(realIncidents) ? realIncidents : []
   return `
     <!-- Secondary KPI row - Real data only -->
     <div class="kpi-row mb-3">
@@ -396,7 +397,7 @@ function renderExecutive() {
           ${[
             { name: 'Identity',    icon: 'ti-user-check',        score: realIdentityPosture.identitySecureScore || 72, color: '#0C447C', bg:'#E6F1FB', issues: realIdentityPosture.highRiskUsers },
             { name: 'Secure Score',icon: 'ti-shield-check',      score: Math.round(ss.percentOf100), color: '#854F0B', bg:'#FAEEDA', issues: 0 },
-            { name: 'Incidents',   icon: 'ti-alert-triangle',    score: realIncidents.filter(i => i.status !== 'resolved').length === 0 ? 100 : 50, color: realIncidents.filter(i => i.status !== 'resolved').length === 0 ? '#3B6D11' : '#A32D2D', bg: realIncidents.filter(i => i.status !== 'resolved').length === 0 ? '#EAF3DE' : '#FDEBEB', issues: realIncidents.filter(i => i.status !== 'resolved').length },
+            { name: 'Incidents',   icon: 'ti-alert-triangle',    score: incidents.filter(i => i.status !== 'resolved').length === 0 ? 100 : 50, color: incidents.filter(i => i.status !== 'resolved').length === 0 ? '#3B6D11' : '#A32D2D', bg: incidents.filter(i => i.status !== 'resolved').length === 0 ? '#EAF3DE' : '#FDEBEB', issues: incidents.filter(i => i.status !== 'resolved').length },
           ].map(s => {
             const cls = s.score >= 80 ? 'success' : s.score >= 65 ? 'warning' : 'danger'
             return `<div class="sec-svc-tile" data-goto="${s.name.toLowerCase().replace(' ','').replace('.','')}" style="cursor:pointer">
@@ -421,8 +422,8 @@ function renderExecutive() {
           <span class="card-title"><i class="ti ti-alert-triangle"></i> Active Incidents</span>
           <button class="btn btn-xs btn-primary" id="exec-view-incidents">View all</button>
         </div>
-        ${realIncidents.filter(i => i.status !== 'resolved').length > 0 ? `
-          ${realIncidents.filter(i => i.status !== 'resolved').slice(0, 4).map(inc => `
+        ${incidents.filter(i => i.status !== 'resolved').length > 0 ? `
+          ${incidents.filter(i => i.status !== 'resolved').slice(0, 4).map(inc => `
             <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
               <span class="badge ${inc.severity === 'critical' ? 'danger' : inc.severity === 'high' ? 'danger' : 'warning'}" style="flex-shrink:0;min-width:56px;justify-content:center">${inc.severity}</span>
               <div style="flex:1;min-width:0">
