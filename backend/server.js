@@ -3878,13 +3878,27 @@ app.get('/api/tenantguard/users/:userId/investigation', async (req, res) => {
             }
             return matches
           })
-          .map(a => ({
-            timestamp: a.timestamp,
-            operation: a.operation_name || 'Unknown Operation',
-            target: a.target || 'N/A',
-            result: 'success',
-            severity: a.severity || 'MEDIUM'
-          }))
+          .map(a => {
+            // Determine severity based on operation type
+            const op = a.operation_name?.toLowerCase() || ''
+            let severity = 'MEDIUM'
+
+            if (op.includes('reset') || op.includes('password') || op.includes('delete') ||
+                op.includes('remove') || op.includes('admin') || op.includes('role')) {
+              severity = 'HIGH'
+            }
+            if (op.includes('create') || op.includes('update') || op.includes('add')) {
+              severity = 'MEDIUM'
+            }
+
+            return {
+              timestamp: a.timestamp,
+              operation: a.operation_name || 'Unknown Operation',
+              target: a.target || 'N/A',
+              result: 'success',
+              severity: severity
+            }
+          })
           .slice(0, 20)
 
         console.log(`✓ Found ${auditLogs.length} audit logs for ${user.displayName}`)

@@ -38,16 +38,29 @@ export class AuditCollector {
         for (const audit of audits.value || []) {
           const logId = audit.id || uuid()
           try {
+            // Extract operation name - try multiple fields
+            const operationName = audit.activityDisplayName ||
+                                audit.activity ||
+                                audit.operationName ||
+                                'Unknown Operation'
+
+            // Extract target - check multiple sources
+            const target = audit.targetResources?.[0]?.displayName ||
+                          audit.targetResources?.[0]?.id ||
+                          audit.targetDisplayName ||
+                          ''
+
             stmt.run(
               logId,
               'graph',
-              audit.activity,
+              operationName,
               audit.initiatedBy?.user?.userPrincipalName || 'System',
-              audit.targetResources?.[0]?.displayName || '',
+              target,
               audit.activityDateTime,
               JSON.stringify(audit)
             )
             results.audits++
+            console.log(`  ✓ Stored audit: ${operationName}`)
           } catch (e) {
             // Ignore duplicate key errors
             if (!e.message.includes('UNIQUE')) {
