@@ -1,6 +1,7 @@
 /**
  * Database - Simple in-memory storage for Azure App Service compatibility
  * (No native dependencies - safe for Azure deployment)
+ * Returns synchronous results to match better-sqlite3 API
  */
 
 const store = {
@@ -24,11 +25,11 @@ class DatabaseWrapper {
   }
 
   run(sql, params = []) {
-    return Promise.resolve({ lastID: 1, changes: 1 })
+    return { lastID: 1, changes: 1 }
   }
 
   get(sql, params = []) {
-    // Extract table and key from SQL
+    // Extract table and key from SQL like: SELECT * FROM alerts WHERE id = ?
     const tableMatch = sql.match(/FROM\s+(\w+)/i)
     const whereMatch = sql.match(/WHERE\s+(\w+)\s*=\s*\?/i)
 
@@ -36,9 +37,15 @@ class DatabaseWrapper {
       const table = tableMatch[1]
       const key = params[0]
       const data = this.store[table] || {}
-      return Promise.resolve(data[key] || null)
+      return data[key] || null
     }
-    return Promise.resolve(null)
+
+    // For COUNT queries
+    if (sql.includes('COUNT(*)')) {
+      return { count: 0 }
+    }
+
+    return null
   }
 
   all(sql, params = []) {
@@ -46,13 +53,14 @@ class DatabaseWrapper {
     if (tableMatch) {
       const table = tableMatch[1]
       const data = this.store[table] || {}
-      return Promise.resolve(Object.values(data))
+      return Object.values(data)
     }
-    return Promise.resolve([])
+    return []
   }
 
   exec(sql) {
-    return Promise.resolve()
+    // No-op for in-memory
+    return undefined
   }
 
   prepare(sql) {
@@ -64,7 +72,7 @@ class DatabaseWrapper {
   }
 
   close() {
-    return Promise.resolve()
+    return undefined
   }
 }
 
@@ -78,8 +86,6 @@ export function getDatabase() {
 }
 
 export async function closeDatabase() {
-  if (db) {
-    await db.close()
-    db = null
-  }
+  // No-op for in-memory
+  db = null
 }
