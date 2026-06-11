@@ -273,62 +273,87 @@ function renderInvestigation(el, data) {
 
   el.querySelector('#applications-section').innerHTML = appHtml
 
-  // Sign-in Logs
+  // Group sign-in logs by application
+  const appGroups = {}
+  signInLogs.forEach(log => {
+    if (!appGroups[log.application]) {
+      appGroups[log.application] = []
+    }
+    appGroups[log.application].push(log)
+  })
+
+  // Sign-in Logs by Application
   const signinHtml = `
-    <div style="overflow-x:auto">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Timestamp</th>
-            <th>Application</th>
-            <th>Location</th>
-            <th>Browser / OS</th>
-            <th>Device Name</th>
-            <th>IP Address</th>
-            <th>Compliant</th>
-            <th>Managed</th>
-            <th>Status</th>
-            <th>Risk</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${signInLogs.slice(0, 20).map(log => `
-            <tr>
-              <td>${formatTime(log.timestamp)}</td>
-              <td><strong>${log.application}</strong></td>
-              <td>${log.location}</td>
-              <td style="font-size:10px">
-                <div>${log.browser}</div>
-                <div style="color:var(--color-text-secondary)">${log.operatingSystem}</div>
-              </td>
-              <td style="font-size:11px;color:${log.deviceName ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)'}">${log.deviceName || '-'}</td>
-              <td style="font-family:monospace;font-size:10px;color:var(--color-text-secondary)">${log.ipAddress}</td>
-              <td>
-                <span style="padding:2px 6px;border-radius:3px;font-size:9px;font-weight:600;background:${log.compliant === 'Yes' ? 'var(--clr-success-bg)' : 'var(--clr-warning-bg)'};color:${log.compliant === 'Yes' ? 'var(--clr-success-text)' : 'var(--clr-warning-text)'}">
-                  ${log.compliant}
-                </span>
-              </td>
-              <td>
-                <span style="padding:2px 6px;border-radius:3px;font-size:9px;font-weight:600;background:${log.managed === 'Yes' ? 'var(--clr-success-bg)' : 'var(--clr-info-bg)'};color:${log.managed === 'Yes' ? 'var(--clr-success-text)' : 'var(--clr-info-text)'}">
-                  ${log.managed}
-                </span>
-              </td>
-              <td>
-                <span style="padding:2px 6px;border-radius:3px;font-size:9px;font-weight:600;background:${log.status === 'success' ? 'var(--clr-success-bg)' : 'var(--clr-danger-bg)'};color:${log.status === 'success' ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'}">
-                  ${log.status.toUpperCase()}
-                </span>
-              </td>
-              <td>
-                <span style="padding:2px 6px;border-radius:3px;font-size:9px;font-weight:600;background:${getRiskBadgeColor(log.riskLevel).bg};color:${getRiskBadgeColor(log.riskLevel).text}">
-                  ${log.riskLevel.toUpperCase()}
-                </span>
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+    <div style="display:grid;gap:16px">
+      ${Object.entries(appGroups).slice(0, 10).map(([appName, logs]) => {
+        const successCount = logs.filter(l => l.status === 'success').length
+        const failureCount = logs.filter(l => l.status === 'failure').length
+        const nonCompliantCount = logs.filter(l => l.compliant === 'No').length
+        const unmanagedCount = logs.filter(l => l.managed === 'No').length
+
+        return `
+          <div style="border:1px solid var(--color-border);border-radius:6px;padding:12px;background:var(--color-bg-secondary)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <h4 style="margin:0;color:var(--color-text-primary)">${appName}</h4>
+              <div style="display:flex;gap:8px;font-size:11px">
+                <span style="padding:4px 8px;border-radius:3px;background:var(--clr-success-bg);color:var(--clr-success-text)"><strong>${successCount}</strong> success</span>
+                ${failureCount > 0 ? `<span style="padding:4px 8px;border-radius:3px;background:var(--clr-danger-bg);color:var(--clr-danger-text)"><strong>${failureCount}</strong> failed</span>` : ''}
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px;font-size:11px">
+              <div style="background:var(--color-bg-primary);padding:8px;border-radius:3px">
+                <div style="color:var(--color-text-secondary);font-size:10px">Non-Compliant</div>
+                <div style="font-weight:600;color:${nonCompliantCount > 0 ? 'var(--clr-warning-text)' : 'var(--color-text-tertiary)'}">${nonCompliantCount}</div>
+              </div>
+              <div style="background:var(--color-bg-primary);padding:8px;border-radius:3px">
+                <div style="color:var(--color-text-secondary);font-size:10px">Unmanaged</div>
+                <div style="font-weight:600;color:${unmanagedCount > 0 ? 'var(--clr-info-text)' : 'var(--color-text-tertiary)'}">${unmanagedCount}</div>
+              </div>
+              <div style="background:var(--color-bg-primary);padding:8px;border-radius:3px">
+                <div style="color:var(--color-text-secondary);font-size:10px">Recent Activity</div>
+                <div style="font-weight:600">${formatTime(logs[0].timestamp)}</div>
+              </div>
+            </div>
+
+            <details style="cursor:pointer">
+              <summary style="color:var(--color-text-secondary);font-size:11px;font-weight:600;padding:4px 0">Show ${logs.length} sign-in details</summary>
+              <table class="data-table" style="margin-top:8px;font-size:10px">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Browser / OS</th>
+                    <th>Device</th>
+                    <th>IP</th>
+                    <th>Compliant</th>
+                    <th>Managed</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${logs.slice(0, 15).map(log => `
+                    <tr>
+                      <td style="white-space:nowrap">${formatTime(log.timestamp)}</td>
+                      <td style="font-size:9px">
+                        <div>${log.browser}</div>
+                        <div style="color:var(--color-text-secondary)">${log.operatingSystem}</div>
+                      </td>
+                      <td style="font-size:9px;color:${log.deviceName ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)'}">${log.deviceName || '-'}</td>
+                      <td style="font-family:monospace;font-size:9px;color:var(--color-text-secondary)">${log.ipAddress}</td>
+                      <td><span style="padding:2px 4px;border-radius:2px;font-size:8px;background:${log.compliant === 'Yes' ? 'var(--clr-success-bg)' : 'var(--clr-warning-bg)'};color:${log.compliant === 'Yes' ? 'var(--clr-success-text)' : 'var(--clr-warning-text)'}">${log.compliant}</span></td>
+                      <td><span style="padding:2px 4px;border-radius:2px;font-size:8px;background:${log.managed === 'Yes' ? 'var(--clr-success-bg)' : 'var(--clr-info-bg)'};color:${log.managed === 'Yes' ? 'var(--clr-success-text)' : 'var(--clr-info-text)'}">${log.managed}</span></td>
+                      <td><span style="padding:2px 4px;border-radius:2px;font-size:8px;background:${log.status === 'success' ? 'var(--clr-success-bg)' : 'var(--clr-danger-bg)'};color:${log.status === 'success' ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'}">${log.status.toUpperCase()}</span></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+              ${logs.length > 15 ? `<div style="color:var(--color-text-tertiary);font-size:9px;margin-top:4px">Showing 15 of ${logs.length} sign-ins</div>` : ''}
+            </details>
+          </div>
+        `
+      }).join('')}
     </div>
-    ${signInLogs.length > 20 ? `<div style="color:var(--color-text-tertiary);font-size:11px;margin-top:8px">Showing 20 of ${signInLogs.length} sign-ins</div>` : ''}
+    ${signInLogs.length > 0 ? `<div style="color:var(--color-text-tertiary);font-size:11px;margin-top:12px">Showing ${Math.min(10, Object.keys(appGroups).length)} of ${Object.keys(appGroups).length} applications (${signInLogs.length} total sign-ins)</div>` : ''}
   `
 
   el.querySelector('#signin-logs-section').innerHTML = signinHtml
