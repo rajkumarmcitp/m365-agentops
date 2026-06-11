@@ -3751,7 +3751,7 @@ function getMockUsers() {
  * GET /api/tenantguard/users/:userId/investigation
  * Get comprehensive user activity investigation data
  */
-app.get('/api/tenantguard/users/:userId/investigation', (req, res) => {
+app.get('/api/tenantguard/users/:userId/investigation', async (req, res) => {
   try {
     const { userId } = req.params
     const { startDate, endDate } = req.query
@@ -3760,8 +3760,32 @@ app.get('/api/tenantguard/users/:userId/investigation', (req, res) => {
     let start = startDate ? new Date(startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     let end = endDate ? new Date(endDate) : new Date()
 
-    // Mock user data
-    const userMap = {
+    let user = null
+
+    // Fetch REAL user from Graph API
+    if (graphClient) {
+      try {
+        const graphUser = await graphClient
+          .api(`/users/${userId}`)
+          .select('id,displayName,mail,jobTitle,department,userPrincipalName')
+          .get()
+
+        user = {
+          id: graphUser.id,
+          displayName: graphUser.displayName || 'Unknown',
+          mail: graphUser.mail || graphUser.userPrincipalName,
+          jobTitle: graphUser.jobTitle || 'N/A',
+          department: graphUser.department || 'N/A'
+        }
+        console.log(`✓ Fetched user ${user.displayName} from Graph API`)
+      } catch (apiError) {
+        console.warn(`⚠️ Error fetching user from Graph API:`, apiError.message)
+      }
+    }
+
+    // Fallback to mock user if Graph API fails
+    if (!user) {
+      const userMap = {
       'user-001': {
         id: 'user-001',
         displayName: 'John Smith',
