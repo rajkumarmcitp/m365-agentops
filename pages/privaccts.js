@@ -1,17 +1,32 @@
 import { PA_ACCOUNTS, PA_GROUPS, PA_LOG } from '../data/pa-data.js'
 import { showToast } from '../components/toast.js'
+import { getPrivilegedAccounts } from '../lib/api-client.js'
 
 let logEntries = [...PA_LOG]
+let realPrivilegedAccounts = PA_ACCOUNTS
+let accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0, servicePrincipals: 0 }
 
-export function initPrivAccts() {
+export async function initPrivAccts() {
   const el = document.getElementById('page-privaccts')
   if (!el) return
+
+  try {
+    console.log('📡 Fetching real privileged accounts from Azure AD...')
+    const result = await getPrivilegedAccounts()
+    if (result.success && result.data?.accounts) {
+      realPrivilegedAccounts = result.data.accounts
+      accountsSummary = result.data.summary
+      console.log(`✅ Loaded ${realPrivilegedAccounts.length} real privileged accounts`)
+    }
+  } catch (error) {
+    console.warn('⚠️ Using demo privileged accounts:', error.message)
+  }
 
   el.innerHTML = `
     <div class="page-header">
       <div>
         <div class="page-title"><i class="ti ti-crown"></i> Privileged Accounts</div>
-        <div class="page-subtitle">Manage and monitor privileged identities in Contoso.com</div>
+        <div class="page-subtitle">Manage and monitor privileged identities in your tenant</div>
       </div>
       <div class="page-actions">
         <button class="btn" id="pa-sync"><i class="ti ti-refresh"></i> Sync tenant</button>
@@ -19,17 +34,19 @@ export function initPrivAccts() {
       </div>
     </div>
 
-    <div class="alert-banner danger mb-3">
-      <i class="ti ti-alert-triangle"></i>
-      2 privileged accounts have active risk detections.
-    </div>
+    ${accountsSummary.atRisk > 0 ? `
+      <div class="alert-banner danger mb-3">
+        <i class="ti ti-alert-triangle"></i>
+        ${accountsSummary.atRisk} privileged account${accountsSummary.atRisk > 1 ? 's' : ''} have active risk detection${accountsSummary.atRisk > 1 ? 's' : ''}.
+      </div>
+    ` : ''}
 
     <div class="kpi-row">
-      <div class="kpi-tile"><div class="kpi-value info">14</div><div class="kpi-label">Accounts</div></div>
-      <div class="kpi-tile"><div class="kpi-value danger">2</div><div class="kpi-label">At Risk</div></div>
-      <div class="kpi-tile"><div class="kpi-value danger">1</div><div class="kpi-label">No MFA</div></div>
-      <div class="kpi-tile"><div class="kpi-value info">8</div><div class="kpi-label">Groups</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning">4</div><div class="kpi-label">Permanent</div></div>
+      <div class="kpi-tile"><div class="kpi-value info">${accountsSummary.totalAccounts}</div><div class="kpi-label">Accounts</div></div>
+      <div class="kpi-tile"><div class="kpi-value ${accountsSummary.atRisk > 0 ? 'danger' : 'success'}">${accountsSummary.atRisk}</div><div class="kpi-label">At Risk</div></div>
+      <div class="kpi-tile"><div class="kpi-value info">${accountsSummary.noMFA}</div><div class="kpi-label">No MFA</div></div>
+      <div class="kpi-tile"><div class="kpi-value info">${PA_GROUPS.length}</div><div class="kpi-label">Groups</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning">${accountsSummary.permanentRoles}</div><div class="kpi-label">Permanent</div></div>
     </div>
 
     <div class="tabs" id="pa-tabs">
@@ -117,7 +134,7 @@ function renderAccountsTab(el) {
           <th style="width:5%"></th>
         </tr></thead>
         <tbody id="pa-acct-tbody">
-          ${PA_ACCOUNTS.map(a => accountRow(a)).join('')}
+          ${realPrivilegedAccounts.map(a => accountRow(a)).join('')}
         </tbody>
       </table>
     </div>
@@ -140,7 +157,7 @@ function renderAccountsTab(el) {
 function filterAccounts(container, q, risk) {
   const tbody = container.querySelector('#pa-acct-tbody')
   if (!tbody) return
-  tbody.innerHTML = PA_ACCOUNTS
+  tbody.innerHTML = realPrivilegedAccounts
     .filter(a => {
       const matchQ = !q || a.upn.toLowerCase().includes(q) || a.name.toLowerCase().includes(q)
       const matchR = risk === 'all' || a.risk === risk

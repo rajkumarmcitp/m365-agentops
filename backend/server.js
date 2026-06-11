@@ -3417,6 +3417,107 @@ app.get('/api/security/incidents', (req, res) => {
 })
 
 /**
+ * GET /api/privileged-accounts
+ * Get real privileged accounts and admin users from Azure AD
+ */
+app.get('/api/privileged-accounts', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    console.log('📡 Fetching privileged accounts from Azure AD...')
+
+    // Fetch all directory roles (admin roles)
+    const roles = await graphClient
+      .api('/directoryRoles')
+      .expand('members')
+      .get()
+
+    const privilegedAccounts = new Map()
+    let totalRiskDetected = 0
+    let noMFACount = 0
+
+    // Process each role and collect members
+    for (const role of roles.value || []) {
+      const members = role.members || []
+      for (const member of members) {
+        if (!privilegedAccounts.has(member.id)) {
+          privilegedAccounts.set(member.id, {
+            id: member.id,
+            upn: member.userPrincipalName,
+            name: member.displayName,
+            roles: [],
+            type: member['@odata.type']?.includes('ServicePrincipal') ? 'service' : 'user',
+            isSPN: member['@odata.type']?.includes('ServicePrincipal') || false,
+            mfa: [],
+            risk: 'None',
+            pim: false,
+            tagged: false
+          })
+        }
+
+        const acct = privilegedAccounts.get(member.id)
+        if (!acct.roles.includes(role.displayName)) {
+          acct.roles.push(role.displayName)
+        }
+      }
+    }
+
+    // Try to get MFA and risk status for each account
+    const accounts = Array.from(privilegedAccounts.values())
+
+    // Fetch risky users if available
+    let riskyUserIds = new Set()
+    try {
+      const riskUsers = await graphClient
+        .api('/identityProtection/riskyUsers')
+        .select('id,userRiskLevel')
+        .get()
+
+      for (const user of riskUsers.value || []) {
+        if (user.userRiskLevel === 'high' || user.userRiskLevel === 'medium') {
+          riskyUserIds.add(user.id)
+        }
+      }
+    } catch (riskError) {
+      console.warn('⚠️ Risk data not available:', riskError.message)
+    }
+
+    // Update risk status for privileged accounts
+    for (const acct of accounts) {
+      if (riskyUserIds.has(acct.id)) {
+        acct.risk = riskyUserIds.has(acct.id) ? 'High' : 'None'
+        if (acct.risk === 'High') totalRiskDetected++
+      }
+    }
+
+    console.log(`✅ Privileged accounts: ${accounts.length} accounts, ${totalRiskDetected} at risk`)
+
+    res.json({
+      success: true,
+      data: {
+        accounts,
+        summary: {
+          totalAccounts: accounts.length,
+          atRisk: totalRiskDetected,
+          noMFA: noMFACount,
+          permanentRoles: accounts.filter(a => !a.pim).length,
+          servicePrincipals: accounts.filter(a => a.isSPN).length
+        }
+      }
+    })
+  } catch (error) {
+    console.error('❌ Privileged accounts API error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      data: { accounts: [], summary: {} }
+    })
+  }
+})
+
+/**
  * GET /api/identity/posture
  * Get identity posture metrics from Azure AD
  */
