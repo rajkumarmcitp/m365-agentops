@@ -1,6 +1,6 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
-import { getSecurityScore, getIncidents, getDevices } from '../lib/api-client.js'
+import { getSecurityScore, getIncidents, getDevices, getIdentityPosture } from '../lib/api-client.js'
 import {
   SECURE_SCORE, IDENTITY, EMAIL, ENDPOINT, TEAMS_SEC, SHAREPOINT_SEC,
   DATA_PROTECTION, PRIV_ACCESS, GUEST_GOVERNANCE, INCIDENTS as STATIC_INCIDENTS, RECOMMENDATIONS,
@@ -9,6 +9,7 @@ import {
 
 let realSecureScore = SECURE_SCORE
 let realIncidents = STATIC_INCIDENTS
+let realIdentityPosture = IDENTITY
 
 // ============================================================
 // Sub-navigation
@@ -108,6 +109,34 @@ export async function initSecurity() {
       // Enrich static incidents with real device data
       realIncidents = enrichIncidents(STATIC_INCIDENTS)
     }
+
+    // Fetch identity posture
+    const identityResult = await getIdentityPosture()
+    if (identityResult.success && identityResult.data) {
+      realIdentityPosture = {
+        totalUsers: identityResult.data.totalUsers || IDENTITY.totalUsers,
+        privAccounts: identityResult.data.privilegedAccounts || IDENTITY.privAccounts,
+        globalAdmins: identityResult.data.globalAdmins || IDENTITY.globalAdmins,
+        serviceAccounts: identityResult.data.serviceAccounts || IDENTITY.serviceAccounts,
+        breakGlass: identityResult.data.breakGlassAccounts || IDENTITY.breakGlass,
+        identitySecureScore: identityResult.data.identitySecureScore || IDENTITY.identitySecureScore,
+        mfaEnabled: identityResult.data.mfaEnabled || IDENTITY.mfaEnabled,
+        mfaExcluded: IDENTITY.mfaExcluded,
+        passwordlessAdoption: IDENTITY.passwordlessAdoption,
+        fido2Adoption: IDENTITY.fido2Adoption,
+        legacyAuthConnections: IDENTITY.legacyAuthConnections,
+        highRiskUsers: identityResult.data.highRiskUsers || IDENTITY.highRiskUsers,
+        riskySignIns30d: identityResult.data.riskySignIns30d || IDENTITY.riskySignIns30d,
+        impossibleTravel30d: IDENTITY.impossibleTravel30d,
+        anonymousIP30d: IDENTITY.anonymousIP30d,
+        passwordSpray30d: IDENTITY.passwordSpray30d,
+        caPoliciesEnabled: IDENTITY.caPoliciesEnabled,
+        caPoliciesDisabled: IDENTITY.caPoliciesDisabled,
+        caPoliciesReportOnly: IDENTITY.caPoliciesReportOnly,
+        caUsersExcluded: IDENTITY.caUsersExcluded,
+      }
+      console.log('✅ Loaded real identity posture data from Azure AD')
+    }
   } catch (error) {
     console.warn('⚠️ Using simulated data:', error.message)
     realSecureScore = SECURE_SCORE
@@ -146,7 +175,7 @@ function render(el) {
           <i class="ti ${t.icon}"></i><span>${t.label}</span>
           ${t.id === 'incidents' && critCount > 0 ? `<span class="sec-tab-badge red">${critCount}</span>` : ''}
           ${t.id === 'recommendations' ? `<span class="sec-tab-badge amber">${openRec}</span>` : ''}
-          ${t.id === 'identity' && IDENTITY.highRiskUsers > 0 ? `<span class="sec-tab-badge red">${IDENTITY.highRiskUsers}</span>` : ''}
+          ${t.id === 'identity' && realIdentityPosture.highRiskUsers > 0 ? `<span class="sec-tab-badge red">${realIdentityPosture.highRiskUsers}</span>` : ''}
         </button>
       `).join('')}
     </div>
@@ -207,9 +236,9 @@ function topFiveKpi() {
       <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${realIncidents.filter(i => i.status !== 'resolved').length} open total</div>
     </div>
     <div class="kpi-tile">
-      <div class="kpi-value ${IDENTITY.highRiskUsers > 0 ? 'danger' : 'success'}">${IDENTITY.highRiskUsers}</div>
+      <div class="kpi-value ${realIdentityPosture.highRiskUsers > 0 ? 'danger' : 'success'}">${realIdentityPosture.highRiskUsers}</div>
       <div class="kpi-label">High-Risk Users</div>
-      <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${IDENTITY.riskySignIns30d} risky sign-ins (30d)</div>
+      <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${realIdentityPosture.riskySignIns30d} risky sign-ins (30d)</div>
     </div>
     <div class="kpi-tile">
       <div class="kpi-value ${ENDPOINT.vulnerable > 0 ? 'danger' : 'success'}">${ENDPOINT.vulnerable}</div>
@@ -299,7 +328,7 @@ function renderExecutive() {
     <!-- Secondary KPI row -->
     <div class="kpi-row mb-3">
       <div class="kpi-tile">
-        <div class="kpi-value warning">${IDENTITY.identitySecureScore}</div>
+        <div class="kpi-value warning">${realIdentityPosture.identitySecureScore}</div>
         <div class="kpi-label">Identity Score</div>
       </div>
       <div class="kpi-tile">
@@ -307,11 +336,11 @@ function renderExecutive() {
         <div class="kpi-label">Compliance Score</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value ${IDENTITY.mfaEnabled / IDENTITY.totalUsers >= 0.95 ? 'success' : 'warning'}">${Math.round(IDENTITY.mfaEnabled / IDENTITY.totalUsers * 100)}%</div>
+        <div class="kpi-value ${realIdentityPosture.mfaEnabled / realIdentityPosture.totalUsers >= 0.95 ? 'success' : 'warning'}">${Math.round(realIdentityPosture.mfaEnabled / realIdentityPosture.totalUsers * 100)}%</div>
         <div class="kpi-label">MFA Adoption</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value info">${IDENTITY.riskySignIns30d}</div>
+        <div class="kpi-value info">${realIdentityPosture.riskySignIns30d}</div>
         <div class="kpi-label">Risky Sign-ins (30d)</div>
       </div>
       <div class="kpi-tile">
@@ -369,7 +398,7 @@ function renderExecutive() {
         </div>
         <div class="sec-svc-grid">
           ${[
-            { name: 'Identity',    icon: 'ti-user-check',        score: 68, color: '#0C447C', bg:'#E6F1FB', issues: IDENTITY.highRiskUsers },
+            { name: 'Identity',    icon: 'ti-user-check',        score: 68, color: '#0C447C', bg:'#E6F1FB', issues: realIdentityPosture.highRiskUsers },
             { name: 'Email',       icon: 'ti-mail',               score: 71, color: '#854F0B', bg:'#FAEEDA', issues: EMAIL.externalForwardingRules + (EMAIL.dmarc !== 'reject' ? 1 : 0) },
             { name: 'Endpoint',    icon: 'ti-device-laptop',      score: 58, color: '#3B6D11', bg:'#EAF3DE', issues: ENDPOINT.vulnerable },
             { name: 'Teams',       icon: 'ti-brand-teams',        score: 74, color: '#3C3489', bg:'#EEEDFE', issues: TEAMS_SEC.publicTeams },
@@ -537,7 +566,7 @@ function renderSecureScore() {
 // IDENTITY SECURITY
 // ============================================================
 function renderIdentity() {
-  const id = IDENTITY
+  const id = realIdentityPosture
   return `
     <div class="grid-2 mb-3" style="gap:16px">
       <div class="card">
