@@ -3,12 +3,12 @@ import { showToast } from '../components/toast.js'
 import { getSecurityScore, getIncidents } from '../lib/api-client.js'
 import {
   SECURE_SCORE, IDENTITY, EMAIL, ENDPOINT, TEAMS_SEC, SHAREPOINT_SEC,
-  DATA_PROTECTION, PRIV_ACCESS, GUEST_GOVERNANCE, realIncidents as STATIC_realIncidents, RECOMMENDATIONS,
+  DATA_PROTECTION, PRIV_ACCESS, GUEST_GOVERNANCE, INCIDENTS as STATIC_INCIDENTS, RECOMMENDATIONS,
   API_REFERENCE, SECURITY_COPILOT_KB
 } from '../data/security-data.js'
 
 let realSecureScore = SECURE_SCORE
-let realIncidents = STATIC_realIncidents
+let realIncidents = STATIC_INCIDENTS
 
 // ============================================================
 // Sub-navigation
