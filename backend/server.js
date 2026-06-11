@@ -3786,44 +3786,42 @@ app.get('/api/tenantguard/users/:userId/investigation', async (req, res) => {
     // Fallback to mock user if Graph API fails
     if (!user) {
       const userMap = {
-      'user-001': {
-        id: 'user-001',
-        displayName: 'John Smith',
-        mail: 'john.smith@contoso.com',
-        jobTitle: 'IT Administrator',
-        department: 'Information Technology'
-      },
-      'user-002': {
-        id: 'user-002',
-        displayName: 'Alice Johnson',
-        mail: 'alice.johnson@contoso.com',
-        jobTitle: 'Security Engineer',
-        department: 'Security'
-      },
-      'user-003': {
-        id: 'user-003',
-        displayName: 'Bob Davis',
-        mail: 'bob.davis@contoso.com',
-        jobTitle: 'Exchange Administrator',
-        department: 'Messaging'
-      },
-      'user-004': {
-        id: 'user-004',
-        displayName: 'Carol Williams',
-        mail: 'carol.williams@contoso.com',
-        jobTitle: 'Global Administrator',
-        department: 'Information Technology'
-      },
-      'user-005': {
-        id: 'user-005',
-        displayName: 'David Lee',
-        mail: 'david.lee@contoso.com',
-        jobTitle: 'SharePoint Administrator',
-        department: 'Collaboration'
+        'user-001': {
+          id: 'user-001',
+          displayName: 'John Smith',
+          mail: 'john.smith@contoso.com',
+          jobTitle: 'IT Administrator',
+          department: 'Information Technology'
+        },
+        'user-002': {
+          id: 'user-002',
+          displayName: 'Alice Johnson',
+          mail: 'alice.johnson@contoso.com',
+          jobTitle: 'Security Engineer',
+          department: 'Security'
+        },
+        'user-003': {
+          id: 'user-003',
+          displayName: 'Bob Davis',
+          mail: 'bob.davis@contoso.com',
+          jobTitle: 'Exchange Administrator',
+          department: 'Messaging'
+        },
+        'user-004': {
+          id: 'user-004',
+          displayName: 'Carol Williams',
+          mail: 'carol.williams@contoso.com',
+          jobTitle: 'Global Administrator',
+          department: 'Information Technology'
+        },
+        'user-005': {
+          id: 'user-005',
+          displayName: 'David Lee',
+          mail: 'david.lee@contoso.com',
+          jobTitle: 'SharePoint Administrator',
+          department: 'Collaboration'
+        }
       }
-    }
-
-    if (!user) {
       user = userMap[userId] || { id: userId, displayName: 'Unknown User', mail: 'unknown@contoso.com' }
     }
 
