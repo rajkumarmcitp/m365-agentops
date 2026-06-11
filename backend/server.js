@@ -106,32 +106,35 @@ const ROLE_GROUPS = {
 // ============================================================
 // TenantGuard Alert Engine
 // ============================================================
-console.log('🔧 Initializing TenantGuard...')
 let investigationService = null
-try {
-  initDatabase()
-  const db = getDatabase()
-  createInvestigationTables(db)
 
-  // Load Claude API key from settings
-  const claudeApiKey = SettingsService.getClaudeApiKey()
-  const claudeClient = claudeApiKey ? InvestigationService.initializeWithApiKey(claudeApiKey) : null
+async function initializeTenantGuard() {
+  try {
+    console.log('🔧 Initializing TenantGuard...')
+    await initDatabase()
+    const db = getDatabase()
+    createInvestigationTables(db)
 
-  investigationService = new InvestigationService(claudeClient)
-  const status = investigationService.getStatus()
-  console.log(`   ${status.message}`)
+    // Load Claude API key from settings
+    const claudeApiKey = SettingsService.getClaudeApiKey()
+    const claudeClient = claudeApiKey ? InvestigationService.initializeWithApiKey(claudeApiKey) : null
 
-  if (graphClient) {
-    startAuditCollectionJob(graphClient)
-  } else {
-    console.log('⚠️ Graph Client not available - TenantGuard will not collect audit data')
+    investigationService = new InvestigationService(claudeClient)
+    const status = investigationService.getStatus()
+    console.log(`   ${status.message}`)
+
+    if (graphClient) {
+      startAuditCollectionJob(graphClient)
+    } else {
+      console.log('⚠️ Graph Client not available - TenantGuard will not collect audit data')
+    }
+
+    startCorrelationJobs()
+
+    console.log('✅ TenantGuard ready')
+  } catch (error) {
+    console.error('❌ TenantGuard initialization failed:', error.message)
   }
-
-  startCorrelationJobs()
-
-  console.log('✅ TenantGuard ready')
-} catch (error) {
-  console.error('❌ TenantGuard initialization failed:', error.message)
 }
 
 // ============================================================
@@ -4012,10 +4015,10 @@ app.get('/api/tenantguard/users/:userId/investigation', (req, res) => {
  * GET /api/data/settings
  * Get all persisted settings
  */
-app.get('/api/data/settings', (req, res) => {
+app.get('/api/data/settings', async (req, res) => {
   try {
     const dataService = getDataService()
-    const settings = dataService.getAllSettings()
+    const settings = await dataService.getAllSettings()
     res.json({
       success: true,
       data: settings
@@ -4029,10 +4032,10 @@ app.get('/api/data/settings', (req, res) => {
  * POST /api/data/settings
  * Save settings
  */
-app.post('/api/data/settings', (req, res) => {
+app.post('/api/data/settings', async (req, res) => {
   try {
     const dataService = getDataService()
-    dataService.saveAllSettings(req.body)
+    await dataService.saveAllSettings(req.body)
     res.json({
       success: true,
       message: 'Settings saved'
@@ -4046,10 +4049,10 @@ app.post('/api/data/settings', (req, res) => {
  * GET /api/data/attestations
  * Get all M365 Config attestations
  */
-app.get('/api/data/attestations', (req, res) => {
+app.get('/api/data/attestations', async (req, res) => {
   try {
     const dataService = getDataService()
-    const attestations = dataService.getAllAttestations()
+    const attestations = await dataService.getAllAttestations()
     res.json({
       success: true,
       data: attestations
@@ -4063,10 +4066,10 @@ app.get('/api/data/attestations', (req, res) => {
  * POST /api/data/attestations
  * Save M365 Config attestations
  */
-app.post('/api/data/attestations', (req, res) => {
+app.post('/api/data/attestations', async (req, res) => {
   try {
     const dataService = getDataService()
-    dataService.saveAllAttestations(req.body)
+    await dataService.saveAllAttestations(req.body)
     res.json({
       success: true,
       message: 'Attestations saved'
@@ -4080,11 +4083,11 @@ app.post('/api/data/attestations', (req, res) => {
  * GET /api/data/agent-logs
  * Get agent logs
  */
-app.get('/api/data/agent-logs', (req, res) => {
+app.get('/api/data/agent-logs', async (req, res) => {
   try {
     const dataService = getDataService()
     const limit = parseInt(req.query.limit) || 100
-    const logs = dataService.getAgentLogs(limit)
+    const logs = await dataService.getAgentLogs(limit)
     res.json({
       success: true,
       data: logs
@@ -4098,11 +4101,11 @@ app.get('/api/data/agent-logs', (req, res) => {
  * POST /api/data/agent-logs
  * Save agent log entry
  */
-app.post('/api/data/agent-logs', (req, res) => {
+app.post('/api/data/agent-logs', async (req, res) => {
   try {
     const dataService = getDataService()
     const { jobName, schedule, status, details } = req.body
-    const id = dataService.saveAgentLog(jobName, schedule, status, details)
+    const id = await dataService.saveAgentLog(jobName, schedule, status, details)
     res.json({
       success: true,
       id,
@@ -4117,10 +4120,10 @@ app.post('/api/data/agent-logs', (req, res) => {
  * GET /api/data/export
  * Export all data
  */
-app.get('/api/data/export', (req, res) => {
+app.get('/api/data/export', async (req, res) => {
   try {
     const dataService = getDataService()
-    const allData = dataService.exportAllData()
+    const allData = await dataService.exportAllData()
     res.json({
       success: true,
       data: allData,
@@ -4135,10 +4138,10 @@ app.get('/api/data/export', (req, res) => {
  * POST /api/data/import
  * Import data
  */
-app.post('/api/data/import', (req, res) => {
+app.post('/api/data/import', async (req, res) => {
   try {
     const dataService = getDataService()
-    dataService.importData(req.body)
+    await dataService.importData(req.body)
     res.json({
       success: true,
       message: 'Data imported successfully'
@@ -4198,19 +4201,23 @@ app.use((req, res) => {
 // ============================================================
 // Start Server
 // ============================================================
-app.listen(PORT, () => {
-  console.log('')
-  console.log('╔════════════════════════════════════════════════════╗')
-  console.log('║  M365 AgentOps Backend API                         ║')
-  console.log('╚════════════════════════════════════════════════════╝')
-  console.log(`✓ Server running on port ${PORT}`)
-  console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`)
-  console.log(`✓ CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`)
-  console.log(`✓ Health check: http://localhost:${PORT}/api/health`)
-  console.log('')
-  console.log('📋 Role Group Configuration:')
-  console.log(`  Super Admins: ${ROLE_GROUPS.super || '❌ NOT CONFIGURED'}`)
-  console.log(`  Admins: ${ROLE_GROUPS.admin || '❌ NOT CONFIGURED'}`)
-  console.log(`  Managers: ${ROLE_GROUPS.manager || '❌ NOT CONFIGURED'}`)
-  console.log('')
-})
+(async () => {
+  await initializeTenantGuard()
+
+  app.listen(PORT, () => {
+    console.log('')
+    console.log('╔════════════════════════════════════════════════════╗')
+    console.log('║  M365 AgentOps Backend API                         ║')
+    console.log('╚════════════════════════════════════════════════════╝')
+    console.log(`✓ Server running on port ${PORT}`)
+    console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`)
+    console.log(`✓ CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`)
+    console.log(`✓ Health check: http://localhost:${PORT}/api/health`)
+    console.log('')
+    console.log('📋 Role Group Configuration:')
+    console.log(`  Super Admins: ${ROLE_GROUPS.super || '❌ NOT CONFIGURED'}`)
+    console.log(`  Admins: ${ROLE_GROUPS.admin || '❌ NOT CONFIGURED'}`)
+    console.log(`  Managers: ${ROLE_GROUPS.manager || '❌ NOT CONFIGURED'}`)
+    console.log('')
+  })
+})()

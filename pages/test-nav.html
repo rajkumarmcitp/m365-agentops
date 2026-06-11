@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Nav Test</title>
+</head>
+<body>
+  <h1>Navigation Test</h1>
+
+  <h2>Check these things:</h2>
+
+  <ol>
+    <li>
+      <strong>Your current user role:</strong>
+      Look at the top-right corner of the M365 AgentOps page.
+      It should show your name and role (Admin or Super Admin).
+      If it shows "user" or "manager", that's why you can't see User Investigation.
+    </li>
+
+    <li>
+      <strong>Hard refresh the page:</strong>
+      Press: <code>Ctrl+Shift+R</code> (Windows/Linux) or <code>Cmd+Shift+R</code> (Mac)
+      Wait for page to fully load.
+    </li>
+
+    <li>
+      <strong>Check sidebar in Administration section:</strong>
+      Look for these items in order:
+      <ul>
+        <li>Dashboard</li>
+        <li>Requests</li>
+        <li>Security</li>
+        <li>TenantGuard</li>
+        <li><strong style="color: red;">User Investigation ← SHOULD BE HERE</strong></li>
+        <li>Zero Trust</li>
+        <li>Privileged Accounts</li>
+      </ul>
+    </li>
+
+    <li>
+      <strong>If still not visible, open browser console (F12) and paste this:</strong>
+      <pre>
+// Check user role
+console.log('Current user role:', state.currentUser?.role)
+
+// Check if user-investigation is in nav access
+console.log('Nav access:', state.currentUser?.navAccess)
+
+// Check if page div exists
+console.log('Page div exists:', !!document.getElementById('page-user-investigation'))
+
+// Check nav item exists
+console.log('Nav item exists:', !!document.getElementById('n-user-investigation'))
+      </pre>
+    </li>
+  </ol>
+
+  <h2>Most Common Issue:</h2>
+  <p style="background: #fff3cd; padding: 10px; border-radius: 5px;">
+    <strong>User role is not Admin or Super Admin</strong><br>
+    The page only appears for Admin and Super Admin users.<br>
+    If you need access, your account needs to be added to an admin role.
+  </p>
+
+  <h2>Quick Test:</h2>
+  <p>Go back to http://localhost:5173 and:</p>
+  <ol>
+    <li>Look at your user info (top-right)</li>
+    <li>Check if it says "Admin" or "Super Admin"</li>
+    <li>Hard refresh (Ctrl+Shift+R)</li>
+    <li>Look for "User Investigation" in the sidebar</li>
+  </ol>
+</body>
+</html>

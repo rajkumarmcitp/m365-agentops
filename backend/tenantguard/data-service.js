@@ -14,18 +14,18 @@ export class DataService {
   // User Settings
   // ============================================================
 
-  saveSetting(key, value) {
+  async saveSetting(key, value) {
     const id = `setting-${key}`
     const valueStr = typeof value === 'string' ? value : JSON.stringify(value)
 
-    this.db.prepare(`
+    await this.db.prepare(`
       INSERT OR REPLACE INTO user_settings (id, setting_key, setting_value, updated_at)
       VALUES (?, ?, ?, CURRENT_TIMESTAMP)
     `).run(id, key, valueStr)
   }
 
-  getSetting(key, defaultValue = null) {
-    const result = this.db.prepare(`
+  async getSetting(key, defaultValue = null) {
+    const result = await this.db.prepare(`
       SELECT setting_value FROM user_settings WHERE setting_key = ?
     `).get(key)
 
@@ -38,8 +38,8 @@ export class DataService {
     }
   }
 
-  getAllSettings() {
-    const results = this.db.prepare(`
+  async getAllSettings() {
+    const results = await this.db.prepare(`
       SELECT setting_key, setting_value FROM user_settings
     `).all()
 
@@ -54,58 +54,58 @@ export class DataService {
     return settings
   }
 
-  saveAllSettings(settingsObj) {
-    Object.entries(settingsObj).forEach(([key, value]) => {
-      this.saveSetting(key, value)
-    })
+  async saveAllSettings(settingsObj) {
+    for (const [key, value] of Object.entries(settingsObj)) {
+      await this.saveSetting(key, value)
+    }
   }
 
   // ============================================================
   // M365 Config Attestations
   // ============================================================
 
-  saveAttestation(controlId, status, result, notes = '', attestedBy = '') {
+  async saveAttestation(controlId, status, result, notes = '', attestedBy = '') {
     const id = `attestation-${controlId}`
 
-    this.db.prepare(`
+    await this.db.prepare(`
       INSERT OR REPLACE INTO m365_attestations
       (id, control_id, status, result, notes, attested_by, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `).run(id, controlId, status, result, notes, attestedBy)
   }
 
-  getAttestation(controlId) {
-    return this.db.prepare(`
+  async getAttestation(controlId) {
+    return await this.db.prepare(`
       SELECT * FROM m365_attestations WHERE control_id = ?
     `).get(controlId)
   }
 
-  getAllAttestations() {
-    return this.db.prepare(`
+  async getAllAttestations() {
+    return await this.db.prepare(`
       SELECT * FROM m365_attestations ORDER BY updated_at DESC
     `).all()
   }
 
-  saveAllAttestations(attestationsObj) {
-    Object.entries(attestationsObj).forEach(([controlId, attestation]) => {
-      this.saveAttestation(
+  async saveAllAttestations(attestationsObj) {
+    for (const [controlId, attestation] of Object.entries(attestationsObj)) {
+      await this.saveAttestation(
         controlId,
         attestation.status,
         attestation.result,
         attestation.notes,
         attestation.attestedBy
       )
-    })
+    }
   }
 
   // ============================================================
   // Agent Logs
   // ============================================================
 
-  saveAgentLog(jobName, schedule, status, details = {}) {
+  async saveAgentLog(jobName, schedule, status, details = {}) {
     const id = `agent-${Date.now()}`
 
-    this.db.prepare(`
+    await this.db.prepare(`
       INSERT INTO agent_logs
       (id, job_name, schedule, start_time, end_time, status, controls_checked, failures_found, new_failures, logs)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -125,14 +125,14 @@ export class DataService {
     return id
   }
 
-  getAgentLogs(limit = 100) {
-    return this.db.prepare(`
+  async getAgentLogs(limit = 100) {
+    return await this.db.prepare(`
       SELECT * FROM agent_logs ORDER BY start_time DESC LIMIT ?
     `).all(limit)
   }
 
-  getAgentLogById(id) {
-    return this.db.prepare(`
+  async getAgentLogById(id) {
+    return await this.db.prepare(`
       SELECT * FROM agent_logs WHERE id = ?
     `).get(id)
   }
@@ -141,19 +141,19 @@ export class DataService {
   // Dashboard Cache
   // ============================================================
 
-  saveDashboardData(dataType, dataKey, data) {
+  async saveDashboardData(dataType, dataKey, data) {
     const id = `dashboard-${dataType}-${dataKey}`
     const dataStr = typeof data === 'string' ? data : JSON.stringify(data)
 
-    this.db.prepare(`
+    await this.db.prepare(`
       INSERT OR REPLACE INTO dashboard_cache
       (id, data_type, data_key, data_value, last_synced, updated_at)
       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(id, dataType, dataKey, dataStr)
   }
 
-  getDashboardData(dataType, dataKey) {
-    const result = this.db.prepare(`
+  async getDashboardData(dataType, dataKey) {
+    const result = await this.db.prepare(`
       SELECT data_value FROM dashboard_cache
       WHERE data_type = ? AND data_key = ?
     `).get(dataType, dataKey)
@@ -167,8 +167,8 @@ export class DataService {
     }
   }
 
-  getDashboardDataByType(dataType) {
-    const results = this.db.prepare(`
+  async getDashboardDataByType(dataType) {
+    const results = await this.db.prepare(`
       SELECT data_key, data_value FROM dashboard_cache WHERE data_type = ?
     `).all(dataType)
 
@@ -183,8 +183,8 @@ export class DataService {
     return data
   }
 
-  clearDashboardCache(dataType) {
-    this.db.prepare(`
+  async clearDashboardCache(dataType) {
+    await this.db.prepare(`
       DELETE FROM dashboard_cache WHERE data_type = ?
     `).run(dataType)
   }
@@ -193,24 +193,24 @@ export class DataService {
   // User Session
   // ============================================================
 
-  saveUserSession(userId, userName, userEmail, userRole) {
+  async saveUserSession(userId, userName, userEmail, userRole) {
     const id = `session-current`
 
-    this.db.prepare(`
+    await this.db.prepare(`
       INSERT OR REPLACE INTO user_session
       (id, user_id, user_name, user_email, user_role, updated_at)
       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `).run(id, userId, userName, userEmail, userRole)
   }
 
-  getUserSession() {
-    return this.db.prepare(`
+  async getUserSession() {
+    return await this.db.prepare(`
       SELECT * FROM user_session WHERE id = 'session-current'
     `).get()
   }
 
-  clearUserSession() {
-    this.db.prepare(`
+  async clearUserSession() {
+    await this.db.prepare(`
       DELETE FROM user_session WHERE id = 'session-current'
     `).run()
   }
@@ -219,18 +219,18 @@ export class DataService {
   // Bulk Operations
   // ============================================================
 
-  exportAllData() {
+  async exportAllData() {
     return {
-      settings: this.getAllSettings(),
-      attestations: this.getAllAttestations(),
-      agentLogs: this.getAgentLogs(1000),
-      dashboard: this.getDashboardDataByType('all'),
-      session: this.getUserSession()
+      settings: await this.getAllSettings(),
+      attestations: await this.getAllAttestations(),
+      agentLogs: await this.getAgentLogs(1000),
+      dashboard: await this.getDashboardDataByType('all'),
+      session: await this.getUserSession()
     }
   }
 
-  importData(data) {
-    if (data.settings) this.saveAllSettings(data.settings)
+  async importData(data) {
+    if (data.settings) await this.saveAllSettings(data.settings)
     if (data.attestations) {
       const attestObj = {}
       data.attestations.forEach(att => {
@@ -241,10 +241,10 @@ export class DataService {
           attestedBy: att.attested_by
         }
       })
-      this.saveAllAttestations(attestObj)
+      await this.saveAllAttestations(attestObj)
     }
     if (data.session) {
-      this.saveUserSession(
+      await this.saveUserSession(
         data.session.user_id,
         data.session.user_name,
         data.session.user_email,

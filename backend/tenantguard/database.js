@@ -1,20 +1,30 @@
-import Database from 'better-sqlite3'
+import sqlite3 from 'sqlite3'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { mkdir } from 'fs/promises'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const dbPath = path.join(__dirname, '../data/tenantguard.db')
+const dbDir = path.join(__dirname, '../data')
+const dbPath = path.join(dbDir, 'tenantguard.db')
 
 let db = null
 
-export function initDatabase() {
-  db = new Database(dbPath)
+const promisify = (fn) => (...args) => new Promise((resolve, reject) => {
+  fn(...args, (err, result) => err ? reject(err) : resolve(result))
+})
 
-  // Enable foreign keys
-  db.pragma('foreign_keys = ON')
+export async function initDatabase() {
+  await mkdir(dbDir, { recursive: true })
 
-  // Create tables
-  db.exec(`
+  return new Promise((resolve, reject) => {
+    db = new sqlite3.Database(dbPath, (err) => {
+      if (err) return reject(err)
+
+      db.run('PRAGMA foreign_keys = ON', (err) => {
+        if (err) return reject(err)
+
+        // Create tables
+        db.exec(`
     CREATE TABLE IF NOT EXISTS alerts (
       id TEXT PRIMARY KEY,
       type TEXT,
@@ -113,22 +123,93 @@ export function initDatabase() {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
-  `)
+        `)
 
-  console.log('✅ Database initialized:', dbPath)
-  return db
+        console.log('✅ Database initialized:', dbPath)
+        resolve(db)
+      })
+    })
+  })
+}
+
+class DatabaseWrapper {
+  constructor(db) {
+    this.db = db
+  }
+
+  run(sql, params = []) {
+    return new Promise((resolve, reject) => {
+      this.db.run(sql, params, function(err) {
+        if (err) reject(err)
+        else resolve({ lastID: this.lastID, changes: this.changes })
+      })
+    })
+  }
+
+  get(sql, params = []) {
+    return new Promise((resolve, reject) => {
+      this.db.get(sql, params, (err, row) => {
+        if (err) reject(err)
+        else resolve(row)
+      })
+    })
+  }
+
+  all(sql, params = []) {
+    return new Promise((resolve, reject) => {
+      this.db.all(sql, params, (err, rows) => {
+        if (err) reject(err)
+        else resolve(rows || [])
+      })
+    })
+  }
+
+  exec(sql) {
+    return new Promise((resolve, reject) => {
+      this.db.exec(sql, (err) => {
+        if (err) reject(err)
+        else resolve()
+      })
+    })
+  }
+
+  prepare(sql) {
+    return {
+      run: (...params) => this.run(sql, params),
+      get: (...params) => this.get(sql, params),
+      all: (...params) => this.all(sql, params)
+    }
+  }
+
+  close() {
+    return new Promise((resolve, reject) => {
+      if (this.db) {
+        this.db.close((err) => {
+          if (err) reject(err)
+          else resolve()
+        })
+      } else {
+        resolve()
+      }
+    })
+  }
 }
 
 export function getDatabase() {
   if (!db) {
     throw new Error('Database not initialized. Call initDatabase() first.')
   }
-  return db
+  return new DatabaseWrapper(db)
 }
 
-export function closeDatabase() {
+export async function closeDatabase() {
   if (db) {
-    db.close()
+    await new Promise((resolve, reject) => {
+      db.close((err) => {
+        if (err) reject(err)
+        else resolve()
+      })
+    })
     db = null
   }
 }

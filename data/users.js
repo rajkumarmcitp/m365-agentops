@@ -26,7 +26,7 @@ export const USERS = [
     initials: 'CW',
     color: '#633806',
     navAccess: [
-      'dashboard', 'requests', 'security', 'zerotrust', 'privaccts',
+      'dashboard', 'requests', 'security', 'tenantguard', 'zerotrust', 'privaccts',
       'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune',
       'portal', 'myreqs', 'myaccount', 'chat',
       'audit', 'settings'
@@ -40,7 +40,7 @@ export const USERS = [
     initials: 'AR',
     color: '#791F1F',
     navAccess: [
-      'dashboard', 'requests', 'security', 'zerotrust', 'privaccts',
+      'dashboard', 'requests', 'security', 'tenantguard', 'zerotrust', 'privaccts',
       'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune',
       'portal', 'myreqs', 'myaccount', 'chat',
       'audit', 'settings',
