@@ -53,56 +53,60 @@ export async function initSecurity() {
       console.log('✅ Loaded real secure score from API')
     }
 
+    // Fetch real devices first (needed for both real and static incidents)
+    let devicesData = []
+    try {
+      const devicesResult = await getDevices()
+      if (devicesResult.success && devicesResult.data) {
+        devicesData = devicesResult.data
+        console.log(`✅ Loaded ${devicesData.length} real devices from Intune`)
+      }
+    } catch (deviceError) {
+      console.warn('⚠️ Could not fetch device data:', deviceError.message)
+    }
+
+    // Helper function to enrich incidents with device data
+    const enrichIncidents = (incidents) => {
+      return incidents.map(incident => {
+        // Extract device name from description, title, or use deviceName field
+        const deviceNameSource = incident.deviceName ||
+                                incident.description?.match(/Device ([A-Z0-9-]+)/)?.[1] ||
+                                incident.title?.match(/([A-Z0-9-]+)/)?.[1] ||
+                                incident.description?.match(/([A-Z0-9]{3,})/)?.[1]
+
+        if (deviceNameSource && devicesData.length > 0) {
+          // Try to find matching device in Intune
+          const realDevice = devicesData.find(d =>
+            d.deviceName?.toUpperCase().includes(deviceNameSource.toUpperCase()) ||
+            d.deviceName?.includes(deviceNameSource) ||
+            d.id === deviceNameSource
+          )
+
+          if (realDevice) {
+            return {
+              ...incident,
+              deviceId: realDevice.id,
+              deviceName: realDevice.deviceName,
+              deviceOS: realDevice.operatingSystem,
+              compliant: realDevice.complianceState === 'Compliant',
+              managed: true,
+              owner: realDevice.userDisplayName
+            }
+          }
+        }
+        return incident
+      })
+    }
+
     // Fetch incidents (from alerts)
     const incidentsResult = await getIncidents()
-    let devicesData = []
-
     if (incidentsResult.success && incidentsResult.data.length > 0) {
-      realIncidents = incidentsResult.data
-      console.log(`✅ Loaded ${realIncidents.length} real incidents from alerts`)
-
-      // Fetch real devices to enrich incidents
-      try {
-        const devicesResult = await getDevices()
-        if (devicesResult.success && devicesResult.data) {
-          devicesData = devicesResult.data
-          console.log(`✅ Loaded ${devicesData.length} real devices from Intune`)
-
-          // Enrich incidents with real device data
-          realIncidents = realIncidents.map(incident => {
-            // Try to match device from incident description
-            const deviceMatch = incident.description?.match(/([A-Z0-9-]+)/) || incident.title?.match(/([A-Z0-9-]+)/)
-            if (deviceMatch) {
-              const deviceName = deviceMatch[1]
-              const realDevice = devicesData.find(d =>
-                d.deviceName?.includes(deviceName) ||
-                d.id === deviceName ||
-                d.serialNumber?.includes(deviceName)
-              )
-
-              if (realDevice) {
-                return {
-                  ...incident,
-                  deviceId: realDevice.id,
-                  deviceName: realDevice.deviceName,
-                  deviceOS: realDevice.operatingSystem,
-                  compliant: realDevice.complianceState === 'Compliant',
-                  managed: true,
-                  owner: realDevice.userDisplayName
-                }
-              }
-            }
-            return incident
-          })
-          console.log('✅ Enriched incidents with real device data')
-        }
-      } catch (deviceError) {
-        console.warn('⚠️ Could not fetch device data:', deviceError.message)
-        // Continue with incidents without device data
-      }
+      realIncidents = enrichIncidents(incidentsResult.data)
+      console.log(`✅ Loaded ${realIncidents.length} real incidents from alerts (enriched with device data)`)
     } else {
-      console.warn('⚠️ No active incidents, using static data')
-      realIncidents = STATIC_INCIDENTS
+      console.warn('⚠️ No active incidents, using static data (enriched with real devices)')
+      // Enrich static incidents with real device data
+      realIncidents = enrichIncidents(STATIC_INCIDENTS)
     }
   } catch (error) {
     console.warn('⚠️ Using simulated data:', error.message)
