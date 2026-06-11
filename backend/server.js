@@ -19,6 +19,7 @@ import { startCorrelationJobs } from './tenantguard/correlation-jobs.js'
 import { InvestigationService } from './tenantguard/investigation-service.js'
 import { createInvestigationTables } from './tenantguard/investigation-schema.js'
 import { SettingsService } from './tenantguard/settings-service.js'
+import { getDataService } from './tenantguard/data-service.js'
 
 dotenv.config()
 
@@ -3995,6 +3996,152 @@ app.get('/api/tenantguard/users/:userId/investigation', (req, res) => {
           suspiciousActivity: riskScore > 25 ? ['Multiple failed authentication attempts', 'High-risk administrative actions'] : []
         }
       }
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * ============================================================
+ * Data Persistence Endpoints
+ * ============================================================
+ */
+
+/**
+ * GET /api/data/settings
+ * Get all persisted settings
+ */
+app.get('/api/data/settings', (req, res) => {
+  try {
+    const dataService = getDataService()
+    const settings = dataService.getAllSettings()
+    res.json({
+      success: true,
+      data: settings
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/data/settings
+ * Save settings
+ */
+app.post('/api/data/settings', (req, res) => {
+  try {
+    const dataService = getDataService()
+    dataService.saveAllSettings(req.body)
+    res.json({
+      success: true,
+      message: 'Settings saved'
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/data/attestations
+ * Get all M365 Config attestations
+ */
+app.get('/api/data/attestations', (req, res) => {
+  try {
+    const dataService = getDataService()
+    const attestations = dataService.getAllAttestations()
+    res.json({
+      success: true,
+      data: attestations
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/data/attestations
+ * Save M365 Config attestations
+ */
+app.post('/api/data/attestations', (req, res) => {
+  try {
+    const dataService = getDataService()
+    dataService.saveAllAttestations(req.body)
+    res.json({
+      success: true,
+      message: 'Attestations saved'
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/data/agent-logs
+ * Get agent logs
+ */
+app.get('/api/data/agent-logs', (req, res) => {
+  try {
+    const dataService = getDataService()
+    const limit = parseInt(req.query.limit) || 100
+    const logs = dataService.getAgentLogs(limit)
+    res.json({
+      success: true,
+      data: logs
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/data/agent-logs
+ * Save agent log entry
+ */
+app.post('/api/data/agent-logs', (req, res) => {
+  try {
+    const dataService = getDataService()
+    const { jobName, schedule, status, details } = req.body
+    const id = dataService.saveAgentLog(jobName, schedule, status, details)
+    res.json({
+      success: true,
+      id,
+      message: 'Agent log saved'
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/data/export
+ * Export all data
+ */
+app.get('/api/data/export', (req, res) => {
+  try {
+    const dataService = getDataService()
+    const allData = dataService.exportAllData()
+    res.json({
+      success: true,
+      data: allData,
+      exportedAt: new Date().toISOString()
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/data/import
+ * Import data
+ */
+app.post('/api/data/import', (req, res) => {
+  try {
+    const dataService = getDataService()
+    dataService.importData(req.body)
+    res.json({
+      success: true,
+      message: 'Data imported successfully'
     })
   } catch (error) {
     res.status(500).json({ success: false, error: error.message })

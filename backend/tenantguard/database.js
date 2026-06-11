@@ -54,6 +54,65 @@ export function initDatabase() {
     );
 
     CREATE INDEX IF NOT EXISTS idx_processed ON audit_logs_cache(processed);
+
+    CREATE TABLE IF NOT EXISTS dashboard_cache (
+      id TEXT PRIMARY KEY,
+      data_type TEXT,
+      data_key TEXT,
+      data_value TEXT,
+      last_synced TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(data_type, data_key)
+    );
+
+    CREATE TABLE IF NOT EXISTS m365_attestations (
+      id TEXT PRIMARY KEY,
+      control_id TEXT,
+      status TEXT,
+      result TEXT,
+      notes TEXT,
+      attested_by TEXT,
+      attested_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(control_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_logs (
+      id TEXT PRIMARY KEY,
+      job_name TEXT,
+      schedule TEXT,
+      start_time TEXT,
+      end_time TEXT,
+      status TEXT,
+      controls_checked INTEGER,
+      failures_found INTEGER,
+      new_failures INTEGER,
+      logs TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_agent_date ON agent_logs(start_time);
+
+    CREATE TABLE IF NOT EXISTS user_settings (
+      id TEXT PRIMARY KEY,
+      setting_key TEXT UNIQUE,
+      setting_value TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS user_session (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      user_name TEXT,
+      user_email TEXT,
+      user_role TEXT,
+      last_active TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
   `)
 
   console.log('✅ Database initialized:', dbPath)
