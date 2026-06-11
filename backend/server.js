@@ -3426,16 +3426,17 @@ app.get('/api/identity/posture', async (req, res) => {
       throw new Error('Graph Client not initialized')
     }
 
-    // Fetch total users
+    // Fetch total users (basic call, should work with minimal permissions)
+    console.log('📡 Fetching users from Graph API...')
     const users = await graphClient
       .api('/users')
-      .select('id,userType,assignedLicenses')
-      .top(999)
       .get()
 
     const totalUsers = users.value?.length || 0
+    console.log(`📊 Total users: ${totalUsers}`)
 
     // Fetch directory roles to find privileged users
+    console.log('📡 Fetching directory roles...')
     const roles = await graphClient
       .api('/directoryRoles')
       .expand('members')
@@ -3446,6 +3447,7 @@ app.get('/api/identity/posture', async (req, res) => {
 
     for (const role of roles.value || []) {
       const roleMembers = role.members || []
+      console.log(`  Role: ${role.displayName} (${roleMembers.length} members)`)
       if (role.displayName === 'Global Administrator') {
         globalAdmins = roleMembers.length
       }
@@ -3455,6 +3457,7 @@ app.get('/api/identity/posture', async (req, res) => {
     }
 
     // Fetch service principals (service accounts)
+    console.log('📡 Fetching service principals...')
     const servicePrincipals = await graphClient
       .api('/servicePrincipals')
       .select('id,displayName,accountEnabled')
@@ -3462,28 +3465,36 @@ app.get('/api/identity/posture', async (req, res) => {
       .get()
 
     const serviceAccounts = servicePrincipals.value?.filter(sp => sp.accountEnabled).length || 0
+    console.log(`📊 Service accounts: ${serviceAccounts}`)
 
     // Estimate break glass accounts
     const breakGlassAccounts = Math.max(1, Math.floor(globalAdmins / 2))
 
-    // Fetch risky sign-ins
-    const riskySignIns = await graphClient
-      .api('/identityProtection/riskDetections')
-      .filter("detectionTimingType eq 'realtime'")
-      .top(100)
-      .get()
+    // Try to fetch risky sign-ins (may fail if feature not available)
+    let riskySignIns30d = 0
+    let highRiskUsers = 0
+    try {
+      console.log('📡 Fetching risky sign-ins...')
+      const riskySignIns = await graphClient
+        .api('/identityProtection/riskDetections')
+        .top(100)
+        .get()
+      riskySignIns30d = riskySignIns.value?.length || 0
+      console.log(`📊 Risky sign-ins: ${riskySignIns30d}`)
 
-    const riskySignIns30d = riskySignIns.value?.length || 0
+      console.log('📡 Fetching high-risk users...')
+      const riskUsers = await graphClient
+        .api('/identityProtection/riskyUsers')
+        .top(50)
+        .get()
+      highRiskUsers = riskUsers.value?.filter(u => u.riskLevel === 'high' || u.riskLevel === 'medium').length || 0
+      console.log(`📊 High-risk users: ${highRiskUsers}`)
+    } catch (riskError) {
+      console.warn('⚠️ Risk detection not available:', riskError.message)
+    }
 
-    // Fetch high-risk users
-    const riskUsers = await graphClient
-      .api('/identityProtection/riskyUsers')
-      .top(50)
-      .get()
-
-    const highRiskUsers = riskUsers.value?.filter(u => u.riskLevel === 'high' || u.riskLevel === 'medium').length || 0
-
-    console.log(`✓ Identity posture: ${totalUsers} users, ${privilegedUsers.size} privileged, ${globalAdmins} admins`)
+    const mfaEnabled = Math.round(totalUsers * 0.85)
+    console.log(`✅ Identity posture: ${totalUsers} users, ${privilegedUsers.size} privileged, ${globalAdmins} admins`)
 
     res.json({
       success: true,
@@ -3494,25 +3505,27 @@ app.get('/api/identity/posture', async (req, res) => {
         serviceAccounts,
         breakGlassAccounts,
         identitySecureScore: 72,
-        mfaEnabled: Math.round(totalUsers * 0.85),
+        mfaEnabled,
         riskySignIns30d,
         highRiskUsers
       }
     })
   } catch (error) {
-    console.warn('⚠️ Identity posture API error:', error.message)
-    res.json({
-      success: true,
+    console.error('❌ Identity posture API error:', error.message)
+    console.error('Stack:', error.stack)
+    res.status(500).json({
+      success: false,
+      error: error.message,
       data: {
-        totalUsers: 1000,
-        privilegedAccounts: 14,
-        globalAdmins: 2,
-        serviceAccounts: 12,
-        breakGlassAccounts: 2,
-        identitySecureScore: 72,
-        mfaEnabled: 850,
-        riskySignIns30d: 3,
-        highRiskUsers: 2
+        totalUsers: 0,
+        privilegedAccounts: 0,
+        globalAdmins: 0,
+        serviceAccounts: 0,
+        breakGlassAccounts: 0,
+        identitySecureScore: 0,
+        mfaEnabled: 0,
+        riskySignIns30d: 0,
+        highRiskUsers: 0
       }
     })
   }
