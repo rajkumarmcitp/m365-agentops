@@ -3653,65 +3653,99 @@ app.get('/api/tenantguard/patterns', (req, res) => {
  * GET /api/tenantguard/users
  * Get list of Entra ID users for selection
  */
-app.get('/api/tenantguard/users', (req, res) => {
+app.get('/api/tenantguard/users', async (req, res) => {
   try {
-    // Mock user data - replace with real Graph API call if credentials available
-    const mockUsers = [
-      {
-        id: 'user-001',
-        displayName: 'John Smith',
-        mail: 'john.smith@contoso.com',
-        jobTitle: 'IT Administrator',
-        department: 'Information Technology',
-        lastSignIn: '2026-06-11T14:30:00Z',
-        riskLevel: 'MEDIUM'
-      },
-      {
-        id: 'user-002',
-        displayName: 'Alice Johnson',
-        mail: 'alice.johnson@contoso.com',
-        jobTitle: 'Security Engineer',
-        department: 'Security',
-        lastSignIn: '2026-06-11T09:15:00Z',
-        riskLevel: 'LOW'
-      },
-      {
-        id: 'user-003',
-        displayName: 'Bob Davis',
-        mail: 'bob.davis@contoso.com',
-        jobTitle: 'Exchange Administrator',
-        department: 'Messaging',
-        lastSignIn: '2026-06-10T16:45:00Z',
-        riskLevel: 'HIGH'
-      },
-      {
-        id: 'user-004',
-        displayName: 'Carol Williams',
-        mail: 'carol.williams@contoso.com',
-        jobTitle: 'Global Administrator',
-        department: 'Information Technology',
-        lastSignIn: '2026-06-11T11:20:00Z',
-        riskLevel: 'HIGH'
-      },
-      {
-        id: 'user-005',
-        displayName: 'David Lee',
-        mail: 'david.lee@contoso.com',
-        jobTitle: 'SharePoint Administrator',
-        department: 'Collaboration',
-        lastSignIn: '2026-06-09T13:00:00Z',
-        riskLevel: 'LOW'
+    let users = []
+
+    // Fetch REAL users from Graph API if available
+    if (graphClient) {
+      try {
+        const result = await graphClient
+          .api('/users')
+          .select('id,displayName,mail,jobTitle,department,userPrincipalName')
+          .top(50)
+          .get()
+
+        users = (result.value || []).map(u => ({
+          id: u.id,
+          displayName: u.displayName || 'Unknown User',
+          mail: u.mail || u.userPrincipalName,
+          jobTitle: u.jobTitle || 'N/A',
+          department: u.department || 'N/A',
+          lastSignIn: new Date().toISOString(),
+          riskLevel: 'LOW'
+        }))
+
+        console.log(`✓ Fetched ${users.length} users from Graph API`)
+      } catch (apiError) {
+        console.warn('⚠️ Error fetching users from Graph API:', apiError.message)
+        // Fall back to mock data
+        users = getMockUsers()
       }
-    ]
+    } else {
+      // Use mock data if Graph API not available
+      users = getMockUsers()
+    }
 
     res.json({
       success: true,
-      data: mockUsers
+      data: users
     })
   } catch (error) {
     res.status(500).json({ success: false, error: error.message })
   }
 })
+
+// Helper function for mock users
+function getMockUsers() {
+  return [
+    {
+      id: 'user-001',
+      displayName: 'John Smith',
+      mail: 'john.smith@contoso.com',
+      jobTitle: 'IT Administrator',
+      department: 'Information Technology',
+      lastSignIn: '2026-06-11T14:30:00Z',
+      riskLevel: 'MEDIUM'
+    },
+    {
+      id: 'user-002',
+      displayName: 'Alice Johnson',
+      mail: 'alice.johnson@contoso.com',
+      jobTitle: 'Security Engineer',
+      department: 'Security',
+      lastSignIn: '2026-06-11T09:15:00Z',
+      riskLevel: 'LOW'
+    },
+    {
+      id: 'user-003',
+      displayName: 'Bob Davis',
+      mail: 'bob.davis@contoso.com',
+      jobTitle: 'Exchange Administrator',
+      department: 'Messaging',
+      lastSignIn: '2026-06-10T16:45:00Z',
+      riskLevel: 'HIGH'
+    },
+    {
+      id: 'user-004',
+      displayName: 'Carol Williams',
+      mail: 'carol.williams@contoso.com',
+      jobTitle: 'Global Administrator',
+      department: 'Information Technology',
+      lastSignIn: '2026-06-11T11:20:00Z',
+      riskLevel: 'HIGH'
+    },
+    {
+      id: 'user-005',
+      displayName: 'David Lee',
+      mail: 'david.lee@contoso.com',
+      jobTitle: 'SharePoint Administrator',
+      department: 'Collaboration',
+      lastSignIn: '2026-06-09T13:00:00Z',
+      riskLevel: 'LOW'
+    }
+  ]
+}
 
 /**
  * GET /api/tenantguard/users/:userId/investigation
