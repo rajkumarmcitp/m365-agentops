@@ -1120,10 +1120,10 @@ td.sla-overdue { color: var(--clr-danger-text); font-weight: 600; }
 
 /* Security sub-navigation */
 .sec-subnav {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, auto);
   gap: 4px;
   margin-bottom: 12px;
-  overflow-x: auto;
   padding: 0 0 4px;
   border-bottom: 0.5px solid var(--color-border-secondary);
   padding-bottom: 8px;
@@ -1141,7 +1141,6 @@ td.sla-overdue { color: var(--clr-danger-text); font-weight: 600; }
   cursor: pointer;
   border-bottom: 2px solid transparent;
   white-space: nowrap;
-  flex-shrink: 0;
   transition: all var(--transition);
 }
 .sec-tab-btn:hover {
