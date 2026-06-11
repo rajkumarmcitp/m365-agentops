@@ -26,7 +26,6 @@ export class AuditCollector {
         const audits = await this.graphClient
           .api('/auditLogs/directoryAudits')
           .filter(`activityDateTime gt ${thirtyMinutesAgo.toISOString()}`)
-          .select('id,activity,activityDateTime,initiatedBy,targetResources,additionalDetails,result')
           .top(100)
           .get()
 
@@ -66,7 +65,6 @@ export class AuditCollector {
         const signIns = await this.graphClient
           .api('/auditLogs/signIns')
           .filter(`createdDateTime gt ${fiveMinutesAgo.toISOString()}`)
-          .select('id,userPrincipalName,createdDateTime,ipAddress,riskLevelDuringSignIn')
           .top(100)
           .get()
 
