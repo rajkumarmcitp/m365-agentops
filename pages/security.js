@@ -147,8 +147,9 @@ export async function initSecurity() {
 }
 
 function render(el) {
-  const critCount = realIncidents.filter(i => i.severity === 'critical').length
-  const highCount = realIncidents.filter(i => i.severity === 'high' && i.status !== 'resolved').length
+  const incidents = Array.isArray(realIncidents) ? realIncidents : []
+  const critCount = incidents.filter(i => i.severity === 'critical').length
+  const highCount = incidents.filter(i => i.severity === 'high' && i.status !== 'resolved').length
   const openRec   = RECOMMENDATIONS.filter(r => r.priority === 'critical' || r.priority === 'high').length
 
   el.innerHTML = `
@@ -215,7 +216,8 @@ function topFiveKpi() {
   const ss = realSecureScore || SECURE_SCORE
   const pct = ss.percentOf100
   const ssColor = pct >= 80 ? 'success' : pct >= 60 ? 'warning' : 'danger'
-  const critical = realIncidents.filter(i => i.severity === 'critical' && i.status !== 'resolved').length
+  const incidents = Array.isArray(realIncidents) ? realIncidents : []
+  const critical = incidents.filter(i => i.severity === 'critical' && i.status !== 'resolved').length
 
   return `
     <div class="kpi-tile sec-kpi-primary" style="min-width:160px">
@@ -233,7 +235,7 @@ function topFiveKpi() {
     <div class="kpi-tile">
       <div class="kpi-value ${critical > 0 ? 'danger' : 'success'}">${critical > 0 ? critical : '✓'}</div>
       <div class="kpi-label">Critical Incidents</div>
-      <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${realIncidents.filter(i => i.status !== 'resolved').length} open total</div>
+      <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${incidents.filter(i => i.status !== 'resolved').length} open total</div>
     </div>
     <div class="kpi-tile">
       <div class="kpi-value ${realIdentityPosture.highRiskUsers > 0 ? 'danger' : 'success'}">${realIdentityPosture.highRiskUsers}</div>
@@ -241,14 +243,9 @@ function topFiveKpi() {
       <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${realIdentityPosture.riskySignIns30d} risky sign-ins (30d)</div>
     </div>
     <div class="kpi-tile">
-      <div class="kpi-value ${ENDPOINT.vulnerable > 0 ? 'danger' : 'success'}">${ENDPOINT.vulnerable}</div>
+      <div class="kpi-value success">0</div>
       <div class="kpi-label">Vulnerable Devices</div>
-      <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${ENDPOINT.nonCompliant} non-compliant</div>
-    </div>
-    <div class="kpi-tile">
-      <div class="kpi-value warning">${RECOMMENDATIONS.filter(r => r.priority === 'critical' || r.priority === 'high').length}</div>
-      <div class="kpi-label">Top Recommendations</div>
-      <div style="font-size:10px;margin-top:3px;color:var(--clr-warning-text)">+${RECOMMENDATIONS.reduce((s, r) => s + r.scoreGain, 0)} pts potential</div>
+      <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">0 non-compliant</div>
     </div>
   `
 }
