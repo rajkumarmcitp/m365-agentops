@@ -1077,10 +1077,14 @@ tr:hover td { background: var(--color-background-secondary); }
     height: auto;
     border-right: none;
     border-bottom: 0.5px solid var(--color-border-secondary);
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0;
   }
 
   #main-content {
     flex: 1;
+    flex-direction: column;
   }
 
   #page-area {
