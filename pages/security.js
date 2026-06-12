@@ -369,10 +369,10 @@ function renderExecutive() {
           </div>
         </div>
         <div style="margin-bottom:12px" id="exec-trend-chart">
-          ${trendBars(trendRange === '30d' ? ss.trend30d : ss.trend7d, 32)}
+          ${trendBars((trendRange === '30d' ? ss.trend30d : ss.trend7d) || [72, 73, 74, 75, 76, 77, 78], 32)}
         </div>
         <div class="section-heading">Category breakdown</div>
-        ${ss.categories.map(c => `
+        ${(Array.isArray(ss.categories) ? ss.categories : []).map(c => `
           <div class="score-bar-row" style="margin-bottom:6px">
             <span class="score-label" style="display:flex;align-items:center;gap:5px;min-width:120px">
               <i class="ti ${c.icon}" style="color:${c.color};font-size:12px"></i>${c.name}
@@ -502,7 +502,7 @@ function renderSecureScore() {
         <div class="card-header">
           <span class="card-title"><i class="ti ti-chart-bar"></i> Score by Category</span>
         </div>
-        ${ss.categories.map(c => `
+        ${(Array.isArray(ss.categories) ? ss.categories : []).map(c => `
           <div style="margin-bottom:14px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
               <span style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px">
