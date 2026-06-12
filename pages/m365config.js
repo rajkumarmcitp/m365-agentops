@@ -1,6 +1,7 @@
 import { state, saveState } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
+import { getCISControls } from '../lib/api-client.js'
 import { CFG_TOPICS } from '../data/cis-controls.js'
 
 let cfgView = 'main'
@@ -69,7 +70,7 @@ function scoreClass(score) {
   return 'danger'
 }
 
-export function initM365Config() {
+export async function initM365Config() {
   const el = document.getElementById('page-m365config')
   if (!el) return
   cfgView = 'main'
@@ -78,7 +79,7 @@ export function initM365Config() {
   if (isDemoAccount()) {
     renderDemoMain(el)
   } else {
-    renderBlankMain(el)
+    await renderProductionMain(el)
   }
 }
 
@@ -268,7 +269,158 @@ function renderDemoTopic(el, topic) {
   })
 }
 
-function renderBlankMain(el) {
+async function renderProductionMain(el) {
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-settings-2"></i> M365 Config — CIS Benchmark</div>
+        <div class="page-subtitle">Loading configuration compliance from Graph API...</div>
+      </div>
+    </div>
+    <div style="padding:20px;text-align:center"><div class="spinner"></div><p>Scanning your tenant configuration...</p></div>
+  `
+
+  try {
+    const result = await getCISControls()
+
+    if (!result.success || !result.data || result.data.length === 0) {
+      renderBlankProductionState(el)
+      return
+    }
+
+    const cisData = result.data
+    const stats = {
+      total: cisData.length,
+      pass: cisData.filter(c => c.status === 'pass').length,
+      fail: cisData.filter(c => c.status === 'fail').length,
+      warn: cisData.filter(c => c.status === 'warn').length,
+      manual: cisData.filter(c => c.type === 'manual').length,
+      score: 0
+    }
+    stats.score = stats.total > 0 ? Math.round((stats.pass / stats.total) * 100) : 0
+    const cls = scoreClass(stats.score)
+
+    el.innerHTML = `
+      <div class="page-header">
+        <div>
+          <div class="page-title"><i class="ti ti-settings-2"></i> M365 Config — CIS Benchmark v7.0.0</div>
+          <div class="page-subtitle">Last assessed: Today · ${stats.total} controls from ${cisData.length > 0 ? 'Graph API' : 'local data'}</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Re-scan</button>
+          <button class="btn btn-primary" id="cfg-agent-btn"><i class="ti ti-robot"></i> Config Agent</button>
+        </div>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-tile">
+          <div class="kpi-value ${cls}">${stats.score}%</div>
+          <div class="kpi-label">Overall Score</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-value success">${stats.pass}</div>
+          <div class="kpi-label">Passed</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-value danger">${stats.fail}</div>
+          <div class="kpi-label">Failed</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-value warning">${stats.warn}</div>
+          <div class="kpi-label">Warnings</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-value purple">${stats.manual}</div>
+          <div class="kpi-label">Manual</div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header">
+          <span class="card-title">Configuration Assessment Results</span>
+          <span class="badge ${cls}">${stats.score}% compliant</span>
+        </div>
+        <div class="cfg-topic-grid">
+          ${cisData.slice(0, 9).map((topic, i) => {
+            const topicStats = {
+              total: topic.controlCount || 1,
+              pass: topic.passCount || 0,
+              fail: topic.failCount || 0,
+              warn: topic.warnCount || 0
+            }
+            const topicScore = topicStats.total > 0 ? Math.round((topicStats.pass / topicStats.total) * 100) : 0
+            const topicClass = scoreClass(topicScore)
+            const topicColor = TOPIC_COLOURS[`t${i+1}`] || { bg: '#E6F1FB', color: '#0C447C' }
+
+            return `
+              <div class="cfg-topic-card" style="background:${topicColor.bg};border-color:${topicColor.color}">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                  <div style="font-size:16px;color:${topicColor.color}">${topic.icon ? `<i class="ti ${topic.icon}"></i>` : '⚙️'}</div>
+                  <div style="font-weight:600;font-size:12px;color:${topicColor.color}">${topic.name || `Topic ${i+1}`}</div>
+                </div>
+                <div style="font-size:20px;font-weight:700;color:${topicColor.color};margin-bottom:4px">${topicScore}%</div>
+                <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:8px">
+                  ${topicStats.pass}/${topicStats.total} controls
+                </div>
+                <div style="display:flex;gap:4px;font-size:9px">
+                  ${topicStats.fail > 0 ? `<span style="color:var(--clr-danger-text)">● ${topicStats.fail} fail</span>` : ''}
+                  ${topicStats.warn > 0 ? `<span style="color:var(--clr-warning-text)">● ${topicStats.warn} warn</span>` : ''}
+                </div>
+              </div>
+            `
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Control Details</span>
+        </div>
+        <table style="width:100%;font-size:11px">
+          <thead style="background:var(--color-background-secondary)">
+            <tr>
+              <th style="padding:8px 12px;text-align:left;font-weight:600">Control ID</th>
+              <th style="padding:8px 12px;text-align:left;font-weight:600">Title</th>
+              <th style="padding:8px 12px;text-align:center;font-weight:600">Status</th>
+              <th style="padding:8px 12px;text-align:left;font-weight:600">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cisData.slice(0, 20).map(control => `
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                <td style="padding:8px 12px;font-weight:600;color:var(--clr-info-text)">${control.id || '—'}</td>
+                <td style="padding:8px 12px">${control.title || control.name || '—'}</td>
+                <td style="padding:8px 12px;text-align:center">${statusBadge(control.status)}</td>
+                <td style="padding:8px 12px;font-size:10px;color:var(--color-text-secondary)">${(control.value || '—').substring(0, 50)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `
+
+    el.querySelector('#cfg-scan-now')?.addEventListener('click', async () => {
+      const btn = el.querySelector('#cfg-scan-now')
+      btn.innerHTML = `<span class="spinner dark"></span> Scanning...`
+      btn.disabled = true
+      setTimeout(async () => {
+        btn.innerHTML = `<i class="ti ti-refresh"></i> Re-scan`
+        btn.disabled = false
+        await renderProductionMain(el)
+        showToast('Configuration scan completed', 'success')
+      }, 2000)
+    })
+
+    el.querySelector('#cfg-agent-btn')?.addEventListener('click', () => {
+      showToast('Configuration Agent will help remediate failed controls', 'info')
+    })
+  } catch (error) {
+    console.error('Error loading CIS controls:', error)
+    renderBlankProductionState(el)
+  }
+}
+
+function renderBlankProductionState(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
@@ -284,10 +436,10 @@ function renderBlankMain(el) {
       <i class="ti ti-settings-off" style="font-size:48px;color:var(--color-text-tertiary);margin-bottom:12px"></i>
       <div style="font-size:13px;font-weight:600;margin-bottom:4px">No Configuration Data Available</div>
       <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:16px">
-        M365 Configuration scanning requires real-time assessment through Microsoft Graph API
+        Configuration scanning requires Graph API backend integration
       </div>
       <div style="font-size:10px;color:var(--color-text-tertiary);padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);text-align:left;max-width:400px">
-        <strong>Data sources:</strong>
+        <strong>Required data sources:</strong>
         <div style="margin-top:6px;font-family:monospace;font-size:9px">
           /deviceManagement/deviceCompliancePolicies<br>
           /policies/conditionalAccessPolicies<br>
@@ -298,14 +450,14 @@ function renderBlankMain(el) {
     </div>
   `
 
-  el.querySelector('#cfg-scan-now').addEventListener('click', () => {
+  el.querySelector('#cfg-scan-now').addEventListener('click', async () => {
     const btn = el.querySelector('#cfg-scan-now')
     btn.innerHTML = `<span class="spinner dark"></span> Scanning...`
     btn.disabled = true
-    setTimeout(() => {
+    setTimeout(async () => {
       btn.innerHTML = `<i class="ti ti-refresh"></i> Run scan`
       btn.disabled = false
-      showToast('No configuration data available from Graph API', 'info')
+      await renderProductionMain(el)
     }, 2000)
   })
 }
