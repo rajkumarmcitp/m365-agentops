@@ -1,5 +1,19 @@
 export const USERS = [
   {
+    id: 'demo',
+    name: 'Demo Account',
+    email: 'demo@contoso.com',
+    role: 'admin',
+    initials: 'DM',
+    color: '#00C7B7',
+    navAccess: [
+      'dashboard', 'requests', 'security', 'tenantguard', 'zerotrust', 'privaccts',
+      'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune',
+      'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings'
+    ],
+    isDemoAccount: true,
+  },
+  {
     id: 'priya',
     name: 'Priya Kumar',
     email: 'priya@contoso.com',
