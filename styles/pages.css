@@ -10,6 +10,36 @@
   margin-bottom: 16px;
 }
 
+/* Dashboard Typography - Increased & Uniform */
+#page-dashboard [style*="font-size:13px"] {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+#page-dashboard .card-title {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+#page-dashboard [style*="font-size:20px"] {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+}
+
+#page-dashboard [style*="font-size:16px"] {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+}
+
+#page-dashboard [style*="font-size:9px;"] {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+#page-dashboard [style*="font-size:10px;color:var(--color-text-secondary)"] {
+  font-size: 12px !important;
+}
+
 .dash-event-dot {
   width: 7px;
   height: 7px;
