@@ -1,6 +1,7 @@
 import { showToast } from '../components/toast.js'
 import { getPrivilegedAccounts } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
+import { PA_GROUPS } from '../data/pa-data.js'
 
 let logEntries = []
 let realPrivilegedAccounts = []
