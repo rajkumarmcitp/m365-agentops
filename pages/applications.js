@@ -2,6 +2,7 @@ import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getApplications, getServicePrincipals, api } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
+import { APPS_SUMMARY, APPS_RECOMMENDATIONS, APPS_COPILOT_KB } from '../data/apps-data.js'
 
 let activeSection = 'executive'
 let appFilter = { type: 'all', status: 'all', search: '' }
