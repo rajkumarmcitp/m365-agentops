@@ -277,6 +277,7 @@ async function doLogin(userId) {
   if (!user) return
   state.currentUser = user
   window.userEmail = user.email
+  console.log(`✅ Demo login: ${user.name} (${user.email})`)
   renderShell()
   const defaultPage = user.navAccess[0]
   await go(defaultPage)
