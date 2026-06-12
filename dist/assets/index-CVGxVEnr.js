@@ -3018,7 +3018,7 @@ Current status: Secure Score 64/95 · ${R.filter(l=>l.status!=="resolved").lengt
           ${n.controls.map(l=>`
             <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
               <td style="padding:10px 12px;font-size:10px;font-family:monospace">${l.id}</td>
-              <td style="padding:10px 12px;font-size:11px">${l.name}</td>
+              <td style="padding:10px 12px;font-size:11px">${l.title||l.name||"—"}</td>
               <td style="padding:10px 12px;font-size:10px"><span class="badge ${l.type==="manual"?"purple":"info"}">${l.type==="manual"?"Manual":"Auto"}</span></td>
               <td style="padding:10px 12px;font-size:10px">${on(Tt(l))}</td>
             </tr>

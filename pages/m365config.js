@@ -248,7 +248,7 @@ function renderDemoTopic(el, topic) {
           ${subsection.controls.map(control => `
             <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
               <td style="padding:10px 12px;font-size:10px;font-family:monospace">${control.id}</td>
-              <td style="padding:10px 12px;font-size:11px">${control.name}</td>
+              <td style="padding:10px 12px;font-size:11px">${control.title || control.name || '—'}</td>
               <td style="padding:10px 12px;font-size:10px"><span class="badge ${control.type === 'manual' ? 'purple' : 'info'}">${control.type === 'manual' ? 'Manual' : 'Auto'}</span></td>
               <td style="padding:10px 12px;font-size:10px">${statusBadge(getEffectiveStatus(control))}</td>
             </tr>
