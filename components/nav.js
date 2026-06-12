@@ -52,7 +52,7 @@ export function renderNav() {
       <div class="nav-logo-icon"><i class="ti ti-shield-bolt"></i></div>
       <div>
         <div class="nav-logo-text">M365 AgentOps</div>
-        <div class="nav-logo-sub">Contoso.com</div>
+        <div class="nav-logo-sub">${state.tenantDomain}</div>
       </div>
     </div>
   `

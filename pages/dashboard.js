@@ -1,4 +1,4 @@
-import { go } from '../app.js'
+import { go, state } from '../app.js'
 import { getDevices, getUsers, getSecurityScore, callAPI } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 
@@ -64,7 +64,7 @@ export async function initDashboard() {
     <div class="page-header">
       <div>
         <div class="page-title"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
-        <div class="page-subtitle">Contoso.com — last updated just now</div>
+        <div class="page-subtitle">${state.tenantDomain} — last updated just now</div>
       </div>
       <div class="page-actions">
         <button class="btn"><i class="ti ti-refresh"></i> Refresh</button>
@@ -171,7 +171,7 @@ function renderDemoDashboard(el) {
     <div class="page-header">
       <div>
         <div class="page-title"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
-        <div class="page-subtitle">Contoso.com — last updated just now</div>
+        <div class="page-subtitle">${state.tenantDomain} — last updated just now</div>
       </div>
       <div class="page-actions">
         <button class="btn"><i class="ti ti-refresh"></i> Refresh</button>

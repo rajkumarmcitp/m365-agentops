@@ -2,7 +2,7 @@ import { USERS } from './data/users.js'
 import { renderHeader } from './components/header.js'
 import { renderNav } from './components/nav.js'
 import { showToast } from './components/toast.js'
-import { initMSAL, loginWithMicrosoft, getCurrentUser, getUserEmail, logout } from './lib/auth.js'
+import { initMSAL, loginWithMicrosoft, getCurrentUser, getUserEmail, logout, getAccessToken } from './lib/auth.js'
 import { initDashboard } from './pages/dashboard.js'
 import { initRequests } from './pages/requests.js'
 import { initSecurity } from './pages/security.js'
@@ -32,6 +32,7 @@ import { initMyAccount } from './pages/myaccount.js'
 export const state = {
   currentUser: null,
   currentPage: 'dashboard',
+  tenantDomain: 'Contoso.com',
   settings: {
     showPSCommands: true,
     showTenantResult: true,
@@ -173,6 +174,45 @@ export async function go(pageId) {
 
   // Call init function (handle both sync and async)
   if (PAGE_INIT[pageId]) await PAGE_INIT[pageId]()
+}
+
+// ============================================================
+// Fetch Tenant Domain from Graph API
+// ============================================================
+async function fetchTenantDomain() {
+  try {
+    const token = await getAccessToken()
+    if (!token) {
+      console.warn('⚠️ No access token available for tenant domain fetch')
+      return
+    }
+
+    console.log('📡 Fetching tenant domain from Graph API...')
+    const response = await fetch('https://graph.microsoft.com/v1.0/organization', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      console.warn(`⚠️ Failed to fetch organization: ${response.status}`)
+      return
+    }
+
+    const data = await response.json()
+    if (data.value && data.value.length > 0) {
+      const tenantDisplayName = data.value[0].displayName
+      if (tenantDisplayName) {
+        state.tenantDomain = tenantDisplayName
+        console.log(`✓ Tenant domain: ${state.tenantDomain}`)
+        // Update nav to show new domain
+        renderNav()
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ Error fetching tenant domain:', error.message)
+  }
 }
 
 // ============================================================
@@ -342,6 +382,10 @@ async function doLoginWithEntraID(account) {
 
   state.currentUser = entraUser
   renderShell()
+
+  // Fetch tenant domain from Graph API
+  fetchTenantDomain()
+
   const defaultPage = entraUser.navAccess[0]
   await go(defaultPage)
   showToast(`Welcome, ${entraUser.name}! Role: ${role}`, 'success')

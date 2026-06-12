@@ -1,4 +1,4 @@
-import { go } from '../app.js'
+import { go, state } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getSecurityScore, getIncidents, getDevices, getIdentityPosture } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
@@ -1105,7 +1105,7 @@ function renderSecurityCopilot() {
   if (!copilotInit || copilotMessages.length === 0) {
     copilotMessages = [{
       role: 'ai',
-      text: `**M365 Security Copilot** — I have full context of your security posture across all 15 data sources.\n\nCurrent tenant: **Contoso.com** · Secure Score: **64/95** · ${realIncidents.filter(i => i.status !== 'resolved').length} active incidents\n\nAsk me anything about your security posture, specific risks, or recommended actions.`
+      text: `**M365 Security Copilot** — I have full context of your security posture across all 15 data sources.\n\nCurrent tenant: **${state.tenantDomain}** · Secure Score: **64/95** · ${realIncidents.filter(i => i.status !== 'resolved').length} active incidents\n\nAsk me anything about your security posture, specific risks, or recommended actions.`
     }]
     copilotInit = true
   }
