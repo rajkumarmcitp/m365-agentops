@@ -1,5 +1,6 @@
 import { showToast } from '../components/toast.js'
 import { getPrivilegedAccounts } from '../lib/api-client.js'
+import { isDemoAccount } from '../lib/demo-account.js'
 
 let logEntries = []
 let realPrivilegedAccounts = []
@@ -8,6 +9,12 @@ let accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0
 export async function initPrivAccts() {
   const el = document.getElementById('page-privaccts')
   if (!el) return
+
+  if (isDemoAccount()) {
+    console.log('🎭 Demo account detected - showing demo privileged accounts')
+    renderDemoPrivAccts(el)
+    return
+  }
 
   try {
     console.log('📡 Fetching real privileged accounts from Azure AD...')
@@ -111,6 +118,196 @@ function mfaBadge(mfa) {
 function roleBadge(role) {
   const isGlobal = role.toLowerCase().includes('global')
   return `<span class="pa-role-chip ${isGlobal ? 'global' : ''}">${role}</span>`
+}
+
+function renderDemoPrivAccts(el) {
+  const demoAccounts = [
+    { id: 'user-1', name: 'Aisha Raza', email: 'aisha.raza@contoso.com', role: 'Global Administrator', mfa: ['Microsoft Authenticator'], riskLevel: 'high', lastSignIn: '2026-06-01 14:32' },
+    { id: 'user-2', name: 'Chen Wei', email: 'chen.wei@contoso.com', role: 'Exchange Administrator', mfa: ['Authenticator App'], riskLevel: 'low', lastSignIn: '2026-06-01 09:15' },
+    { id: 'user-3', name: 'Sanjay Kumar', email: 'sanjay.kumar@contoso.com', role: 'Security Administrator', mfa: ['SMS', 'Authenticator App'], riskLevel: 'low', lastSignIn: '2026-06-01 11:45' },
+    { id: 'user-4', name: 'Sarah Johnson', email: 'sarah.johnson@contoso.com', role: 'Sharepoint Administrator', mfa: [], riskLevel: 'medium', lastSignIn: '2026-05-30 16:20' },
+    { id: 'user-5', name: 'Tom Brooks', email: 'tom.brooks@contoso.com', role: 'Teams Administrator', mfa: ['Microsoft Authenticator'], riskLevel: 'low', lastSignIn: '2026-06-01 13:50' },
+  ]
+
+  const demoSummary = {
+    totalAccounts: demoAccounts.length,
+    atRisk: 1,
+    noMFA: 1,
+    permanentRoles: 3,
+    servicePrincipals: 0
+  }
+
+  const demoGroups = [
+    { id: 'group-1', name: 'Global Administrators', members: 2, eligible: 1, permanent: true },
+    { id: 'group-2', name: 'Exchange Administrators', members: 1, eligible: 0, permanent: true },
+    { id: 'group-3', name: 'Security Administrators', members: 1, eligible: 0, permanent: true },
+  ]
+
+  const demoLog = [
+    { date: '2026-06-01 10:30', user: 'Aisha Raza', action: 'Added to Global Administrator', status: 'Permanent assignment', severity: 'critical' },
+    { date: '2026-05-31 14:15', user: 'Chen Wei', action: 'Activated Exchange Administrator', status: 'Temporary (4 hours)', severity: 'warning' },
+    { date: '2026-05-30 09:20', user: 'Sanjay Kumar', action: 'MFA verification', status: 'Approved', severity: 'low' },
+    { date: '2026-05-29 16:45', user: 'Sarah Johnson', action: 'Removed from SharePoint Administrators', status: 'Role deactivated', severity: 'low' },
+    { date: '2026-05-28 11:30', user: 'Tom Brooks', action: 'Added to Teams Administrators', status: 'Eligible assignment', severity: 'warning' },
+  ]
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-crown"></i> Privileged Accounts</div>
+        <div class="page-subtitle">Manage and monitor privileged identities in your tenant</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn" id="pa-sync"><i class="ti ti-refresh"></i> Sync tenant</button>
+        <button class="btn btn-primary" id="pa-tag-account"><i class="ti ti-plus"></i> Tag account</button>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
+      <span class="status-dot active pulse"></span>
+      <span><strong style="color:var(--color-text-secondary)">Demo Mode</strong> · Showing sample privileged accounts</span>
+    </div>
+
+    <div class="alert-banner danger mb-3">
+      <i class="ti ti-alert-triangle"></i>
+      1 privileged account has active risk detection.
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-tile"><div class="kpi-value info">${demoSummary.totalAccounts}</div><div class="kpi-label">Accounts</div></div>
+      <div class="kpi-tile"><div class="kpi-value danger">${demoSummary.atRisk}</div><div class="kpi-label">At Risk</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning">${demoSummary.noMFA}</div><div class="kpi-label">No MFA</div></div>
+      <div class="kpi-tile"><div class="kpi-value info">${demoGroups.length}</div><div class="kpi-label">Groups</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning">${demoSummary.permanentRoles}</div><div class="kpi-label">Permanent</div></div>
+    </div>
+
+    <div class="tabs" id="pa-tabs">
+      <button class="tab-btn active" data-tab="accounts">Privileged Accounts</button>
+      <button class="tab-btn" data-tab="groups">Privileged Groups</button>
+      <button class="tab-btn" data-tab="log">Membership Log</button>
+    </div>
+
+    <div class="tab-panel active" id="pa-tab-accounts"></div>
+    <div class="tab-panel" id="pa-tab-groups"></div>
+    <div class="tab-panel" id="pa-tab-log"></div>
+  `
+
+  renderDemoAccountsTab(el, demoAccounts)
+  renderDemoGroupsTab(el, demoGroups)
+  renderDemoLogTab(el, demoLog)
+
+  el.querySelector('#pa-sync').addEventListener('click', () => {
+    const btn = el.querySelector('#pa-sync')
+    btn.innerHTML = `<span class="spinner dark"></span> Syncing...`
+    btn.disabled = true
+    setTimeout(() => {
+      btn.innerHTML = `<i class="ti ti-refresh"></i> Sync tenant`
+      btn.disabled = false
+      showToast('Sync complete — all privileged accounts updated', 'success')
+    }, 2000)
+  })
+
+  el.querySelectorAll('#pa-tabs .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el.querySelectorAll('#pa-tabs .tab-btn').forEach(b => b.classList.remove('active'))
+      el.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'))
+      btn.classList.add('active')
+      el.querySelector(`#pa-tab-${btn.dataset.tab}`).classList.add('active')
+    })
+  })
+}
+
+function renderDemoAccountsTab(el, accounts) {
+  const container = el.querySelector('#pa-tab-accounts')
+  container.innerHTML = `
+    <div style="margin-bottom:12px">
+      <input type="text" class="form-input" placeholder="Search accounts..." style="max-width:300px">
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">User</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Email</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Role</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">MFA</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Risk</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Last Sign-in</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${accounts.map((account, i) => `
+            <tr style="border-bottom:${i < accounts.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none'}">
+              <td style="padding:10px 12px;font-size:11px;font-weight:600">${account.name}</td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${account.email}</td>
+              <td style="padding:10px 12px;font-size:10px">${roleBadge(account.role)}</td>
+              <td style="padding:10px 12px;font-size:10px">${mfaBadge(account.mfa)}</td>
+              <td style="padding:10px 12px"><span class="badge ${account.riskLevel === 'high' ? 'danger' : account.riskLevel === 'medium' ? 'warning' : 'success'}">${account.riskLevel}</span></td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-tertiary)">${account.lastSignIn}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoGroupsTab(el, groups) {
+  const container = el.querySelector('#pa-tab-groups')
+  container.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden">
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Group Name</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Total Members</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Eligible</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${groups.map((group, i) => `
+            <tr style="border-bottom:${i < groups.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none'}">
+              <td style="padding:10px 12px;font-size:11px;font-weight:600">${group.name}</td>
+              <td style="padding:10px 12px;font-size:10px">${group.members}</td>
+              <td style="padding:10px 12px;font-size:10px">${group.eligible}</td>
+              <td style="padding:10px 12px"><span class="badge ${group.permanent ? 'danger' : 'warning'}">${group.permanent ? 'Permanent' : 'Eligible'}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoLogTab(el, logEntries) {
+  const container = el.querySelector('#pa-tab-log')
+  container.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden">
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Date/Time</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">User</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Action</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Status</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Severity</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${logEntries.map((entry, i) => `
+            <tr style="border-bottom:${i < logEntries.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none'}">
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-tertiary)">${entry.date}</td>
+              <td style="padding:10px 12px;font-size:11px;font-weight:600">${entry.user}</td>
+              <td style="padding:10px 12px;font-size:10px">${entry.action}</td>
+              <td style="padding:10px 12px;font-size:10px">${entry.status}</td>
+              <td style="padding:10px 12px"><span class="badge ${entry.severity === 'critical' ? 'danger' : entry.severity === 'warning' ? 'warning' : 'success'}">${entry.severity}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
 }
 
 function renderAccountsTab(el) {
