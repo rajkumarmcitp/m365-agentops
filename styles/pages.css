@@ -1121,7 +1121,7 @@ td.sla-overdue { color: var(--clr-danger-text); font-weight: 600; }
 /* Security sub-navigation */
 .sec-subnav {
   display: grid;
-  grid-template-columns: repeat(4, auto);
+  grid-template-columns: repeat(7, auto);
   gap: 4px;
   margin-bottom: 12px;
   padding: 0 0 4px;
