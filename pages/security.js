@@ -1,7 +1,8 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getSecurityScore, getIncidents, getDevices, getIdentityPosture } from '../lib/api-client.js'
-import { IDENTITY } from '../data/security-data.js'
+import { isDemoAccount } from '../lib/demo-account.js'
+import { IDENTITY, INCIDENTS as DEMO_INCIDENTS } from '../data/security-data.js'
 
 let realSecureScore = null
 let realIncidents = []
@@ -39,6 +40,12 @@ const SEC_TABS = [
 export async function initSecurity() {
   const el = document.getElementById('page-security')
   if (!el) return
+
+  if (isDemoAccount()) {
+    console.log('🎭 Demo account detected - showing demo security data')
+    renderDemoSecurityPage(el)
+    return
+  }
 
   try {
     console.log('📡 Fetching real security data from backend...')
@@ -1308,6 +1315,242 @@ function formatSecMsg(text) {
       const cells = m.split('|').filter(c => c.trim())
       return `<span style="display:flex;gap:16px;font-size:11px;padding:2px 0">${cells.map(c => `<span>${c.trim()}</span>`).join('')}</span>`
     })
+}
+
+// ============================================================
+// Demo Page Rendering
+// ============================================================
+function renderDemoSecurityPage(el) {
+  const demoScore = { overallScore: 78, categoryScores: { identity: 82, data: 75, devices: 72, apps: 76, infrastructure: 79 } }
+  const demoIncidents = DEMO_INCIDENTS.slice(0, 5)
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-shield-check"></i> Security</div>
+        <div class="page-subtitle">Comprehensive security posture and threat assessment</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn"><i class="ti ti-refresh"></i> Refresh</button>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
+      <span class="status-dot active pulse"></span>
+      <span><strong style="color:var(--color-text-secondary)">Demo Mode</strong> · Showing sample security data</span>
+    </div>
+
+    <div class="tabs" id="sec-tabs" style="margin-bottom:16px">
+      <button class="tab-btn active" data-section="executive">
+        <i class="ti ti-layout-dashboard"></i> Executive
+      </button>
+      <button class="tab-btn" data-section="securescore">
+        <i class="ti ti-shield-check"></i> Secure Score
+      </button>
+      <button class="tab-btn" data-section="identity">
+        <i class="ti ti-user-check"></i> Identity
+      </button>
+      <button class="tab-btn" data-section="incidents">
+        <i class="ti ti-alert-triangle"></i> Incidents
+      </button>
+    </div>
+
+    <div id="security-content"></div>
+  `
+
+  const contentEl = el.querySelector('#security-content')
+  renderDemoExecutive(contentEl, demoScore, demoIncidents)
+
+  el.querySelectorAll('#sec-tabs .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el.querySelectorAll('#sec-tabs .tab-btn').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+      const section = btn.dataset.section
+
+      if (section === 'executive') renderDemoExecutive(contentEl, demoScore, demoIncidents)
+      else if (section === 'securescore') renderDemoSecureScore(contentEl, demoScore)
+      else if (section === 'identity') renderDemoIdentity(contentEl)
+      else if (section === 'incidents') renderDemoIncidents(contentEl, demoIncidents)
+    })
+  })
+}
+
+function renderDemoExecutive(el, score, incidents) {
+  el.innerHTML = `
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Overall Security Score</span>
+        <span class="badge warning">${score.overallScore}%</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:10px">
+        <div style="text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:20px;font-weight:700;color:var(--clr-info-text)">${score.categoryScores.identity}%</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Identity</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">${score.categoryScores.data}%</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Data</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">${score.categoryScores.devices}%</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Devices</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:20px;font-weight:700;color:var(--clr-info-text)">${score.categoryScores.apps}%</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Apps</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:20px;font-weight:700;color:var(--clr-success-text)">${score.categoryScores.infrastructure}%</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Infrastructure</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Active Incidents</span>
+        <span class="badge danger">${incidents.length} alerts</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Incident</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Severity</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Status</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Detected</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${incidents.slice(0, 5).map(incident => `
+            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+              <td style="padding:10px;font-size:11px;color:var(--color-text-secondary)">${incident.title}</td>
+              <td style="padding:10px;font-size:10px"><span class="badge ${incident.severity === 'high' ? 'danger' : 'warning'}">${incident.severity}</span></td>
+              <td style="padding:10px;font-size:10px"><span class="badge info">Investigating</span></td>
+              <td style="padding:10px;font-size:10px;color:var(--color-text-tertiary)">${new Date(incident.detectedAt || Date.now()).toLocaleDateString()}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoSecureScore(el, score) {
+  el.innerHTML = `
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Microsoft Secure Score</span>
+      </div>
+      <div style="padding:20px;text-align:center">
+        <div style="font-size:48px;font-weight:700;color:var(--clr-warning-text);margin-bottom:8px">${score.overallScore}</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:20px">Out of 100 possible points</div>
+        <div style="width:100%;height:8px;background:var(--color-background-secondary);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${score.overallScore}%;background:var(--clr-warning-bg)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="card">
+        <div class="card-title">Identity & Access</div>
+        <div style="margin-top:8px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:11px">Secure Score:</span>
+            <span style="font-size:11px;font-weight:600">${score.categoryScores.identity} points</span>
+          </div>
+          <div style="height:4px;background:var(--color-background-secondary);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${score.categoryScores.identity}%;background:var(--clr-info-bg)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Data Security</div>
+        <div style="margin-top:8px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:11px">Secure Score:</span>
+            <span style="font-size:11px;font-weight:600">${score.categoryScores.data} points</span>
+          </div>
+          <div style="height:4px;background:var(--color-background-secondary);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${score.categoryScores.data}%;background:var(--clr-warning-bg)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderDemoIdentity(el) {
+  el.innerHTML = `
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Identity Posture</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Total Users</div>
+          <div style="font-size:24px;font-weight:700">1,000</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">MFA Enabled</div>
+          <div style="font-size:24px;font-weight:700;color:var(--clr-success-text)">856</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">85.6%</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Global Admins</div>
+          <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">4</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Conditional Access</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Policy</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px;font-size:11px">Require MFA for admins</td>
+            <td style="padding:10px"><span class="badge success">Enabled</span></td>
+          </tr>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px;font-size:11px">Block legacy authentication</td>
+            <td style="padding:10px"><span class="badge success">Enabled</span></td>
+          </tr>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px;font-size:11px">Require compliant devices</td>
+            <td style="padding:10px"><span class="badge warning">Report only</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoIncidents(el, incidents) {
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Security Alerts</span>
+        <span class="badge danger">${incidents.length} open</span>
+      </div>
+      ${incidents.map((incident, i) => `
+        <div style="padding:12px;border-bottom:${i < incidents.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none'}">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px">
+            <div style="font-weight:600;font-size:11px">${incident.title}</div>
+            <span class="badge ${incident.severity === 'high' ? 'danger' : 'warning'}">${incident.severity}</span>
+          </div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:8px">${incident.description}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary)">Detected: ${new Date(incident.detectedAt || Date.now()).toLocaleString()}</div>
+        </div>
+      `).join('')}
+    </div>
+  `
 }
 
 // ============================================================
