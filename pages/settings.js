@@ -1,7 +1,6 @@
 import { state, saveState, resetSettings } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { createToggle } from '../components/toggle.js'
-import { refreshM365ConfigView } from './m365config.js'
 import { SERVICE_GROUPS, EXCHANGE_SUB } from '../data/portal-services.js'
 import { getClaudeStatus, setClaudeApiKey, removeClaudeApiKey } from '../lib/tenantguard-settings-client.js'
 
@@ -147,7 +146,7 @@ function renderSettings(el) {
     id: 'toggle-ps', checked: s.showPSCommands,
     label: 'Show PowerShell validation commands',
     sublabel: 'Displays the PowerShell command used for each control in the M365 Config topic view.',
-    onChange: (v) => { state.settings.showPSCommands = v; saveState(); refreshM365ConfigView() },
+    onChange: (v) => { state.settings.showPSCommands = v; saveState() },
   })
   el.querySelector('#settings-ps-wrap').appendChild(psToggle)
 
@@ -155,7 +154,7 @@ function renderSettings(el) {
     id: 'toggle-result', checked: s.showTenantResult,
     label: 'Show simulated tenant result',
     sublabel: 'Displays the simulated tenant scan result for each control.',
-    onChange: (v) => { state.settings.showTenantResult = v; saveState(); refreshM365ConfigView() },
+    onChange: (v) => { state.settings.showTenantResult = v; saveState() },
   })
   el.querySelector('#settings-result-wrap').appendChild(resultToggle)
 
@@ -279,7 +278,6 @@ function renderSettings(el) {
     resetSettings()
     renderSettings(el)
     showToast('Settings reset to defaults.', 'info')
-    refreshM365ConfigView()
   })
 
   // ---- Claude API Configuration ----

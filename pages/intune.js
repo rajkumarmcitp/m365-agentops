@@ -1,24 +1,17 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getDevices, getDeviceCompliancePolicies, callAPI } from '../lib/api-client.js'
-import {
-  INTUNE_SUMMARY, PLATFORM_DISTRIBUTION, DEVICE_COMPLIANCE_POLICIES, DEVICE_INVENTORY,
-  ENDPOINT_SECURITY_ASSESSMENT, PATCH_MANAGEMENT, APPLICATION_INVENTORY,
-  DEVICE_RISK_ASSESSMENT, CONDITIONAL_ACCESS_POLICIES, CONFIGURATION_POLICIES,
-  SECURITY_BASELINE_COMPARISON, DEVICE_HEALTH_CALCULATION, INTUNE_RECOMMENDATIONS,
-  INTUNE_COPILOT_KB
-} from '../data/intune-data.js'
 
 let activeSection = 'executive'
 let copilotMessages = []
 let copilotInit = false
-let realDevices = [] // Store real data from API
+let realDevices = []
 let realPolicies = []
 let intuneData = {
-  summary: INTUNE_SUMMARY,
-  endpointSecurity: ENDPOINT_SECURITY_ASSESSMENT,
-  patchManagement: PATCH_MANAGEMENT,
-  riskAssessment: DEVICE_RISK_ASSESSMENT,
+  summary: {},
+  endpointSecurity: {},
+  patchManagement: {},
+  riskAssessment: {},
   deviceHealth: [],
   applications: [],
   policies: { configurationPolicies: [], conditionalAccessPolicies: [] },
@@ -63,27 +56,29 @@ export async function initIntune() {
     ])
 
     // Handle device data
-    if (devicesResult.success) {
-      realDevices = devicesResult.data || DEVICE_INVENTORY
+    if (devicesResult.success && devicesResult.data) {
+      realDevices = devicesResult.data
       console.log(`✅ Loaded ${realDevices.length} real devices`)
     } else {
-      realDevices = DEVICE_INVENTORY
-      console.warn('⚠️ Using demo devices')
+      console.warn('⚠️ No device data available from API')
+      realDevices = []
     }
 
     // Handle policy data
-    if (policiesResult.success) {
-      realPolicies = policiesResult.data || DEVICE_COMPLIANCE_POLICIES
+    if (policiesResult.success && policiesResult.data) {
+      realPolicies = policiesResult.data
       console.log(`✅ Loaded ${realPolicies.length} real policies`)
     } else {
-      realPolicies = DEVICE_COMPLIANCE_POLICIES
-      console.warn('⚠️ Using demo policies')
+      console.warn('⚠️ No policy data available from API')
+      realPolicies = []
     }
 
     // Handle summary data
     if (summaryResult.success && summaryResult.data) {
-      intuneData.summary = { ...INTUNE_SUMMARY, ...summaryResult.data }
+      intuneData.summary = summaryResult.data
       console.log(`✅ Loaded Intune summary`)
+    } else {
+      intuneData.summary = {}
     }
 
     // Handle endpoint security data
@@ -131,7 +126,6 @@ export async function initIntune() {
     console.log('✅ All Intune data loaded successfully')
   } catch (error) {
     console.error('❌ Error loading Intune data:', error)
-    showToast('Some Intune data unavailable. Using demo data.', 'warning')
   }
 
   render(el)

@@ -1,9 +1,8 @@
-import { PA_ACCOUNTS, PA_GROUPS, PA_LOG } from '../data/pa-data.js'
 import { showToast } from '../components/toast.js'
 import { getPrivilegedAccounts } from '../lib/api-client.js'
 
-let logEntries = [...PA_LOG]
-let realPrivilegedAccounts = PA_ACCOUNTS
+let logEntries = []
+let realPrivilegedAccounts = []
 let accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0, servicePrincipals: 0 }
 
 export async function initPrivAccts() {
@@ -17,9 +16,15 @@ export async function initPrivAccts() {
       realPrivilegedAccounts = result.data.accounts
       accountsSummary = result.data.summary
       console.log(`✅ Loaded ${realPrivilegedAccounts.length} real privileged accounts`)
+    } else {
+      console.warn('⚠️ No privileged account data available from API')
+      realPrivilegedAccounts = []
+      accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0, servicePrincipals: 0 }
     }
   } catch (error) {
-    console.warn('⚠️ Using demo privileged accounts:', error.message)
+    console.error('❌ Error loading privileged accounts:', error.message)
+    realPrivilegedAccounts = []
+    accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0, servicePrincipals: 0 }
   }
 
   el.innerHTML = `
@@ -45,7 +50,7 @@ export async function initPrivAccts() {
       <div class="kpi-tile"><div class="kpi-value info">${accountsSummary.totalAccounts}</div><div class="kpi-label">Accounts</div></div>
       <div class="kpi-tile"><div class="kpi-value ${accountsSummary.atRisk > 0 ? 'danger' : 'success'}">${accountsSummary.atRisk}</div><div class="kpi-label">At Risk</div></div>
       <div class="kpi-tile"><div class="kpi-value info">${accountsSummary.noMFA}</div><div class="kpi-label">No MFA</div></div>
-      <div class="kpi-tile"><div class="kpi-value info">${PA_GROUPS.length}</div><div class="kpi-label">Groups</div></div>
+      <div class="kpi-tile"><div class="kpi-value info">0</div><div class="kpi-label">Groups</div></div>
       <div class="kpi-tile"><div class="kpi-value warning">${accountsSummary.permanentRoles}</div><div class="kpi-label">Permanent</div></div>
     </div>
 

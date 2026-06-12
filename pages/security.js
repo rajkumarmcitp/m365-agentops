@@ -1,14 +1,10 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getSecurityScore, getIncidents, getDevices, getIdentityPosture } from '../lib/api-client.js'
-import {
-  SECURE_SCORE, IDENTITY, EMAIL, ENDPOINT, TEAMS_SEC, SHAREPOINT_SEC,
-  DATA_PROTECTION, PRIV_ACCESS, GUEST_GOVERNANCE, INCIDENTS as STATIC_INCIDENTS, RECOMMENDATIONS,
-  API_REFERENCE, SECURITY_COPILOT_KB
-} from '../data/security-data.js'
+import { IDENTITY } from '../data/security-data.js'
 
-let realSecureScore = SECURE_SCORE
-let realIncidents = STATIC_INCIDENTS
+let realSecureScore = null
+let realIncidents = []
 let realIdentityPosture = IDENTITY
 
 // ============================================================
@@ -49,9 +45,12 @@ export async function initSecurity() {
 
     // Fetch secure score
     const scoreResult = await getSecurityScore()
-    if (scoreResult.success) {
-      realSecureScore = scoreResult.data || SECURE_SCORE
+    if (scoreResult.success && scoreResult.data) {
+      realSecureScore = scoreResult.data
       console.log('✅ Loaded real secure score from API')
+    } else {
+      console.warn('⚠️ No secure score data available from API')
+      realSecureScore = null
     }
 
     // Fetch real devices first (needed for both real and static incidents)
@@ -138,9 +137,7 @@ export async function initSecurity() {
       console.log('✅ Loaded real identity posture data from Azure AD')
     }
   } catch (error) {
-    console.warn('⚠️ Using simulated data:', error.message)
-    realSecureScore = SECURE_SCORE
-    realIncidents = STATIC_INCIDENTS
+    console.error('❌ Error loading security data:', error.message)
   }
 
   render(el)

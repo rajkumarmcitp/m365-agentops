@@ -1,11 +1,6 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getApplications, getServicePrincipals, api } from '../lib/api-client.js'
-import {
-  APPS_SUMMARY, APP_REGISTRATIONS, ENTERPRISE_APPLICATIONS, SECRETS_CERTIFICATES,
-  API_PERMISSIONS, ADMIN_CONSENTS, SIGN_IN_ANALYTICS, RISK_ASSESSMENT,
-  APPS_RECOMMENDATIONS, APPS_COPILOT_KB
-} from '../data/apps-data.js'
 
 let activeSection = 'executive'
 let appFilter = { type: 'all', status: 'all', search: '' }
@@ -50,20 +45,22 @@ export async function initApplications() {
 
   // Load applications
   const appsResult = await getApplications()
-  if (appsResult?.success) {
-    realApps = appsResult.data || APP_REGISTRATIONS
+  if (appsResult?.success && appsResult.data) {
+    realApps = appsResult.data
     console.log(`✅ Apps: ${realApps.length}`)
   } else {
-    realApps = APP_REGISTRATIONS
+    console.warn('⚠️ No application data available from API')
+    realApps = []
   }
 
   // Load service principals
   const spResult = await getServicePrincipals()
-  if (spResult?.success) {
-    realServicePrincipals = spResult.data || ENTERPRISE_APPLICATIONS
+  if (spResult?.success && spResult.data) {
+    realServicePrincipals = spResult.data
     console.log(`✅ SPs: ${realServicePrincipals.length}`)
   } else {
-    realServicePrincipals = ENTERPRISE_APPLICATIONS
+    console.warn('⚠️ No service principal data available from API')
+    realServicePrincipals = []
   }
 
   // Load secrets

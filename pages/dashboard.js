@@ -1,6 +1,5 @@
 import { go } from '../app.js'
 import { getDevices, getUsers, getSecurityScore, callAPI } from '../lib/api-client.js'
-import { MC_MESSAGES, SVC_HEALTH, SVC_META } from '../data/msgcenter-data.js'
 
 let realDeviceCount = 0
 let realUserCount = 0
@@ -29,9 +28,9 @@ export async function initDashboard() {
     const usersResult = await getUsers()
     const scoreResult = await getSecurityScore()
 
-    // Set real counts with fallback
-    realDeviceCount = (devicesResult.success && devicesResult.count) ? devicesResult.count : 847
-    realUserCount = (usersResult.success && usersResult.count) ? usersResult.count : 1000
+    // Set real counts (no fallback)
+    realDeviceCount = (devicesResult.success && devicesResult.count) ? devicesResult.count : 0
+    realUserCount = (usersResult.success && usersResult.count) ? usersResult.count : 0
     realSecureScore = scoreResult.success ? scoreResult.data : null
 
     // Fetch recent admin consents (last 24 hours)
@@ -108,208 +107,30 @@ export async function initDashboard() {
     </div>
     ` : ''}
 
-    <!-- KPI Tiles -->
+    <!-- KPI Tiles - Real Data Only -->
     <div class="kpi-row">
       <div class="kpi-tile">
-        <div class="kpi-value info">7</div>
-        <div class="kpi-label">Pending Requests</div>
+        <div class="kpi-value info">${realDeviceCount}</div>
+        <div class="kpi-label">Managed Devices</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value danger">3</div>
-        <div class="kpi-label">Risky Users</div>
+        <div class="kpi-value success">${realUserCount}</div>
+        <div class="kpi-label">Total Users</div>
       </div>
-      <div class="kpi-tile">
-        <div class="kpi-value warning">14</div>
-        <div class="kpi-label">Privileged Accounts</div>
-      </div>
-      <div class="kpi-tile">
-        <div class="kpi-value warning">7/12</div>
-        <div class="kpi-label">Zero Trust Score</div>
-      </div>
-      <div class="kpi-tile">
-        <div class="kpi-value warning">78%</div>
-        <div class="kpi-label">M365 Config Score</div>
-      </div>
+      ${realSecureScore ? `<div class="kpi-tile">
+        <div class="kpi-value warning">${realSecureScore.overallScore || 0}/100</div>
+        <div class="kpi-label">Security Score</div>
+      </div>` : ''}
     </div>
 
-    <!-- Row 1 -->
+    <!-- Quick Links to Other Pages -->
     <div class="dash-cards-row mb-3">
-      <!-- Pending Approvals snapshot -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><i class="ti ti-check-list"></i> Pending Approvals</span>
-          <span class="badge danger dot">3 pending</span>
-        </div>
-        <table>
-          <thead><tr>
-            <th style="width:35%">Requestor</th>
-            <th style="width:30%">Type</th>
-            <th style="width:20%">SLA</th>
-            <th style="width:15%">Status</th>
-          </tr></thead>
-          <tbody>
-            <tr>
-              <td>Priya Kumar</td>
-              <td>Distribution Group</td>
-              <td>2h left</td>
-              <td><span class="badge warning dot">Pending</span></td>
-            </tr>
-            <tr>
-              <td>James Liu</td>
-              <td>MFA Reset</td>
-              <td class="sla-overdue">Overdue</td>
-              <td><span class="badge danger dot">Overdue</span></td>
-            </tr>
-            <tr>
-              <td>Sara Ogden</td>
-              <td>SharePoint Access</td>
-              <td>4h left</td>
-              <td><span class="badge warning dot">Pending</span></td>
-            </tr>
-          </tbody>
-        </table>
-        <div style="margin-top:12px">
-          <button class="btn btn-primary" id="dash-to-requests"><i class="ti ti-arrow-right"></i> View all requests</button>
-        </div>
-      </div>
-
-      <!-- M365 Config snapshot -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><i class="ti ti-settings-2"></i> M365 Config — CIS Controls</span>
-          <span class="badge warning dot">78% compliant</span>
-        </div>
-        <table>
-          <thead><tr>
-            <th style="width:20%">Control</th>
-            <th style="width:45%">Title</th>
-            <th style="width:20%">Status</th>
-            <th style="width:15%">Type</th>
-          </tr></thead>
-          <tbody>
-            <tr>
-              <td class="monospace">1.1.4</td>
-              <td>Security Defaults disabled</td>
-              <td><span class="badge danger">Failed</span></td>
-              <td><span class="badge info">Auto</span></td>
-            </tr>
-            <tr>
-              <td class="monospace">5.2.2.5</td>
-              <td>Device compliance CA policy</td>
-              <td><span class="badge danger">Failed</span></td>
-              <td><span class="badge info">Auto</span></td>
-            </tr>
-            <tr>
-              <td class="monospace">2.1.3</td>
-              <td>Safe Attachments enabled</td>
-              <td><span class="badge danger">Failed</span></td>
-              <td><span class="badge info">Auto</span></td>
-            </tr>
-            <tr>
-              <td class="monospace">1.2.1</td>
-              <td>M365 Groups creation</td>
-              <td><span class="badge warning">Warning</span></td>
-              <td><span class="badge info">Auto</span></td>
-            </tr>
-            <tr>
-              <td class="monospace">5.1.2.1</td>
-              <td>Security Defaults status</td>
-              <td><span class="badge warning">Warning</span></td>
-              <td><span class="badge info">Auto</span></td>
-            </tr>
-          </tbody>
-        </table>
-        <div style="margin-top:12px">
-          <button class="btn btn-primary" id="dash-to-m365"><i class="ti ti-arrow-right"></i> View M365 Config</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Row 2 -->
-    <div class="dash-cards-row">
-      <!-- Zero Trust snapshot -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><i class="ti ti-lock-check"></i> Zero Trust Score</span>
-          <span class="badge warning dot">7/12 passed</span>
-        </div>
-        <div style="margin-bottom:12px">
-          <div class="seg-bar" style="height:10px;border-radius:5px">
-            <div class="seg pass" style="width:58%"></div>
-            <div class="seg warn" style="width:25%"></div>
-            <div class="seg fail" style="width:17%"></div>
-          </div>
-          <div style="display:flex;gap:16px;margin-top:6px">
-            <span style="font-size:10px;color:var(--clr-success-text)">● 7 Pass</span>
-            <span style="font-size:10px;color:var(--clr-warning-text)">● 3 Warn</span>
-            <span style="font-size:10px;color:var(--clr-danger-text)">● 2 Fail</span>
-          </div>
-        </div>
-        <table>
-          <thead><tr>
-            <th style="width:40%">Control</th>
-            <th style="width:30%">Pillar</th>
-            <th style="width:30%">Status</th>
-          </tr></thead>
-          <tbody>
-            <tr>
-              <td>Legacy Auth Blocked</td>
-              <td>Identity</td>
-              <td><span class="badge danger dot">Failed</span></td>
-            </tr>
-            <tr>
-              <td>Device Risk CA</td>
-              <td>Device</td>
-              <td><span class="badge danger dot">Failed</span></td>
-            </tr>
-            <tr>
-              <td>MFA Coverage</td>
-              <td>Identity</td>
-              <td><span class="badge warning dot">Warning</span></td>
-            </tr>
-            <tr>
-              <td>PIM Assignments</td>
-              <td>Priv. Access</td>
-              <td><span class="badge warning dot">Warning</span></td>
-            </tr>
-          </tbody>
-        </table>
-        <div style="margin-top:12px">
-          <button class="btn btn-primary" id="dash-to-zt"><i class="ti ti-arrow-right"></i> View Zero Trust</button>
-        </div>
-      </div>
-
-      <!-- Audit events -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><i class="ti ti-activity"></i> Recent Audit Events</span>
-          <button class="btn btn-sm" id="dash-to-audit">View all</button>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          ${[
-            { dot: 'var(--clr-danger-text)',  msg: 'High-risk user sign-in detected — kevin.osei@contoso.com', time: '14 min ago' },
-            { dot: 'var(--clr-warning-text)', msg: 'MFA registration incomplete — 3 users below policy threshold', time: '1 hour ago' },
-            { dot: 'var(--clr-info-text)',    msg: 'Config scan completed — 4 new failures found', time: '08:45 today' },
-          ].map(e => `
-            <div style="display:flex;align-items:flex-start;gap:10px;padding-bottom:10px;border-bottom:0.5px solid var(--color-border-tertiary)">
-              <div class="dash-event-dot" style="background:${e.dot};margin-top:5px"></div>
-              <div style="flex:1">
-                <div style="font-size:11px;color:var(--color-text-primary);line-height:1.4">${e.msg}</div>
-                <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px">${e.time}</div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-        <div style="margin-top:4px;padding-top:12px">
-          <div class="card-title" style="margin-bottom:10px"><i class="ti ti-crown"></i> Privileged Account Alerts</div>
-          <div class="alert-banner danger">
-            <i class="ti ti-alert-triangle"></i>
-            2 privileged accounts have active risk detections (High severity).
-          </div>
-          <div class="alert-banner warning" style="margin-bottom:0">
-            <i class="ti ti-shield-off"></i>
-            1 privileged account (tom.brooks) has no MFA registered.
-          </div>
+      <div class="card" style="padding:20px;text-align:center">
+        <div style="font-size:12px;font-weight:600;margin-bottom:12px">Additional Data</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+          <button class="btn" id="dash-to-requests"><i class="ti ti-check-list"></i> Requests</button>
+          <button class="btn" id="dash-to-m365"><i class="ti ti-settings-2"></i> M365 Config</button>
+          <button class="btn" id="dash-to-zt"><i class="ti ti-lock-check"></i> Zero Trust</button>
         </div>
       </div>
     </div>
