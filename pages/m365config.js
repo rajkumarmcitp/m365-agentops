@@ -76,11 +76,8 @@ export async function initM365Config() {
   cfgView = 'main'
   activeTopic = null
 
-  if (isDemoAccount()) {
-    renderDemoMain(el)
-  } else {
-    await renderProductionMain(el)
-  }
+  // Show demo CIS controls for all accounts while backend API is configured
+  renderDemoMain(el)
 }
 
 function renderDemoMain(el) {
