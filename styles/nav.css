@@ -200,36 +200,52 @@
   }
 
   .nav-section {
-    margin: 0 2px;
-    padding-right: 4px;
+    display: flex;
     gap: 2px;
+    margin: 0 2px;
+    padding: 0;
+    padding-right: 4px;
+    border-right: 0.5px solid var(--color-border-tertiary);
   }
 
-  /* Icon-only by default on mobile */
-  .nav-item {
-    width: 50px;
-    min-width: 50px;
-    padding: 6px 4px;
-    gap: 0;
-    font-size: 8px;
-    border-bottom: 2px solid transparent;
-  }
-
-  /* Show label on active only */
-  .nav-item .nav-label {
+  .nav-section-label {
     display: none;
-    font-size: 8px;
-    margin-top: 2px;
   }
 
-  .nav-item.active .nav-label {
+  /* Show icon + label together on mobile */
+  .nav-item {
+    flex-direction: column;
+    width: auto;
+    min-width: auto;
+    padding: 6px 10px;
+    gap: 3px;
+    font-size: 9px;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    border-radius: var(--border-radius-md);
+    white-space: nowrap;
+    align-items: center;
+    position: relative;
+  }
+
+  /* Always show label on mobile */
+  .nav-item .nav-label {
     display: block;
+    font-size: 9px;
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .nav-item.active {
+    background: var(--clr-primary-bg);
+    border-bottom-color: var(--clr-primary);
   }
 
   .nav-item i {
-    font-size: 18px;
-    width: 20px;
-    height: 20px;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -238,33 +254,21 @@
   /* Badge positioning on mobile */
   .nav-badge {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: -2px;
+    right: -2px;
     font-size: 7px !important;
-    width: 12px !important;
-    height: 12px !important;
+    width: 14px !important;
+    height: 14px !important;
     padding: 0 !important;
+    line-height: 14px;
   }
 
-  .nav-item {
-    position: relative;
+  .nav-divider {
+    display: none;
   }
 
-  /* Tooltip-like hover effect */
-  .nav-item:hover::after {
-    content: attr(data-label);
-    position: absolute;
-    bottom: -24px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--color-text-primary);
-    color: white;
-    font-size: 9px;
-    padding: 4px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
-    z-index: 1000;
-    pointer-events: none;
+  .nav-footer {
+    display: none;
   }
 }
 
