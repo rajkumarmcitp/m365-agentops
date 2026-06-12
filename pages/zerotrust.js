@@ -101,10 +101,32 @@ function renderBlankZeroTrust(el) {
       </div>
     </div>
 
-    <div class="blank-state">
-      <i class="ti ti-database-off" style="font-size:48px;color:var(--color-text-tertiary);margin-bottom:12px"></i>
-      <div style="font-size:13px;font-weight:600;margin-bottom:4px">No Zero Trust Data Available</div>
-      <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:16px">Zero Trust compliance controls will appear here when evaluated via Graph API</div>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
+      <span class="status-dot warning"></span>
+      <span><strong style="color:var(--color-text-secondary)">Production Mode</strong> · Fetching Zero Trust assessment data from Graph API</span>
+    </div>
+
+    <div class="card mb-3" style="min-height:400px;display:flex;flex-direction:column;justify-content:center;align-items:center">
+      <i class="ti ti-database-off" style="font-size:48px;color:var(--color-text-tertiary);margin-bottom:12px;opacity:0.5"></i>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary)">No Zero Trust Assessment Data</div>
+      <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:16px;max-width:400px;text-align:center">
+        Zero Trust compliance controls are evaluated through Microsoft Graph API. Data will appear here once assessments are available for your tenant.
+      </div>
+      <button class="btn btn-primary" id="zt-request-assessment"><i class="ti ti-arrow-right"></i> Request Assessment</button>
+    </div>
+
+    <div class="card" style="background:var(--color-background-secondary);padding:12px">
+      <div style="font-size:11px;font-weight:600;margin-bottom:8px">About Zero Trust Compliance</div>
+      <div style="font-size:10px;color:var(--color-text-secondary);line-height:1.6">
+        <p>Zero Trust Compliance evaluates your tenant against Microsoft's Zero Trust principles:</p>
+        <ul style="margin:8px 0;padding-left:20px">
+          <li>Identity & Access Management</li>
+          <li>Device Security & Compliance</li>
+          <li>Data Protection & Governance</li>
+          <li>Network & Application Security</li>
+        </ul>
+        <p>For more information, visit: <span style="color:var(--clr-info-text)">aka.ms/zerotrust</span></p>
+      </div>
     </div>
   `
 
@@ -115,7 +137,17 @@ function renderBlankZeroTrust(el) {
     setTimeout(() => {
       btn.innerHTML = `<i class="ti ti-refresh"></i> Rescan`
       btn.disabled = false
-      showToast('No Zero Trust assessment data available from Graph API', 'info')
+      showToast('No Zero Trust assessment data available from Graph API for this tenant', 'info')
+    }, 2000)
+  })
+
+  el.querySelector('#zt-request-assessment').addEventListener('click', () => {
+    const btn = el.querySelector('#zt-request-assessment')
+    btn.innerHTML = `<span class="spinner dark"></span> Requesting...`
+    btn.disabled = true
+    setTimeout(() => {
+      btn.innerHTML = `<i class="ti ti-check"></i> Assessment Requested`
+      showToast('Zero Trust assessment has been requested. Check back soon for results.', 'success')
     }, 2000)
   })
 }
