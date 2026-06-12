@@ -5,11 +5,226 @@
 
 import { getUserList, getUserInvestigation } from '../lib/user-investigation-client.js'
 import { showToast } from '../components/toast.js'
+import { isDemoAccount } from '../lib/demo-account.js'
 
 export function initUserInvestigation() {
   const el = document.getElementById('page-user-investigation')
   if (!el) return
+
+  if (isDemoAccount()) {
+    renderDemoUserInvestigation(el)
+    return
+  }
+
   renderUserInvestigation(el)
+}
+
+function renderDemoUserInvestigation(el) {
+  const demoUsers = [
+    { id: '1', displayName: 'Sarah Kim', mail: 'sarah.kim@contoso.com', riskScore: 78 },
+    { id: '2', displayName: 'John Smith', mail: 'john.smith@contoso.com', riskScore: 42 },
+    { id: '3', displayName: 'Maya Patel', mail: 'maya.patel@contoso.com', riskScore: 15 },
+  ]
+
+  const selectedUserDemo = demoUsers[0]
+
+  const demoAppAccess = [
+    { name: 'Microsoft Teams', lastUsed: '2026-06-01 14:32', accessCount: 47, riskLevel: 'LOW' },
+    { name: 'SharePoint Online', lastUsed: '2026-06-01 13:15', accessCount: 23, riskLevel: 'LOW' },
+    { name: 'Exchange Online', lastUsed: '2026-06-01 10:45', accessCount: 156, riskLevel: 'MEDIUM' },
+    { name: 'OneDrive', lastUsed: '2026-05-31 16:20', accessCount: 8, riskLevel: 'LOW' },
+  ]
+
+  const demoSignInLogs = [
+    { timestamp: '2026-06-01 14:32', location: 'Seattle, WA', app: 'Teams', status: 'Success', risk: 'Low' },
+    { timestamp: '2026-06-01 13:45', location: 'Seattle, WA', app: 'OWA', status: 'Success', risk: 'Low' },
+    { timestamp: '2026-06-01 10:20', location: 'Seattle, WA', app: 'SharePoint', status: 'Success', risk: 'Low' },
+    { timestamp: '2026-05-31 18:30', location: 'Unknown', app: 'Exchange', status: 'MFA Challenge', risk: 'Medium' },
+  ]
+
+  const demoAuditLogs = [
+    { action: 'User added to group', object: 'Engineering Team', timestamp: '2026-06-01 10:15', status: 'Success' },
+    { action: 'Mailbox forwarding rule created', object: 'sarah.kim@contoso.com', timestamp: '2026-05-31 15:45', status: 'Success' },
+    { action: 'SharePoint site access granted', object: 'Compliance Docs', timestamp: '2026-05-30 14:20', status: 'Success' },
+  ]
+
+  const demoActionsOnOthers = [
+    { action: 'Added john.smith to Executives group', timestamp: '2026-06-01 09:30', riskLevel: 'Medium' },
+    { action: 'Created forwarding rule to external domain', timestamp: '2026-05-28 16:15', riskLevel: 'High' },
+  ]
+
+  const demoTimeline = [
+    { date: '2026-06-01', event: 'Abnormal sign-in location detected', severity: 'Medium' },
+    { date: '2026-05-31', event: 'MFA bypass attempted', severity: 'High' },
+    { date: '2026-05-28', event: 'Email forwarding rule created to external domain', severity: 'High' },
+  ]
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div class="page-title"><i class="ti ti-shield-check"></i> User Investigation</div>
+      <div class="page-subtitle">Comprehensive user activity analysis and risk assessment</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
+      <span class="status-dot active pulse"></span>
+      <span><strong style="color:var(--color-text-secondary)">Demo Mode</strong> · Showing sample user investigation data</span>
+    </div>
+
+    <!-- Demo User Selection -->
+    <div class="card mb-3">
+      <div class="card-title mb-3">Demo User Investigation</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;padding:12px 0">
+        ${demoUsers.map(u => `
+          <div class="demo-user-card" data-user-id="${u.id}" style="padding:12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);cursor:pointer;flex:1;min-width:200px;${u.id === selectedUserDemo.id ? 'border-color:var(--clr-info-text);background:var(--clr-info-bg)' : ''}">
+            <div style="font-weight:600;margin-bottom:4px">${u.displayName}</div>
+            <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:8px">${u.mail}</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="width:40px;height:8px;background:var(--color-background-tertiary);border-radius:4px;overflow:hidden">
+                <div style="height:100%;width:${u.riskScore}%;background:${u.riskScore > 60 ? 'var(--clr-danger-text)' : u.riskScore > 30 ? 'var(--clr-warning-text)' : 'var(--clr-success-text)'}"></div>
+              </div>
+              <span style="font-size:10px;font-weight:600;color:${u.riskScore > 60 ? 'var(--clr-danger-text)' : u.riskScore > 30 ? 'var(--clr-warning-text)' : 'var(--clr-success-text)'}">${u.riskScore} risk</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- User Summary KPIs -->
+    <div class="kpi-row mb-3">
+      <div class="kpi-tile">
+        <div class="kpi-value danger">${selectedUserDemo.riskScore}</div>
+        <div class="kpi-label">Risk Score</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value info">${demoAppAccess.length}</div>
+        <div class="kpi-label">Apps Accessed</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value warning">${demoSignInLogs.length}</div>
+        <div class="kpi-label">Recent Sign-ins</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value danger">${demoActionsOnOthers.length}</div>
+        <div class="kpi-label">Risky Actions</div>
+      </div>
+    </div>
+
+    <!-- Application Access -->
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-apps"></i> Application Access (Last 7 days)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-weight:600">Application</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600">Last Used</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600">Access Count</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600">Risk</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${demoAppAccess.map(app => `
+            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+              <td style="padding:10px 12px;font-weight:600">${app.name}</td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${app.lastUsed}</td>
+              <td style="padding:10px 12px">${app.accessCount}</td>
+              <td style="padding:10px 12px"><span class="badge ${app.riskLevel === 'LOW' ? 'success' : 'warning'}">${app.riskLevel}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sign-in Activity -->
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-login"></i> Recent Sign-in Activity</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-weight:600">Timestamp</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600">Location</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600">Application</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600">Status</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600">Risk</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${demoSignInLogs.map(log => `
+            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+              <td style="padding:10px 12px;font-size:10px">${log.timestamp}</td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${log.location}</td>
+              <td style="padding:10px 12px">${log.app}</td>
+              <td style="padding:10px 12px"><span class="badge ${log.status === 'Success' ? 'success' : 'warning'}">${log.status}</span></td>
+              <td style="padding:10px 12px"><span class="badge ${log.risk === 'Low' ? 'success' : 'warning'}">${log.risk}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Audit Actions -->
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-clipboard-list"></i> Audit Actions</div>
+      <div style="display:flex;flex-direction:column;gap:12px;padding:12px 0">
+        ${demoAuditLogs.map(log => `
+          <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border-left:3px solid var(--clr-info-text)">
+            <div style="display:flex;justify-content:space-between;align-items:start">
+              <div>
+                <div style="font-weight:600;margin-bottom:4px">${log.action}</div>
+                <div style="font-size:10px;color:var(--color-text-secondary)">${log.object}</div>
+              </div>
+              <span class="badge success">${log.status}</span>
+            </div>
+            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:8px">${log.timestamp}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Actions on Other Accounts -->
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-users-group"></i> Actions on Other Accounts</div>
+      <div style="display:flex;flex-direction:column;gap:12px;padding:12px 0">
+        ${demoActionsOnOthers.map(act => `
+          <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border-left:3px solid ${act.riskLevel === 'High' ? 'var(--clr-danger-text)' : 'var(--clr-warning-text)'}">
+            <div style="display:flex;justify-content:space-between;align-items:start">
+              <div style="font-weight:600">${act.action}</div>
+              <span class="badge ${act.riskLevel === 'High' ? 'danger' : 'warning'}">${act.riskLevel} Risk</span>
+            </div>
+            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:8px">${act.timestamp}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Risk Timeline -->
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-timeline"></i> Risk Timeline</div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:12px 0">
+        ${demoTimeline.map(item => `
+          <div style="display:flex;gap:12px;align-items:start">
+            <div style="flex-shrink:0;margin-top:4px;width:12px;height:12px;border-radius:50%;background:${item.severity === 'High' ? 'var(--clr-danger-text)' : 'var(--clr-warning-text)'}"></div>
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:11px">${item.event}</div>
+              <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px">${item.date}</div>
+            </div>
+            <span class="badge ${item.severity === 'High' ? 'danger' : 'warning'}">${item.severity}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `
+
+  // User card selection
+  el.querySelectorAll('.demo-user-card').forEach(card => {
+    card.addEventListener('click', () => {
+      el.querySelectorAll('.demo-user-card').forEach(c => {
+        c.style.borderColor = 'var(--color-border-secondary)'
+        c.style.background = 'var(--color-background-secondary)'
+      })
+      card.style.borderColor = 'var(--clr-info-text)'
+      card.style.background = 'var(--clr-info-bg)'
+    })
+  })
 }
 
 function renderUserInvestigation(el) {
