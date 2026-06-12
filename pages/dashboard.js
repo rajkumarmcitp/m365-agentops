@@ -151,8 +151,18 @@ export async function initDashboard() {
 
   el.querySelector('#dash-to-msgcenter-health')?.addEventListener('click', async () => await go('msgcenter'))
   el.querySelector('#dash-to-requests')?.addEventListener('click', async () => await go('requests'))
-  el.querySelector('#dash-to-m365')?.addEventListener('click', async () => await go('m365config'))
+  el.querySelector('#dash-to-security')?.addEventListener('click', async () => await go('security'))
+  el.querySelector('#dash-to-tenantguard')?.addEventListener('click', async () => await go('tenantguard'))
+  el.querySelector('#dash-to-privaccts')?.addEventListener('click', async () => await go('privaccts'))
   el.querySelector('#dash-to-zt')?.addEventListener('click', async () => await go('zerotrust'))
+  el.querySelector('#dash-to-m365')?.addEventListener('click', async () => await go('m365config'))
+  el.querySelector('#dash-to-licenses')?.addEventListener('click', async () => await go('licenses'))
+  el.querySelector('#dash-to-intune')?.addEventListener('click', async () => await go('intune'))
+  el.querySelector('#dash-to-apps')?.addEventListener('click', async () => await go('applications'))
+  el.querySelector('#dash-to-investigation')?.addEventListener('click', async () => await go('user-investigation'))
+  el.querySelector('#dash-to-agents')?.addEventListener('click', async () => await go('agents'))
+  el.querySelector('#dash-to-approvals')?.addEventListener('click', async () => await go('approvals'))
+  el.querySelector('#dash-to-msgcenter')?.addEventListener('click', async () => await go('msgcenter'))
   el.querySelector('#dash-to-audit')?.addEventListener('click', async () => await go('audit'))
   el.querySelector('#dash-to-msgcenter')?.addEventListener('click', async () => await go('msgcenter'))
 
@@ -250,14 +260,154 @@ function renderDemoDashboard(el) {
       </div>
     </div>
 
-    <!-- Quick Links to Other Pages -->
+    <!-- Administration Overview Widgets -->
     <div class="dash-cards-row mb-3">
-      <div class="card" style="padding:20px;text-align:center">
-        <div style="font-size:12px;font-weight:600;margin-bottom:12px">Additional Data</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
-          <button class="btn" id="dash-to-requests"><i class="ti ti-check-list"></i> Requests</button>
-          <button class="btn" id="dash-to-m365"><i class="ti ti-settings-2"></i> M365 Config</button>
-          <button class="btn" id="dash-to-zt"><i class="ti ti-lock-check"></i> Zero Trust</button>
+      <!-- Requests Status -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-inbox"></i> Pending Requests</span>
+        </div>
+        <div style="padding:12px 0;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">2</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">Awaiting approval</div>
+          <button class="btn btn-sm" id="dash-to-requests" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Requests</button>
+        </div>
+      </div>
+
+      <!-- Security Incidents -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-alert-triangle"></i> Security Incidents</span>
+        </div>
+        <div style="padding:12px 0;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-danger-text)">0</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">Active incidents</div>
+          <button class="btn btn-sm" id="dash-to-security" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Security</button>
+        </div>
+      </div>
+
+      <!-- TenantGuard Alerts -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-shield-check"></i> TenantGuard</span>
+        </div>
+        <div style="padding:12px 0;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">5</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">Active alerts</div>
+          <button class="btn btn-sm" id="dash-to-tenantguard" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Alerts</button>
+        </div>
+      </div>
+
+      <!-- Privileged Accounts -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-crown"></i> Privileged Users</span>
+        </div>
+        <div style="padding:12px 0;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-danger-text)">1</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">At-risk accounts</div>
+          <button class="btn btn-sm" id="dash-to-privaccts" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Accounts</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Health Overview -->
+    <div class="dash-cards-row mb-3">
+      <!-- Zero Trust Compliance -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</span>
+        </div>
+        <div style="padding:12px;text-align:center">
+          <div style="font-size:14px;color:var(--color-text-secondary);margin-bottom:8px">No assessment data</div>
+          <button class="btn btn-sm" id="dash-to-zt" style="width:100%"><i class="ti ti-arrow-right"></i> Request Assessment</button>
+        </div>
+      </div>
+
+      <!-- M365 Config Compliance -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-settings-2"></i> CIS Controls</span>
+        </div>
+        <div style="padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">78%</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">Compliance</div>
+          <button class="btn btn-sm" id="dash-to-m365" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Config</button>
+        </div>
+      </div>
+
+      <!-- Licenses -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-license"></i> License Usage</span>
+        </div>
+        <div style="padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-success-text)">95%</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">Utilized</div>
+          <button class="btn btn-sm" id="dash-to-licenses" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Licenses</button>
+        </div>
+      </div>
+
+      <!-- Intune Devices -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-device-laptop"></i> Device Compliance</span>
+        </div>
+        <div style="padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-success-text)">98%</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">Compliant devices</div>
+          <button class="btn btn-sm" id="dash-to-intune" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Devices</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Application & Enterprise Health -->
+    <div class="dash-cards-row mb-3">
+      <!-- Applications -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-app-window"></i> Entra Apps</span>
+        </div>
+        <div style="padding:12px 0;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-danger-text)">3</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">Expiring secrets</div>
+          <button class="btn btn-sm" id="dash-to-apps" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Apps</button>
+        </div>
+      </div>
+
+      <!-- User Investigation -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-shield-check"></i> Risk Analysis</span>
+        </div>
+        <div style="padding:12px 0;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">3</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">High-risk users</div>
+          <button class="btn btn-sm" id="dash-to-investigation" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> Investigate</button>
+        </div>
+      </div>
+
+      <!-- AI Agents -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-robot"></i> AI Agents</span>
+        </div>
+        <div style="padding:12px 0;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-success-text)">6</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">Active agents</div>
+          <button class="btn btn-sm" id="dash-to-agents" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Agents</button>
+        </div>
+      </div>
+
+      <!-- Approvals -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-check-list"></i> Pending Approvals</span>
+        </div>
+        <div style="padding:12px 0;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">3</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">Awaiting your action</div>
+          <button class="btn btn-sm" id="dash-to-approvals" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> Review</button>
         </div>
       </div>
     </div>
@@ -272,8 +422,18 @@ function renderDemoDashboard(el) {
     localStorage.setItem('dashboard_consents_dismissed', new Date().getTime())
   })
   el.querySelector('#dash-to-requests')?.addEventListener('click', async () => await go('requests'))
-  el.querySelector('#dash-to-m365')?.addEventListener('click', async () => await go('m365config'))
+  el.querySelector('#dash-to-security')?.addEventListener('click', async () => await go('security'))
+  el.querySelector('#dash-to-tenantguard')?.addEventListener('click', async () => await go('tenantguard'))
+  el.querySelector('#dash-to-privaccts')?.addEventListener('click', async () => await go('privaccts'))
   el.querySelector('#dash-to-zt')?.addEventListener('click', async () => await go('zerotrust'))
+  el.querySelector('#dash-to-m365')?.addEventListener('click', async () => await go('m365config'))
+  el.querySelector('#dash-to-licenses')?.addEventListener('click', async () => await go('licenses'))
+  el.querySelector('#dash-to-intune')?.addEventListener('click', async () => await go('intune'))
+  el.querySelector('#dash-to-apps')?.addEventListener('click', async () => await go('applications'))
+  el.querySelector('#dash-to-investigation')?.addEventListener('click', async () => await go('user-investigation'))
+  el.querySelector('#dash-to-agents')?.addEventListener('click', async () => await go('agents'))
+  el.querySelector('#dash-to-approvals')?.addEventListener('click', async () => await go('approvals'))
+  el.querySelector('#dash-to-msgcenter')?.addEventListener('click', async () => await go('msgcenter'))
 }
 
 function buildChangeIntelWidget() {
