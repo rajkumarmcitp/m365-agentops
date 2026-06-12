@@ -1061,3 +1061,240 @@ tr:hover td { background: var(--color-background-secondary); }
   color: var(--color-text-tertiary);
   font-size: 12px;
 }
+
+/* ============================================================
+   MOBILE RESPONSIVE DESIGN
+   ============================================================ */
+
+/* Tablet: max-width 768px */
+@media (max-width: 768px) {
+  #app-shell {
+    flex-direction: column;
+  }
+
+  #sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 0.5px solid var(--color-border-secondary);
+  }
+
+  #main-content {
+    flex: 1;
+  }
+
+  #page-area {
+    padding: 16px 12px;
+  }
+
+  /* Responsive grids */
+  .grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .kpi-row {
+    gap: 8px;
+  }
+
+  .kpi-tile {
+    flex: 1;
+    min-width: auto;
+  }
+
+  /* Smaller fonts */
+  .page-title {
+    font-size: 18px !important;
+  }
+
+  .page-subtitle {
+    font-size: 11px !important;
+  }
+
+  .card-title {
+    font-size: 11px !important;
+  }
+
+  /* Reduce padding on cards */
+  .card {
+    padding: 12px !important;
+  }
+
+  .card-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Button sizes */
+  .btn {
+    padding: 6px 10px !important;
+    font-size: 10px !important;
+  }
+
+  /* Table responsive */
+  table {
+    font-size: 10px !important;
+  }
+
+  th, td {
+    padding: 6px 4px !important;
+  }
+
+  /* Forms */
+  .form-input,
+  .form-select {
+    font-size: 12px !important;
+    padding: 6px 8px !important;
+  }
+
+  /* Tab responsiveness handled in pages.css */
+}
+
+/* Mobile: max-width 480px */
+@media (max-width: 480px) {
+  #page-area {
+    padding: 12px 8px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .page-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .page-actions .btn {
+    width: 100%;
+  }
+
+  .page-title {
+    font-size: 16px !important;
+  }
+
+  .page-subtitle {
+    font-size: 10px !important;
+  }
+
+  /* Single column everything */
+  .grid-2,
+  .grid-3,
+  .grid-auto {
+    grid-template-columns: 1fr !important;
+  }
+
+  .kpi-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .kpi-tile {
+    min-width: 100%;
+  }
+
+  /* Reduce card padding further */
+  .card {
+    padding: 10px !important;
+    border-radius: 6px;
+  }
+
+  /* Smaller text sizes */
+  .card-title {
+    font-size: 10px !important;
+  }
+
+  h3, h4, h5, h6 {
+    font-size: 12px !important;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 5px 8px !important;
+    font-size: 9px !important;
+  }
+
+  .btn-xs {
+    padding: 3px 6px !important;
+    font-size: 8px !important;
+  }
+
+  /* Badge sizes */
+  .badge {
+    padding: 2px 5px !important;
+    font-size: 9px !important;
+  }
+
+  /* Tables */
+  table {
+    font-size: 9px !important;
+  }
+
+  th, td {
+    padding: 4px 2px !important;
+  }
+
+  /* Hide less important columns on mobile */
+  th:nth-child(n+5),
+  td:nth-child(n+5) {
+    display: none;
+  }
+
+  /* Forms full width */
+  .form-input,
+  .form-select,
+  textarea {
+    width: 100%;
+    font-size: 12px !important;
+    padding: 8px !important;
+  }
+
+  /* Filter bar vertical stack */
+  .filter-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .filter-bar > * {
+    width: 100%;
+  }
+
+  /* Modal/Dialog responsive */
+  .modal-content {
+    width: 95vw !important;
+    max-height: 90vh;
+    border-radius: 8px;
+  }
+
+  /* Search input */
+  .search {
+    width: 100%;
+  }
+
+  /* Sidebar as drawer on mobile */
+  #sidebar {
+    position: relative;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .sidebar-toggle {
+    display: block !important;
+  }
+
+  /* Chat/message layouts */
+  .chat-bubble {
+    max-width: 85vw;
+    font-size: 12px;
+  }
+
+  /* Prevent horizontal overflow */
+  .monospace {
+    word-break: break-all;
+  }
+
+  code {
+    word-break: break-all;
+    font-size: 9px !important;
+  }
+}
