@@ -2,7 +2,7 @@ import { go, state } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getSecurityScore, getIncidents, getDevices, getIdentityPosture } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
-import { IDENTITY, INCIDENTS as DEMO_INCIDENTS } from '../data/security-data.js'
+import { IDENTITY, INCIDENTS as DEMO_INCIDENTS, RECOMMENDATIONS } from '../data/security-data.js'
 
 let realSecureScore = null
 let realIncidents = []
