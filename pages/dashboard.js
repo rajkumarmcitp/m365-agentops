@@ -472,7 +472,7 @@ function buildChangeIntelWidget() {
   return `
     <div class="dash-cards-row">
       <!-- Change Intelligence Critical Messages -->
-      <div class="card">
+      <div class="card" style="grid-column: span 2;">
         <div class="card-header">
           <span class="card-title"><i class="ti ti-antenna" style="color:var(--clr-danger-text)"></i> Change Intelligence</span>
           <span class="badge danger dot">${actionCount} action required</span>
@@ -496,7 +496,7 @@ function buildChangeIntelWidget() {
       </div>
 
       <!-- Service Health Summary -->
-      <div class="card">
+      <div class="card" style="grid-column: span 2;">
         <div class="card-header">
           <span class="card-title"><i class="ti ti-heartbeat"></i> Service Health</span>
           <span class="badge ${activeIssues.length > 0 ? 'warning' : 'success'}">${activeIssues.length > 0 ? activeIssues.length + ' active' : 'All clear'}</span>

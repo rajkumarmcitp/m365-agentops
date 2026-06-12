@@ -379,7 +379,7 @@
       <span class="status-dot ${l}" style="width:6px;height:6px"></span>${a.replace("Microsoft ","").replace(" Online","").replace(" ID","").substring(0,7)}</span>`}).join("");return`
     <div class="dash-cards-row">
       <!-- Change Intelligence Critical Messages -->
-      <div class="card">
+      <div class="card" style="grid-column: span 2;">
         <div class="card-header">
           <span class="card-title"><i class="ti ti-antenna" style="color:var(--clr-danger-text)"></i> Change Intelligence</span>
           <span class="badge danger dot">${i} action required</span>
@@ -400,7 +400,7 @@
       </div>
 
       <!-- Service Health Summary -->
-      <div class="card">
+      <div class="card" style="grid-column: span 2;">
         <div class="card-header">
           <span class="card-title"><i class="ti ti-heartbeat"></i> Service Health</span>
           <span class="badge ${t.length>0?"warning":"success"}">${t.length>0?t.length+" active":"All clear"}</span>
