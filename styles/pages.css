@@ -1672,6 +1672,18 @@ td.sla-overdue { color: var(--clr-danger-text); font-weight: 600; }
   /* Dashboard cards */
   .dash-cards-row {
     grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Message items wrap text properly */
+  .dash-cards-row [style*="white-space: nowrap"] {
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
+  /* Service health dots wrap */
+  .dash-cards-row [style*="display:flex;flex-wrap:wrap"] {
+    gap: 6px !important;
   }
 
   /* Config topic grid */
@@ -1700,6 +1712,47 @@ td.sla-overdue { color: var(--clr-danger-text); font-weight: 600; }
 
 /* Mobile: max-width 480px */
 @media (max-width: 480px) {
+  /* Dashboard responsive cards */
+  .dash-cards-row {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .dash-cards-row .card {
+    padding: 12px !important;
+  }
+
+  /* Message/service list items - allow wrapping */
+  .dash-cards-row div[style*="display:flex;align-items:flex-start;gap:8px"] {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* Allow text to wrap instead of truncate */
+  .dash-cards-row div[style*="white-space:nowrap"] {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Service health dots container */
+  .dash-cards-row div[style*="flex-wrap:wrap"] {
+    gap: 4px !important;
+  }
+
+  /* Badge sizing on mobile cards */
+  .dash-cards-row .badge {
+    font-size: 8px !important;
+    padding: 2px 4px !important;
+  }
+
+  /* Button full width on mobile cards */
+  .dash-cards-row .btn {
+    width: 100% !important;
+    font-size: 10px !important;
+    padding: 6px 8px !important;
+  }
+
   /* Security tabs - 2 per row */
   .sec-subnav {
     grid-template-columns: repeat(2, auto) !important;
