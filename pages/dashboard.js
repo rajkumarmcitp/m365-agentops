@@ -1,5 +1,6 @@
 import { go } from '../app.js'
 import { getDevices, getUsers, getSecurityScore, callAPI } from '../lib/api-client.js'
+import { isDemoAccount } from '../lib/demo-account.js'
 
 let realDeviceCount = 0
 let realUserCount = 0
@@ -18,6 +19,11 @@ function isDismissedRecently() {
 export async function initDashboard() {
   const el = document.getElementById('page-dashboard')
   if (!el) return
+
+  if (isDemoAccount()) {
+    renderDemoDashboard(el)
+    return
+  }
 
   el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading dashboard data...</p></div>`
 
@@ -158,6 +164,115 @@ export async function initDashboard() {
     if (tableEl && tableEl.querySelector('table')) tableEl.style.display = 'none'
     localStorage.setItem('dashboard_consents_dismissed', new Date().getTime())
   })
+}
+
+function renderDemoDashboard(el) {
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+        <div class="page-subtitle">Contoso.com — last updated just now</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn"><i class="ti ti-refresh"></i> Refresh</button>
+        <button class="btn btn-primary"><i class="ti ti-download"></i> Export</button>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
+      <span class="status-dot active pulse"></span>
+      <span><strong style="color:var(--color-text-secondary)">Demo Mode</strong> · Showing sample data</span>
+    </div>
+
+    <div class="alert-banner warning" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+      <div style="flex:1">
+        <i class="ti ti-alert-triangle"></i>
+        <span><strong>3 new admin consents</strong> granted in the last 24 hours. Review for suspicious activity.</span>
+      </div>
+      <button class="btn btn-sm" id="dash-consents-view" style="margin-right:8px"><i class="ti ti-arrow-right"></i> View Details</button>
+      <button class="btn btn-sm" id="dash-consents-dismiss" style="padding:6px 12px"><i class="ti ti-x"></i></button>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
+      <div style="padding:12px;border-bottom:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)">
+        <span style="font-weight:600;font-size:12px">Recent Admin Consents (Last 24 Hours)</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:18%">Time</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:20%">Application</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:30%">Permissions</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:15%">Performed By</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:17%">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px 12px;font-size:10px">2026-06-01 14:32 PM</td>
+            <td style="padding:10px 12px;font-weight:600;font-size:11px">Power BI Service</td>
+            <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">Dataset.ReadWrite.All, Report.Read.All</td>
+            <td style="padding:10px 12px;font-size:10px">Priya Kumar</td>
+            <td style="padding:10px 12px;font-size:10px"><span class="badge success">Success</span></td>
+          </tr>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px 12px;font-size:10px">2026-06-01 11:15 AM</td>
+            <td style="padding:10px 12px;font-weight:600;font-size:11px">Azure DevOps Connector</td>
+            <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">vso.work_write, vso.project_manage</td>
+            <td style="padding:10px 12px;font-size:10px">Chen Wei</td>
+            <td style="padding:10px 12px;font-size:10px"><span class="badge success">Success</span></td>
+          </tr>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px 12px;font-size:10px">2026-06-01 09:47 AM</td>
+            <td style="padding:10px 12px;font-weight:600;font-size:11px">Salesforce Sync App</td>
+            <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">User.Read.All, Directory.Read.All</td>
+            <td style="padding:10px 12px;font-size:10px">Aisha Raza</td>
+            <td style="padding:10px 12px;font-size:10px"><span class="badge success">Success</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- KPI Tiles - Demo Data -->
+    <div class="kpi-row">
+      <div class="kpi-tile">
+        <div class="kpi-value info">847</div>
+        <div class="kpi-label">Managed Devices</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value success">1,000</div>
+        <div class="kpi-label">Total Users</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value warning">78/100</div>
+        <div class="kpi-label">Security Score</div>
+      </div>
+    </div>
+
+    <!-- Quick Links to Other Pages -->
+    <div class="dash-cards-row mb-3">
+      <div class="card" style="padding:20px;text-align:center">
+        <div style="font-size:12px;font-weight:600;margin-bottom:12px">Additional Data</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+          <button class="btn" id="dash-to-requests"><i class="ti ti-check-list"></i> Requests</button>
+          <button class="btn" id="dash-to-m365"><i class="ti ti-settings-2"></i> M365 Config</button>
+          <button class="btn" id="dash-to-zt"><i class="ti ti-lock-check"></i> Zero Trust</button>
+        </div>
+      </div>
+    </div>
+  `
+
+  el.querySelector('#dash-consents-view')?.addEventListener('click', async () => await go('applications'))
+  el.querySelector('#dash-consents-dismiss')?.addEventListener('click', () => {
+    const alertEl = el.querySelector('.alert-banner')
+    const tableEl = el.querySelector('.card')
+    if (alertEl) alertEl.style.display = 'none'
+    if (tableEl && tableEl.querySelector('table')) tableEl.style.display = 'none'
+    localStorage.setItem('dashboard_consents_dismissed', new Date().getTime())
+  })
+  el.querySelector('#dash-to-requests')?.addEventListener('click', async () => await go('requests'))
+  el.querySelector('#dash-to-m365')?.addEventListener('click', async () => await go('m365config'))
+  el.querySelector('#dash-to-zt')?.addEventListener('click', async () => await go('zerotrust'))
 }
 
 function buildChangeIntelWidget() {
