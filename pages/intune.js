@@ -1,6 +1,7 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getDevices, getDeviceCompliancePolicies, callAPI } from '../lib/api-client.js'
+import { isDemoAccount } from '../lib/demo-account.js'
 
 let activeSection = 'executive'
 let copilotMessages = []
@@ -35,6 +36,12 @@ const INTUNE_TABS = [
 export async function initIntune() {
   const el = document.getElementById('page-intune')
   if (!el) return
+
+  if (isDemoAccount()) {
+    console.log('🎭 Demo account detected - showing demo Intune data')
+    renderDemoIntunePage(el)
+    return
+  }
 
   // Show loading state
   el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading comprehensive Intune data...</p></div>`
@@ -129,6 +136,290 @@ export async function initIntune() {
   }
 
   render(el)
+}
+
+function renderDemoIntunePage(el) {
+  const demoDevices = [
+    { id: 'DEV-001', name: 'LAPTOP-PRIYA01', os: 'Windows 11', osVersion: '23H2', compliance: 'Compliant', owner: 'Priya Kumar', lastSync: '2026-06-01' },
+    { id: 'DEV-002', name: 'LAPTOP-CHEN02', os: 'Windows 11', osVersion: '23H2', compliance: 'Compliant', owner: 'Chen Wei', lastSync: '2026-06-01' },
+    { id: 'DEV-003', name: 'IPAD-AISHA01', os: 'iPadOS', osVersion: '17.5', compliance: 'Compliant', owner: 'Aisha Raza', lastSync: '2026-06-01' },
+    { id: 'DEV-004', name: 'IPHONE-SANJAY01', os: 'iOS', osVersion: '17.5', compliance: 'Non-compliant', owner: 'Sanjay Kumar', lastSync: '2026-05-31' },
+    { id: 'DEV-005', name: 'LAPTOP-JAMES03', os: 'Windows 10', osVersion: '22H2', compliance: 'Non-compliant', owner: 'James Liu', lastSync: '2026-05-30' },
+  ]
+
+  const demoSummary = {
+    totalDevices: 847,
+    compliantDevices: 801,
+    nonCompliantDevices: 46,
+    enrolledToday: 3,
+    updatesPending: 12,
+  }
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-device-laptop"></i> Microsoft Intune Insights</div>
+        <div class="page-subtitle">Device Management & Security Assessment · ${demoSummary.totalDevices} devices managed · Last sync: Today 08:45</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn"><i class="ti ti-refresh"></i> Refresh</button>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
+      <span class="status-dot active pulse"></span>
+      <span><strong style="color:var(--color-text-secondary)">Demo Mode</strong> · Showing sample Intune data</span>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-tile">
+        <div class="kpi-value info">${demoSummary.totalDevices}</div>
+        <div class="kpi-label">Total Devices</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value success">${demoSummary.compliantDevices}</div>
+        <div class="kpi-label">Compliant</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value danger">${demoSummary.nonCompliantDevices}</div>
+        <div class="kpi-label">Non-compliant</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value warning">${demoSummary.updatesPending}</div>
+        <div class="kpi-label">Updates Pending</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value info">${demoSummary.enrolledToday}</div>
+        <div class="kpi-label">Enrolled Today</div>
+      </div>
+    </div>
+
+    <div class="tabs" id="intune-tabs" style="margin-bottom:16px">
+      ${INTUNE_TABS.map((tab, i) => `
+        <button class="tab-btn ${i === 0 ? 'active' : ''}" data-tab="${tab.id}">
+          <i class="ti ${tab.icon}"></i> ${tab.label}
+        </button>
+      `).join('')}
+    </div>
+
+    <div id="intune-content"></div>
+  `
+
+  const contentEl = el.querySelector('#intune-content')
+  renderDemoExecutive(contentEl, demoSummary, demoDevices)
+
+  el.querySelectorAll('#intune-tabs .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el.querySelectorAll('#intune-tabs .tab-btn').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+      const tabId = btn.dataset.tab
+
+      if (tabId === 'executive') renderDemoExecutive(contentEl, demoSummary, demoDevices)
+      else if (tabId === 'health') renderDemoHealth(contentEl, demoDevices)
+      else if (tabId === 'compliance') renderDemoCompliance(contentEl, demoSummary)
+      else if (tabId === 'inventory') renderDemoInventory(contentEl, demoDevices)
+      else if (tabId === 'security') renderDemoSecurity(contentEl)
+      else if (tabId === 'patches') renderDemoPatches(contentEl)
+      else contentEl.innerHTML = `<div class="card"><div class="card-header"><span class="card-title">${btn.textContent}</span></div><div style="padding:20px;text-align:center;color:var(--color-text-tertiary)">Demo data for ${btn.textContent}</div></div>`
+    })
+  })
+}
+
+function renderDemoExecutive(el, summary, devices) {
+  el.innerHTML = `
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Device Compliance Overview</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Compliance Rate</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-success-text)">${Math.round(summary.compliantDevices / summary.totalDevices * 100)}%</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">${summary.compliantDevices} of ${summary.totalDevices} devices</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Non-Compliant Devices</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-danger-text)">${summary.nonCompliantDevices}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">Require attention</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Recently Enrolled Devices</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Device Name</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Owner</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">OS</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Compliance</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${devices.slice(0, 5).map(device => `
+            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+              <td style="padding:10px;font-size:11px;color:var(--color-text-secondary)">${device.name}</td>
+              <td style="padding:10px;font-size:10px">${device.owner}</td>
+              <td style="padding:10px;font-size:10px">${device.os} ${device.osVersion}</td>
+              <td style="padding:10px"><span class="badge ${device.compliance === 'Compliant' ? 'success' : 'danger'}">${device.compliance}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoHealth(el, devices) {
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Device Health Status</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Device</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Status</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Last Sync</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${devices.map(device => `
+            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+              <td style="padding:10px;font-size:11px">${device.name}</td>
+              <td style="padding:10px"><span class="badge ${device.compliance === 'Compliant' ? 'success' : 'warning'}">Healthy</span></td>
+              <td style="padding:10px;font-size:10px;color:var(--color-text-tertiary)">${new Date(device.lastSync).toLocaleDateString()}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoCompliance(el, summary) {
+  el.innerHTML = `
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Compliance Policies</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Policy</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Platform</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Compliant</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px;font-size:11px">Windows Security Baseline</td>
+            <td style="padding:10px;font-size:10px">Windows</td>
+            <td style="padding:10px"><span class="badge success">801/801</span></td>
+          </tr>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px;font-size:11px">Mobile Device Management</td>
+            <td style="padding:10px;font-size:10px">iOS/Android</td>
+            <td style="padding:10px"><span class="badge warning">46/47</span></td>
+          </tr>
+          <tr>
+            <td style="padding:10px;font-size:11px">Encryption Required</td>
+            <td style="padding:10px;font-size:10px">All</td>
+            <td style="padding:10px"><span class="badge success">847/847</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoInventory(el, devices) {
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Device Inventory</span>
+        <span class="badge info">${devices.length} devices</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Device ID</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Device Name</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Platform</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Owner</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${devices.map(device => `
+            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+              <td style="padding:10px;font-size:9px;font-family:monospace">${device.id}</td>
+              <td style="padding:10px;font-size:11px">${device.name}</td>
+              <td style="padding:10px;font-size:10px">${device.os}</td>
+              <td style="padding:10px;font-size:10px">${device.owner}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoSecurity(el) {
+  el.innerHTML = `
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Endpoint Security</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Antivirus Status</div>
+          <div style="font-size:16px;font-weight:700;color:var(--clr-success-text)">847/847</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">All devices protected</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Firewall Status</div>
+          <div style="font-size:16px;font-weight:700;color:var(--clr-success-text)">847/847</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">All devices protected</div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderDemoPatches(el) {
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Patch Management</span>
+        <span class="badge warning">12 updates pending</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Update</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Severity</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Devices Affected</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px;font-size:11px">Windows 11 23H2 KB5036893</td>
+            <td style="padding:10px"><span class="badge danger">Critical</span></td>
+            <td style="padding:10px;font-size:10px">4</td>
+          </tr>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px;font-size:11px">Security Update June 2026</td>
+            <td style="padding:10px"><span class="badge warning">Important</span></td>
+            <td style="padding:10px;font-size:10px">8</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `
 }
 
 function render(el) {
