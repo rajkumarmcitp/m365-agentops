@@ -1,6 +1,7 @@
 import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getApplications, getServicePrincipals, api } from '../lib/api-client.js'
+import { isDemoAccount } from '../lib/demo-account.js'
 
 let activeSection = 'executive'
 let appFilter = { type: 'all', status: 'all', search: '' }
@@ -38,6 +39,12 @@ const APP_TABS = [
 export async function initApplications() {
   const el = document.getElementById('page-applications')
   if (!el) return
+
+  if (isDemoAccount()) {
+    console.log('🎭 Demo account detected - showing demo applications data')
+    renderDemoApplicationsPage(el)
+    return
+  }
 
   el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading real M365 application data...</p></div>`
 
@@ -165,6 +172,322 @@ export async function initApplications() {
   }
 
   render(el)
+}
+
+function renderDemoApplicationsPage(el) {
+  const demoApps = [
+    { id: 'app-001', name: 'Power BI Service', owners: ['Chen Wei', 'Priya Kumar'], lastUsed: '2026-06-01', status: 'active', riskLevel: 'low', secretsExpiring: 0 },
+    { id: 'app-002', name: 'Salesforce Integration', owners: ['Aisha Raza'], lastUsed: '2026-06-01', status: 'active', riskLevel: 'medium', secretsExpiring: 1 },
+    { id: 'app-003', name: 'ServiceNow Connector', owners: ['Chen Wei', 'Sanjay Kumar'], lastUsed: '2026-05-31', status: 'active', riskLevel: 'low', secretsExpiring: 0 },
+    { id: 'app-004', name: 'Slack Integration', owners: ['Priya Kumar'], lastUsed: '2026-05-30', status: 'inactive', riskLevel: 'low', secretsExpiring: 0 },
+    { id: 'app-005', name: 'Azure DevOps Extension', owners: ['Chen Wei'], lastUsed: '2026-06-01', status: 'active', riskLevel: 'high', secretsExpiring: 2 },
+  ]
+
+  const demoSummary = {
+    totalApps: demoApps.length,
+    activeApps: 4,
+    inactiveApps: 1,
+    appPermissions: 12,
+    delegatedPermissions: 18,
+    appRoles: 8,
+    secretsExpiring: 3,
+    secretsExpired: 0,
+    highRiskApps: 1,
+  }
+
+  const demoConsents = [
+    { appName: 'Power BI Service', permissions: 'Dataset.ReadWrite.All, Report.Read.All', grantedBy: 'Chen Wei', grantedAt: '2026-06-01 14:32', status: 'Approved' },
+    { appName: 'Salesforce Integration', permissions: 'User.Read.All, Directory.Read.All', grantedBy: 'Aisha Raza', grantedAt: '2026-06-01 11:15', status: 'Approved' },
+    { appName: 'ServiceNow Connector', permissions: 'Mail.Send, Mail.Read', grantedBy: 'Admin', grantedAt: '2026-05-30 09:45', status: 'Approved' },
+  ]
+
+  const demoSecrets = [
+    { appName: 'Salesforce Integration', type: 'Client Secret', expiresAt: '2026-06-15', status: 'Expiring soon', daysLeft: 14 },
+    { appName: 'Azure DevOps Extension', type: 'Client Secret', expiresAt: '2026-06-10', status: 'Expiring soon', daysLeft: 9 },
+    { appName: 'Azure DevOps Extension', type: 'Certificate', expiresAt: '2026-06-08', status: 'Critical', daysLeft: 7 },
+  ]
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-app-window"></i> Applications</div>
+        <div class="page-subtitle">Manage app registrations, permissions, and consent</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn"><i class="ti ti-refresh"></i> Refresh</button>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
+      <span class="status-dot active pulse"></span>
+      <span><strong style="color:var(--color-text-secondary)">Demo Mode</strong> · Showing sample application data</span>
+    </div>
+
+    <div class="tabs" id="app-tabs" style="margin-bottom:16px">
+      ${APP_TABS.slice(0, 6).map((tab, i) => `
+        <button class="tab-btn ${i === 0 ? 'active' : ''}" data-tab="${tab.id}">
+          <i class="ti ${tab.icon}"></i> ${tab.label}
+        </button>
+      `).join('')}
+    </div>
+
+    <div id="app-content"></div>
+  `
+
+  const contentEl = el.querySelector('#app-content')
+  renderDemoExecutive(contentEl, demoSummary, demoApps)
+
+  el.querySelectorAll('#app-tabs .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el.querySelectorAll('#app-tabs .tab-btn').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+      const tabId = btn.dataset.tab
+
+      if (tabId === 'executive') renderDemoExecutive(contentEl, demoSummary, demoApps)
+      else if (tabId === 'appregistrations') renderDemoAppRegistrations(contentEl, demoApps)
+      else if (tabId === 'enterprise') renderDemoEnterpriseApps(contentEl, demoApps)
+      else if (tabId === 'secrets') renderDemoSecrets(contentEl, demoSecrets)
+      else if (tabId === 'permissions') renderDemoPermissions(contentEl, demoSummary)
+      else if (tabId === 'auditconsents') renderDemoAuditConsents(contentEl, demoConsents)
+    })
+  })
+}
+
+function renderDemoExecutive(el, summary, apps) {
+  const riskApps = apps.filter(a => a.riskLevel === 'high')
+  el.innerHTML = `
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Application Overview</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Total Apps</div>
+          <div style="font-size:24px;font-weight:700;color:var(--clr-info-text)">${summary.totalApps}</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Active</div>
+          <div style="font-size:24px;font-weight:700;color:var(--clr-success-text)">${summary.activeApps}</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Secrets Expiring</div>
+          <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">${summary.secretsExpiring}</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">High Risk</div>
+          <div style="font-size:24px;font-weight:700;color:var(--clr-danger-text)">${riskApps.length}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Registered Applications</span>
+        <span class="badge info">${apps.length} apps</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Application Name</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Owners</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Status</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Risk</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Last Used</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${apps.map((app, i) => `
+            <tr style="border-bottom:${i < apps.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none'}">
+              <td style="padding:10px 12px;font-size:11px;font-weight:600">${app.name}</td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${app.owners.join(', ')}</td>
+              <td style="padding:10px 12px"><span class="badge ${app.status === 'active' ? 'success' : 'neutral'}">${app.status}</span></td>
+              <td style="padding:10px 12px"><span class="badge ${app.riskLevel === 'high' ? 'danger' : app.riskLevel === 'medium' ? 'warning' : 'success'}">${app.riskLevel}</span></td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-tertiary)">${app.lastUsed}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoAppRegistrations(el, apps) {
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">App Registrations</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">App Name</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">App ID</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${apps.map((app, i) => `
+            <tr style="border-bottom:${i < apps.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none'}">
+              <td style="padding:10px 12px;font-size:11px;font-weight:600">${app.name}</td>
+              <td style="padding:10px 12px;font-size:9px;font-family:monospace;color:var(--color-text-tertiary)">${app.id}</td>
+              <td style="padding:10px 12px"><span class="badge ${app.status === 'active' ? 'success' : 'neutral'}">${app.status}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoEnterpriseApps(el, apps) {
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Enterprise Applications</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Application</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Owners</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Users</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${apps.filter(a => a.status === 'active').map((app, i) => `
+            <tr style="border-bottom:${i < 3 ? '0.5px solid var(--color-border-tertiary)' : 'none'}">
+              <td style="padding:10px 12px;font-size:11px;font-weight:600">${app.name}</td>
+              <td style="padding:10px 12px;font-size:10px">${app.owners[0]}</td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${Math.floor(Math.random() * 500) + 10} users</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoSecrets(el, secrets) {
+  el.innerHTML = `
+    <div class="alert-banner warning" style="margin-bottom:16px">
+      <i class="ti ti-alert-triangle"></i>
+      <span><strong>3 secrets expiring soon</strong> — Review and rotate before expiration</span>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Credentials & Certificates</span>
+        <span class="badge warning">${secrets.length} expiring</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Application</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Type</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Expires</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Days Left</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${secrets.map((secret, i) => `
+            <tr style="border-bottom:${i < secrets.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none'}">
+              <td style="padding:10px 12px;font-size:11px;font-weight:600">${secret.appName}</td>
+              <td style="padding:10px 12px;font-size:10px">${secret.type}</td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${secret.expiresAt}</td>
+              <td style="padding:10px 12px;font-size:10px">${secret.daysLeft} days</td>
+              <td style="padding:10px 12px"><span class="badge ${secret.status === 'Critical' ? 'danger' : 'warning'}">${secret.status}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoPermissions(el, summary) {
+  el.innerHTML = `
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Permission Summary</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:12px">
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">App Permissions</div>
+          <div style="font-size:20px;font-weight:700;color:var(--clr-danger-text)">${summary.appPermissions}</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Delegated</div>
+          <div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">${summary.delegatedPermissions}</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">App Roles</div>
+          <div style="font-size:20px;font-weight:700;color:var(--clr-info-text)">${summary.appRoles}</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Top Permissions Requested</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Permission</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Type</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Apps Using</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px 12px;font-size:10px">User.Read.All</td>
+            <td style="padding:10px 12px"><span class="badge danger">App</span></td>
+            <td style="padding:10px 12px;font-size:10px">4 apps</td>
+          </tr>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px 12px;font-size:10px">Mail.Send</td>
+            <td style="padding:10px 12px"><span class="badge warning">Delegated</span></td>
+            <td style="padding:10px 12px;font-size:10px">3 apps</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 12px;font-size:10px">Files.ReadWrite.All</td>
+            <td style="padding:10px 12px"><span class="badge danger">App</span></td>
+            <td style="padding:10px 12px;font-size:10px">2 apps</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderDemoAuditConsents(el, consents) {
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Admin Consents Granted</span>
+        <span class="badge success">${consents.length} consents</span>
+      </div>
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Application</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Permissions</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Granted By</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${consents.map((consent, i) => `
+            <tr style="border-bottom:${i < consents.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none'}">
+              <td style="padding:10px 12px;font-size:11px;font-weight:600">${consent.appName}</td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${consent.permissions.substring(0, 35)}...</td>
+              <td style="padding:10px 12px;font-size:10px">${consent.grantedBy}</td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-tertiary)">${consent.grantedAt}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
 }
 
 function render(el) {
