@@ -394,17 +394,22 @@ function renderExecutive() {
           ${[
             { name: 'Identity',    icon: 'ti-user-check',        score: realIdentityPosture.identitySecureScore || 72, color: '#0C447C', bg:'#E6F1FB', issues: realIdentityPosture.highRiskUsers },
             { name: 'Secure Score',icon: 'ti-shield-check',      score: Math.round(ss.percentOf100), color: '#854F0B', bg:'#FAEEDA', issues: 0 },
+            { name: 'Email',       icon: 'ti-mail',              score: 71, color: '#854F0B', bg:'#FAEEDA', issues: 0, coming: true },
+            { name: 'Endpoint',    icon: 'ti-device-laptop',     score: 58, color: '#3B6D11', bg:'#EAF3DE', issues: 0, coming: true },
+            { name: 'Teams',       icon: 'ti-brand-teams',       score: 74, color: '#3C3489', bg:'#EEEDFE', issues: 0, coming: true },
+            { name: 'SharePoint',  icon: 'ti-brand-sharepoint',  score: 66, color: '#3B6D11', bg:'#EAF3DE', issues: 0, coming: true },
+            { name: 'Data',        icon: 'ti-database',          score: 61, color: '#3C3489', bg:'#EEEDFE', issues: 0, coming: true },
             { name: 'Incidents',   icon: 'ti-alert-triangle',    score: incidents.filter(i => i.status !== 'resolved').length === 0 ? 100 : 50, color: incidents.filter(i => i.status !== 'resolved').length === 0 ? '#3B6D11' : '#A32D2D', bg: incidents.filter(i => i.status !== 'resolved').length === 0 ? '#EAF3DE' : '#FDEBEB', issues: incidents.filter(i => i.status !== 'resolved').length },
           ].map(s => {
             const cls = s.score >= 80 ? 'success' : s.score >= 65 ? 'warning' : 'danger'
-            return `<div class="sec-svc-tile" data-goto="${s.name.toLowerCase().replace(' ','').replace('.','')}" style="cursor:pointer">
+            return `<div class="sec-svc-tile" data-goto="${s.name.toLowerCase().replace(' ','').replace('.','')}" style="cursor:pointer;${s.coming ? 'opacity:0.7' : ''}">
               ${scoreGauge(s.score, 100, 40)}
               <div style="flex:1;min-width:0">
                 <div style="display:flex;align-items:center;gap:6px">
                   <div style="width:22px;height:22px;border-radius:5px;background:${s.bg};color:${s.color};display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0"><i class="ti ${s.icon}"></i></div>
                   <span style="font-size:11px;font-weight:600">${s.name}</span>
                 </div>
-                ${s.issues > 0 ? `<div style="font-size:9px;color:var(--clr-warning-text);margin-top:2px">${s.issues} issue${s.issues > 1 ? 's' : ''}</div>` : `<div style="font-size:9px;color:var(--clr-success-text);margin-top:2px">No issues</div>`}
+                ${s.coming ? `<div style="font-size:9px;color:var(--clr-info-text);margin-top:2px">Real data soon</div>` : s.issues > 0 ? `<div style="font-size:9px;color:var(--clr-warning-text);margin-top:2px">${s.issues} issue${s.issues > 1 ? 's' : ''}</div>` : `<div style="font-size:9px;color:var(--clr-success-text);margin-top:2px">No issues</div>`}
               </div>
             </div>`
           }).join('')}
