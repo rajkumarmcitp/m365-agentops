@@ -94,7 +94,7 @@ async function renderProductionMsgCenter(el) {
     const now = new Date()
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-    const recentMessages = messages.filter(m => {
+    const recentMessages = mcResult.data.filter(m => {
       const pubDate = new Date(m.publishedDate)
       return pubDate >= sevenDaysAgo && m.actionRequired
     })

@@ -5768,7 +5768,7 @@ Try rephrasing your question or ask about a specific service name.`}function mr(
       </div>
     </div>
     <div style="padding:20px;text-align:center"><div class="spinner"></div><p>Syncing messages...</p></div>
-  `;try{const a=await Ii(),n=await zi();if(!a.success||!a.data||a.data.length===0){fi(e);return}const r=new Date,l=new Date(r.getTime()-7*24*60*60*1e3),o=messages.filter(p=>new Date(p.publishedDate)>=l&&p.actionRequired),d=o.length,c=o.filter(p=>p.severity==="high").length;e.innerHTML=`
+  `;try{const a=await Ii(),n=await zi();if(!a.success||!a.data||a.data.length===0){fi(e);return}const r=new Date,l=new Date(r.getTime()-7*24*60*60*1e3),o=a.data.filter(p=>new Date(p.publishedDate)>=l&&p.actionRequired),d=o.length,c=o.filter(p=>p.severity==="high").length;e.innerHTML=`
       <div class="page-header">
         <div>
           <div class="page-title"><i class="ti ti-antenna"></i> Change Intelligence</div>
