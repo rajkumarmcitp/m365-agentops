@@ -175,11 +175,11 @@ async function renderProductionMsgCenter(el) {
     })
 
     el.querySelector('#mc-analyze')?.addEventListener('click', () => {
-      if (recentMessages.length === 0) {
+      if (actionRequiredCount === 0) {
         showToast('No recent action-required announcements to analyze', 'info')
         return
       }
-      showToast(`Analyzing ${recentMessages.length} announcements with AI...`, 'info')
+      showToast(`Analyzing ${actionRequiredCount} announcements with AI...`, 'info')
       // TODO: Call AI Agent to analyze announcements
       setTimeout(() => {
         showToast('AI analysis complete - see insights panel below', 'success')
