@@ -519,8 +519,21 @@ async function buildChangeIntelWidget() {
   const mcMessages = useRealData && messages.length > 0 ? messages : MC_MESSAGES
   const svcHealth = useRealData && health.length > 0 ? health : SVC_HEALTH
 
-  const critical = mcMessages.filter(m => m.actionRequired && m.severity === 'high').slice(0, 3)
-  const activeIssues = svcHealth.filter(h => h.status !== 'resolved')
+  // Filter messages - for real data, show any messages (severity varies); for demo, filter strictly
+  let critical = []
+  if (useRealData && mcMessages.length > 0) {
+    // Real data: show messages with high severity OR action required
+    critical = mcMessages.filter(m => m.severity === 'high' || m.actionRequired).slice(0, 3)
+    // If still empty, show any messages
+    if (critical.length === 0) {
+      critical = mcMessages.slice(0, 3)
+    }
+  } else {
+    // Demo data: filter strictly
+    critical = mcMessages.filter(m => m.actionRequired && m.severity === 'high').slice(0, 3)
+  }
+
+  const activeIssues = svcHealth.filter(h => h.status !== 'resolved' && h.status !== 'Resolved')
   const actionCount = mcMessages.filter(m => m.actionRequired).length
 
   const svcHealthDots = Object.entries(SVC_META).map(([svc, meta]) => {
