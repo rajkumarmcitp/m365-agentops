@@ -90,14 +90,32 @@ async function renderProductionMsgCenter(el) {
       return
     }
 
-    // Filter: Last 7 days + Action Required only
+    // Filter: Action Required (prioritize recent)
+    // First try last 7 days, then expand to 30 days, then show all action-required
     const now = new Date()
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-    const recentMessages = mcResult.data.filter(m => {
+    let recentMessages = mcResult.data.filter(m => {
       const pubDate = new Date(m.publishedDate)
       return pubDate >= sevenDaysAgo && m.actionRequired
     })
+
+    // If no results from last 7 days, expand to 30 days
+    if (recentMessages.length === 0) {
+      recentMessages = mcResult.data.filter(m => {
+        const pubDate = new Date(m.publishedDate)
+        return pubDate >= thirtyDaysAgo && m.actionRequired
+      })
+    }
+
+    // If still no results, show all action-required regardless of date
+    if (recentMessages.length === 0) {
+      recentMessages = mcResult.data.filter(m => m.actionRequired)
+    }
+
+    // Sort by date, newest first
+    recentMessages.sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate))
 
     const actionRequiredCount = recentMessages.length
     const highSeverityCount = recentMessages.filter(m => m.severity === 'high').length
