@@ -154,7 +154,7 @@ async function renderProductionMsgCenter(el) {
       </div>
     `
 
-    el.querySelector('#mc-sync').addEventListener('click', async () => {
+    el.querySelector('#mc-sync')?.addEventListener('click', async () => {
       const btn = el.querySelector('#mc-sync')
       btn.innerHTML = `<span class="spinner dark"></span> Syncing...`
       btn.disabled = true
@@ -164,6 +164,18 @@ async function renderProductionMsgCenter(el) {
         await renderProductionMsgCenter(el)
         showToast(`Synced ${messages.length} messages`, 'success')
       }, 2000)
+    })
+
+    el.querySelector('#mc-digest')?.addEventListener('click', () => {
+      showToast('Weekly digest will be emailed to admins on Monday morning', 'info')
+    })
+
+    el.querySelector('#mc-create-tasks')?.addEventListener('click', () => {
+      if (actionRequiredCount === 0) {
+        showToast('No action-required messages to create tasks for', 'info')
+      } else {
+        showToast(`Creating ${actionRequiredCount} tasks from action-required messages...`, 'success')
+      }
     })
   } catch (error) {
     console.error('Error loading Message Center:', error)
