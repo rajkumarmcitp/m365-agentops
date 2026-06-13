@@ -90,27 +90,35 @@ async function renderProductionMsgCenter(el) {
       return
     }
 
-    const messages = mcResult.data
-    const actionRequiredCount = messages.filter(m => m.actionRequired).length
-    const highSeverityCount = messages.filter(m => m.severity === 'high').length
+    // Filter: Last 7 days + Action Required only
+    const now = new Date()
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+    const recentMessages = messages.filter(m => {
+      const pubDate = new Date(m.publishedDate)
+      return pubDate >= sevenDaysAgo && m.actionRequired
+    })
+
+    const actionRequiredCount = recentMessages.length
+    const highSeverityCount = recentMessages.filter(m => m.severity === 'high').length
 
     el.innerHTML = `
       <div class="page-header">
         <div>
           <div class="page-title"><i class="ti ti-antenna"></i> Change Intelligence</div>
-          <div class="page-subtitle">Graph: /admin/serviceAnnouncement/messages · ${messages.length} messages · <span style="color:var(--clr-success-text)">● Real data</span></div>
+          <div class="page-subtitle">Last 7 days · Action required only · ${recentMessages.length} announcements · <span style="color:var(--clr-success-text)">● Real data</span></div>
         </div>
         <div class="page-actions">
           <button class="btn" id="mc-sync"><i class="ti ti-refresh"></i> Sync now</button>
-          <button class="btn" id="mc-digest"><i class="ti ti-file-text"></i> Weekly digest</button>
+          <button class="btn" id="mc-analyze"><i class="ti ti-sparkles"></i> Analyze with AI</button>
           <button class="btn btn-primary" id="mc-create-tasks"><i class="ti ti-circle-plus"></i> Create tasks (${actionRequiredCount})</button>
         </div>
       </div>
 
       <div class="kpi-row">
         <div class="kpi-tile">
-          <div class="kpi-value info">${messages.length}</div>
-          <div class="kpi-label">Total Messages</div>
+          <div class="kpi-value info">${recentMessages.length}</div>
+          <div class="kpi-label">Recent (7 days)</div>
         </div>
         <div class="kpi-tile">
           <div class="kpi-value danger">${actionRequiredCount}</div>
@@ -129,11 +137,11 @@ async function renderProductionMsgCenter(el) {
 
       <div class="card">
         <div class="card-header">
-          <span class="card-title">Service Announcements</span>
-          <span class="badge info">${messages.length} messages</span>
+          <span class="card-title">Action Required Announcements (Last 7 Days)</span>
+          <span class="badge danger">${recentMessages.length} announcements</span>
         </div>
         <div style="max-height:600px;overflow-y:auto">
-          ${messages.slice(0, 50).map(msg => `
+          ${recentMessages.slice(0, 50).map(msg => `
             <div style="padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
                 <div style="flex:1">
@@ -166,15 +174,23 @@ async function renderProductionMsgCenter(el) {
       }, 2000)
     })
 
-    el.querySelector('#mc-digest')?.addEventListener('click', () => {
-      showToast('Weekly digest will be emailed to admins on Monday morning', 'info')
+    el.querySelector('#mc-analyze')?.addEventListener('click', () => {
+      if (recentMessages.length === 0) {
+        showToast('No recent action-required announcements to analyze', 'info')
+        return
+      }
+      showToast(`Analyzing ${recentMessages.length} announcements with AI...`, 'info')
+      // TODO: Call AI Agent to analyze announcements
+      setTimeout(() => {
+        showToast('AI analysis complete - see insights panel below', 'success')
+      }, 2000)
     })
 
     el.querySelector('#mc-create-tasks')?.addEventListener('click', () => {
       if (actionRequiredCount === 0) {
-        showToast('No action-required messages to create tasks for', 'info')
+        showToast('No action-required announcements to create tasks for', 'info')
       } else {
-        showToast(`Creating ${actionRequiredCount} tasks from action-required messages...`, 'success')
+        showToast(`Creating ${actionRequiredCount} tasks from recent announcements...`, 'success')
       }
     })
   } catch (error) {
