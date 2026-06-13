@@ -170,7 +170,7 @@ async function renderProductionMsgCenter(el) {
         btn.innerHTML = `<i class="ti ti-refresh"></i> Sync now`
         btn.disabled = false
         await renderProductionMsgCenter(el)
-        showToast(`Synced ${messages.length} messages`, 'success')
+        showToast(`Synced announcements`, 'success')
       }, 2000)
     })
 
