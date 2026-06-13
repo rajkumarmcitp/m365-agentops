@@ -501,16 +501,33 @@ app.get('/api/config/cis-controls', async (req, res) => {
     // Fetch real configuration data from Graph API
     if (graphClient) {
       try {
+        let caCount = 0, dcCount = 0, authMethod = null
+
         // Fetch conditional access policies
-        const caPolicy = await graphClient.api('/policies/conditionalAccessPolicies').get()
-        const caCount = caPolicy.value?.length || 0
+        try {
+          const caPolicy = await graphClient.api('/identity/conditionalAccess/policies').get()
+          caCount = caPolicy.value?.length || 0
+          console.log(`✓ Conditional Access: ${caCount} policies found`)
+        } catch (caError) {
+          console.warn(`⚠️ CA Policy fetch failed: ${caError.message}`)
+        }
 
         // Fetch device compliance policies
-        const dcPolicy = await graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
-        const dcCount = dcPolicy.value?.length || 0
+        try {
+          const dcPolicy = await graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+          dcCount = dcPolicy.value?.length || 0
+          console.log(`✓ Device Compliance: ${dcCount} policies found`)
+        } catch (dcError) {
+          console.warn(`⚠️ Device Compliance fetch failed: ${dcError.message}`)
+        }
 
         // Fetch authentication method policies
-        const authMethod = await graphClient.api('/policies/authenticationMethodsPolicy').get()
+        try {
+          authMethod = await graphClient.api('/policies/authenticationMethodsPolicy').get()
+          console.log(`✓ Authentication Methods: configured`)
+        } catch (authError) {
+          console.warn(`⚠️ Auth Methods fetch failed: ${authError.message}`)
+        }
 
         // Fetch organization settings
         const org = await graphClient.api('/organization').get()

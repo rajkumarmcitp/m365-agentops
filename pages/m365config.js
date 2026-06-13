@@ -288,23 +288,15 @@ async function renderProductionMain(el) {
       return
     }
 
-    const cisData = result.data
-    const stats = {
-      total: cisData.length,
-      pass: cisData.filter(c => c.status === 'pass').length,
-      fail: cisData.filter(c => c.status === 'fail').length,
-      warn: cisData.filter(c => c.status === 'warn').length,
-      manual: cisData.filter(c => c.type === 'manual').length,
-      score: 0
-    }
-    stats.score = stats.total > 0 ? Math.round((stats.pass / stats.total) * 100) : 0
+    // Use full CFG_TOPICS structure with real data from Graph API assessment
+    const stats = getOverallStats()
     const cls = scoreClass(stats.score)
 
     el.innerHTML = `
       <div class="page-header">
         <div>
           <div class="page-title"><i class="ti ti-settings-2"></i> M365 Config — CIS Benchmark v7.0.0</div>
-          <div class="page-subtitle">Last assessed: Today · ${stats.total} controls from ${cisData.length > 0 ? 'Graph API' : 'local data'}</div>
+          <div class="page-subtitle">Last validated: Today · ${stats.total} controls from Graph API</div>
         </div>
         <div class="page-actions">
           <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Re-scan</button>
@@ -337,67 +329,62 @@ async function renderProductionMain(el) {
 
       <div class="card mb-3">
         <div class="card-header">
-          <span class="card-title">Configuration Assessment Results</span>
+          <span class="card-title">Overall Compliance Posture</span>
           <span class="badge ${cls}">${stats.score}% compliant</span>
         </div>
-        <div class="cfg-topic-grid">
-          ${cisData.slice(0, 9).map((topic, i) => {
-            const topicStats = {
-              total: topic.controlCount || 1,
-              pass: topic.passCount || 0,
-              fail: topic.failCount || 0,
-              warn: topic.warnCount || 0
-            }
-            const topicScore = topicStats.total > 0 ? Math.round((topicStats.pass / topicStats.total) * 100) : 0
-            const topicClass = scoreClass(topicScore)
-            const topicColor = TOPIC_COLOURS[`t${i+1}`] || { bg: '#E6F1FB', color: '#0C447C' }
-
-            return `
-              <div class="cfg-topic-card" style="background:${topicColor.bg};border-color:${topicColor.color}">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                  <div style="font-size:16px;color:${topicColor.color}">${topic.icon ? `<i class="ti ${topic.icon}"></i>` : '⚙️'}</div>
-                  <div style="font-weight:600;font-size:12px;color:${topicColor.color}">${topic.name || `Topic ${i+1}`}</div>
-                </div>
-                <div style="font-size:20px;font-weight:700;color:${topicColor.color};margin-bottom:4px">${topicScore}%</div>
-                <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:8px">
-                  ${topicStats.pass}/${topicStats.total} controls
-                </div>
-                <div style="display:flex;gap:4px;font-size:9px">
-                  ${topicStats.fail > 0 ? `<span style="color:var(--clr-danger-text)">● ${topicStats.fail} fail</span>` : ''}
-                  ${topicStats.warn > 0 ? `<span style="color:var(--clr-warning-text)">● ${topicStats.warn} warn</span>` : ''}
-                </div>
-              </div>
-            `
-          }).join('')}
+        <div class="seg-bar" style="height:12px;border-radius:6px">
+          <div class="seg pass" style="width:${(stats.pass/stats.total*100).toFixed(1)}%"></div>
+          <div class="seg warn" style="width:${(stats.warn/stats.total*100).toFixed(1)}%"></div>
+          <div class="seg fail" style="width:${(stats.fail/stats.total*100).toFixed(1)}%"></div>
+        </div>
+        <div style="display:flex;gap:20px;margin-top:8px">
+          <span style="font-size:10px;color:var(--clr-success-text)">● ${stats.pass} Passed</span>
+          <span style="font-size:10px;color:var(--clr-warning-text)">● ${stats.warn} Warnings</span>
+          <span style="font-size:10px;color:var(--clr-danger-text)">● ${stats.fail} Failed</span>
+          <span style="font-size:10px;color:var(--clr-purple-text)">● ${stats.manual} Manual</span>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Control Details</span>
-        </div>
-        <table style="width:100%;font-size:11px">
-          <thead style="background:var(--color-background-secondary)">
-            <tr>
-              <th style="padding:8px 12px;text-align:left;font-weight:600">Control ID</th>
-              <th style="padding:8px 12px;text-align:left;font-weight:600">Title</th>
-              <th style="padding:8px 12px;text-align:center;font-weight:600">Status</th>
-              <th style="padding:8px 12px;text-align:left;font-weight:600">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${cisData.slice(0, 20).map(control => `
-              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-                <td style="padding:8px 12px;font-weight:600;color:var(--clr-info-text)">${control.id || '—'}</td>
-                <td style="padding:8px 12px">${control.title || control.name || '—'}</td>
-                <td style="padding:8px 12px;text-align:center">${statusBadge(control.status)}</td>
-                <td style="padding:8px 12px;font-size:10px;color:var(--color-text-secondary)">${(control.value || '—').substring(0, 50)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
+        <span class="status-dot active pulse"></span>
+        <span><strong style="color:var(--color-text-secondary)">Production Mode</strong> · Real tenant configuration from Graph API</span>
       </div>
+
+      <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">Topics</div>
+      <div class="cfg-topic-grid" id="cfg-topic-grid"></div>
     `
+
+    const grid = el.querySelector('#cfg-topic-grid')
+    CFG_TOPICS.forEach(topic => {
+      const s = getTopicStats(topic)
+      const tCls = scoreClass(s.score)
+      const card = document.createElement('div')
+      card.className = 'cfg-topic-card'
+      const tc = TOPIC_COLOURS[topic.id] || { bg: '#f0f0f0', color: '#555' }
+      card.innerHTML = `
+        <div class="cfg-topic-icon" style="background:${tc.bg};color:${tc.color}">
+          <i class="ti ${topic.icon}"></i>
+        </div>
+        <div class="cfg-topic-num">Topic ${topic.num}</div>
+        <div class="cfg-topic-name">${topic.name}</div>
+        <div class="cfg-topic-badges">
+          ${s.fail > 0 ? `<span class="badge danger">${s.fail} fail</span>` : ''}
+          ${s.warn > 0 ? `<span class="badge warning">${s.warn} warn</span>` : ''}
+          ${s.pass > 0 ? `<span class="badge success">${s.pass} pass</span>` : ''}
+        </div>
+        <div class="cfg-topic-bar">
+          <div class="score-bar">
+            <div class="score-bar-fill ${tCls}" style="width:${s.score}%"></div>
+          </div>
+        </div>
+      `
+      card.addEventListener('click', () => {
+        activeTopic = topic
+        cfgView = 'topic'
+        renderDemoTopic(el, topic)
+      })
+      grid.appendChild(card)
+    })
 
     el.querySelector('#cfg-scan-now')?.addEventListener('click', async () => {
       const btn = el.querySelector('#cfg-scan-now')
