@@ -147,7 +147,7 @@ async function renderProductionMsgCenter(el) {
                 </span>
               </div>
               ${msg.actionByDate ? `<div style="font-size:10px;color:var(--clr-danger-text);margin-top:6px">⚠️ Action required by: <strong>${msg.actionByDate}</strong></div>` : ''}
-              ${msg.body ? `<div style="font-size:10px;color:var(--color-text-secondary);margin-top:6px;line-height:1.4">${msg.body.substring(0, 150)}...</div>` : ''}
+              ${msg.body && typeof msg.body === 'string' ? `<div style="font-size:10px;color:var(--color-text-secondary);margin-top:6px;line-height:1.4">${msg.body.substring(0, 150)}...</div>` : ''}
             </div>
           `).join('')}
         </div>

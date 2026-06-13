@@ -5821,7 +5821,7 @@ Try rephrasing your question or ask about a specific service name.`}function mr(
                 </span>
               </div>
               ${r.actionByDate?`<div style="font-size:10px;color:var(--clr-danger-text);margin-top:6px">⚠️ Action required by: <strong>${r.actionByDate}</strong></div>`:""}
-              ${r.body?`<div style="font-size:10px;color:var(--color-text-secondary);margin-top:6px;line-height:1.4">${r.body.substring(0,150)}...</div>`:""}
+              ${r.body&&typeof r.body=="string"?`<div style="font-size:10px;color:var(--color-text-secondary);margin-top:6px;line-height:1.4">${r.body.substring(0,150)}...</div>`:""}
             </div>
           `).join("")}
         </div>
