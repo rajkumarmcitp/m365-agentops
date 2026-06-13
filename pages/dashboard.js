@@ -1,5 +1,5 @@
 import { go, state } from '../app.js'
-import { getDevices, getUsers, getSecurityScore, callAPI } from '../lib/api-client.js'
+import { getDevices, getUsers, getSecurityScore, callAPI, getMessageCenterMessages, getServiceHealth } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { MC_MESSAGES, SVC_HEALTH, SVC_META } from '../data/msgcenter-data.js'
 
@@ -167,8 +167,12 @@ export async function initDashboard() {
   // ---- Change Intelligence widget (appended) ----
   const ciSection = document.createElement('div')
   ciSection.style.marginTop = '16px'
-  ciSection.innerHTML = buildChangeIntelWidget()
+  ciSection.innerHTML = '<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading Change Intelligence...</p></div>'
   el.querySelector('#page-dashboard-inner') || el.appendChild(ciSection)
+
+  // Fetch real Message Center data
+  const ciHtml = await buildChangeIntelWidget()
+  ciSection.innerHTML = ciHtml
 
   el.querySelector('#dash-to-msgcenter-health')?.addEventListener('click', async () => await go('msgcenter'))
   el.querySelector('#dash-to-requests')?.addEventListener('click', async () => await go('requests'))
@@ -457,17 +461,57 @@ function renderDemoDashboard(el) {
   el.querySelector('#dash-to-msgcenter')?.addEventListener('click', async () => await go('msgcenter'))
 }
 
-function buildChangeIntelWidget() {
-  const critical = MC_MESSAGES.filter(m => m.actionRequired && m.severity === 'high').slice(0, 3)
-  const activeIssues = SVC_HEALTH.filter(h => h.status !== 'resolved')
-  const actionCount = MC_MESSAGES.filter(m => m.actionRequired).length
+async function buildChangeIntelWidget() {
+  // Fetch real Message Center and Service Health data
+  let messages = []
+  let health = []
+  let useRealData = true
+
+  if (!isDemoAccount()) {
+    try {
+      const mcResult = await getMessageCenterMessages()
+      const shResult = await getServiceHealth()
+
+      if (mcResult.success && mcResult.data) {
+        messages = mcResult.data
+        console.log(`✓ Loaded ${messages.length} real Message Center messages`)
+      }
+
+      if (shResult.success && shResult.data) {
+        health = shResult.data
+        console.log(`✓ Loaded ${health.length} real Service Health issues`)
+      }
+
+      // If we got real data, use it; otherwise fall back to demo data
+      if (messages.length === 0 && health.length === 0) {
+        console.log('ℹ️ No real Message Center or Health data available, using demo data')
+        useRealData = false
+      }
+    } catch (error) {
+      console.warn('⚠️ Error fetching real data, falling back to demo:', error.message)
+      useRealData = false
+    }
+  } else {
+    useRealData = false
+  }
+
+  // Use real data if available, otherwise fall back to demo data
+  const mcMessages = useRealData && messages.length > 0 ? messages : MC_MESSAGES
+  const svcHealth = useRealData && health.length > 0 ? health : SVC_HEALTH
+
+  const critical = mcMessages.filter(m => m.actionRequired && m.severity === 'high').slice(0, 3)
+  const activeIssues = svcHealth.filter(h => h.status !== 'resolved')
+  const actionCount = mcMessages.filter(m => m.actionRequired).length
 
   const svcHealthDots = Object.entries(SVC_META).map(([svc, meta]) => {
-    const issue = SVC_HEALTH.find(h => h.service === svc && h.status !== 'resolved')
+    const issue = svcHealth.find(h => h.service === svc && h.status !== 'resolved')
     const cls = issue ? (issue.severity === 'high' ? 'fail' : 'warn') : 'pass'
     return `<span title="${svc}: ${issue ? issue.status : 'Operational'}" style="display:inline-flex;align-items:center;gap:3px;font-size:9px;color:var(--color-text-tertiary);margin-right:6px">
       <span class="status-dot ${cls}" style="width:6px;height:6px"></span>${svc.replace('Microsoft ','').replace(' Online','').replace(' ID','').substring(0,7)}</span>`
   }).join('')
+
+  // Add badge for real vs demo data
+  const dataBadge = useRealData ? '<span style="font-size:9px;color:var(--clr-success-text);margin-left:8px">● Real data</span>' : '<span style="font-size:9px;color:var(--color-text-tertiary);margin-left:8px">● Demo data</span>'
 
   return `
     <div class="dash-cards-row">
@@ -475,7 +519,10 @@ function buildChangeIntelWidget() {
       <div class="card" style="grid-column: span 2;">
         <div class="card-header">
           <span class="card-title"><i class="ti ti-antenna" style="color:var(--clr-danger-text)"></i> Change Intelligence</span>
-          <span class="badge danger dot">${actionCount} action required</span>
+          <span style="display:flex;gap:8px;align-items:center">
+            <span class="badge danger dot">${actionCount} action required</span>
+            ${dataBadge}
+          </span>
         </div>
         <div style="margin-bottom:10px">
           ${critical.map(m => {

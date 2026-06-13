@@ -3605,6 +3605,90 @@ app.get('/api/security/incidents', (req, res) => {
   }
 })
 
+// ============================================================
+// Message Center & Service Health
+// ============================================================
+app.get('/api/msgcenter/messages', async (req, res) => {
+  try {
+    console.log('📡 Fetching Message Center messages from Graph API...')
+    let messages = []
+
+    if (graphClient) {
+      try {
+        const result = await graphClient.api('/admin/serviceAnnouncement/messages').get()
+        messages = (result.value || []).map(msg => ({
+          id: msg.id,
+          title: msg.title || 'Message Center Update',
+          service: msg.services?.[0] || 'Microsoft 365',
+          category: msg.category || 'other',
+          severity: msg.severity?.toLowerCase() || 'normal',
+          actionRequired: msg.isMessageCenterMessage && msg.actionRequiredByDateTime ? true : false,
+          actionByDate: msg.actionRequiredByDateTime || null,
+          publishedDate: msg.createdDateTime,
+          body: msg.body || msg.details?.[0]?.contentType || '',
+          status: 'new'
+        }))
+
+        console.log(`✓ Message Center: ${messages.length} messages found`)
+      } catch (mcError) {
+        console.warn(`⚠️ Message Center fetch failed: ${mcError.message}`)
+        messages = []
+      }
+    } else {
+      console.warn('⚠️ Graph Client not initialized - cannot fetch Message Center')
+    }
+
+    res.json({
+      success: true,
+      data: messages,
+      count: messages.length,
+      source: messages.length > 0 ? 'Graph API' : 'none'
+    })
+  } catch (error) {
+    console.error('Error fetching Message Center:', error.message)
+    res.status(500).json({ success: false, error: error.message, data: [] })
+  }
+})
+
+app.get('/api/msgcenter/health', async (req, res) => {
+  try {
+    console.log('📡 Fetching Service Health from Graph API...')
+    let health = []
+
+    if (graphClient) {
+      try {
+        const result = await graphClient.api('/admin/serviceAnnouncement/issues').get()
+        health = (result.value || []).map(issue => ({
+          id: issue.id,
+          service: issue.service || 'Microsoft 365',
+          status: issue.status?.toLowerCase() || 'resolved',
+          severity: issue.severity?.toLowerCase() || 'low',
+          title: issue.title || 'Service Issue',
+          lastUpdated: issue.lastModifiedDateTime || new Date().toISOString(),
+          affectedWorkload: issue.service || 'Multiple services'
+        }))
+
+        console.log(`✓ Service Health: ${health.length} issues found`)
+      } catch (shError) {
+        console.warn(`⚠️ Service Health fetch failed: ${shError.message}`)
+        health = []
+      }
+    } else {
+      console.warn('⚠️ Graph Client not initialized - cannot fetch Service Health')
+    }
+
+    res.json({
+      success: true,
+      data: health,
+      count: health.length,
+      source: health.length > 0 ? 'Graph API' : 'none'
+    })
+  } catch (error) {
+    console.error('Error fetching Service Health:', error.message)
+    res.status(500).json({ success: false, error: error.message, data: [] })
+  }
+})
+
 /**
  * GET /api/privileged-accounts
  * Get real privileged accounts and admin users from Azure AD
