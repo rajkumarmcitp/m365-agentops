@@ -127,8 +127,30 @@ async function renderProductionMsgCenter(el) {
         <span><strong style="color:var(--color-text-secondary)">Production Mode</strong> · Real Message Center data from Graph API</span>
       </div>
 
-      <div style="padding:20px;text-align:center;color:var(--color-text-secondary)">
-        <p>Displaying ${messages.length} real Message Center announcements for your Nas-Tech tenant</p>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Service Announcements</span>
+          <span class="badge info">${messages.length} messages</span>
+        </div>
+        <div style="max-height:600px;overflow-y:auto">
+          ${messages.slice(0, 50).map(msg => `
+            <div style="padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+                <div style="flex:1">
+                  <div style="font-weight:600;font-size:12px;color:var(--color-text-primary)">${msg.title || msg.id}</div>
+                  <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">
+                    Service: <strong>${msg.service || 'Unknown'}</strong> · ID: <code style="font-family:monospace;font-size:9px">${msg.id}</code>
+                  </div>
+                </div>
+                <span class="badge ${msg.severity === 'high' ? 'danger' : msg.severity === 'medium' ? 'warning' : 'success'}" style="flex-shrink:0;font-size:9px">
+                  ${msg.severity || 'normal'}
+                </span>
+              </div>
+              ${msg.actionByDate ? `<div style="font-size:10px;color:var(--clr-danger-text);margin-top:6px">⚠️ Action required by: <strong>${msg.actionByDate}</strong></div>` : ''}
+              ${msg.body ? `<div style="font-size:10px;color:var(--color-text-secondary);margin-top:6px;line-height:1.4">${msg.body.substring(0, 150)}...</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
       </div>
     `
 
