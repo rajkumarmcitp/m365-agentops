@@ -171,8 +171,15 @@ export async function initDashboard() {
   el.querySelector('#page-dashboard-inner') || el.appendChild(ciSection)
 
   // Fetch real Message Center data
-  const ciHtml = await buildChangeIntelWidget()
-  ciSection.innerHTML = ciHtml
+  try {
+    console.log('📡 Fetching Change Intelligence data...')
+    const ciHtml = await buildChangeIntelWidget()
+    ciSection.innerHTML = ciHtml
+    console.log('✓ Change Intelligence loaded')
+  } catch (ciError) {
+    console.error('❌ Error loading Change Intelligence:', ciError.message)
+    ciSection.innerHTML = `<div style="padding:20px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)"><div style="color:var(--color-text-secondary);font-size:11px">Failed to load Change Intelligence: ${ciError.message}</div></div>`
+  }
 
   el.querySelector('#dash-to-msgcenter-health')?.addEventListener('click', async () => await go('msgcenter'))
   el.querySelector('#dash-to-requests')?.addEventListener('click', async () => await go('requests'))
@@ -467,19 +474,30 @@ async function buildChangeIntelWidget() {
   let health = []
   let useRealData = true
 
+  console.log('📡 buildChangeIntelWidget: Checking account type...')
   if (!isDemoAccount()) {
+    console.log('📡 buildChangeIntelWidget: Production account - fetching real data...')
     try {
+      console.log('📡 Calling getMessageCenterMessages()...')
       const mcResult = await getMessageCenterMessages()
+      console.log('📡 MC Result:', mcResult)
+
+      console.log('📡 Calling getServiceHealth()...')
       const shResult = await getServiceHealth()
+      console.log('📡 SH Result:', shResult)
 
       if (mcResult.success && mcResult.data) {
         messages = mcResult.data
         console.log(`✓ Loaded ${messages.length} real Message Center messages`)
+      } else {
+        console.log('⚠️ MC Result not successful:', mcResult)
       }
 
       if (shResult.success && shResult.data) {
         health = shResult.data
         console.log(`✓ Loaded ${health.length} real Service Health issues`)
+      } else {
+        console.log('⚠️ SH Result not successful:', shResult)
       }
 
       // If we got real data, use it; otherwise fall back to demo data
@@ -488,10 +506,12 @@ async function buildChangeIntelWidget() {
         useRealData = false
       }
     } catch (error) {
-      console.warn('⚠️ Error fetching real data, falling back to demo:', error.message)
+      console.error('❌ Error fetching real data:', error)
+      console.warn('⚠️ Falling back to demo data')
       useRealData = false
     }
   } else {
+    console.log('📡 buildChangeIntelWidget: Demo account - using demo data')
     useRealData = false
   }
 
