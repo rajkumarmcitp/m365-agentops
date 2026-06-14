@@ -153,10 +153,59 @@ async function renderProductionMsgCenter(el) {
         <span><strong style="color:var(--color-text-secondary)">Production Mode</strong> · Real Message Center data from Graph API</span>
       </div>
 
+      <!-- Filters Panel -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <span class="card-title">Filters</span>
+          <button class="btn btn-sm" id="mc-clear-filters" style="display:none"><i class="ti ti-x"></i> Clear all</button>
+        </div>
+        <div style="padding:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+          <div>
+            <label style="font-size:10px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px">Service</label>
+            <select id="mc-filter-service" style="width:100%;padding:6px;font-size:11px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-sm)">
+              <option value="">All Services</option>
+              <option value="Teams">Microsoft Teams</option>
+              <option value="Exchange">Exchange Online</option>
+              <option value="SharePoint">SharePoint Online</option>
+              <option value="OneDrive">OneDrive</option>
+              <option value="Entra">Microsoft Entra ID</option>
+              <option value="Defender">Microsoft Defender</option>
+              <option value="Intune">Microsoft Intune</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px">Message State</label>
+            <select id="mc-filter-state" style="width:100%;padding:6px;font-size:11px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-sm)">
+              <option value="">All States</option>
+              <option value="high">High Severity</option>
+              <option value="medium">Medium Severity</option>
+              <option value="normal">Normal Severity</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px">Relevance</label>
+            <select id="mc-filter-relevance" style="width:100%;padding:6px;font-size:11px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-sm)">
+              <option value="">All</option>
+              <option value="action">Action Required</option>
+              <option value="info">Informational</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px">Timing of Change</label>
+            <select id="mc-filter-timing" style="width:100%;padding:6px;font-size:11px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-sm)">
+              <option value="">All</option>
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 90 days</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-header">
-          <span class="card-title">Action Required Announcements (Last 7 Days)</span>
-          <span class="badge danger">${recentMessages.length} announcements</span>
+          <span class="card-title">Change Announcements</span>
+          <span class="badge info" id="mc-announcement-count">${recentMessages.length} of 668</span>
         </div>
         <div style="max-height:600px;overflow-y:auto">
           ${recentMessages.slice(0, 50).map(msg => `
@@ -208,8 +257,73 @@ async function renderProductionMsgCenter(el) {
       if (actionRequiredCount === 0) {
         showToast('No action-required announcements to create tasks for', 'info')
       } else {
-        showToast(`Creating ${actionRequiredCount} tasks from recent announcements...`, 'success')
+        showToast(`Creating ${actionRequiredCount} tasks from announcements...`, 'success')
       }
+    })
+
+    // Filter event listeners
+    const applyFilters = () => {
+      const service = el.querySelector('#mc-filter-service')?.value || ''
+      const state = el.querySelector('#mc-filter-state')?.value || ''
+      const relevance = el.querySelector('#mc-filter-relevance')?.value || ''
+      const timing = el.querySelector('#mc-filter-timing')?.value || ''
+
+      let filtered = mcResult.data
+
+      if (service) filtered = filtered.filter(m => m.service?.includes(service))
+      if (state) filtered = filtered.filter(m => m.severity === state)
+      if (relevance === 'action') filtered = filtered.filter(m => m.actionRequired)
+      if (relevance === 'info') filtered = filtered.filter(m => !m.actionRequired)
+
+      if (timing) {
+        const timingDays = parseInt(timing)
+        const cutoffDate = new Date(now.getTime() - timingDays * 24 * 60 * 60 * 1000)
+        filtered = filtered.filter(m => new Date(m.publishedDate) >= cutoffDate)
+      }
+
+      filtered.sort((a, b) => new Date(b.publishedDate) - new Date(a.publishedDate))
+
+      const container = el.querySelector('[style*="max-height:600px"]')
+      if (container) {
+        container.innerHTML = filtered.slice(0, 50).map(msg => `
+          <div style="padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:12px;color:var(--color-text-primary)">${msg.title || msg.id}</div>
+                <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">
+                  Service: <strong>${msg.service || 'Unknown'}</strong> · ID: <code style="font-family:monospace;font-size:9px">${msg.id}</code>
+                </div>
+              </div>
+              <span class="badge ${msg.severity === 'high' ? 'danger' : msg.severity === 'medium' ? 'warning' : 'success'}" style="flex-shrink:0;font-size:9px">
+                ${msg.severity || 'normal'}
+              </span>
+            </div>
+            ${msg.actionByDate ? `<div style="font-size:10px;color:var(--clr-danger-text);margin-top:6px">⚠️ Action required by: <strong>${msg.actionByDate}</strong></div>` : ''}
+            ${msg.body && typeof msg.body === 'string' ? `<div style="font-size:10px;color:var(--color-text-secondary);margin-top:6px;line-height:1.4">${msg.body.substring(0, 150)}...</div>` : ''}
+          </div>
+        `).join('')
+      }
+
+      const countEl = el.querySelector('#mc-announcement-count')
+      if (countEl) countEl.textContent = `${filtered.length} of 668`
+
+      const clearBtn = el.querySelector('#mc-clear-filters')
+      if (clearBtn) {
+        clearBtn.style.display = (service || state || relevance || timing) ? 'block' : 'none'
+      }
+    }
+
+    el.querySelector('#mc-filter-service')?.addEventListener('change', applyFilters)
+    el.querySelector('#mc-filter-state')?.addEventListener('change', applyFilters)
+    el.querySelector('#mc-filter-relevance')?.addEventListener('change', applyFilters)
+    el.querySelector('#mc-filter-timing')?.addEventListener('change', applyFilters)
+
+    el.querySelector('#mc-clear-filters')?.addEventListener('click', () => {
+      el.querySelector('#mc-filter-service').value = ''
+      el.querySelector('#mc-filter-state').value = ''
+      el.querySelector('#mc-filter-relevance').value = ''
+      el.querySelector('#mc-filter-timing').value = ''
+      applyFilters()
     })
   } catch (error) {
     console.error('Error loading Message Center:', error)
