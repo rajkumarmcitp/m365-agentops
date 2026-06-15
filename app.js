@@ -48,7 +48,7 @@ export const state = {
     agentDailyDigest: true,
     // Change Intelligence - SharePoint Configuration
     // Default based on environment: use env var or fallback to 'root'
-    sharepointSiteUrl: import.meta.env.VITE_SHAREPOINT_SITE || 'root',
+    sharepointSiteUrl: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SHAREPOINT_SITE) || 'root',
     sharepointSiteId: null,
     announcementSyncDays: 7, // 7, 14, or 30 days
     // Task Resolution Approvers
@@ -85,7 +85,7 @@ const DEFAULTS = {
   showGraphHealth: true,
   showZeroTrustScore: true,
   showM365ConfigScore: true,
-  sharepointSiteUrl: import.meta.env.VITE_SHAREPOINT_SITE || 'root',
+  sharepointSiteUrl: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SHAREPOINT_SITE) || 'root',
   sharepointSiteId: null,
   announcementSyncDays: 7,
   portalEnabled: true,
@@ -116,7 +116,7 @@ function loadState() {
   } catch (e) { /* ignore */ }
 
   // Environment variables take precedence over localStorage
-  if (import.meta.env.VITE_SHAREPOINT_SITE) {
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SHAREPOINT_SITE) {
     state.settings.sharepointSiteUrl = import.meta.env.VITE_SHAREPOINT_SITE
     console.log(`📍 SharePoint Site set from environment: ${import.meta.env.VITE_SHAREPOINT_SITE}`)
   }
