@@ -4271,6 +4271,18 @@ app.patch('/api/msgcenter/tasks/:taskId', async (req, res) => {
   }
 })
 
+// Manual sync trigger (for testing/admin)
+app.post('/api/msgcenter/sync-now', async (req, res) => {
+  try {
+    console.log('🚀 Manual sync triggered by request')
+    await syncAnnouncementsToSharePoint()
+    res.json({ success: true, message: 'Sync completed' })
+  } catch (error) {
+    console.error('Manual sync failed:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 // Get notifications
 app.get('/api/msgcenter/notifications', async (req, res) => {
   try {
