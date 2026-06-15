@@ -3992,6 +3992,7 @@ app.get('/api/msgcenter/announcements', async (req, res) => {
         const result = {
           id: item.id,
           announcementId: announcementId,
+          messageId: announcementId,
           title: itemTitle,
           service: service,
           severity: severity,
@@ -4000,6 +4001,8 @@ app.get('/api/msgcenter/announcements', async (req, res) => {
           reviewStatus: item.fields.ReviewStatus || 'Not Reviewed',
           taskStatus: item.fields.TaskStatus || 'Not Started',
           actionDeadline: item.fields.ActionDeadline || fullAnnouncement?.actionRequiredByDateTime,
+          assignedTo: item.fields.AssignedTo || '',
+          dueDate: item.fields.ActionDeadline || '',
           notes: item.fields.Notes || '',
           createdDate: item.createdDateTime
         }
@@ -4084,6 +4087,15 @@ app.post('/api/msgcenter/create-task-from-announcement', async (req, res) => {
     const sites = await graphClient.api(`/sites/${configuredSiteUrl}`).get()
     const siteId = sites.id
 
+    // Fetch the announcement to get its real Message Center ID
+    const announcementsList = await graphClient.api(`/sites/${siteId}/lists`).get().then(r => r.value?.find(l => l.displayName === 'Change Announcements'))
+    if (announcementsList) {
+      const announcementItem = await graphClient.api(`/sites/${siteId}/lists/${announcementsList.id}/items/${announcementItemId}`).get()
+      const realAnnouncementId = announcementItem.fields.MessageId || announcementItemId
+      // Override to use real Message Center ID instead of SharePoint item ID
+      announcementData.realMessageId = realAnnouncementId
+    }
+
     // Get or create Tasks list
     let taskListId
     try {
@@ -4139,11 +4151,12 @@ app.post('/api/msgcenter/create-task-from-announcement', async (req, res) => {
     }
 
     // Create task item
+    const realMessageId = announcementData.realMessageId || announcementItemId
     console.log(`📋 Creating task with data:`, {
       title: announcementData.title,
       assignedTo: announcementData.assignedTo,
       actionDeadline: announcementData.actionDeadline,
-      announcementId: announcementItemId
+      announcementId: realMessageId
     })
 
     const taskItem = await graphClient.api(`/sites/${siteId}/lists/${taskListId}/items`).post({
@@ -4154,7 +4167,7 @@ app.post('/api/msgcenter/create-task-from-announcement', async (req, res) => {
         TaskStatus: 'Not Started',
         ApprovalStatus: 'Pending',
         DueDate: announcementData.actionDeadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        AnnouncementId: announcementItemId,
+        AnnouncementId: realMessageId,
         AssignedTo: announcementData.assignedTo || '',
         Progress: '0%'
       }
@@ -4162,7 +4175,7 @@ app.post('/api/msgcenter/create-task-from-announcement', async (req, res) => {
 
     console.log(`✓ Task created with ID ${taskItem.id}, fields:`, taskItem.fields)
 
-    console.log(`✓ Created task ${taskItem.id} for announcement ${announcementItemId} with assignee: ${announcementData.assignedTo}`)
+    console.log(`✓ Created task ${taskItem.id} for announcement ${realMessageId} with assignee: ${announcementData.assignedTo}`)
     res.json({
       success: true,
       message: 'Task created successfully',
