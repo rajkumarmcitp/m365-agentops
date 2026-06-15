@@ -5578,6 +5578,11 @@ function startMessageCenterSyncJob() {
     console.error('Initial sync failed:', err.message)
   })
 
+  // Auto-create SharePoint lists on startup
+  ensureSharePointListsExist().catch(err => {
+    console.warn('⚠️ Could not auto-create SharePoint lists:', err.message)
+  })
+
   // Then sync every hour
   syncJobInterval = setInterval(() => {
     syncAnnouncementsToSharePoint().catch(err => {
@@ -5586,6 +5591,109 @@ function startMessageCenterSyncJob() {
   }, 60 * 60 * 1000) // 60 minutes
 
   console.log('🔄 Message Center sync job started (hourly)')
+}
+
+// Ensure SharePoint lists exist and create them if needed
+async function ensureSharePointListsExist() {
+  if (!graphClient) {
+    console.log('⏭️  Skipping SharePoint setup: Graph Client not initialized')
+    return
+  }
+
+  try {
+    const siteUrl = 'root'
+    console.log('🔧 Checking/creating SharePoint lists...')
+
+    const sites = await graphClient.api(`/sites/${siteUrl}`).get()
+    const siteId = sites.id
+    const lists = await graphClient.api(`/sites/${siteId}/lists`).get()
+
+    // Check and create "Change Announcements" list
+    const announcementsList = lists.value?.find(l => l.displayName === 'Change Announcements')
+    if (!announcementsList) {
+      console.log('📋 Creating "Change Announcements" list...')
+      const newList = await graphClient.api(`/sites/${siteId}/lists`).post({
+        displayName: 'Change Announcements',
+        list: { template: 'genericList' }
+      })
+      const listId = newList.id
+
+      // Add columns
+      const fields = [
+        { displayName: 'ReviewStatus', fieldType: 'choice', choices: ['Not Reviewed', 'Reviewed'] },
+        { displayName: 'TaskStatus', fieldType: 'choice', choices: ['Not Started', 'In Progress', 'Review', 'Resolved'] },
+        { displayName: 'ActionDeadline', fieldType: 'dateTime' },
+        { displayName: 'Notes', fieldType: 'text' },
+        { displayName: 'AssignedTo', fieldType: 'text' }
+      ]
+
+      for (const field of fields) {
+        try {
+          let payload = { displayName: field.displayName, name: field.displayName }
+          if (field.fieldType === 'choice') {
+            payload.choice = { choices: field.choices }
+          } else if (field.fieldType === 'dateTime') {
+            payload.dateTime = {}
+          } else if (field.fieldType === 'text') {
+            payload.text = {}
+          }
+          await graphClient.api(`/sites/${siteId}/lists/${listId}/columns`).post(payload)
+        } catch (e) {
+          console.warn(`⚠️ Could not create field ${field.displayName}: ${e.message}`)
+        }
+      }
+      console.log('✓ "Change Announcements" list created with fields')
+    } else {
+      console.log('✓ "Change Announcements" list already exists')
+    }
+
+    // Check and create "Change Announcement Tasks" list
+    const tasksList = lists.value?.find(l => l.displayName === 'Change Announcement Tasks')
+    if (!tasksList) {
+      console.log('📋 Creating "Change Announcement Tasks" list...')
+      const newList = await graphClient.api(`/sites/${siteId}/lists`).post({
+        displayName: 'Change Announcement Tasks',
+        list: { template: 'genericList' }
+      })
+      const listId = newList.id
+
+      // Add columns for tasks
+      const fields = [
+        { displayName: 'Service', fieldType: 'text' },
+        { displayName: 'Severity', fieldType: 'choice', choices: ['normal', 'high', 'critical'] },
+        { displayName: 'TaskStatus', fieldType: 'choice', choices: ['Not Started', 'In Progress', 'Review', 'Resolved'] },
+        { displayName: 'ApprovalStatus', fieldType: 'choice', choices: ['Pending', 'Approved', 'Rejected'] },
+        { displayName: 'DueDate', fieldType: 'dateTime' },
+        { displayName: 'AnnouncementId', fieldType: 'text' },
+        { displayName: 'AssignedTo', fieldType: 'text' },
+        { displayName: 'Progress', fieldType: 'text' },
+        { displayName: 'Notes', fieldType: 'text' }
+      ]
+
+      for (const field of fields) {
+        try {
+          let payload = { displayName: field.displayName, name: field.displayName }
+          if (field.fieldType === 'choice') {
+            payload.choice = { choices: field.choices }
+          } else if (field.fieldType === 'dateTime') {
+            payload.dateTime = {}
+          } else if (field.fieldType === 'text') {
+            payload.text = {}
+          }
+          await graphClient.api(`/sites/${siteId}/lists/${listId}/columns`).post(payload)
+        } catch (e) {
+          console.warn(`⚠️ Could not create field ${field.displayName}: ${e.message}`)
+        }
+      }
+      console.log('✓ "Change Announcement Tasks" list created with fields')
+    } else {
+      console.log('✓ "Change Announcement Tasks" list already exists')
+    }
+
+    console.log('✅ SharePoint setup complete')
+  } catch (error) {
+    console.error('❌ Error setting up SharePoint lists:', error.message)
+  }
 }
 
 // ============================================================
