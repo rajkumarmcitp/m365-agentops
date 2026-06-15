@@ -1396,28 +1396,30 @@ function renderDemoExecutive(el, score, incidents) {
         <span class="card-title">Overall Security Score</span>
         <span class="badge warning">${score.overallScore}%</span>
       </div>
-      <div class="score-grid">
-        <div style="text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-          <div style="font-size:20px;font-weight:700;color:var(--clr-info-text)">${score.categoryScores.identity}%</div>
-          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Identity</div>
-        </div>
-        <div style="text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-          <div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">${score.categoryScores.data}%</div>
-          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Data</div>
-        </div>
-        <div style="text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-          <div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">${score.categoryScores.devices}%</div>
-          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Devices</div>
-        </div>
-        <div style="text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-          <div style="font-size:20px;font-weight:700;color:var(--clr-info-text)">${score.categoryScores.apps}%</div>
-          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Apps</div>
-        </div>
-        <div style="text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-          <div style="font-size:20px;font-weight:700;color:var(--clr-success-text)">${score.categoryScores.infrastructure}%</div>
-          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Infrastructure</div>
-        </div>
-      </div>
+      <table style="width:100%">
+        <tbody>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px 12px;font-size:11px;font-weight:600">Identity</td>
+            <td style="padding:10px 12px;text-align:right;font-size:14px;font-weight:700;color:var(--clr-info-text)">${score.categoryScores.identity}%</td>
+          </tr>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px 12px;font-size:11px;font-weight:600">Data</td>
+            <td style="padding:10px 12px;text-align:right;font-size:14px;font-weight:700;color:var(--clr-warning-text)">${score.categoryScores.data}%</td>
+          </tr>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px 12px;font-size:11px;font-weight:600">Devices</td>
+            <td style="padding:10px 12px;text-align:right;font-size:14px;font-weight:700;color:var(--clr-warning-text)">${score.categoryScores.devices}%</td>
+          </tr>
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+            <td style="padding:10px 12px;font-size:11px;font-weight:600">Apps</td>
+            <td style="padding:10px 12px;text-align:right;font-size:14px;font-weight:700;color:var(--clr-info-text)">${score.categoryScores.apps}%</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 12px;font-size:11px;font-weight:600">Infrastructure</td>
+            <td style="padding:10px 12px;text-align:right;font-size:14px;font-weight:700;color:var(--clr-success-text)">${score.categoryScores.infrastructure}%</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="card mb-3">
