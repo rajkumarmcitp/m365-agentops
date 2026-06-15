@@ -1396,7 +1396,7 @@ function renderDemoExecutive(el, score, incidents) {
         <span class="card-title">Overall Security Score</span>
         <span class="badge warning">${score.overallScore}%</span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:10px">
+      <div class="score-grid">
         <div style="text-align:center;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
           <div style="font-size:20px;font-weight:700;color:var(--clr-info-text)">${score.categoryScores.identity}%</div>
           <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Identity</div>

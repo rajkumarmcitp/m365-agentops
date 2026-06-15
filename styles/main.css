@@ -711,6 +711,13 @@ tr:hover td { background: var(--color-background-secondary); }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
+/* Score grid - responsive */
+.score-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  gap: 10px;
+}
+
 /* ============================================================
    Toast Notifications
    ============================================================ */
@@ -1208,6 +1215,65 @@ tr:hover td { background: var(--color-background-secondary); }
     display: none;
   }
 
+  /* Tabs - horizontal scroll on mobile */
+  .tabs {
+    overflow-x: auto;
+    margin-bottom: 12px;
+    gap: 0;
+  }
+
+  .tab-btn {
+    padding: 5px 10px;
+    font-size: 9px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .tab-btn i {
+    display: none;
+  }
+
+  /* Score grid - 2 columns on mobile */
+  .score-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .score-grid > div {
+    padding: 8px !important;
+  }
+
+  .score-grid > div > div:first-child {
+    font-size: 16px !important;
+  }
+
+  .score-grid > div > div:last-child {
+    font-size: 9px !important;
+    margin-top: 2px !important;
+  }
+
+  /* Tables - responsive with horizontal scroll */
+  table {
+    font-size: 9px !important;
+  }
+
+  table th,
+  table td {
+    padding: 6px !important;
+  }
+
+  /* Card responsive */
+  .card-header {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    flex: 1;
+    min-width: 100%;
+  }
+
   /* Single column everything */
   .grid-2,
   .grid-3,
@@ -1278,6 +1344,24 @@ tr:hover td { background: var(--color-background-secondary); }
     width: 100%;
     font-size: 12px !important;
     padding: 8px !important;
+  }
+
+  /* Tabs responsive - scrollable on tablet */
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .tab-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 10px;
+  }
+
+  /* Score grid - 3 columns on tablet */
+  .score-grid {
+    grid-template-columns: 1fr 1fr 1fr;
   }
 
   /* Filter bar vertical stack */
