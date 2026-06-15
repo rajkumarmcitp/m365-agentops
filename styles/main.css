@@ -1255,30 +1255,88 @@ tr:hover td { background: var(--color-background-secondary); }
   /* Tables - responsive with horizontal scroll */
   table {
     font-size: 9px !important;
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  table thead,
+  table tbody,
+  table tr {
+    display: table;
+    width: 100%;
   }
 
   table th,
   table td {
     padding: 6px !important;
+    text-align: left;
+  }
+
+  table thead {
+    position: sticky;
+    top: 0;
+    background: var(--color-background-secondary);
   }
 
   /* Card responsive */
+  .card {
+    margin-bottom: 12px;
+  }
+
   .card-header {
     flex-wrap: wrap;
     gap: 4px;
+    flex-direction: column;
   }
 
   .card-title {
-    font-size: 12px;
-    flex: 1;
-    min-width: 100%;
+    font-size: 11px;
+    width: 100%;
+  }
+
+  .card-header .badge {
+    width: auto;
+    align-self: flex-start;
+  }
+
+  /* Form inputs responsive */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 14px !important;
+    width: 100%;
+  }
+
+  /* Button responsive */
+  .btn {
+    font-size: 11px;
+    padding: 6px 10px;
+    width: 100%;
+  }
+
+  .btn-sm {
+    padding: 4px 8px;
   }
 
   /* Single column everything */
   .grid-2,
   .grid-3,
-  .grid-auto {
+  .grid-auto,
+  .grid-4 {
     grid-template-columns: 1fr !important;
+  }
+
+  /* Flex layouts stack on mobile */
+  .flex-row {
+    flex-direction: column;
+  }
+
+  /* KPI cards stack */
+  .kpi-row {
+    flex-direction: column;
   }
 
   .kpi-row {
