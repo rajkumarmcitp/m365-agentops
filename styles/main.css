@@ -1258,11 +1258,11 @@ tr:hover td { background: var(--color-background-secondary); }
     display: none;
   }
 
-  /* Tabs - horizontal scroll on mobile */
+  /* Tabs - wrap to multiple lines on mobile */
   .tabs {
-    overflow-x: auto;
+    flex-wrap: wrap;
     margin-bottom: 12px;
-    gap: 8px;
+    gap: 12px;
   }
 
   .tab-btn {
@@ -1443,10 +1443,9 @@ tr:hover td { background: var(--color-background-secondary); }
     padding: 8px !important;
   }
 
-  /* Tabs responsive - scrollable on tablet */
+  /* Tabs responsive - wrap on tablet if needed */
   .tabs {
-    overflow-x: auto;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 12px;
   }
 
@@ -1454,7 +1453,7 @@ tr:hover td { background: var(--color-background-secondary); }
     white-space: nowrap;
     flex-shrink: 0;
     padding: 6px 0;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   /* Filter buttons responsive */
