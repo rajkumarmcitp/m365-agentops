@@ -5537,14 +5537,28 @@ async function syncAnnouncementsToSharePoint() {
 
     // Add new announcements
     let addedCount = 0
+    let skippedCount = 0
     const syncDate = new Date()
     syncDate.setDate(syncDate.getDate() - 7) // Last 7 days
+    console.log(`📅 Syncing announcements from last 7 days (since ${syncDate.toLocaleDateString()})`)
+    console.log(`📊 Fetched ${announcements.length} total announcements from Graph API`)
+    console.log(`📋 Already in SharePoint: ${existingIds.size} announcements`)
 
     for (const msg of announcements) {
-      if (existingIds.has(msg.id)) continue // Skip if already exists
+      if (existingIds.has(msg.id)) {
+        skippedCount++
+        continue // Skip if already exists
+      }
 
+      // Use lastModifiedDateTime or createdDateTime, whichever is more recent
       const lastModified = msg.lastModifiedDateTime ? new Date(msg.lastModifiedDateTime) : null
-      if (!lastModified || lastModified < syncDate) continue
+      const created = msg.createdDateTime ? new Date(msg.createdDateTime) : null
+      const announcementDate = lastModified || created
+
+      if (!announcementDate || announcementDate < syncDate) {
+        skippedCount++
+        continue
+      }
 
       const bodyPreview = msg.body?.content?.substring(0, 100) || ''
       const titleData = `${msg.id}|${msg.title || 'Update'}|${msg.services?.[0] || 'Microsoft 365'}|${msg.severity?.toLowerCase() || 'normal'}|${bodyPreview}`
@@ -5575,7 +5589,7 @@ async function syncAnnouncementsToSharePoint() {
     }
 
     lastSyncTime = new Date().toISOString()
-    console.log(`✓ Sync complete: Added ${addedCount} new announcements at ${lastSyncTime}`)
+    console.log(`✓ Sync complete: Added ${addedCount} new | Skipped ${skippedCount} (already exist or outside date range) | Total processed at ${lastSyncTime}`)
   } catch (error) {
     console.error(`❌ Sync failed: ${error.message}`)
   }
