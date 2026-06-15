@@ -5568,7 +5568,14 @@ async function syncAnnouncementsToSharePoint() {
       const created = msg.createdDateTime ? new Date(msg.createdDateTime) : null
       const announcementDate = lastModified || created
 
-      if (!announcementDate || announcementDate < syncDate) {
+      if (!announcementDate) {
+        console.log(`⏭️  Skipping ${msg.id}: No date found (no lastModified or created date)`)
+        skippedCount++
+        continue
+      }
+
+      if (announcementDate < syncDate) {
+        console.log(`⏭️  Skipping ${msg.id} (${msg.title?.substring(0, 50)}...): Date ${announcementDate.toLocaleDateString()} is before ${syncDate.toLocaleDateString()}`)
         skippedCount++
         continue
       }
