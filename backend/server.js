@@ -5587,7 +5587,6 @@ async function syncAnnouncementsToSharePoint() {
         await graphClient.api(`/sites/${siteId}/lists/${listId}/items`).post({
           fields: {
             Title: titleData,
-            MessageId: msg.id,
             ReviewStatus: 'Not Reviewed',
             TaskStatus: 'Not Started'
           }
