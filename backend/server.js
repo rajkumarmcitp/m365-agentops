@@ -5521,9 +5521,9 @@ async function syncAnnouncementsToSharePoint() {
     console.log(`📅 Starting scheduled announcement sync...`)
     const siteUrl = process.env.VITE_SHAREPOINT_SITE || 'nasstech.sharepoint.com:/sites/ChangeIntelligence:' || 'root'
 
-    // Fetch announcements from Graph API
-    const result = await graphClient.api('/admin/serviceAnnouncement/messages').get()
-    const announcements = (result.value || []).slice(0, 100) // Limit to 100
+    // Fetch announcements from Graph API (sorted by most recent first)
+    const result = await graphClient.api('/admin/serviceAnnouncement/messages?$orderby=lastModifiedDateTime desc&$top=200').get()
+    const announcements = (result.value || []).slice(0, 200) // Get up to 200, sorted by newest first
 
     // Get SharePoint site
     const sites = await graphClient.api(`/sites/${siteUrl}`).get()
