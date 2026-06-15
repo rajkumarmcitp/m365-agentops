@@ -685,23 +685,27 @@ tr:hover td { background: var(--color-background-secondary); }
   display: flex;
   border-bottom: 0.5px solid var(--color-border-secondary);
   margin-bottom: 16px;
-  gap: 2px;
+  gap: 16px;
 }
 
 .tab-btn {
-  padding: 7px 14px;
-  font-size: 11px;
-  font-weight: 500;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 400;
   color: var(--color-text-secondary);
   background: transparent;
   border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -0.5px;
+  border-bottom: 3px solid transparent;
   cursor: pointer;
-  transition: color var(--transition), border-color var(--transition);
+  transition: all var(--transition);
   white-space: nowrap;
 }
-.tab-btn:hover { color: var(--color-text-primary); }
+
+.tab-btn:hover {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-border-secondary);
+}
+
 .tab-btn.active {
   color: var(--clr-primary);
   border-bottom-color: var(--clr-primary);
@@ -1258,18 +1262,14 @@ tr:hover td { background: var(--color-background-secondary); }
   .tabs {
     overflow-x: auto;
     margin-bottom: 12px;
-    gap: 0;
+    gap: 8px;
   }
 
   .tab-btn {
-    padding: 5px 10px;
-    font-size: 9px;
+    padding: 5px 0;
+    font-size: 10px;
     white-space: nowrap;
     flex-shrink: 0;
-  }
-
-  .tab-btn i {
-    display: none;
   }
 
   /* Score grid - 2 columns on mobile */
@@ -1447,12 +1447,13 @@ tr:hover td { background: var(--color-background-secondary); }
   .tabs {
     overflow-x: auto;
     flex-wrap: nowrap;
+    gap: 12px;
   }
 
   .tab-btn {
     white-space: nowrap;
     flex-shrink: 0;
-    padding: 6px 12px;
+    padding: 6px 0;
     font-size: 10px;
   }
 
