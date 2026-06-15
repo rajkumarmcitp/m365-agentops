@@ -12,11 +12,6 @@ export default defineConfig({
     outDir: 'dist',
     chunkSizeWarningLimit: 600
   },
-  define: {
-    'process.env.VITE_API_URL': JSON.stringify(
-      process.env.VITE_API_URL || 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net/api'
-    )
-  },
   plugins: [
     {
       name: 'copy-staticwebapp-config',
