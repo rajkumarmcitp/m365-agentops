@@ -3975,7 +3975,7 @@ app.get('/api/msgcenter/announcements', async (req, res) => {
         const title = item.fields.Title || ''
         const parts = title.split('|')
 
-        const announcementId = parts[0] || 'unknown'
+        const announcementId = item.fields.MessageId || parts[0] || 'unknown'
         const itemTitle = parts[1] || 'Untitled'
         const service = parts[2] || 'Unknown'
         const severity = parts[3] || 'normal'
@@ -5540,6 +5540,7 @@ async function syncAnnouncementsToSharePoint() {
         await graphClient.api(`/sites/${siteId}/lists/${listId}/items`).post({
           fields: {
             Title: titleData,
+            MessageId: msg.id,
             ReviewStatus: 'Not Reviewed',
             TaskStatus: 'Not Started'
           }
@@ -5620,6 +5621,7 @@ async function ensureSharePointListsExist() {
 
       // Add columns
       const fields = [
+        { displayName: 'MessageId', fieldType: 'text' },
         { displayName: 'ReviewStatus', fieldType: 'choice', choices: ['Not Reviewed', 'Reviewed'] },
         { displayName: 'TaskStatus', fieldType: 'choice', choices: ['Not Started', 'In Progress', 'Review', 'Resolved'] },
         { displayName: 'ActionDeadline', fieldType: 'dateTime' },
