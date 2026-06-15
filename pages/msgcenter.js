@@ -156,9 +156,14 @@ function updateAdminActionsTable(announcements, tasks = []) {
 
   // Render tasks with tracking info
   tbody.innerHTML = displayItems.map(item => {
-    // Get the announcement ID - for tasks it's in announcementId, for announcements it's in announcementId
-    const msgId = item.announcementId || 'N/A'
+    // Get the announcement ID - prefer announcementId (Message Center ID), fallback to SharePoint item ID
+    const msgId = item.announcementId && item.announcementId !== item.id ? item.announcementId : (item.id || 'N/A')
     const isPendingApproval = item.taskStatus === 'Resolved' && item.approvalStatus === 'Pending' && isApprover
+
+    // Format assigned to / due date
+    const assignedToText = item.assignedTo ? `Assigned: ${item.assignedTo}` : ''
+    const dueText = item.dueDate ? `Due: ${item.dueDate.split('T')[0]}` : ''
+    const assignedToDueDisplay = [assignedToText, dueText].filter(Boolean).join(' | ') || '—'
 
     return `
       <tr style="border-bottom:0.5px solid #ddd">
@@ -176,7 +181,7 @@ function updateAdminActionsTable(announcements, tasks = []) {
           </div>
           <span style="font-size:9px;color:#666;margin-left:4px">${item.progress || '0%'}</span>
         </td>
-        <td style="padding:10px;color:#666;font-size:10px">${item.assignedTo || item.dueDate?.split('T')[0] || '—'}</td>
+        <td style="padding:10px;color:#666;font-size:10px">${assignedToDueDisplay}</td>
         <td style="padding:10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#666;font-size:9px">${item.notes || '—'}</td>
         <td style="padding:10px;text-align:center">
           ${isPendingApproval ? `
