@@ -5493,7 +5493,7 @@ async function syncAnnouncementsToSharePoint() {
 
   try {
     console.log(`📅 Starting scheduled announcement sync...`)
-    const siteUrl = 'root' // Use root site for syncing
+    const siteUrl = process.env.VITE_SHAREPOINT_SITE || 'nasstech.sharepoint.com:/sites/ChangeIntelligence:' || 'root'
 
     // Fetch announcements from Graph API
     const result = await graphClient.api('/admin/serviceAnnouncement/messages').get()
@@ -5601,8 +5601,8 @@ async function ensureSharePointListsExist() {
   }
 
   try {
-    const siteUrl = 'root'
-    console.log('🔧 Checking/creating SharePoint lists...')
+    const siteUrl = process.env.VITE_SHAREPOINT_SITE || 'nasstech.sharepoint.com:/sites/ChangeIntelligence:' || 'root'
+    console.log(`🔧 Checking/creating SharePoint lists on: ${siteUrl}...`)
 
     const sites = await graphClient.api(`/sites/${siteUrl}`).get()
     const siteId = sites.id
