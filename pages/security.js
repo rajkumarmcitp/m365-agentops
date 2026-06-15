@@ -1354,19 +1354,34 @@ function renderDemoSecurityPage(el) {
       <span><strong style="color:var(--color-text-secondary)">Demo Mode</strong> · Showing sample security data</span>
     </div>
 
-    <div class="tabs" id="sec-tabs" style="margin-bottom:16px">
-      <button class="tab-btn active" data-section="executive">
-        <i class="ti ti-layout-dashboard"></i> Executive
-      </button>
-      <button class="tab-btn" data-section="securescore">
-        <i class="ti ti-shield-check"></i> Secure Score
-      </button>
-      <button class="tab-btn" data-section="identity">
-        <i class="ti ti-user-check"></i> Identity
-      </button>
-      <button class="tab-btn" data-section="incidents">
-        <i class="ti ti-alert-triangle"></i> Incidents
-      </button>
+    <div class="kpi-row" style="margin-bottom:20px">
+      <div class="kpi-tile">
+        <div class="kpi-value info">78</div>
+        <div class="kpi-label">Overall Score</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value success">82</div>
+        <div class="kpi-label">Identity</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value warning">75</div>
+        <div class="kpi-label">Data</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value warning">72</div>
+        <div class="kpi-label">Devices</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value danger">5</div>
+        <div class="kpi-label">Incidents</div>
+      </div>
+    </div>
+
+    <div class="tabs" id="sec-tabs">
+      <button class="tab-btn active" data-section="executive">Executive</button>
+      <button class="tab-btn" data-section="securescore">Secure Score</button>
+      <button class="tab-btn" data-section="identity">Identity</button>
+      <button class="tab-btn" data-section="incidents">Incidents</button>
     </div>
 
     <div id="security-content"></div>
