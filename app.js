@@ -47,7 +47,8 @@ export const state = {
     agentAlertOnFail: true,
     agentDailyDigest: true,
     // Change Intelligence - SharePoint Configuration
-    sharepointSiteUrl: 'root',
+    // Default based on environment: use env var or fallback to 'root'
+    sharepointSiteUrl: import.meta.env.VITE_SHAREPOINT_SITE || 'root',
     sharepointSiteId: null,
     announcementSyncDays: 7, // 7, 14, or 30 days
     // Task Resolution Approvers
