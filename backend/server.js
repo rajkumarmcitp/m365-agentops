@@ -4292,7 +4292,8 @@ app.get('/api/msgcenter/notifications', async (req, res) => {
           const today = new Date()
           const threeDaysFromNow = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000)
 
-          (items?.value || []).forEach(item => {
+          const taskItems = Array.isArray(items?.value) ? items.value : (items?.value ? [items.value] : [])
+          taskItems.forEach(item => {
             const dueDate = item.fields.DueDate ? new Date(item.fields.DueDate) : null
             const taskStatus = item.fields.TaskStatus
             const approvalStatus = item.fields.ApprovalStatus
@@ -4320,7 +4321,7 @@ app.get('/api/msgcenter/notifications', async (req, res) => {
           })
         }
       } catch (error) {
-        console.warn('Could not check deadlines/approvals:', error.message)
+        console.warn('Could not check deadlines/approvals:', error.message, error.stack)
       }
     }
 
@@ -5596,23 +5597,28 @@ async function syncAnnouncementsToSharePoint() {
 }
 
 function startMessageCenterSyncJob() {
+  console.log('🔧 Starting Message Center sync job...')
   if (!graphClient) {
     console.log('⏭️  Message Center sync disabled: Graph Client not initialized')
     return
   }
 
-  // Sync immediately on startup
-  syncAnnouncementsToSharePoint().catch(err => {
-    console.error('Initial sync failed:', err.message)
-  })
+  console.log('✅ Graph Client ready, initializing sync...')
 
   // Auto-create SharePoint lists on startup
   ensureSharePointListsExist().catch(err => {
     console.warn('⚠️ Could not auto-create SharePoint lists:', err.message)
   })
 
+  // Sync immediately on startup
+  console.log('📅 Starting initial sync of announcements...')
+  syncAnnouncementsToSharePoint().catch(err => {
+    console.error('Initial sync failed:', err.message)
+  })
+
   // Then sync every hour
   syncJobInterval = setInterval(() => {
+    console.log('⏰ Running scheduled sync (hourly)...')
     syncAnnouncementsToSharePoint().catch(err => {
       console.error('Scheduled sync failed:', err.message)
     })
