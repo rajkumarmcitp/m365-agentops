@@ -224,229 +224,32 @@ function renderDemoApplicationsPage(el) {
       <span><strong style="color:var(--color-text-secondary)">Demo Mode</strong> · Showing sample application data</span>
     </div>
 
-    <div class="kpi-row" style="margin-bottom:20px">
-      <div class="kpi-tile">
-        <div class="kpi-value info">${demoApps.length}</div>
-        <div class="kpi-label">Total Apps</div>
-      </div>
-      <div class="kpi-tile">
-        <div class="kpi-value danger">${demoApps.filter(a => a.riskLevel === 'high').length}</div>
-        <div class="kpi-label">High Risk</div>
-      </div>
-      <div class="kpi-tile">
-        <div class="kpi-value warning">${demoSecrets.filter(s => s.daysLeft <= 14).length}</div>
-        <div class="kpi-label">Expiring Soon</div>
-      </div>
-      <div class="kpi-tile">
-        <div class="kpi-value info">${demoPermissions.length}</div>
-        <div class="kpi-label">Permissions</div>
-      </div>
-    </div>
-
-    <div class="filter-buttons" id="app-filters" style="margin-bottom:16px;display:flex;gap:6px;flex-wrap:wrap">
-      <button class="filter-btn active" data-view="overview"><i class="ti ti-layout-dashboard"></i> Overview</button>
-      <button class="filter-btn" data-view="apps"><i class="ti ti-grid-dots"></i> Applications</button>
-      <button class="filter-btn" data-view="security"><i class="ti ti-lock"></i> Security</button>
-      <button class="filter-btn" data-view="audit"><i class="ti ti-history"></i> Audit</button>
+    <div class="tabs" id="app-tabs" style="margin-bottom:16px">
+      ${APP_TABS.slice(0, 4).map((tab, i) => `
+        <button class="tab-btn ${i === 0 ? 'active' : ''}" data-tab="${tab.id}">
+          <i class="ti ${tab.icon}"></i> ${tab.label}
+        </button>
+      `).join('')}
     </div>
 
     <div id="app-content"></div>
   `
 
   const contentEl = el.querySelector('#app-content')
-  renderDemoOverview(contentEl, demoSummary, demoApps, demoSecrets, demoPermissions)
+  renderDemoExecutive(contentEl, demoSummary, demoApps)
 
-  el.querySelectorAll('#app-filters .filter-btn').forEach(btn => {
+  el.querySelectorAll('#app-tabs .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      el.querySelectorAll('#app-filters .filter-btn').forEach(b => b.classList.remove('active'))
+      el.querySelectorAll('#app-tabs .tab-btn').forEach(b => b.classList.remove('active'))
       btn.classList.add('active')
-      const view = btn.dataset.view
+      const tabId = btn.dataset.tab
 
-      if (view === 'overview') renderDemoOverview(contentEl, demoSummary, demoApps, demoSecrets, demoPermissions)
-      else if (view === 'apps') renderDemoAppsSection(contentEl, demoApps)
-      else if (view === 'security') renderDemoSecuritySection(contentEl, demoSecrets, demoPermissions)
-      else if (view === 'audit') renderDemoAuditSection(contentEl, demoConsents)
+      if (tabId === 'executive') renderDemoExecutive(contentEl, demoSummary, demoApps)
+      else if (tabId === 'appregistrations') renderDemoAppRegistrations(contentEl, demoApps)
+      else if (tabId === 'enterprise') renderDemoEnterpriseApps(contentEl, demoApps)
+      else if (tabId === 'secrets') renderDemoSecrets(contentEl, demoSecrets)
     })
   })
-}
-
-function renderDemoOverview(el, summary, apps, secrets, permissions) {
-  const riskApps = apps.filter(a => a.riskLevel === 'high')
-  const expiringSecrets = secrets.filter(s => s.daysLeft <= 14)
-
-  el.innerHTML = `
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">App Registrations Overview</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-            <div style="font-size:20px;font-weight:700;color:var(--clr-info-text)">${apps.length}</div>
-            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Total</div>
-          </div>
-          <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-            <div style="font-size:20px;font-weight:700;color:var(--clr-danger-text)">${riskApps.length}</div>
-            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">High Risk</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Security Status</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-            <div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">${expiringSecrets.length}</div>
-            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Expiring Soon</div>
-          </div>
-          <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-            <div style="font-size:20px;font-weight:700;color:var(--clr-info-text)">${permissions.length}</div>
-            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Permissions</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Top Priority Actions</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        ${expiringSecrets.slice(0, 3).map(s => `
-          <div style="padding:10px;border-left:3px solid var(--clr-warning-bg);background:var(--clr-warning-bg);border-radius:4px;display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-weight:600;font-size:11px;color:var(--color-text-primary)">${s.appName}</div>
-              <div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px">${s.type} expires in ${s.daysLeft} days</div>
-            </div>
-            <span class="badge warning">${s.status}</span>
-          </div>
-        `).join('')}
-        ${riskApps.slice(0, 2).map(a => `
-          <div style="padding:10px;border-left:3px solid var(--clr-danger-bg);background:var(--clr-danger-bg);border-radius:4px;display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-weight:600;font-size:11px;color:var(--color-text-primary)">${a.name}</div>
-              <div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px">Risk assessment: High</div>
-            </div>
-            <span class="badge danger">Review</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `
-}
-
-function renderDemoAppsSection(el, apps) {
-  el.innerHTML = `
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Applications (${apps.length})</span>
-      </div>
-      <table style="width:100%">
-        <thead style="background:var(--color-background-secondary)">
-          <tr>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Application</th>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Owner</th>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Risk</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${apps.map(app => `
-            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-              <td style="padding:10px;font-size:11px;color:var(--color-text-secondary)">${app.name}</td>
-              <td style="padding:10px;font-size:10px;color:var(--color-text-tertiary)">${app.owner}</td>
-              <td style="padding:10px"><span class="badge ${app.riskLevel === 'high' ? 'danger' : app.riskLevel === 'medium' ? 'warning' : 'success'}">${app.riskLevel}</span></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `
-}
-
-function renderDemoSecuritySection(el, secrets, permissions) {
-  el.innerHTML = `
-    <div class="card mb-3">
-      <div class="card-header">
-        <span class="card-title">Secrets & Certificates (${secrets.length})</span>
-      </div>
-      <table style="width:100%">
-        <thead style="background:var(--color-background-secondary)">
-          <tr>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Application</th>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Type</th>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Expires</th>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${secrets.map(s => `
-            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-              <td style="padding:10px;font-size:11px;color:var(--color-text-secondary)">${s.appName}</td>
-              <td style="padding:10px;font-size:10px;color:var(--color-text-tertiary)">${s.type}</td>
-              <td style="padding:10px;font-size:10px;color:var(--color-text-tertiary)">${s.expiresAt}</td>
-              <td style="padding:10px"><span class="badge ${s.status === 'Critical' ? 'danger' : 'warning'}">${s.status}</span></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Permissions (${permissions.length})</span>
-      </div>
-      <table style="width:100%">
-        <thead style="background:var(--color-background-secondary)">
-          <tr>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Application</th>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Permissions</th>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${permissions.slice(0, 5).map(p => `
-            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-              <td style="padding:10px;font-size:11px;color:var(--color-text-secondary)">${p.appName}</td>
-              <td style="padding:10px;font-size:9px;color:var(--color-text-tertiary)">${p.permissions.substring(0, 50)}...</td>
-              <td style="padding:10px"><span class="badge success">${p.status}</span></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `
-}
-
-function renderDemoAuditSection(el, consents) {
-  el.innerHTML = `
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Audit Consents (${consents.length})</span>
-      </div>
-      <table style="width:100%">
-        <thead style="background:var(--color-background-secondary)">
-          <tr>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Application</th>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Granted By</th>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Date</th>
-            <th style="padding:10px;text-align:left;font-size:10px;font-weight:600">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${consents.slice(0, 8).map(c => `
-            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-              <td style="padding:10px;font-size:11px;color:var(--color-text-secondary)">${c.appName}</td>
-              <td style="padding:10px;font-size:10px;color:var(--color-text-tertiary)">${c.grantedBy}</td>
-              <td style="padding:10px;font-size:10px;color:var(--color-text-tertiary)">${c.grantedAt}</td>
-              <td style="padding:10px"><span class="badge success">${c.status}</span></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `
 }
 
 function renderDemoExecutive(el, summary, apps) {
