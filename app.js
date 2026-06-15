@@ -22,6 +22,8 @@ import { initSso } from './pages/sso.js'
 import { initAudit } from './pages/audit.js'
 import { initSettings } from './pages/settings.js'
 import { initMsgCenter } from './pages/msgcenter.js'
+import { initTasks } from './pages/tasks.js'
+import { initNotifications, stopNotifications } from './components/notifications.js'
 import { initApplications } from './pages/applications.js'
 import { initIntune } from './pages/intune.js'
 import { initMyAccount } from './pages/myaccount.js'
@@ -44,6 +46,13 @@ export const state = {
     agentAlertEmail: 'security@contoso.com',
     agentAlertOnFail: true,
     agentDailyDigest: true,
+    // Change Intelligence - SharePoint Configuration
+    sharepointSiteUrl: 'root',
+    sharepointSiteId: null,
+    announcementSyncDays: 7, // 7, 14, or 30 days
+    // Task Resolution Approvers
+    primaryApprover: null,
+    secondaryApprover: null,
     // Portal services — master switch + per-service toggles
     portalEnabled: true,
     portal_exchange: true,
@@ -75,6 +84,9 @@ const DEFAULTS = {
   showGraphHealth: true,
   showZeroTrustScore: true,
   showM365ConfigScore: true,
+  sharepointSiteUrl: 'root',
+  sharepointSiteId: null,
+  announcementSyncDays: 7,
   portalEnabled: true,
   portal_exchange: true, portal_teams: true, portal_sharepoint: true, portal_onedrive: true,
   portal_ext_sharing: true, portal_user_access: true, portal_licenses: true, portal_copilot: true,
@@ -132,6 +144,7 @@ export function isRole(...roles) {
 const PAGE_INIT = {
   dashboard: initDashboard,
   msgcenter: initMsgCenter,
+  tasks: initTasks,
   applications: initApplications,
   intune: initIntune,
   requests: initRequests,
@@ -319,6 +332,7 @@ async function doLogin(userId) {
   window.userEmail = user.email
   console.log(`✅ Demo login: ${user.name} (${user.email})`)
   renderShell()
+  initNotifications()
   const defaultPage = user.navAccess[0]
   await go(defaultPage)
   showToast(`Welcome back, ${user.name}!`, 'success')
@@ -352,9 +366,9 @@ async function doLoginWithEntraID(account) {
 
   // Determine nav access based on role
   const roleNavAccess = {
-    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'audit', 'settings'],
-    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings'],
-    manager: ['requests', 'msgcenter', 'portal', 'myreqs', 'myaccount', 'chat'],
+    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'audit', 'settings'],
+    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings'],
+    manager: ['requests', 'msgcenter', 'tasks', 'portal', 'myreqs', 'myaccount', 'chat'],
     user: ['portal', 'myreqs', 'myaccount', 'chat']
   }
 
@@ -382,6 +396,9 @@ async function doLoginWithEntraID(account) {
 
   state.currentUser = entraUser
   renderShell()
+
+  // Initialize notifications
+  initNotifications()
 
   // Fetch tenant domain from Graph API
   fetchTenantDomain()
@@ -415,7 +432,7 @@ function renderShell() {
 function renderAllPages() {
   const pages = [
     'dashboard','requests','security','tenantguard','user-investigation','zerotrust','privaccts','m365config',
-    'msgcenter','applications','intune','licenses','agents','approvals','portal','myreqs','myaccount','chat',
+    'msgcenter','tasks','applications','intune','licenses','agents','approvals','portal','myreqs','myaccount','chat',
     'graphapi','sso','audit','settings'
   ]
   return pages.map(p => `<div class="page" id="page-${p}"></div>`).join('')

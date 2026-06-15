@@ -45,7 +45,7 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Credentials', 'true')
   }
 
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS, PUT, DELETE')
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   res.header('Access-Control-Max-Age', '3600')
 
@@ -3616,18 +3616,23 @@ app.get('/api/msgcenter/messages', async (req, res) => {
     if (graphClient) {
       try {
         const result = await graphClient.api('/admin/serviceAnnouncement/messages').get()
-        messages = (result.value || []).map(msg => ({
-          id: msg.id,
-          title: msg.title || 'Message Center Update',
-          service: msg.services?.[0] || 'Microsoft 365',
-          category: msg.category || 'other',
-          severity: msg.severity?.toLowerCase() || 'normal',
-          actionRequired: msg.isMessageCenterMessage && msg.actionRequiredByDateTime ? true : false,
-          actionByDate: msg.actionRequiredByDateTime || null,
-          publishedDate: msg.createdDateTime,
-          body: msg.body || msg.details?.[0]?.contentType || '',
-          status: 'new'
-        }))
+        messages = (result.value || []).map(msg => {
+          const bodyContent = msg.body?.content || msg.details?.[0]?.content || 'No summary available'
+          const hasActionDeadline = msg.actionRequiredByDateTime || bodyContent.includes('Action required') || bodyContent.includes('action required')
+
+          return {
+            id: msg.id,
+            title: msg.title || 'Message Center Update',
+            service: msg.services?.[0] || 'Microsoft 365',
+            category: msg.category || 'other',
+            severity: msg.severity?.toLowerCase() || 'normal',
+            actionRequired: hasActionDeadline ? true : false,
+            actionByDate: msg.actionRequiredByDateTime || null,
+            publishedDate: msg.createdDateTime,
+            body: bodyContent,
+            status: 'new'
+          }
+        })
 
         console.log(`✓ Message Center: ${messages.length} messages found`)
       } catch (mcError) {
@@ -3688,6 +3693,680 @@ app.get('/api/msgcenter/health', async (req, res) => {
     res.status(500).json({ success: false, error: error.message, data: [] })
   }
 })
+
+// Validate SharePoint site connection
+app.post('/api/msgcenter/validate-sharepoint', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const { siteUrl } = req.body
+    if (!siteUrl) {
+      return res.status(400).json({ success: false, error: 'Site URL is required' })
+    }
+
+    let siteId
+    let siteName
+    try {
+      const site = await graphClient.api(`/sites/${siteUrl}`).get()
+      siteId = site.id
+      siteName = site.displayName || site.name || siteUrl
+      console.log(`✓ SharePoint site validated: ${siteName}`)
+    } catch (error) {
+      return res.status(400).json({ success: false, error: `Could not access site: ${error.message}` })
+    }
+
+    res.json({
+      success: true,
+      siteId: siteId,
+      siteName: siteName,
+      message: `Connected to ${siteName}`
+    })
+  } catch (error) {
+    console.error('Error validating SharePoint:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Sync announcements from Graph API to SharePoint
+app.post('/api/msgcenter/sync-announcements', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    // Get SharePoint site URL from request (defaults to 'root')
+    const siteUrl = req.body?.siteUrl || req.headers['x-sharepoint-site'] || 'root'
+
+    // Get SharePoint site ID
+    let siteId
+    try {
+      const sites = await graphClient.api(`/sites/${siteUrl}`).get()
+      siteId = sites.id
+      console.log(`Using SharePoint site: ${siteUrl}`)
+    } catch (error) {
+      return res.status(500).json({ success: false, error: `Could not access SharePoint site (${siteUrl}): ${error.message}` })
+    }
+
+    // Get or create Announcements list
+    let listId
+    try {
+      const lists = await graphClient.api(`/sites/${siteId}/lists`).get()
+      const existingList = lists.value?.find(l => l.displayName === 'Change Announcements')
+
+      if (existingList) {
+        // Delete existing list to recreate with proper schema
+        try {
+          await graphClient.api(`/sites/${siteId}/lists/${existingList.id}`).delete()
+          console.log('✓ Deleted existing "Change Announcements" list')
+        } catch (deleteError) {
+          console.warn('Could not delete existing list:', deleteError.message)
+        }
+      }
+
+      // Create new list with generic template
+      const newList = await graphClient.api(`/sites/${siteId}/lists`).post({
+        displayName: 'Change Announcements',
+        list: { template: 'genericList' }
+      })
+      listId = newList.id
+      console.log('✓ Created new "Change Announcements" list')
+
+      // Create custom fields for the list
+      try {
+        const fieldsToCreate = [
+          { displayName: 'ReviewStatus', name: 'ReviewStatus', fieldType: 'choice', choices: ['Not Reviewed', 'Reviewed'] },
+          { displayName: 'TaskStatus', name: 'TaskStatus', fieldType: 'choice', choices: ['Not Started', 'In Progress', 'Resolved'] },
+          { displayName: 'ActionDeadline', name: 'ActionDeadline', fieldType: 'dateTime' },
+          { displayName: 'Notes', name: 'Notes', fieldType: 'text' }
+        ]
+
+        for (const fieldDef of fieldsToCreate) {
+          try {
+            let fieldPayload = {
+              displayName: fieldDef.displayName,
+              name: fieldDef.name
+            }
+
+            if (fieldDef.fieldType === 'choice') {
+              fieldPayload.choice = { choices: fieldDef.choices }
+            } else if (fieldDef.fieldType === 'dateTime') {
+              fieldPayload.dateTime = {}
+            } else if (fieldDef.fieldType === 'text') {
+              fieldPayload.text = {}
+            }
+
+            await graphClient.api(`/sites/${siteId}/lists/${listId}/columns`).post(fieldPayload)
+            console.log(`✓ Created field: ${fieldDef.displayName}`)
+          } catch (fieldError) {
+            console.warn(`⚠️ Could not create field ${fieldDef.displayName}: ${fieldError.message}`)
+          }
+        }
+      } catch (fieldsError) {
+        console.warn(`⚠️ Error creating fields: ${fieldsError.message}`)
+      }
+    } catch (error) {
+      console.error('Error accessing/creating list:', error.message)
+      return res.status(500).json({ success: false, error: `Could not access SharePoint list: ${error.message}` })
+    }
+
+    // Fetch announcements from Graph API - filter by date range
+    let announcements = []
+    try {
+      // Get sync days from request (default 7)
+      const syncDays = req.body?.syncDays || 7
+
+      const syncDate = new Date()
+      syncDate.setDate(syncDate.getDate() - syncDays)
+
+      const result = await graphClient.api('/admin/serviceAnnouncement/messages').get()
+
+      // Debug: log first announcement and its available fields
+      if (result.value && result.value.length > 0) {
+        const first = result.value[0]
+        console.log(`📅 First announcement:`)
+        console.log(`   Title: ${first.title}`)
+        console.log(`   Available date fields:`)
+        console.log(`   - createdDateTime: ${first.createdDateTime || 'undefined'}`)
+        console.log(`   - modifiedDateTime: ${first.modifiedDateTime || 'undefined'}`)
+        console.log(`   - publishedDateTime: ${first.publishedDateTime || 'undefined'}`)
+        console.log(`   - lastModifiedDateTime: ${first.lastModifiedDateTime || 'undefined'}`)
+        console.log(`   All fields: ${Object.keys(first).join(', ')}`)
+        console.log(`   Sync cutoff date: ${syncDate.toISOString()}`)
+      }
+
+      announcements = (result.value || [])
+        .filter(msg => {
+          // Use lastModifiedDateTime field
+          const lastModified = msg.lastModifiedDateTime ? new Date(msg.lastModifiedDateTime) : null
+
+          if (!lastModified) {
+            console.warn(`⚠️ No date found for: ${msg.title}`)
+            return false
+          }
+
+          return lastModified >= syncDate
+        })
+        .map(msg => {
+          const bodyContent = msg.body?.content || msg.details?.[0]?.content || 'No summary available'
+          return {
+            id: msg.id,
+            title: msg.title || 'Message Center Update',
+            service: msg.services?.[0] || 'Microsoft 365',
+            severity: msg.severity?.toLowerCase() || 'normal',
+            body: bodyContent,
+            actionByDate: msg.actionRequiredByDateTime || null
+          }
+        })
+
+      console.log(`📊 Filtered to ${announcements.length} announcements from last ${syncDays} days`)
+    } catch (error) {
+      return res.status(500).json({ success: false, error: 'Could not fetch announcements' })
+    }
+
+    // Get existing announcements to avoid duplicates
+    let existingIds = new Set()
+    try {
+      const existingItems = await graphClient.api(`/sites/${siteId}/lists/${listId}/items`).get()
+      existingItems.value?.forEach(item => {
+        const id = item.fields?.Title?.split('|')[0]
+        if (id) existingIds.add(id)
+      })
+      console.log(`Found ${existingIds.size} existing announcements in SharePoint`)
+    } catch (error) {
+      console.warn('Could not fetch existing items:', error.message)
+    }
+
+    // Sync each announcement to SharePoint (skip duplicates)
+    const results = []
+    for (const announcement of announcements) {
+      try {
+        // Skip if already exists
+        if (existingIds.has(announcement.id)) {
+          results.push({ success: true, title: announcement.title, status: 'already_exists' })
+          continue
+        }
+
+        // Store announcement with all key data in simple pipe-delimited format
+        // Format: id|title|service|severity|body_preview
+        const bodyPreview = announcement.body.substring(0, 100).replace(/\|/g, '').replace(/\n/g, ' ')
+        const itemTitle = `${announcement.id}|${announcement.title}|${announcement.service}|${announcement.severity}|${bodyPreview}`.substring(0, 254)
+
+        await graphClient.api(`/sites/${siteId}/lists/${listId}/items`).post({
+          fields: {
+            Title: itemTitle
+          }
+        })
+
+        results.push({ success: true, title: announcement.title, status: 'synced' })
+        console.log(`✓ Synced announcement: ${announcement.title}`)
+      } catch (error) {
+        results.push({ success: false, title: announcement.title, error: error.message })
+        console.error(`❌ Failed to sync: ${announcement.title}`)
+      }
+    }
+
+    const syncedCount = results.filter(r => r.status === 'synced').length
+    const existingCount = results.filter(r => r.status === 'already_exists').length
+
+    res.json({
+      success: true,
+      message: `Synced ${syncedCount} new announcements`,
+      summary: { total: announcements.length, synced: syncedCount, existing: existingCount },
+      results: results
+    })
+  } catch (error) {
+    console.error('Error syncing announcements:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Get announcements from SharePoint
+app.get('/api/msgcenter/announcements', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const siteUrl = req.query?.siteUrl || req.headers['x-sharepoint-site'] || 'root'
+
+    const sites = await graphClient.api(`/sites/${siteUrl}`).get()
+    const siteId = sites.id
+
+    const lists = await graphClient.api(`/sites/${siteId}/lists`).get()
+    const announcementsList = lists.value?.find(l => l.displayName === 'Change Announcements')
+
+    if (!announcementsList) {
+      return res.json({ success: true, data: [], message: 'No announcements list found' })
+    }
+
+    const listId = announcementsList.id
+    const items = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$expand=fields`).get()
+
+    // Fetch full announcements from Graph API to get complete body text
+    let announcementsMap = new Map()
+    if (graphClient) {
+      try {
+        console.log('📡 Fetching full announcements from Graph API...')
+        const result = await graphClient.api('/admin/serviceAnnouncement/messages').get()
+        const messages = result?.value || []
+        console.log(`✓ Received ${messages.length} announcements from Graph API`)
+
+        messages.forEach(msg => {
+          announcementsMap.set(msg.id, msg)
+        })
+
+        if (announcementsMap.size > 0) {
+          const sample = Array.from(announcementsMap.values())[0]
+          console.log(`📋 Sample announcement fields: ${Object.keys(sample).join(', ')}`)
+          console.log(`📋 Sample bodyPreview: ${sample.bodyPreview?.substring(0, 100) || 'NO PREVIEW'}`)
+        }
+      } catch (fetchError) {
+        console.warn('⚠️ Could not fetch full announcements from Graph API:', fetchError.message)
+      }
+    } else {
+      console.warn('⚠️ Graph Client not initialized when fetching announcements')
+    }
+
+    const announcements = (items.value || []).map((item, idx) => {
+      try {
+        // Parse data from Title field (format: "id|title|service|severity|body_preview")
+        const title = item.fields.Title || ''
+        const parts = title.split('|')
+
+        const announcementId = parts[0] || 'unknown'
+        const itemTitle = parts[1] || 'Untitled'
+        const service = parts[2] || 'Unknown'
+        const severity = parts[3] || 'normal'
+
+        // Get full announcement body from Graph API cache
+        const fullAnnouncement = announcementsMap.get(announcementId)
+        // Try different possible fields for the body content
+        const fullBody = fullAnnouncement?.body?.content
+                      || fullAnnouncement?.bodyPreview
+                      || fullAnnouncement?.body
+                      || parts[4]
+                      || ''
+
+        const result = {
+          id: item.id,
+          announcementId: announcementId,
+          title: itemTitle,
+          service: service,
+          severity: severity,
+          description: fullBody,
+          body: fullBody,
+          reviewStatus: item.fields.ReviewStatus || 'Not Reviewed',
+          taskStatus: item.fields.TaskStatus || 'Not Started',
+          actionDeadline: item.fields.ActionDeadline || fullAnnouncement?.actionRequiredByDateTime,
+          notes: item.fields.Notes || '',
+          createdDate: item.createdDateTime
+        }
+
+        // Log first item to debug
+        if (idx === 0) {
+          console.log(`📋 Sample item from SharePoint:`)
+          console.log(`   Title: ${result.title}`)
+          console.log(`   ReviewStatus: ${result.reviewStatus}`)
+          console.log(`   TaskStatus: ${result.taskStatus}`)
+          console.log(`   ActionDeadline: ${result.actionDeadline}`)
+          console.log(`   Notes: ${result.notes}`)
+        }
+
+        return result
+      } catch (parseError) {
+        console.warn(`Could not parse item ${item.id}: ${parseError.message}`)
+        return null
+      }
+    }).filter(Boolean)
+
+    res.json({ success: true, data: announcements, count: announcements.length })
+  } catch (error) {
+    console.error('Error fetching announcements:', error.message)
+    res.status(500).json({ success: false, error: error.message, data: [] })
+  }
+})
+
+// Update announcement status and notes
+app.patch('/api/msgcenter/announcements/:itemId', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const { itemId } = req.params
+    const { reviewStatus, taskStatus, notes, actionDeadline, assignedTo, siteUrl } = req.body
+
+    const configuredSiteUrl = siteUrl || req.headers['x-sharepoint-site'] || 'root'
+
+    const sites = await graphClient.api(`/sites/${configuredSiteUrl}`).get()
+    const siteId = sites.id
+
+    const lists = await graphClient.api(`/sites/${siteId}/lists`).get()
+    const announcementsList = lists.value?.find(l => l.displayName === 'Change Announcements')
+
+    if (!announcementsList) {
+      return res.status(404).json({ success: false, error: 'Change Announcements list not found' })
+    }
+
+    const listId = announcementsList.id
+
+    const updateFields = {}
+    if (reviewStatus !== undefined) updateFields.ReviewStatus = reviewStatus
+    if (taskStatus !== undefined) updateFields.TaskStatus = taskStatus
+    if (notes !== undefined) updateFields.Notes = notes
+    if (actionDeadline !== undefined) updateFields.ActionDeadline = actionDeadline
+    // Note: AssignedTo is only on the Task list, not the Announcement list
+
+    console.log(`📝 Updating item ${itemId}: ${JSON.stringify(updateFields)}`)
+    await graphClient.api(`/sites/${siteId}/lists/${listId}/items/${itemId}`).patch({ fields: updateFields })
+    console.log(`✓ Item ${itemId} updated successfully`)
+
+    res.json({ success: true, message: 'Announcement updated successfully' })
+  } catch (error) {
+    console.error('Error updating announcement:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Create task from a specific announcement (admin chooses which ones)
+app.post('/api/msgcenter/create-task-from-announcement', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const { announcementItemId, announcementData, siteUrl } = req.body
+
+    const configuredSiteUrl = siteUrl || req.headers['x-sharepoint-site'] || 'root'
+
+    const sites = await graphClient.api(`/sites/${configuredSiteUrl}`).get()
+    const siteId = sites.id
+
+    // Get or create Tasks list
+    let taskListId
+    try {
+      const lists = await graphClient.api(`/sites/${siteId}/lists`).get()
+      const existingTaskList = lists.value?.find(l => l.displayName === 'Change Announcement Tasks')
+
+      if (existingTaskList) {
+        taskListId = existingTaskList.id
+      } else {
+        const newList = await graphClient.api(`/sites/${siteId}/lists`).post({
+          displayName: 'Change Announcement Tasks',
+          list: { template: 'genericList' }
+        })
+        taskListId = newList.id
+        console.log('✓ Created "Change Announcement Tasks" list')
+
+        // Create custom fields for task list
+        try {
+          const fieldsToCreate = [
+            { displayName: 'Service', name: 'Service', fieldType: 'text' },
+            { displayName: 'Severity', name: 'Severity', fieldType: 'choice', choices: ['normal', 'high', 'critical'] },
+            { displayName: 'TaskStatus', name: 'TaskStatus', fieldType: 'choice', choices: ['Not Started', 'In Progress', 'Review', 'Resolved'] },
+            { displayName: 'ApprovalStatus', name: 'ApprovalStatus', fieldType: 'choice', choices: ['Pending', 'Approved', 'Rejected'] },
+            { displayName: 'DueDate', name: 'DueDate', fieldType: 'dateTime' },
+            { displayName: 'AnnouncementId', name: 'AnnouncementId', fieldType: 'text' },
+            { displayName: 'AssignedTo', name: 'AssignedTo', fieldType: 'text' },
+            { displayName: 'Progress', name: 'Progress', fieldType: 'text' }
+          ]
+
+          for (const fieldDef of fieldsToCreate) {
+            try {
+              let fieldPayload = { displayName: fieldDef.displayName, name: fieldDef.name }
+              if (fieldDef.fieldType === 'choice') {
+                fieldPayload.choice = { choices: fieldDef.choices }
+              } else if (fieldDef.fieldType === 'dateTime') {
+                fieldPayload.dateTime = {}
+              } else if (fieldDef.fieldType === 'text') {
+                fieldPayload.text = {}
+              }
+              await graphClient.api(`/sites/${siteId}/lists/${taskListId}/columns`).post(fieldPayload)
+              console.log(`✓ Created field: ${fieldDef.displayName}`)
+            } catch (fieldError) {
+              console.warn(`⚠️ Could not create field ${fieldDef.displayName}: ${fieldError.message}`)
+            }
+          }
+        } catch (fieldsError) {
+          console.warn(`⚠️ Error creating task list fields: ${fieldsError.message}`)
+        }
+      }
+    } catch (error) {
+      console.error('Error accessing/creating tasks list:', error.message)
+      return res.status(500).json({ success: false, error: `Could not access Tasks list: ${error.message}` })
+    }
+
+    // Create task item
+    console.log(`📋 Creating task with data:`, {
+      title: announcementData.title,
+      assignedTo: announcementData.assignedTo,
+      actionDeadline: announcementData.actionDeadline,
+      announcementId: announcementItemId
+    })
+
+    const taskItem = await graphClient.api(`/sites/${siteId}/lists/${taskListId}/items`).post({
+      fields: {
+        Title: announcementData.title,
+        Service: announcementData.service,
+        Severity: announcementData.severity,
+        TaskStatus: 'Not Started',
+        ApprovalStatus: 'Pending',
+        DueDate: announcementData.actionDeadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        AnnouncementId: announcementItemId,
+        AssignedTo: announcementData.assignedTo || '',
+        Progress: '0%'
+      }
+    })
+
+    console.log(`✓ Task created with ID ${taskItem.id}, fields:`, taskItem.fields)
+
+    console.log(`✓ Created task ${taskItem.id} for announcement ${announcementItemId} with assignee: ${announcementData.assignedTo}`)
+    res.json({
+      success: true,
+      message: 'Task created successfully',
+      taskId: taskItem.id
+    })
+  } catch (error) {
+    console.error('Error creating task:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Get all tasks from Change Announcement Tasks list
+app.get('/api/msgcenter/tasks', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const siteUrl = req.query?.siteUrl || req.headers['x-sharepoint-site'] || 'root'
+
+    const sites = await graphClient.api(`/sites/${siteUrl}`).get()
+    const siteId = sites.id
+
+    const lists = await graphClient.api(`/sites/${siteId}/lists`).get()
+    const tasksList = lists.value?.find(l => l.displayName === 'Change Announcement Tasks')
+
+    if (!tasksList) {
+      return res.json({ success: true, data: [], message: 'No tasks list found' })
+    }
+
+    const items = await graphClient.api(`/sites/${siteId}/lists/${tasksList.id}/items?$expand=fields`).get()
+
+    const tasks = (items.value || []).map(item => ({
+      id: item.id,
+      title: item.fields.Title || 'Untitled',
+      service: item.fields.Service || '',
+      severity: item.fields.Severity || 'normal',
+      taskStatus: item.fields.TaskStatus || 'Not Started',
+      approvalStatus: item.fields.ApprovalStatus || 'Pending',
+      dueDate: item.fields.DueDate || '',
+      announcementId: item.fields.AnnouncementId || '',
+      assignedTo: item.fields.AssignedTo || '',
+      progress: item.fields.Progress || '0%',
+      createdDate: item.createdDateTime
+    }))
+
+    res.json({ success: true, data: tasks, count: tasks.length })
+  } catch (error) {
+    console.error('Error fetching tasks:', error.message)
+    res.status(500).json({ success: false, error: error.message, data: [] })
+  }
+})
+
+// Update task status or approval
+app.patch('/api/msgcenter/tasks/:taskId', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const { taskId } = req.params
+    const { taskStatus, approvalStatus, progress, assignedTo, approvedBy, approvedDate, notes, siteUrl } = req.body
+
+    const configuredSiteUrl = siteUrl || req.headers['x-sharepoint-site'] || 'root'
+
+    const sites = await graphClient.api(`/sites/${configuredSiteUrl}`).get()
+    const siteId = sites.id
+
+    const lists = await graphClient.api(`/sites/${siteId}/lists`).get()
+    const tasksList = lists.value?.find(l => l.displayName === 'Change Announcement Tasks')
+
+    if (!tasksList) {
+      return res.status(404).json({ success: false, error: 'Tasks list not found' })
+    }
+
+    const updateFields = {}
+    if (taskStatus !== undefined) updateFields.TaskStatus = taskStatus
+    if (approvalStatus !== undefined) updateFields.ApprovalStatus = approvalStatus
+    if (progress !== undefined) updateFields.Progress = progress
+    if (assignedTo !== undefined) updateFields.AssignedTo = assignedTo
+    if (approvedBy !== undefined) updateFields.ApprovedBy = approvedBy
+    if (approvedDate !== undefined) updateFields.ApprovedDate = approvedDate
+    if (notes !== undefined) updateFields.Notes = notes
+
+    console.log(`📝 Updating task ${taskId}: ${JSON.stringify(updateFields)}`)
+    await graphClient.api(`/sites/${siteId}/lists/${tasksList.id}/items/${taskId}`).patch({ fields: updateFields })
+    console.log(`✓ Task ${taskId} updated successfully`)
+
+    res.json({ success: true, message: 'Task updated successfully' })
+  } catch (error) {
+    console.error('Error updating task:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Get notifications
+app.get('/api/msgcenter/notifications', async (req, res) => {
+  try {
+    // Check for approaching deadlines and pending approvals
+    const approachingDeadlines = []
+    const pendingApprovals = []
+
+    if (graphClient) {
+      try {
+        const siteUrl = req.query?.siteUrl || 'root'
+        const sites = await graphClient.api(`/sites/${siteUrl}`).get()
+        const siteId = sites.id
+
+        const lists = await graphClient.api(`/sites/${siteId}/lists`).get()
+        const tasksList = lists.value?.find(l => l.displayName === 'Change Announcement Tasks')
+
+        if (tasksList) {
+          const items = await graphClient.api(`/sites/${siteId}/lists/${tasksList.id}/items?$expand=fields`).get()
+          const today = new Date()
+          const threeDaysFromNow = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000)
+
+          (items?.value || []).forEach(item => {
+            const dueDate = item.fields.DueDate ? new Date(item.fields.DueDate) : null
+            const taskStatus = item.fields.TaskStatus
+            const approvalStatus = item.fields.ApprovalStatus
+
+            // Check for approaching deadlines
+            if (dueDate && taskStatus !== 'Resolved' && dueDate <= threeDaysFromNow && dueDate >= today) {
+              approachingDeadlines.push({
+                id: item.id,
+                title: item.fields.Title,
+                dueDate: item.fields.DueDate,
+                taskStatus: taskStatus,
+                type: 'deadline'
+              })
+            }
+
+            // Check for pending approvals
+            if (approvalStatus === 'Pending' && taskStatus !== 'Not Started') {
+              pendingApprovals.push({
+                id: item.id,
+                title: item.fields.Title,
+                taskStatus: taskStatus,
+                type: 'approval'
+              })
+            }
+          })
+        }
+      } catch (error) {
+        console.warn('Could not check deadlines/approvals:', error.message)
+      }
+    }
+
+    // Combine notifications - approvals and deadlines are immediate
+    const allNotifications = [...notifications, ...pendingApprovals, ...approachingDeadlines]
+
+    // Keep only recent notifications (last 24 hours) - but always include pending approvals
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const recentNotifications = allNotifications.filter(n => {
+      if (n.type === 'approval') return true // Always show pending approvals
+      if (n.timestamp) return new Date(n.timestamp) > oneDayAgo
+      return true
+    })
+
+    res.json({
+      success: true,
+      data: recentNotifications,
+      count: recentNotifications.length,
+      unreadCount: recentNotifications.filter(n => !n.read).length
+    })
+  } catch (error) {
+    console.error('Error fetching notifications:', error.message)
+    res.status(500).json({ success: false, error: error.message, data: [] })
+  }
+})
+
+// Mark notification as read
+app.post('/api/msgcenter/notifications/:notificationId/read', async (req, res) => {
+  try {
+    const notification = notifications.find(n => n.id === req.params.notificationId)
+    if (notification) {
+      notification.read = true
+    }
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Add notification (internal use)
+function addNotification(type, title, message, data = {}) {
+  const notification = {
+    id: Date.now().toString(),
+    type, // 'new_announcement', 'deadline', 'task_update'
+    title,
+    message,
+    data,
+    timestamp: new Date().toISOString(),
+    read: false
+  }
+  notifications.push(notification)
+
+  // Keep only last 50 notifications
+  if (notifications.length > 50) {
+    notifications.shift()
+  }
+
+  return notification
+}
 
 /**
  * GET /api/privileged-accounts
@@ -4800,6 +5479,116 @@ app.use((req, res) => {
 })
 
 // ============================================================
+// Message Center Sync Job (runs every hour)
+// ============================================================
+let syncJobInterval = null
+let lastSyncTime = null
+let notifications = [] // In-memory notification store
+
+async function syncAnnouncementsToSharePoint() {
+  if (!graphClient) {
+    console.log('⏭️  Skipping sync: Graph Client not initialized')
+    return
+  }
+
+  try {
+    console.log(`📅 Starting scheduled announcement sync...`)
+    const siteUrl = 'root' // Use root site for syncing
+
+    // Fetch announcements from Graph API
+    const result = await graphClient.api('/admin/serviceAnnouncement/messages').get()
+    const announcements = (result.value || []).slice(0, 100) // Limit to 100
+
+    // Get SharePoint site
+    const sites = await graphClient.api(`/sites/${siteUrl}`).get()
+    const siteId = sites.id
+
+    // Get or find the list
+    const lists = await graphClient.api(`/sites/${siteId}/lists`).get()
+    const announcementsList = lists.value?.find(l => l.displayName === 'Change Announcements')
+
+    if (!announcementsList) {
+      console.log('⏭️  Change Announcements list not found - skipping sync')
+      return
+    }
+
+    const listId = announcementsList.id
+
+    // Fetch existing items
+    const items = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$expand=fields`).get()
+    const existingIds = new Set((items.value || []).map(item => {
+      const title = item.fields.Title || ''
+      const parts = title.split('|')
+      return parts[0]
+    }))
+
+    // Add new announcements
+    let addedCount = 0
+    const syncDate = new Date()
+    syncDate.setDate(syncDate.getDate() - 7) // Last 7 days
+
+    for (const msg of announcements) {
+      if (existingIds.has(msg.id)) continue // Skip if already exists
+
+      const lastModified = msg.lastModifiedDateTime ? new Date(msg.lastModifiedDateTime) : null
+      if (!lastModified || lastModified < syncDate) continue
+
+      const bodyPreview = msg.body?.content?.substring(0, 100) || ''
+      const titleData = `${msg.id}|${msg.title || 'Update'}|${msg.services?.[0] || 'Microsoft 365'}|${msg.severity?.toLowerCase() || 'normal'}|${bodyPreview}`
+
+      try {
+        await graphClient.api(`/sites/${siteId}/lists/${listId}/items`).post({
+          fields: {
+            Title: titleData,
+            ReviewStatus: 'Not Reviewed',
+            TaskStatus: 'Not Started'
+          }
+        })
+        addedCount++
+      } catch (itemError) {
+        console.warn(`⚠️  Failed to add announcement ${msg.id}: ${itemError.message}`)
+      }
+    }
+
+    // Add notification if new announcements found
+    if (addedCount > 0) {
+      addNotification(
+        'new_announcement',
+        `${addedCount} New Announcement${addedCount > 1 ? 's' : ''}`,
+        `${addedCount} new Microsoft 365 change announcement${addedCount > 1 ? 's' : ''} available for review`,
+        { count: addedCount }
+      )
+    }
+
+    lastSyncTime = new Date().toISOString()
+    console.log(`✓ Sync complete: Added ${addedCount} new announcements at ${lastSyncTime}`)
+  } catch (error) {
+    console.error(`❌ Sync failed: ${error.message}`)
+  }
+}
+
+function startMessageCenterSyncJob() {
+  if (!graphClient) {
+    console.log('⏭️  Message Center sync disabled: Graph Client not initialized')
+    return
+  }
+
+  // Sync immediately on startup
+  syncAnnouncementsToSharePoint().catch(err => {
+    console.error('Initial sync failed:', err.message)
+  })
+
+  // Then sync every hour
+  syncJobInterval = setInterval(() => {
+    syncAnnouncementsToSharePoint().catch(err => {
+      console.error('Scheduled sync failed:', err.message)
+    })
+  }, 60 * 60 * 1000) // 60 minutes
+
+  console.log('🔄 Message Center sync job started (hourly)')
+}
+
+// ============================================================
 // Start Server
 // ============================================================
 const server = app.listen(PORT, () => {
@@ -4822,4 +5611,7 @@ const server = app.listen(PORT, () => {
   initializeTenantGuard().catch(err => {
     console.error('❌ TenantGuard initialization failed:', err.message)
   })
+
+  // Start Message Center sync job (every hour)
+  startMessageCenterSyncJob()
 })

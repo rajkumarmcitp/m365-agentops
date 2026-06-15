@@ -3,6 +3,7 @@ import { showToast } from '../components/toast.js'
 import { createToggle } from '../components/toggle.js'
 import { SERVICE_GROUPS, EXCHANGE_SUB } from '../data/portal-services.js'
 import { getClaudeStatus, setClaudeApiKey, removeClaudeApiKey } from '../lib/tenantguard-settings-client.js'
+import { api } from '../lib/api-client.js'
 
 export function initSettings() {
   const el = document.getElementById('page-settings')
@@ -101,7 +102,62 @@ function renderSettings(el) {
       <div id="settings-cfg-score-wrap" style="margin-bottom:4px"></div>
     </div>
 
-    <!-- Self-Service Portal Management -->
+    <!-- Change Intelligence Configuration -->
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-antenna"></i> Change Intelligence Configuration</div>
+      <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+        <div style="margin-bottom:14px">
+          <label class="form-label">Announcement Sync Period</label>
+          <select id="settings-sync-days" style="width:100%;padding:8px;font-size:11px;border:0.5px solid #ccc;border-radius:4px">
+            <option value="7">Last 7 days (Default)</option>
+            <option value="14">Last 14 days</option>
+            <option value="30">Last 30 days</option>
+          </select>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px">
+            Pulls announcements created or updated in selected period
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <label class="form-label">SharePoint Site URL</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" class="form-input" id="settings-sharepoint-site" placeholder="e.g., root or /sites/OpsCenter" style="flex:1">
+            <button class="btn" id="settings-sharepoint-test" style="white-space:nowrap"><i class="ti ti-check"></i> Test</button>
+          </div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px">
+            Enter "root" for tenant root site, or "/sites/SiteName" for a specific site
+          </div>
+        </div>
+        <div id="settings-sharepoint-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none">
+          Status will appear here
+        </div>
+
+        <div style="margin-top:16px;border-top:1px solid #ddd;padding-top:14px">
+          <label class="form-label">Task Resolution Approvers</label>
+          <div style="background:#fff3cd;border-left:4px solid #ff9800;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#ff6600">
+            <strong>Governance:</strong> Designate 2 accounts (Primary & Secondary) who must approve before tasks can be marked as Resolved.
+          </div>
+
+          <div style="margin-bottom:12px">
+            <label style="font-size:10px;font-weight:600;color:#555;display:block;margin-bottom:6px">Primary Approver Email</label>
+            <input type="email" id="settings-primary-approver" placeholder="admin@company.com" style="width:100%;padding:8px;font-size:11px;border:0.5px solid #ccc;border-radius:4px" value="${s.primaryApprover || ''}">
+          </div>
+
+          <div style="margin-bottom:12px">
+            <label style="font-size:10px;font-weight:600;color:#555;display:block;margin-bottom:6px">Secondary Approver Email</label>
+            <input type="email" id="settings-secondary-approver" placeholder="manager@company.com" style="width:100%;padding:8px;font-size:11px;border:0.5px solid #ccc;border-radius:4px" value="${s.secondaryApprover || ''}">
+          </div>
+
+          <div style="font-size:9px;color:#666;padding:8px;background:#f5f5f5;border-radius:4px">
+            <strong>Current approvers:</strong><br>
+            Primary: ${s.primaryApprover ? `<span style="color:#0066cc;font-weight:600">${s.primaryApprover}</span>` : '<span style="color:#999">Not set</span>'}<br>
+            Secondary: ${s.secondaryApprover ? `<span style="color:#0066cc;font-weight:600">${s.secondaryApprover}</span>` : '<span style="color:#999">Not set</span>'}
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Self-Service Portal Management -->
     <div class="card mb-3">
       <div class="card-header">
         <span class="card-title"><i class="ti ti-grid-dots"></i> Self-Service Portal Management</span>
@@ -194,6 +250,95 @@ function renderSettings(el) {
     onChange: (v) => { state.settings.showM365ConfigScore = v; saveState() },
   })
   el.querySelector('#settings-cfg-score-wrap').appendChild(cfgScoreToggle)
+
+  // ---- Sync Period Configuration ----
+  const syncDaysSelect = el.querySelector('#settings-sync-days')
+  if (syncDaysSelect) {
+    syncDaysSelect.value = s.announcementSyncDays || 7
+    syncDaysSelect.addEventListener('change', (e) => {
+      state.settings.announcementSyncDays = parseInt(e.target.value)
+      saveState()
+      showToast(`Sync period set to last ${e.target.value} days`, 'success')
+    })
+  }
+
+  // ---- SharePoint Configuration ----
+  const sharepointInput = el.querySelector('#settings-sharepoint-site')
+  const sharepointTestBtn = el.querySelector('#settings-sharepoint-test')
+  const sharepointStatus = el.querySelector('#settings-sharepoint-status')
+
+  sharepointInput.value = s.sharepointSiteUrl || 'root'
+
+  sharepointTestBtn.addEventListener('click', async () => {
+    const siteUrl = sharepointInput.value.trim() || 'root'
+    sharepointTestBtn.disabled = true
+    sharepointTestBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Testing...'
+    sharepointStatus.style.display = 'block'
+    sharepointStatus.textContent = 'Testing connection...'
+
+    try {
+      const response = await fetch(`${api}/msgcenter/validate-sharepoint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteUrl })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        sharepointStatus.style.background = '#e8f5e9'
+        sharepointStatus.style.color = '#2e7d32'
+        sharepointStatus.textContent = `✓ Connected! Site: ${result.siteName || siteUrl}`
+        state.settings.sharepointSiteUrl = siteUrl
+        state.settings.sharepointSiteId = result.siteId
+        saveState()
+        showToast('SharePoint site configured successfully', 'success')
+      } else {
+        sharepointStatus.style.background = '#ffebee'
+        sharepointStatus.style.color = '#c62828'
+        sharepointStatus.textContent = `✗ Error: ${result.error || 'Could not connect to site'}`
+        showToast('SharePoint connection failed', 'error')
+      }
+    } catch (error) {
+      sharepointStatus.style.background = '#ffebee'
+      sharepointStatus.style.color = '#c62828'
+      sharepointStatus.textContent = `✗ Error: ${error.message}`
+      showToast('SharePoint connection error', 'error')
+    } finally {
+      sharepointTestBtn.disabled = false
+      sharepointTestBtn.innerHTML = '<i class="ti ti-check"></i> Test'
+    }
+  })
+
+  // ---- Task Resolution Approvers ----
+  const primaryApproverInput = el.querySelector('#settings-primary-approver')
+  const secondaryApproverInput = el.querySelector('#settings-secondary-approver')
+
+  if (primaryApproverInput) {
+    primaryApproverInput.addEventListener('change', (e) => {
+      const email = e.target.value.trim()
+      if (email && !email.includes('@')) {
+        showToast('Please enter a valid email address', 'warning')
+        return
+      }
+      state.settings.primaryApprover = email || null
+      saveState()
+      showToast(email ? `Primary approver set to ${email}` : 'Primary approver cleared', 'success')
+    })
+  }
+
+  if (secondaryApproverInput) {
+    secondaryApproverInput.addEventListener('change', (e) => {
+      const email = e.target.value.trim()
+      if (email && !email.includes('@')) {
+        showToast('Please enter a valid email address', 'warning')
+        return
+      }
+      state.settings.secondaryApprover = email || null
+      saveState()
+      showToast(email ? `Secondary approver set to ${email}` : 'Secondary approver cleared', 'success')
+    })
+  }
 
   // ---- Portal master toggle ----
   const portalMasterToggle = createToggle({
