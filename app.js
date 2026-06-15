@@ -85,7 +85,7 @@ const DEFAULTS = {
   showGraphHealth: true,
   showZeroTrustScore: true,
   showM365ConfigScore: true,
-  sharepointSiteUrl: 'root',
+  sharepointSiteUrl: import.meta.env.VITE_SHAREPOINT_SITE || 'root',
   sharepointSiteId: null,
   announcementSyncDays: 7,
   portalEnabled: true,
@@ -114,6 +114,12 @@ function loadState() {
     const l = localStorage.getItem('m365ops_agentlog')
     if (l) state.cfgAgentLog = JSON.parse(l)
   } catch (e) { /* ignore */ }
+
+  // Environment variables take precedence over localStorage
+  if (import.meta.env.VITE_SHAREPOINT_SITE) {
+    state.settings.sharepointSiteUrl = import.meta.env.VITE_SHAREPOINT_SITE
+    console.log(`📍 SharePoint Site set from environment: ${import.meta.env.VITE_SHAREPOINT_SITE}`)
+  }
 }
 
 export function resetSettings() {
