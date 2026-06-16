@@ -1,0 +1,517 @@
+/**
+ * Self Service Portal - SharePoint List Integration
+ * Manages requests, approvals, and audit logs for self-service requests
+ */
+
+let graphClient = null
+
+export function setSelfServiceGraphClient(client) {
+  graphClient = client
+}
+
+// ============================================================
+// SharePoint Lists Management
+// ============================================================
+
+export async function initializeSelfServiceLists(graphClientInstance, siteId) {
+  if (!graphClientInstance) {
+    console.log('⏭️  Graph Client not available for self-service setup')
+    return
+  }
+
+  graphClient = graphClientInstance
+
+  const lists = [
+    { name: 'SelfServiceRequests', description: 'User submitted service requests' },
+    { name: 'SelfServiceApprovals', description: 'Approval decisions and workflows' },
+    { name: 'SelfServiceAudit', description: 'Audit trail of all actions' }
+  ]
+
+  for (const list of lists) {
+    try {
+      const existing = await graphClient
+        .api(`/sites/${siteId}/lists`)
+        .filter(`displayName eq '${list.name}'`)
+        .get()
+
+      if (existing.value.length === 0) {
+        console.log(`📝 Creating SharePoint list: ${list.name}`)
+        await graphClient.api(`/sites/${siteId}/lists`).post({
+          displayName: list.name,
+          description: list.description,
+          template: 'genericList'
+        })
+      } else {
+        console.log(`✓ List exists: ${list.name}`)
+      }
+    } catch (error) {
+      console.warn(`⚠️  Could not set up list ${list.name}:`, error.message)
+    }
+  }
+}
+
+// ============================================================
+// Request Submission
+// ============================================================
+
+export async function submitRequest(siteId, requestData) {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const {
+      serviceId,
+      operationId,
+      formData,
+      requesterId,
+      description
+    } = requestData
+
+    // Generate request ID
+    const requestId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
+
+    // Create list item in SelfServiceRequests
+    const listResponse = await graphClient
+      .api(`/sites/${siteId}/lists`)
+      .filter(`displayName eq 'SelfServiceRequests'`)
+      .get()
+
+    if (!listResponse.value.length) {
+      throw new Error('SelfServiceRequests list not found')
+    }
+
+    const listId = listResponse.value[0].id
+
+    const requestItem = {
+      fields: {
+        Title: requestId,
+        Service: serviceId,
+        Operation: operationId,
+        FormData: JSON.stringify(formData),
+        Status: 'Submitted',
+        RequesterId: requesterId,
+        CreatedDate: new Date().toISOString(),
+        Description: description || ''
+      }
+    }
+
+    const result = await graphClient
+      .api(`/sites/${siteId}/lists/${listId}/items`)
+      .post(requestItem)
+
+    console.log(`✓ Request submitted: ${requestId}`)
+
+    // Create audit log
+    await createAuditLog(siteId, requestId, 'Submitted', requesterId, {
+      service: serviceId,
+      operation: operationId
+    })
+
+    return {
+      success: true,
+      requestId: requestId,
+      itemId: result.id,
+      message: 'Request submitted successfully'
+    }
+  } catch (error) {
+    console.error('❌ Error submitting request:', error.message)
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}
+
+// ============================================================
+// Request Retrieval
+// ============================================================
+
+export async function getRequest(siteId, requestId) {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const listResponse = await graphClient
+      .api(`/sites/${siteId}/lists`)
+      .filter(`displayName eq 'SelfServiceRequests'`)
+      .get()
+
+    if (!listResponse.value.length) {
+      throw new Error('SelfServiceRequests list not found')
+    }
+
+    const listId = listResponse.value[0].id
+
+    const items = await graphClient
+      .api(`/sites/${siteId}/lists/${listId}/items`)
+      .filter(`fields/Title eq '${requestId}'`)
+      .select('id,fields')
+      .get()
+
+    if (!items.value.length) {
+      return { success: false, error: 'Request not found' }
+    }
+
+    const item = items.value[0]
+    const fields = item.fields
+
+    return {
+      success: true,
+      data: {
+        id: item.id,
+        requestId: fields.Title,
+        service: fields.Service,
+        operation: fields.Operation,
+        formData: fields.FormData ? JSON.parse(fields.FormData) : {},
+        status: fields.Status,
+        requesterId: fields.RequesterId,
+        createdDate: fields.CreatedDate,
+        approvedBy: fields.ApprovedBy,
+        approvedDate: fields.ApprovedDate,
+        completedDate: fields.CompletedDate,
+        notes: fields.Notes ? JSON.parse(fields.Notes) : {}
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error retrieving request:', error.message)
+    return { success: false, error: error.message }
+  }
+}
+
+// ============================================================
+// User's Requests
+// ============================================================
+
+export async function getUserRequests(siteId, userEmail) {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const listResponse = await graphClient
+      .api(`/sites/${siteId}/lists`)
+      .filter(`displayName eq 'SelfServiceRequests'`)
+      .get()
+
+    if (!listResponse.value.length) {
+      throw new Error('SelfServiceRequests list not found')
+    }
+
+    const listId = listResponse.value[0].id
+
+    const items = await graphClient
+      .api(`/sites/${siteId}/lists/${listId}/items`)
+      .filter(`fields/RequesterId eq '${userEmail}'`)
+      .orderby('fields/CreatedDate desc')
+      .select('id,fields')
+      .get()
+
+    const requests = items.value.map(item => ({
+      id: item.id,
+      requestId: item.fields.Title,
+      service: item.fields.Service,
+      operation: item.fields.Operation,
+      status: item.fields.Status,
+      createdDate: item.fields.CreatedDate,
+      approvedDate: item.fields.ApprovedDate,
+      completedDate: item.fields.CompletedDate
+    }))
+
+    return {
+      success: true,
+      data: requests
+    }
+  } catch (error) {
+    console.error('❌ Error retrieving user requests:', error.message)
+    return { success: false, error: error.message, data: [] }
+  }
+}
+
+// ============================================================
+// Approve/Reject Request
+// ============================================================
+
+export async function approveRequest(siteId, requestId, approverId, comment) {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const request = await getRequest(siteId, requestId)
+    if (!request.success) {
+      throw new Error('Request not found')
+    }
+
+    // Update request status
+    const listResponse = await graphClient
+      .api(`/sites/${siteId}/lists`)
+      .filter(`displayName eq 'SelfServiceRequests'`)
+      .get()
+
+    const listId = listResponse.value[0].id
+    const itemId = request.data.id
+
+    await graphClient
+      .api(`/sites/${siteId}/lists/${listId}/items/${itemId}`)
+      .patch({
+        fields: {
+          Status: 'Approved',
+          ApprovedBy: approverId,
+          ApprovedDate: new Date().toISOString()
+        }
+      })
+
+    // Create approval record
+    await createApprovalRecord(siteId, requestId, 'Admin', approverId, 'Approved', comment)
+
+    // Create audit log
+    await createAuditLog(siteId, requestId, 'Approved', approverId, {
+      comment: comment
+    })
+
+    console.log(`✓ Request approved: ${requestId}`)
+
+    return {
+      success: true,
+      message: 'Request approved successfully'
+    }
+  } catch (error) {
+    console.error('❌ Error approving request:', error.message)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function rejectRequest(siteId, requestId, rejectedBy, reason) {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const request = await getRequest(siteId, requestId)
+    if (!request.success) {
+      throw new Error('Request not found')
+    }
+
+    // Update request status
+    const listResponse = await graphClient
+      .api(`/sites/${siteId}/lists`)
+      .filter(`displayName eq 'SelfServiceRequests'`)
+      .get()
+
+    const listId = listResponse.value[0].id
+    const itemId = request.data.id
+
+    await graphClient
+      .api(`/sites/${siteId}/lists/${listId}/items/${itemId}`)
+      .patch({
+        fields: {
+          Status: 'Rejected',
+          Notes: JSON.stringify({ rejectionReason: reason })
+        }
+      })
+
+    // Create approval record
+    await createApprovalRecord(siteId, requestId, 'Admin', rejectedBy, 'Rejected', reason)
+
+    // Create audit log
+    await createAuditLog(siteId, requestId, 'Rejected', rejectedBy, {
+      reason: reason
+    })
+
+    console.log(`✓ Request rejected: ${requestId}`)
+
+    return {
+      success: true,
+      message: 'Request rejected successfully'
+    }
+  } catch (error) {
+    console.error('❌ Error rejecting request:', error.message)
+    return { success: false, error: error.message }
+  }
+}
+
+// ============================================================
+// Approval Record
+// ============================================================
+
+async function createApprovalRecord(siteId, requestId, approvalType, approverId, decision, comment) {
+  try {
+    const listResponse = await graphClient
+      .api(`/sites/${siteId}/lists`)
+      .filter(`displayName eq 'SelfServiceApprovals'`)
+      .get()
+
+    if (!listResponse.value.length) {
+      console.warn('⚠️  SelfServiceApprovals list not found')
+      return
+    }
+
+    const listId = listResponse.value[0].id
+
+    await graphClient
+      .api(`/sites/${siteId}/lists/${listId}/items`)
+      .post({
+        fields: {
+          Title: `${requestId}-${approvalType}`,
+          RequestId: requestId,
+          ApprovalType: approvalType,
+          ApproverId: approverId,
+          Decision: decision,
+          Comment: comment,
+          DecidedDate: new Date().toISOString()
+        }
+      })
+  } catch (error) {
+    console.warn('⚠️  Could not create approval record:', error.message)
+  }
+}
+
+// ============================================================
+// Audit Log
+// ============================================================
+
+async function createAuditLog(siteId, requestId, action, actor, details) {
+  try {
+    const listResponse = await graphClient
+      .api(`/sites/${siteId}/lists`)
+      .filter(`displayName eq 'SelfServiceAudit'`)
+      .get()
+
+    if (!listResponse.value.length) {
+      console.warn('⚠️  SelfServiceAudit list not found')
+      return
+    }
+
+    const listId = listResponse.value[0].id
+
+    await graphClient
+      .api(`/sites/${siteId}/lists/${listId}/items`)
+      .post({
+        fields: {
+          Title: `${requestId}-${action}`,
+          RequestId: requestId,
+          Action: action,
+          Actor: actor,
+          Timestamp: new Date().toISOString(),
+          Details: JSON.stringify(details)
+        }
+      })
+  } catch (error) {
+    console.warn('⚠️  Could not create audit log:', error.message)
+  }
+}
+
+// ============================================================
+// Mark as Completed (for agent processing)
+// ============================================================
+
+export async function completeRequest(siteId, requestId, completionDetails) {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const request = await getRequest(siteId, requestId)
+    if (!request.success) {
+      throw new Error('Request not found')
+    }
+
+    const listResponse = await graphClient
+      .api(`/sites/${siteId}/lists`)
+      .filter(`displayName eq 'SelfServiceRequests'`)
+      .get()
+
+    const listId = listResponse.value[0].id
+    const itemId = request.data.id
+
+    await graphClient
+      .api(`/sites/${siteId}/lists/${listId}/items/${itemId}`)
+      .patch({
+        fields: {
+          Status: 'Completed',
+          CompletedDate: new Date().toISOString(),
+          Notes: JSON.stringify(completionDetails)
+        }
+      })
+
+    // Create audit log
+    await createAuditLog(siteId, requestId, 'Completed', 'Agent', completionDetails)
+
+    console.log(`✓ Request completed: ${requestId}`)
+
+    return {
+      success: true,
+      message: 'Request marked as completed'
+    }
+  } catch (error) {
+    console.error('❌ Error completing request:', error.message)
+    return { success: false, error: error.message }
+  }
+}
+
+// ============================================================
+// Get All Requests (for admin dashboard)
+// ============================================================
+
+export async function getAllRequests(siteId, filters = {}) {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const listResponse = await graphClient
+      .api(`/sites/${siteId}/lists`)
+      .filter(`displayName eq 'SelfServiceRequests'`)
+      .get()
+
+    if (!listResponse.value.length) {
+      throw new Error('SelfServiceRequests list not found')
+    }
+
+    const listId = listResponse.value[0].id
+
+    let query = graphClient
+      .api(`/sites/${siteId}/lists/${listId}/items`)
+      .orderby('fields/CreatedDate desc')
+      .select('id,fields')
+
+    // Apply filters if provided
+    if (filters.status) {
+      query = query.filter(`fields/Status eq '${filters.status}'`)
+    }
+    if (filters.service) {
+      query = query.filter(`fields/Service eq '${filters.service}'`)
+    }
+
+    const items = await query.get()
+
+    const requests = items.value.map(item => ({
+      id: item.id,
+      requestId: item.fields.Title,
+      service: item.fields.Service,
+      operation: item.fields.Operation,
+      requesterId: item.fields.RequesterId,
+      status: item.fields.Status,
+      createdDate: item.fields.CreatedDate,
+      approvedDate: item.fields.ApprovedDate,
+      completedDate: item.fields.CompletedDate
+    }))
+
+    return {
+      success: true,
+      data: requests,
+      count: requests.length,
+      stats: {
+        submitted: requests.filter(r => r.status === 'Submitted').length,
+        approved: requests.filter(r => r.status === 'Approved').length,
+        rejected: requests.filter(r => r.status === 'Rejected').length,
+        completed: requests.filter(r => r.status === 'Completed').length
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error retrieving all requests:', error.message)
+    return { success: false, error: error.message, data: [], stats: {} }
+  }
+}

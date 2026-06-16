@@ -8,12 +8,13 @@ import {
 // ============================================================
 // View state
 // ============================================================
-let portalView = 'landing'      // 'landing' | 'service' | 'form' | 'submitted'
+let portalView = 'landing'      // 'landing' | 'service' | 'form' | 'submitted' | 'my-requests'
 let activeGroupId = null
 let activeSubId = null          // for Exchange sub-services
 let activeOpId = null
 let formValues = {}
 let reqCounter = 100
+let submittedRequestId = null   // Store request ID after submission
 
 // ============================================================
 // Entry
@@ -26,6 +27,7 @@ export function initPortal() {
   activeSubId = null
   activeOpId = null
   formValues = {}
+  submittedRequestId = null
   render(el)
 }
 
@@ -34,6 +36,7 @@ function render(el) {
   else if (portalView === 'service') renderServiceView(el)
   else if (portalView === 'form')  renderFormView(el)
   else if (portalView === 'submitted') renderSubmitted(el)
+  else if (portalView === 'my-requests') renderMyRequests(el)
 }
 
 // ============================================================
@@ -696,27 +699,30 @@ async function completeSubmission(el, op, validation) {
   reqCounter++
 
   try {
-    // Submit request to backend
+    // Submit request to backend Self Service API
     const submitBtn = el.querySelector('#val-submit')
     if (submitBtn) {
       submitBtn.disabled = true
       submitBtn.innerHTML = '<span class="spinner"></span> Submitting...'
     }
 
-    const response = await fetch(`${api}/requests/submit`, {
+    const serviceId = resolveServiceId()
+    const response = await fetch(`${api}/self-service/requests/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        serviceId: serviceId,
         operationId: op.id,
-        fields: formValues,
-        userEmail: window.userEmail,
-        validation: validation || {}
+        formData: formValues,
+        requesterId: state.currentUser?.email || window.userEmail,
+        description: op.label
       })
     })
 
     const result = await response.json()
     if (result.success) {
-      console.log('✓ Request submitted:', result.data.id)
+      console.log('✓ Request submitted:', result.requestId)
+      submittedRequestId = result.requestId
       showToast('Request submitted successfully', 'success')
       portalView = 'submitted'
       render(el)
@@ -743,7 +749,7 @@ function renderSubmitted(el) {
   if (!op || !group) { portalView = 'landing'; render(el); return }
 
   const wfSteps = buildWorkflow(op)
-  const reqNum = `REQ-${String(reqCounter).padStart(4, '0')}`
+  const reqNum = submittedRequestId || `REQ-${String(reqCounter).padStart(4, '0')}`
 
   el.innerHTML = `
     <div class="page-header">
@@ -769,8 +775,8 @@ function renderSubmitted(el) {
           <span>${state.currentUser?.name}</span>
           <span style="color:var(--color-text-tertiary)">Time</span>
           <span>${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} today</span>
-          <span style="color:var(--color-text-tertiary)">Next step</span>
-          <span style="color:var(--clr-warning-text);font-weight:600">${wfSteps[1]?.label || 'AI Validation'}</span>
+          <span style="color:var(--color-text-tertiary)">Status</span>
+          <span style="color:var(--clr-warning-text);font-weight:600">Submitted</span>
         </div>
       </div>
 
@@ -811,10 +817,175 @@ function renderSubmitted(el) {
     activeSubId = null
     activeOpId = null
     formValues = {}
+    submittedRequestId = null
     render(el)
   })
 
   el.querySelector('#submit-myreqs').addEventListener('click', () => {
-    import('../app.js').then(m => m.go('myreqs'))
+    portalView = 'my-requests'
+    render(el)
+  })
+}
+
+// ============================================================
+// MY REQUESTS VIEW — User's request history
+// ============================================================
+async function renderMyRequests(el) {
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-list-check"></i> My Requests</div>
+        <div class="page-subtitle">Track status of your submitted service requests</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn" id="myreq-back"><i class="ti ti-arrow-left"></i> Back to Portal</button>
+      </div>
+    </div>
+
+    <div style="padding:20px;text-align:center">
+      <div class="spinner"></div>
+      <p>Loading your requests...</p>
+    </div>
+  `
+
+  try {
+    // Fetch user's requests from backend
+    const userEmail = state.currentUser?.email || window.userEmail
+    const response = await fetch(`${api}/self-service/requests/my-requests?email=${encodeURIComponent(userEmail)}`, {
+      headers: { 'Content-Type': 'application/json' }
+    })
+
+    const result = await response.json()
+
+    if (result.success && result.data.length > 0) {
+      renderMyRequestsList(el, result.data)
+    } else {
+      el.querySelector('[class="page-header"]').insertAdjacentHTML('afterend', `
+        <div class="empty-state" style="padding:40px;text-align:center;margin-top:20px">
+          <i class="ti ti-inbox" style="font-size:48px;color:var(--color-text-tertiary);margin-bottom:16px;opacity:0.5;display:block"></i>
+          <h3 style="color:var(--color-text-secondary);margin-bottom:8px">No Requests Yet</h3>
+          <p style="color:var(--color-text-tertiary);margin-bottom:16px">You haven't submitted any service requests yet</p>
+          <button class="btn btn-primary" id="myreq-submit-new">
+            <i class="ti ti-plus"></i> Submit a Request
+          </button>
+        </div>
+      `)
+
+      el.querySelector('#myreq-submit-new').addEventListener('click', () => {
+        portalView = 'landing'
+        activeGroupId = null
+        activeSubId = null
+        activeOpId = null
+        formValues = {}
+        submittedRequestId = null
+        render(el)
+      })
+    }
+  } catch (error) {
+    console.error('Error fetching requests:', error)
+    el.querySelector('[class="page-header"]').insertAdjacentHTML('afterend', `
+      <div class="alert-banner danger" style="margin:16px">
+        <i class="ti ti-alert-triangle"></i>
+        <span>Failed to load requests. <button class="btn btn-sm" id="myreq-retry" style="margin-left:8px">Retry</button></span>
+      </div>
+    `)
+
+    el.querySelector('#myreq-retry').addEventListener('click', () => {
+      renderMyRequests(el)
+    })
+  }
+
+  el.querySelector('#myreq-back')?.addEventListener('click', () => {
+    portalView = 'landing'
+    activeGroupId = null
+    activeSubId = null
+    activeOpId = null
+    formValues = {}
+    submittedRequestId = null
+    render(el)
+  })
+}
+
+function renderMyRequestsList(el, requests) {
+  const statusColors = {
+    'Submitted': { bg: 'var(--clr-info-bg)', text: 'var(--clr-info-text)', icon: 'ti-send' },
+    'Approved': { bg: 'var(--clr-success-bg)', text: 'var(--clr-success-text)', icon: 'ti-circle-check' },
+    'Rejected': { bg: 'var(--clr-danger-bg)', text: 'var(--clr-danger-text)', icon: 'ti-circle-x' },
+    'Completed': { bg: 'var(--clr-success-bg)', text: 'var(--clr-success-text)', icon: 'ti-badge-check' }
+  }
+
+  const pageHeader = el.querySelector('.page-header')
+  pageHeader.insertAdjacentHTML('afterend', `
+    <div style="margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
+        <div class="card" style="padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-info-text)">${requests.length}</div>
+          <div style="font-size:11px;color:var(--color-text-tertiary)">Total Requests</div>
+        </div>
+        <div class="card" style="padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">${requests.filter(r => r.status === 'Submitted').length}</div>
+          <div style="font-size:11px;color:var(--color-text-tertiary)">Pending Approval</div>
+        </div>
+        <div class="card" style="padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-success-text)">${requests.filter(r => r.status === 'Completed').length}</div>
+          <div style="font-size:11px;color:var(--color-text-tertiary)">Completed</div>
+        </div>
+      </div>
+
+      <div id="myreq-list"></div>
+    </div>
+  `)
+
+  const listContainer = el.querySelector('#myreq-list')
+  listContainer.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden">
+      <table style="width:100%">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Request ID</th>
+            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Service</th>
+            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Operation</th>
+            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Status</th>
+            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Submitted</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${requests.map(req => {
+            const color = statusColors[req.status] || statusColors['Submitted']
+            const createdDate = new Date(req.createdDate).toLocaleString('en-GB', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+            return `
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary);hover:background:var(--color-background-secondary)">
+                <td style="padding:12px;font-size:11px;font-weight:600;color:var(--clr-info-text)">${req.requestId}</td>
+                <td style="padding:12px;font-size:10px">${req.service || 'N/A'}</td>
+                <td style="padding:12px;font-size:10px">${req.operation || 'N/A'}</td>
+                <td style="padding:12px;font-size:10px">
+                  <span class="badge" style="background:${color.bg};color:${color.text};display:inline-flex;align-items:center;gap:4px">
+                    <i class="ti ${color.icon}" style="font-size:10px"></i>
+                    ${req.status}
+                  </span>
+                </td>
+                <td style="padding:12px;font-size:10px;color:var(--color-text-secondary)">${createdDate}</td>
+              </tr>
+            `
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+
+  el.querySelector('#myreq-back')?.addEventListener('click', () => {
+    portalView = 'landing'
+    activeGroupId = null
+    activeSubId = null
+    activeOpId = null
+    formValues = {}
+    submittedRequestId = null
+    render(el)
   })
 }
