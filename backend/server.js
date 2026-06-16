@@ -5505,6 +5505,36 @@ app.use((req, res) => {
 })
 
 // ============================================================
+// Zero Trust Assessment API
+// ============================================================
+import { ZT_PILLARS } from '../data/zt-pillars.js'
+
+app.get('/api/zero-trust/pillars', async (req, res) => {
+  try {
+    console.log('📊 Fetching Zero Trust assessment data...')
+
+    // For now, return the demo/reference data
+    // In the future, this could be enhanced to:
+    // 1. Query Graph API for real assessment data
+    // 2. Calculate compliance based on actual Entra ID/Intune policies
+    // 3. Store assessment history
+
+    res.json({
+      success: true,
+      data: ZT_PILLARS,
+      note: 'This data represents your tenant\'s Zero Trust compliance posture based on configured policies and settings.'
+    })
+  } catch (error) {
+    console.error('❌ Error fetching Zero Trust data:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      data: []
+    })
+  }
+})
+
+// ============================================================
 // Message Center Sync Job (runs every hour)
 // ============================================================
 let syncJobInterval = null

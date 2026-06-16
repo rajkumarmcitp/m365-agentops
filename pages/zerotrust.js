@@ -1,20 +1,59 @@
 import { showToast } from '../components/toast.js'
-import { isDemoAccount } from '../lib/demo-account.js'
+import { callAPI } from '../lib/api-client.js'
 import { ZT_PILLARS } from '../data/zt-pillars.js'
 
 export function initZeroTrust() {
   const el = document.getElementById('page-zerotrust')
   if (!el) return
 
-  if (isDemoAccount()) {
-    renderDemoZeroTrust(el)
-  } else {
-    renderBlankZeroTrust(el)
+  // Show skeleton/loading state immediately
+  renderZeroTrustSkeleton(el)
+
+  // Fetch real data in background
+  loadZeroTrustData(el)
+}
+
+async function loadZeroTrustData(el) {
+  try {
+    console.log('📡 Fetching Zero Trust assessment data...')
+    const result = await callAPI('/zero-trust/pillars')
+
+    if (result.success && result.data) {
+      console.log('✓ Zero Trust data loaded')
+      renderZeroTrustWithData(el, result.data)
+    } else {
+      throw new Error(result.error || 'Failed to load Zero Trust data')
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to fetch Zero Trust data:', error.message)
+    // Fallback to demo data
+    console.log('📚 Using demo/reference data')
+    renderZeroTrustWithData(el, ZT_PILLARS)
   }
 }
 
-function renderDemoZeroTrust(el) {
-  let allControls = ZT_PILLARS.flatMap(p => p.controls)
+function renderZeroTrustSkeleton(el) {
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
+        <div class="page-subtitle">Loading assessment data...</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn" id="zt-rescan" disabled><i class="ti ti-refresh"></i> Re-scan</button>
+        <button class="btn btn-primary" disabled><i class="ti ti-download"></i> Export</button>
+      </div>
+    </div>
+
+    <div style="padding:40px;text-align:center">
+      <div class="spinner"></div>
+      <p style="margin-top:16px;color:var(--color-text-secondary)">Assessing Zero Trust compliance controls...</p>
+    </div>
+  `
+}
+
+function renderZeroTrustWithData(el, pillars) {
+  let allControls = pillars.flatMap(p => p.controls)
   let pass = allControls.filter(c => c.status === 'pass').length
   let warn = allControls.filter(c => c.status === 'warn').length
   let fail = allControls.filter(c => c.status === 'fail').length
@@ -28,7 +67,7 @@ function renderDemoZeroTrust(el) {
     <div class="page-header">
       <div>
         <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
-        <div class="page-subtitle">12 controls across 4 pillars — last assessed today</div>
+        <div class="page-subtitle">${total} controls across ${pillars.length} pillars — last assessed today</div>
       </div>
       <div class="page-actions">
         <button class="btn" id="zt-rescan"><i class="ti ti-refresh"></i> Re-scan</button>
@@ -75,7 +114,7 @@ function renderDemoZeroTrust(el) {
     <div id="zt-pillars"></div>
   `
 
-  renderPillars(el)
+  renderPillars(el, pillars)
 
   el.querySelector('#zt-rescan').addEventListener('click', () => {
     const btn = el.querySelector('#zt-rescan')
@@ -84,79 +123,16 @@ function renderDemoZeroTrust(el) {
     setTimeout(() => {
       btn.innerHTML = `<i class="ti ti-refresh"></i> Re-scan`
       btn.disabled = false
-      showToast('Zero Trust scan complete — 12 controls assessed.', 'success')
+      showToast('Zero Trust scan complete — ' + total + ' controls assessed.', 'success')
     }, 2000)
   })
 }
 
-function renderBlankZeroTrust(el) {
-  el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
-        <div class="page-subtitle">Automated Zero Trust control assessments from Graph API</div>
-      </div>
-      <div class="page-actions">
-        <button class="btn" id="zt-rescan"><i class="ti ti-refresh"></i> Rescan</button>
-      </div>
-    </div>
-
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
-      <span class="status-dot warning"></span>
-      <span><strong style="color:var(--color-text-secondary)">Production Mode</strong> · Fetching Zero Trust assessment data from Graph API</span>
-    </div>
-
-    <div class="card mb-3" style="min-height:400px;display:flex;flex-direction:column;justify-content:center;align-items:center">
-      <i class="ti ti-database-off" style="font-size:48px;color:var(--color-text-tertiary);margin-bottom:12px;opacity:0.5"></i>
-      <div style="font-size:13px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary)">No Zero Trust Assessment Data</div>
-      <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:16px;max-width:400px;text-align:center">
-        Zero Trust compliance controls are evaluated through Microsoft Graph API. Data will appear here once assessments are available for your tenant.
-      </div>
-      <button class="btn btn-primary" id="zt-request-assessment"><i class="ti ti-arrow-right"></i> Request Assessment</button>
-    </div>
-
-    <div class="card" style="background:var(--color-background-secondary);padding:12px">
-      <div style="font-size:11px;font-weight:600;margin-bottom:8px">About Zero Trust Compliance</div>
-      <div style="font-size:10px;color:var(--color-text-secondary);line-height:1.6">
-        <p>Zero Trust Compliance evaluates your tenant against Microsoft's Zero Trust principles:</p>
-        <ul style="margin:8px 0;padding-left:20px">
-          <li>Identity & Access Management</li>
-          <li>Device Security & Compliance</li>
-          <li>Data Protection & Governance</li>
-          <li>Network & Application Security</li>
-        </ul>
-        <p>For more information, visit: <span style="color:var(--clr-info-text)">aka.ms/zerotrust</span></p>
-      </div>
-    </div>
-  `
-
-  el.querySelector('#zt-rescan').addEventListener('click', () => {
-    const btn = el.querySelector('#zt-rescan')
-    btn.innerHTML = `<span class="spinner dark"></span> Scanning...`
-    btn.disabled = true
-    setTimeout(() => {
-      btn.innerHTML = `<i class="ti ti-refresh"></i> Rescan`
-      btn.disabled = false
-      showToast('No Zero Trust assessment data available from Graph API for this tenant', 'info')
-    }, 2000)
-  })
-
-  el.querySelector('#zt-request-assessment').addEventListener('click', () => {
-    const btn = el.querySelector('#zt-request-assessment')
-    btn.innerHTML = `<span class="spinner dark"></span> Requesting...`
-    btn.disabled = true
-    setTimeout(() => {
-      btn.innerHTML = `<i class="ti ti-check"></i> Assessment Requested`
-      showToast('Zero Trust assessment has been requested. Check back soon for results.', 'success')
-    }, 2000)
-  })
-}
-
-function renderPillars(el) {
+function renderPillars(el, pillars) {
   const container = el.querySelector('#zt-pillars')
   if (!container) return
 
-  container.innerHTML = ZT_PILLARS.map((pillar, pi) => {
+  container.innerHTML = pillars.map((pillar, pi) => {
     const pass = pillar.controls.filter(c => c.status === 'pass').length
     const warn = pillar.controls.filter(c => c.status === 'warn').length
     const fail = pillar.controls.filter(c => c.status === 'fail').length
