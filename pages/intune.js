@@ -33,6 +33,13 @@ const INTUNE_TABS = [
   { id: 'copilot',        label: 'Intune Copilot',      icon: 'ti-robot' },
 ]
 
+const SECURITY_BASELINE_COMPARISON = {
+  windowsBaseline: { score: 92, compliant: 847, nonCompliant: 15 },
+  defenderBaseline: { score: 88, compliant: 832, nonCompliant: 30 },
+  edgeBaseline: { score: 95, compliant: 856, nonCompliant: 6 },
+  msAppsBaseline: { score: 85, compliant: 812, nonCompliant: 50 }
+}
+
 export async function initIntune() {
   const el = document.getElementById('page-intune')
   if (!el) return
@@ -473,9 +480,9 @@ function render(el) {
     </div>
 
     <!-- Sub-navigation -->
-    <div class="intune-subnav" id="intune-subnav">
+    <div class="tabs" id="intune-subnav">
       ${INTUNE_TABS.map(t => `
-        <button class="intune-tab-btn ${activeSection === t.id ? 'active' : ''}" data-intune-section="${t.id}">
+        <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-intune-section="${t.id}">
           <i class="ti ${t.icon}"></i><span>${t.label}</span>
           ${t.id === 'risk' && criticalRisks > 0 ? `<span class="intune-tab-badge red">${criticalRisks}</span>` : ''}
           ${t.id === 'compliance' && s.nonCompliant > 0 ? `<span class="intune-tab-badge red">${s.nonCompliant}</span>` : ''}
@@ -489,7 +496,7 @@ function render(el) {
     <div id="intune-content" style="margin-top:16px">${renderSection()}</div>
   `
 
-  el.querySelectorAll('.intune-tab-btn').forEach(btn => {
+  el.querySelectorAll('#intune-subnav .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeSection = btn.dataset.intuneSection
       render(el)

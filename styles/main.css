@@ -683,22 +683,23 @@ tr:hover td { background: var(--color-background-secondary); }
    ============================================================ */
 .tabs {
   display: flex;
-  border-bottom: 0.5px solid var(--color-border-secondary);
+  flex-wrap: wrap;
   margin-bottom: 16px;
-  gap: 16px;
+  gap: 8px;
+  padding: 12px;
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
+  background: var(--color-background-primary);
 }
 
 .tab-btn {
-  padding: 8px 0;
-  font-size: 13px;
-  font-weight: 400;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--color-text-secondary);
-  background: transparent !important;
-  border: none !important;
-  border-top: none !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-bottom: 3px solid transparent !important;
+  background: var(--color-background-primary) !important;
+  border: 0.5px solid var(--color-border-secondary) !important;
+  border-radius: var(--border-radius-md) !important;
   outline: none !important;
   cursor: pointer;
   transition: all var(--transition);
@@ -706,18 +707,34 @@ tr:hover td { background: var(--color-background-secondary); }
 }
 
 .tab-btn:hover {
+  background: var(--color-background-tertiary) !important;
   color: var(--color-text-primary);
-  border-bottom-color: var(--color-border-secondary);
+  border-color: var(--color-border-primary) !important;
 }
 
 .tab-btn.active {
-  color: var(--clr-primary);
-  border-bottom-color: var(--clr-primary);
+  background: var(--clr-primary) !important;
+  color: white !important;
+  border-color: var(--clr-primary) !important;
   font-weight: 600;
 }
 
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
+
+/* Security page tab spacing */
+#sec-subnav {
+  margin-top: 24px !important;
+}
+
+/* TenantGuard page tab spacing */
+#tg-main-tabs {
+  margin-top: 24px !important;
+}
+
+#tg-severity-tabs {
+  margin-top: 16px !important;
+}
 
 /* Filter buttons - cleaner alternative to tabs */
 .filter-buttons {
@@ -1266,12 +1283,12 @@ tr:hover td { background: var(--color-background-secondary); }
   .tabs {
     flex-wrap: wrap;
     margin-bottom: 12px;
-    gap: 12px;
+    gap: 8px;
   }
 
   .tab-btn {
-    padding: 5px 0;
-    font-size: 10px;
+    padding: 5px 10px;
+    font-size: 11px;
     white-space: nowrap;
     flex-shrink: 0;
   }
@@ -1450,14 +1467,14 @@ tr:hover td { background: var(--color-background-secondary); }
   /* Tabs responsive - wrap on tablet if needed */
   .tabs {
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 8px;
   }
 
   .tab-btn {
     white-space: nowrap;
     flex-shrink: 0;
-    padding: 6px 0;
-    font-size: 11px;
+    padding: 5px 10px;
+    font-size: 10px;
   }
 
   /* Filter buttons responsive */

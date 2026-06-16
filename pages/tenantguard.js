@@ -136,11 +136,11 @@ function renderDemoTenantGuardUI(el, summary) {
       </div>
     </div>
 
-    <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--color-border-secondary);padding-bottom:12px">
-      <button class="demo-tab-btn active" data-section="alerts" style="padding:8px 12px;border:none;background:none;cursor:pointer;font-size:11px;font-weight:600;color:var(--color-text-primary);border-bottom:2px solid var(--clr-info-text)">
+    <div class="tabs">
+      <button class="tab-btn active" data-section="alerts">
         <i class="ti ti-list"></i> Alerts
       </button>
-      <button class="demo-tab-btn" data-section="correlations" style="padding:8px 12px;border:none;background:none;cursor:pointer;font-size:11px;font-weight:600;color:var(--color-text-secondary)">
+      <button class="tab-btn" data-section="correlations">
         <i class="ti ti-link"></i> Correlations
       </button>
     </div>
@@ -151,14 +151,10 @@ function renderDemoTenantGuardUI(el, summary) {
   const contentEl = el.querySelector('#demo-content')
   renderDemoAlerts(contentEl)
 
-  el.querySelectorAll('.demo-tab-btn').forEach(btn => {
+  el.querySelectorAll('.tabs .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      el.querySelectorAll('.demo-tab-btn').forEach(b => {
-        b.style.color = 'var(--color-text-secondary)'
-        b.style.borderBottomColor = 'transparent'
-      })
-      btn.style.color = 'var(--color-text-primary)'
-      btn.style.borderBottomColor = 'var(--clr-info-text)'
+      el.querySelectorAll('.tabs .tab-btn').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
 
       const section = btn.dataset.section
       if (section === 'alerts') renderDemoAlerts(contentEl)
@@ -289,9 +285,9 @@ function render(summary) {
     </div>
 
     <!-- Main Tabs -->
-    <div class="tenantguard-tabs" id="tg-main-tabs">
+    <div class="tabs" id="tg-main-tabs">
       ${MAIN_TABS.map(t => `
-        <button class="tenantguard-tab-btn ${activeSection === t.id ? 'active' : ''}" data-section="${t.id}">
+        <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-section="${t.id}">
           <i class="ti ${t.icon}"></i><span>${t.label}</span>
           ${t.id === 'alerts' && totalCount > 0 ? `<span class="badge" style="background:var(--clr-danger-bg);color:var(--clr-danger-text)">${totalCount}</span>` : ''}
           ${t.id === 'correlations' && correlationCount > 0 ? `<span class="badge" style="background:var(--clr-warning-bg);color:var(--clr-warning-text)">${correlationCount}</span>` : ''}
@@ -336,9 +332,9 @@ function render(summary) {
 function renderAlertsSection() {
   return `
     <!-- Severity Tabs -->
-    <div class="tenantguard-tabs" id="tg-severity-tabs">
+    <div class="tabs" id="tg-severity-tabs">
       ${SEVERITY_TABS.map(t => `
-        <button class="tenantguard-tab-btn ${activeFilter === t.id ? 'active' : ''}" data-severity="${t.id}">
+        <button class="tab-btn ${activeFilter === t.id ? 'active' : ''}" data-severity="${t.id}">
           <i class="ti ${t.icon}"></i><span>${t.label}</span>
         </button>
       `).join('')}
@@ -527,10 +523,10 @@ function wireAlerts(el) {
   // Severity tab listeners
   const severityTabs = el.querySelector('#tg-severity-tabs')
   if (severityTabs) {
-    severityTabs.querySelectorAll('.tenantguard-tab-btn').forEach(btn => {
+    severityTabs.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         activeFilter = btn.dataset.severity
-        severityTabs.querySelectorAll('.tenantguard-tab-btn').forEach(b => b.classList.remove('active'))
+        severityTabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
         btn.classList.add('active')
         const alertsList = el.querySelector('#tg-alerts-list')
         if (alertsList) alertsList.innerHTML = renderAlerts()

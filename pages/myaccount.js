@@ -89,9 +89,9 @@ function render(el) {
     </div>
 
     <!-- Tab Navigation -->
-    <div class="intune-subnav" id="myacc-subnav">
+    <div class="tabs" id="myacc-subnav">
       ${TABS.map(t => `
-        <button class="intune-tab-btn ${activeTab === t.id ? 'active' : ''}" data-tab="${t.id}">
+        <button class="tab-btn ${activeTab === t.id ? 'active' : ''}" data-tab="${t.id}">
           <i class="ti ${t.icon}"></i><span>${t.label}</span>
           ${t.id === 'approvals' && PENDING_APPROVALS.length > 0 ? `<span class="intune-tab-badge red">${PENDING_APPROVALS.length}</span>` : ''}
         </button>
@@ -102,7 +102,7 @@ function render(el) {
     <div id="myacc-content" style="margin-top:16px">${renderTab()}</div>
   `
 
-  el.querySelectorAll('.intune-tab-btn').forEach(btn => {
+  el.querySelectorAll('#myacc-subnav .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeTab = btn.dataset.tab
       el.querySelector('#myacc-content').innerHTML = renderTab()

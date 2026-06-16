@@ -535,9 +535,9 @@ function render(el) {
     </div>
 
     <!-- Sub-navigation tabs -->
-    <div class="app-subnav" id="app-subnav">
+    <div class="tabs" id="app-subnav">
       ${APP_TABS.map(t => `
-        <button class="app-tab-btn ${activeSection === t.id ? 'active' : ''}" data-app-section="${t.id}">
+        <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-app-section="${t.id}">
           <i class="ti ${t.icon}"></i><span>${t.label}</span>
           ${t.id === 'secrets' && (expiredSecrets + expiringSecrets) > 0 ? `<span class="app-tab-badge red">${expiredSecrets + expiringSecrets}</span>` : ''}
           ${t.id === 'risk' && criticalRisks > 0 ? `<span class="app-tab-badge red">${criticalRisks}</span>` : ''}
@@ -550,7 +550,7 @@ function render(el) {
     <div id="app-content" style="margin-top:16px">${renderSection()}</div>
   `
 
-  el.querySelectorAll('.app-tab-btn').forEach(btn => {
+  el.querySelectorAll('#app-subnav .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeSection = btn.dataset.appSection
       render(el)

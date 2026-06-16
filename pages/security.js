@@ -188,9 +188,9 @@ function render(el) {
     </div>
 
     <!-- Internal sub-navigation -->
-    <div class="sec-subnav" id="sec-subnav">
+    <div class="tabs" id="sec-subnav">
       ${SEC_TABS.map(t => `
-        <button class="sec-tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
+        <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
           <i class="ti ${t.icon}"></i><span>${t.label}</span>
           ${t.id === 'incidents' && critCount > 0 ? `<span class="sec-tab-badge red">${critCount}</span>` : ''}
           ${t.id === 'recommendations' ? `<span class="sec-tab-badge amber">${openRec}</span>` : ''}
@@ -203,7 +203,7 @@ function render(el) {
     <div id="sec-content" style="margin-top:16px">${renderSection()}</div>
   `
 
-  el.querySelectorAll('.sec-tab-btn').forEach(btn => {
+  el.querySelectorAll('#sec-subnav .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeSection = btn.dataset.sec
       render(el)

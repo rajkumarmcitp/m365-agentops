@@ -115,9 +115,9 @@ function renderDemoLicensesPage(el) {
     </div>
 
     <!-- Tab Navigation -->
-    <div style="display:flex;gap:0;border-bottom:1px solid var(--color-border-secondary);margin-bottom:16px;overflow-x:auto">
+    <div class="tabs">
       ${TABS.map((t, i) => `
-        <button class="license-tab-btn ${i === 0 ? 'active' : ''}" data-tab="${t.id}" style="padding:12px 16px;border:none;background:none;cursor:pointer;font-size:11px;font-weight:600;color:var(--color-text-secondary);border-bottom:2px solid transparent;white-space:nowrap;${i === 0 ? 'color:var(--color-text-primary);border-bottom-color:var(--clr-info-text)' : ''}">
+        <button class="tab-btn ${i === 0 ? 'active' : ''}" data-tab="${t.id}">
           <i class="ti ${t.icon}"></i> ${t.label}
         </button>
       `).join('')}
@@ -130,14 +130,10 @@ function renderDemoLicensesPage(el) {
   const contentEl = el.querySelector('#tab-content')
   renderDemoExecutiveSummary(contentEl, demoSummary, demoLicenses)
 
-  el.querySelectorAll('.license-tab-btn').forEach(btn => {
+  el.querySelectorAll('.tabs .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      el.querySelectorAll('.license-tab-btn').forEach(b => {
-        b.style.color = 'var(--color-text-secondary)'
-        b.style.borderBottomColor = 'transparent'
-      })
-      btn.style.color = 'var(--color-text-primary)'
-      btn.style.borderBottomColor = 'var(--clr-info-text)'
+      el.querySelectorAll('.tabs .tab-btn').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
       const tabId = btn.dataset.tab
 
       if (tabId === 'summary') renderDemoExecutiveSummary(contentEl, demoSummary, demoLicenses)
