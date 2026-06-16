@@ -26,41 +26,14 @@ export async function initDashboard() {
     return
   }
 
-  el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading dashboard data...</p></div>`
+  // Render page structure immediately with blank placeholders
+  renderDashboardSkeleton(el)
 
-  // Fetch real data
-  try {
-    console.log('📡 Fetching real dashboard data from backend...')
-    const devicesResult = await getDevices()
-    const usersResult = await getUsers()
-    const scoreResult = await getSecurityScore()
+  // Fetch data in background and update as it arrives
+  loadDashboardData(el)
+}
 
-    // Set real counts (no fallback)
-    realDeviceCount = (devicesResult.success && devicesResult.count) ? devicesResult.count : 0
-    realUserCount = (usersResult.success && usersResult.count) ? usersResult.count : 0
-    realSecureScore = scoreResult.success ? scoreResult.data : null
-
-    // Fetch recent admin consents (last 24 hours)
-    try {
-      const consentsResult = await callAPI('/audit-logs/consents')
-      if (consentsResult.success && consentsResult.data) {
-        const now = new Date()
-        const last24hrs = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-        recentAdminConsents = consentsResult.data
-          .filter(c => new Date(c.activityDateTime) >= last24hrs)
-          .sort((a, b) => new Date(b.activityDateTime) - new Date(a.activityDateTime))
-          .slice(0, 5)
-        console.log(`✅ Loaded ${recentAdminConsents.length} recent admin consents (last 24 hours)`)
-      }
-    } catch (error) {
-      console.warn('⚠️ Could not fetch recent admin consents:', error.message)
-    }
-
-    console.log(`✅ Loaded dashboard data: ${realDeviceCount} devices, ${realUserCount} users`)
-  } catch (error) {
-    console.error('❌ Error loading dashboard data:', error)
-  }
-
+function renderDashboardSkeleton(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
@@ -73,61 +46,51 @@ export async function initDashboard() {
       </div>
     </div>
 
-    <!-- Recent Admin Consents Alert -->
-    ${recentAdminConsents.length > 0 && !isDismissedRecently() ? `
-    <div class="alert-banner warning" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
-      <div style="flex:1">
-        <i class="ti ti-alert-triangle"></i>
-        <span><strong>${recentAdminConsents.length} new admin consent${recentAdminConsents.length !== 1 ? 's' : ''}</strong> granted in the last 24 hours. Review for suspicious activity.</span>
+    <!-- Recent Admin Consents Alert (hidden until loaded) -->
+    <div id="dash-consents-section" style="display:none;margin-bottom:16px">
+      <div class="alert-banner warning" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+        <div style="flex:1">
+          <i class="ti ti-alert-triangle"></i>
+          <span><strong id="dash-consents-count">0</strong> new admin consent(s) granted in the last 24 hours. Review for suspicious activity.</span>
+        </div>
+        <button class="btn btn-sm" id="dash-consents-view" style="margin-right:8px"><i class="ti ti-arrow-right"></i> View Details</button>
+        <button class="btn btn-sm" id="dash-consents-dismiss" style="padding:6px 12px"><i class="ti ti-x"></i></button>
       </div>
-      <button class="btn btn-sm" id="dash-consents-view" style="margin-right:8px"><i class="ti ti-arrow-right"></i> View Details</button>
-      <button class="btn btn-sm" id="dash-consents-dismiss" style="padding:6px 12px"><i class="ti ti-x"></i></button>
-    </div>
 
-    <!-- Recent Admin Consents Table -->
-    <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
-      <div style="padding:12px;border-bottom:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)">
-        <span style="font-weight:600;font-size:12px">Recent Admin Consents (Last 24 Hours)</span>
-      </div>
-      <table style="width:100%">
-        <thead style="background:var(--color-background-secondary)">
-          <tr>
-            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:18%">Time</th>
-            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:20%">Application</th>
-            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:30%">Permissions</th>
-            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:15%">Performed By</th>
-            <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:17%">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${recentAdminConsents.map(consent => `
-            <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-              <td style="padding:10px 12px;font-size:10px">${new Date(consent.activityDateTime).toLocaleString()}</td>
-              <td style="padding:10px 12px;font-weight:600;font-size:11px">${consent.appName || '—'}</td>
-              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${(consent.scope || '—').substring(0, 40)}${(consent.scope || '—').length > 40 ? '...' : ''}</td>
-              <td style="padding:10px 12px;font-size:10px">${(consent.initiatedBy || '—').substring(0, 25)}</td>
-              <td style="padding:10px 12px;font-size:10px"><span class="badge ${(consent.result || '').toLowerCase() === 'success' ? 'success' : 'danger'}">${consent.result || '—'}</span></td>
+      <!-- Recent Admin Consents Table -->
+      <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
+        <div style="padding:12px;border-bottom:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)">
+          <span style="font-weight:600;font-size:12px">Recent Admin Consents (Last 24 Hours)</span>
+        </div>
+        <table style="width:100%" id="dash-consents-table">
+          <thead style="background:var(--color-background-secondary)">
+            <tr>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:18%">Time</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:20%">Application</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:30%">Permissions</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:15%">Performed By</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;font-size:11px;width:17%">Status</th>
             </tr>
-          `).join('')}
-        </tbody>
-      </table>
+          </thead>
+          <tbody id="dash-consents-tbody"></tbody>
+        </table>
+      </div>
     </div>
-    ` : ''}
 
-    <!-- KPI Tiles - Real Data Only -->
+    <!-- KPI Tiles -->
     <div class="kpi-row">
-      <div class="kpi-tile">
-        <div class="kpi-value info">${realDeviceCount}</div>
+      <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5">
+        <div class="kpi-value info" id="dash-kpi-devices">—</div>
         <div class="kpi-label">Managed Devices</div>
       </div>
-      <div class="kpi-tile">
-        <div class="kpi-value success">${realUserCount}</div>
+      <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5">
+        <div class="kpi-value success" id="dash-kpi-users">—</div>
         <div class="kpi-label">Total Users</div>
       </div>
-      ${realSecureScore ? `<div class="kpi-tile">
-        <div class="kpi-value warning">${realSecureScore.overallScore || 0}/100</div>
+      <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5">
+        <div class="kpi-value warning" id="dash-kpi-score">—</div>
         <div class="kpi-label">Security Score</div>
-      </div>` : ''}
+      </div>
     </div>
 
     <!-- 📊 Critical Alerts Section -->
@@ -168,19 +131,18 @@ export async function initDashboard() {
   const ciSection = document.createElement('div')
   ciSection.style.marginTop = '16px'
   ciSection.innerHTML = '<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading Change Intelligence...</p></div>'
-  el.querySelector('#page-dashboard-inner') || el.appendChild(ciSection)
+  el.appendChild(ciSection)
 
-  // Fetch real Message Center data
-  try {
-    console.log('📡 Fetching Change Intelligence data...')
-    const ciHtml = await buildChangeIntelWidget()
+  // Fetch Change Intelligence in background
+  buildChangeIntelWidget().then(ciHtml => {
     ciSection.innerHTML = ciHtml
     console.log('✓ Change Intelligence loaded')
-  } catch (ciError) {
+  }).catch(ciError => {
     console.error('❌ Error loading Change Intelligence:', ciError.message)
     ciSection.innerHTML = `<div style="padding:20px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)"><div style="color:var(--color-text-secondary);font-size:11px">Failed to load Change Intelligence: ${ciError.message}</div></div>`
-  }
+  })
 
+  // Attach event listeners
   el.querySelector('#dash-to-msgcenter-health')?.addEventListener('click', async () => await go('msgcenter'))
   el.querySelector('#dash-to-requests')?.addEventListener('click', async () => await go('requests'))
   el.querySelector('#dash-to-security')?.addEventListener('click', async () => await go('security'))
@@ -196,17 +158,90 @@ export async function initDashboard() {
   el.querySelector('#dash-to-approvals')?.addEventListener('click', async () => await go('approvals'))
   el.querySelector('#dash-to-msgcenter')?.addEventListener('click', async () => await go('msgcenter'))
   el.querySelector('#dash-to-audit')?.addEventListener('click', async () => await go('audit'))
-  el.querySelector('#dash-to-msgcenter')?.addEventListener('click', async () => await go('msgcenter'))
 
   // Recent admin consents actions
   el.querySelector('#dash-consents-view')?.addEventListener('click', async () => await go('applications'))
   el.querySelector('#dash-consents-dismiss')?.addEventListener('click', () => {
-    const alertEl = el.querySelector('.alert-banner')
-    const tableEl = el.querySelector('.card')
-    if (alertEl) alertEl.style.display = 'none'
-    if (tableEl && tableEl.querySelector('table')) tableEl.style.display = 'none'
+    const section = el.querySelector('#dash-consents-section')
+    if (section) section.style.display = 'none'
     localStorage.setItem('dashboard_consents_dismissed', new Date().getTime())
   })
+}
+
+async function loadDashboardData(el) {
+  try {
+    console.log('📡 Fetching dashboard data...')
+
+    // Fetch all data in parallel
+    const [devicesResult, usersResult, scoreResult, consentsResult] = await Promise.all([
+      getDevices().catch(e => { console.warn('⚠️ Devices fetch failed:', e.message); return {} }),
+      getUsers().catch(e => { console.warn('⚠️ Users fetch failed:', e.message); return {} }),
+      getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return {} }),
+      callAPI('/audit-logs/consents').catch(e => { console.warn('⚠️ Consents fetch failed:', e.message); return {} })
+    ])
+
+    // Update KPI tiles
+    realDeviceCount = (devicesResult.success && devicesResult.count) ? devicesResult.count : 0
+    realUserCount = (usersResult.success && usersResult.count) ? usersResult.count : 0
+    realSecureScore = scoreResult.success ? scoreResult.data : null
+
+    const kpiDevicesEl = el.querySelector('#dash-kpi-devices')
+    if (kpiDevicesEl) kpiDevicesEl.textContent = realDeviceCount
+    const kpiUsersEl = el.querySelector('#dash-kpi-users')
+    if (kpiUsersEl) kpiUsersEl.textContent = realUserCount
+    const kpiScoreEl = el.querySelector('#dash-kpi-score')
+    if (kpiScoreEl && realSecureScore) {
+      kpiScoreEl.textContent = `${realSecureScore.overallScore || 0}/100`
+    }
+
+    // Update opacity to show data is loaded
+    el.querySelectorAll('.kpi-tile').forEach(tile => {
+      tile.style.background = ''
+      tile.style.opacity = '1'
+    })
+
+    // Update recent admin consents
+    if (consentsResult.success && consentsResult.data) {
+      const now = new Date()
+      const last24hrs = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+      recentAdminConsents = consentsResult.data
+        .filter(c => new Date(c.activityDateTime) >= last24hrs)
+        .sort((a, b) => new Date(b.activityDateTime) - new Date(a.activityDateTime))
+        .slice(0, 5)
+
+      if (recentAdminConsents.length > 0 && !isDismissedRecently()) {
+        console.log(`✅ Loaded ${recentAdminConsents.length} recent admin consents`)
+        updateConsentsBanner(el)
+      } else {
+        el.querySelector('#dash-consents-section').style.display = 'none'
+      }
+    }
+
+    console.log(`✅ Dashboard data loaded: ${realDeviceCount} devices, ${realUserCount} users`)
+  } catch (error) {
+    console.error('❌ Error loading dashboard data:', error)
+  }
+}
+
+function updateConsentsBanner(el) {
+  const section = el.querySelector('#dash-consents-section')
+  const countEl = el.querySelector('#dash-consents-count')
+  const tbody = el.querySelector('#dash-consents-tbody')
+
+  if (!section || !tbody) return
+
+  countEl.textContent = recentAdminConsents.length
+  tbody.innerHTML = recentAdminConsents.map(consent => `
+    <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+      <td style="padding:10px 12px;font-size:10px">${new Date(consent.activityDateTime).toLocaleString()}</td>
+      <td style="padding:10px 12px;font-weight:600;font-size:11px">${consent.appName || '—'}</td>
+      <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${(consent.scope || '—').substring(0, 40)}${(consent.scope || '—').length > 40 ? '...' : ''}</td>
+      <td style="padding:10px 12px;font-size:10px">${(consent.initiatedBy || '—').substring(0, 25)}</td>
+      <td style="padding:10px 12px;font-size:10px"><span class="badge ${(consent.result || '').toLowerCase() === 'success' ? 'success' : 'danger'}">${consent.result || '—'}</span></td>
+    </tr>
+  `).join('')
+
+  section.style.display = 'block'
 }
 
 function renderDemoDashboard(el) {
