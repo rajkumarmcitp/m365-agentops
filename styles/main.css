@@ -693,9 +693,13 @@ tr:hover td { background: var(--color-background-secondary); }
   font-size: 13px;
   font-weight: 400;
   color: var(--color-text-secondary);
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
+  background: transparent !important;
+  border: none !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 3px solid transparent !important;
+  outline: none !important;
   cursor: pointer;
   transition: all var(--transition);
   white-space: nowrap;
