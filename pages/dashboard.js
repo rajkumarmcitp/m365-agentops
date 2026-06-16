@@ -97,10 +97,10 @@ function renderDashboardSkeleton(el) {
     <div style="margin-bottom:16px">
       <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px"><i class="ti ti-alert-triangle"></i> Critical Alerts</div>
       <div class="dash-cards-row mb-3">
-        <div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-inbox"></i> Pending Requests</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">2</div><div style="font-size:9px;color:var(--color-text-tertiary)">Pending</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)">5</div><div style="font-size:9px;color:var(--color-text-tertiary)">Total</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)">⏱ Oldest: 2 hours ago</div><button class="btn btn-sm" id="dash-to-requests" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Requests</button></div></div>
-        <div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-alert-triangle"></i> Security Incidents</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-success-text)">0</div><div style="font-size:9px;color:var(--color-text-tertiary)">Active</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)">3</div><div style="font-size:9px;color:var(--color-text-tertiary)">This Week</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)">✓ Status: Investigating</div><button class="btn btn-sm" id="dash-to-security" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Security</button></div></div>
-        <div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-shield-check"></i> TenantGuard Alerts</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">5</div><div style="font-size:9px;color:var(--color-text-tertiary)">Active</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-danger-text)">2</div><div style="font-size:9px;color:var(--color-text-tertiary)">Critical</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)">⚠ Correlations: 2</div><button class="btn btn-sm" id="dash-to-tenantguard" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Alerts</button></div></div>
-        <div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-crown"></i> Privileged Accounts</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-danger-text)">1</div><div style="font-size:9px;color:var(--color-text-tertiary)">At-Risk</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)">5</div><div style="font-size:9px;color:var(--color-text-tertiary)">Total</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)">⏱ No MFA: 1</div><button class="btn btn-sm" id="dash-to-privaccts" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Accounts</button></div></div>
+        <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-inbox"></i> Pending Requests</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)" id="dash-requests-pending">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Pending</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-requests-total">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Total</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-requests-time">⏱ Loading...</div><button class="btn btn-sm" id="dash-to-requests" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Requests</button></div></div>
+        <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-alert-triangle"></i> Security Incidents</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-success-text)" id="dash-incidents-active">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Active</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-incidents-week">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">This Week</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-incidents-status">✓ Loading...</div><button class="btn btn-sm" id="dash-to-security" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Security</button></div></div>
+        <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-shield-check"></i> TenantGuard Alerts</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)" id="dash-tguard-active">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Active</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-danger-text)" id="dash-tguard-critical">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Critical</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-tguard-correlations">⚠ Loading...</div><button class="btn btn-sm" id="dash-to-tenantguard" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Alerts</button></div></div>
+        <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-crown"></i> Privileged Accounts</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-danger-text)" id="dash-priv-atrisk">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">At-Risk</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-priv-total">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Total</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-priv-nomfa">⏱ Loading...</div><button class="btn btn-sm" id="dash-to-privaccts" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Accounts</button></div></div>
       </div>
     </div>
 
@@ -108,10 +108,10 @@ function renderDashboardSkeleton(el) {
     <div style="margin-bottom:16px">
       <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px"><i class="ti ti-heartbeat"></i> System Health Overview</div>
       <div class="dash-cards-row mb-3">
-        <div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</span></div><div style="padding:12px"><div style="text-align:center;margin-bottom:12px"><div style="font-size:16px;color:var(--color-text-secondary)">No Assessment</div></div><div style="padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-sm);text-align:center"><div style="font-size:10px;color:var(--color-text-secondary)">Pillars: 4 • Controls: 12</div></div><button class="btn btn-sm" id="dash-to-zt" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> Request Assessment</button></div></div>
-        <div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-settings-2"></i> CIS Controls</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">78%</div><div style="font-size:9px;color:var(--color-text-tertiary)">Compliance</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)">9</div><div style="font-size:9px;color:var(--color-text-tertiary)">Topics</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)">📊 Trend: ↑ +2%</div><button class="btn btn-sm" id="dash-to-m365" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Config</button></div></div>
-        <div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-license"></i> License Utilization</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-success-text)">95%</div><div style="font-size:9px;color:var(--color-text-tertiary)">Utilized</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)">1.2K</div><div style="font-size:9px;color:var(--color-text-tertiary)">Of 1.3K</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)">⚠ Risk: 50 unused</div><button class="btn btn-sm" id="dash-to-licenses" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Licenses</button></div></div>
-        <div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-device-laptop"></i> Device Compliance</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-success-text)">98%</div><div style="font-size:9px;color:var(--color-text-tertiary)">Compliant</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)">847</div><div style="font-size:9px;color:var(--color-text-tertiary)">Devices</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)">⚠ Non-Compliant: 15</div><button class="btn btn-sm" id="dash-to-intune" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Devices</button></div></div>
+        <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</span></div><div style="padding:12px"><div style="text-align:center;margin-bottom:12px"><div style="font-size:16px;color:var(--color-text-secondary)" id="dash-zt-status">—</div></div><div style="padding:8px;background:var(--color-background-primary);border-radius:var(--border-radius-sm);text-align:center"><div style="font-size:10px;color:var(--color-text-secondary)" id="dash-zt-pillars">Loading...</div></div><button class="btn btn-sm" id="dash-to-zt" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> Request Assessment</button></div></div>
+        <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-settings-2"></i> CIS Controls</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)" id="dash-cis-compliance">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Compliance</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-cis-topics">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Topics</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-cis-trend">📊 Loading...</div><button class="btn btn-sm" id="dash-to-m365" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Config</button></div></div>
+        <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-license"></i> License Utilization</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-success-text)" id="dash-license-pct">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Utilized</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-license-count">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Count</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-license-risk">⚠ Loading...</div><button class="btn btn-sm" id="dash-to-licenses" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Licenses</button></div></div>
+        <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-device-laptop"></i> Device Compliance</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-success-text)" id="dash-device-compliance">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Compliant</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-device-count">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Devices</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-device-noncompliant">⚠ Loading...</div><button class="btn btn-sm" id="dash-to-intune" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Devices</button></div></div>
       </div>
     </div>
 
@@ -119,10 +119,10 @@ function renderDashboardSkeleton(el) {
     <div style="margin-bottom:16px">
       <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px"><i class="ti ti-rocket"></i> Applications & Enterprise Health</div>
       <div class="dash-cards-row mb-3">
-        <div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-app-window"></i> Entra Apps</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-danger-text)">3</div><div style="font-size:9px;color:var(--color-text-tertiary)">Expiring</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)">5</div><div style="font-size:9px;color:var(--color-text-tertiary)">Total</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)">⚠ Secrets expiring soon</div><button class="btn btn-sm" id="dash-to-apps" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Apps</button></div></div>
-        <div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-shield-check"></i> Risk Analysis</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">3</div><div style="font-size:9px;color:var(--color-text-tertiary)">High-Risk</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)">15</div><div style="font-size:9px;color:var(--color-text-tertiary)">Users</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)">📊 Risk Score: 42</div><button class="btn btn-sm" id="dash-to-investigation" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> Investigate</button></div></div>
-        <div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-robot"></i> AI Agents</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-success-text)">6</div><div style="font-size:9px;color:var(--color-text-tertiary)">Active</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)">4</div><div style="font-size:9px;color:var(--color-text-tertiary)">Healthy</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)">📊 Uptime: 99.8%</div><button class="btn btn-sm" id="dash-to-agents" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Agents</button></div></div>
-        <div class="card"><div class="card-header"><span class="card-title"><i class="ti ti-check-list"></i> Pending Approvals</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">3</div><div style="font-size:9px;color:var(--color-text-tertiary)">Pending</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)">7</div><div style="font-size:9px;color:var(--color-text-tertiary)">Total</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)">⏱ Oldest: 5 hours</div><button class="btn btn-sm" id="dash-to-approvals" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> Review</button></div></div>
+        <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-app-window"></i> Entra Apps</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-danger-text)" id="dash-apps-expiring">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Expiring</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-apps-total">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Total</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-apps-status">⚠ Loading...</div><button class="btn btn-sm" id="dash-to-apps" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Apps</button></div></div>
+        <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-shield-check"></i> Risk Analysis</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)" id="dash-risk-high">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">High-Risk</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-risk-users">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Users</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-risk-score">📊 Loading...</div><button class="btn btn-sm" id="dash-to-investigation" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> Investigate</button></div></div>
+        <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-robot"></i> AI Agents</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-success-text)" id="dash-agents-active">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Active</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-agents-healthy">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Healthy</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-agents-uptime">📊 Loading...</div><button class="btn btn-sm" id="dash-to-agents" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Agents</button></div></div>
+        <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-check-list"></i> Pending Approvals</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)" id="dash-approvals-pending">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Pending</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-approvals-total">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Total</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-approvals-time">⏱ Loading...</div><button class="btn btn-sm" id="dash-to-approvals" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> Review</button></div></div>
       </div>
     </div>
   `
@@ -185,20 +185,10 @@ async function loadDashboardData(el) {
     realUserCount = (usersResult.success && usersResult.count) ? usersResult.count : 0
     realSecureScore = scoreResult.success ? scoreResult.data : null
 
-    const kpiDevicesEl = el.querySelector('#dash-kpi-devices')
-    if (kpiDevicesEl) kpiDevicesEl.textContent = realDeviceCount
-    const kpiUsersEl = el.querySelector('#dash-kpi-users')
-    if (kpiUsersEl) kpiUsersEl.textContent = realUserCount
-    const kpiScoreEl = el.querySelector('#dash-kpi-score')
-    if (kpiScoreEl && realSecureScore) {
-      kpiScoreEl.textContent = `${realSecureScore.overallScore || 0}/100`
-    }
-
-    // Update opacity to show data is loaded
-    el.querySelectorAll('.kpi-tile').forEach(tile => {
-      tile.style.background = ''
-      tile.style.opacity = '1'
-    })
+    updateKPITiles(el)
+    updateCriticalAlerts(el)
+    updateSystemHealth(el)
+    updateApplicationsHealth(el)
 
     // Update recent admin consents
     if (consentsResult.success && consentsResult.data) {
@@ -221,6 +211,144 @@ async function loadDashboardData(el) {
   } catch (error) {
     console.error('❌ Error loading dashboard data:', error)
   }
+}
+
+function updateKPITiles(el) {
+  const kpiDevicesEl = el.querySelector('#dash-kpi-devices')
+  if (kpiDevicesEl) kpiDevicesEl.textContent = realDeviceCount
+  const kpiUsersEl = el.querySelector('#dash-kpi-users')
+  if (kpiUsersEl) kpiUsersEl.textContent = realUserCount
+  const kpiScoreEl = el.querySelector('#dash-kpi-score')
+  if (kpiScoreEl && realSecureScore) {
+    kpiScoreEl.textContent = `${realSecureScore.overallScore || 0}/100`
+  }
+
+  // Update opacity to show data is loaded
+  el.querySelectorAll('.kpi-tile').forEach(tile => {
+    tile.style.background = ''
+    tile.style.opacity = '1'
+  })
+}
+
+function updateCriticalAlerts(el) {
+  // Update Pending Requests
+  const el1a = el.querySelector('#dash-requests-pending')
+  const el1b = el.querySelector('#dash-requests-total')
+  const el1c = el.querySelector('#dash-requests-time')
+  if (el1a) el1a.textContent = '2'
+  if (el1b) el1b.textContent = '5'
+  if (el1c) el1c.textContent = '⏱ Oldest: 2 hours ago'
+
+  // Update Security Incidents
+  const el2a = el.querySelector('#dash-incidents-active')
+  const el2b = el.querySelector('#dash-incidents-week')
+  const el2c = el.querySelector('#dash-incidents-status')
+  if (el2a) el2a.textContent = '0'
+  if (el2b) el2b.textContent = '3'
+  if (el2c) el2c.textContent = '✓ Status: Investigating'
+
+  // Update TenantGuard Alerts
+  const el3a = el.querySelector('#dash-tguard-active')
+  const el3b = el.querySelector('#dash-tguard-critical')
+  const el3c = el.querySelector('#dash-tguard-correlations')
+  if (el3a) el3a.textContent = '5'
+  if (el3b) el3b.textContent = '2'
+  if (el3c) el3c.textContent = '⚠ Correlations: 2'
+
+  // Update Privileged Accounts
+  const el4a = el.querySelector('#dash-priv-atrisk')
+  const el4b = el.querySelector('#dash-priv-total')
+  const el4c = el.querySelector('#dash-priv-nomfa')
+  if (el4a) el4a.textContent = '1'
+  if (el4b) el4b.textContent = '5'
+  if (el4c) el4c.textContent = '⏱ No MFA: 1'
+
+  // Remove opacity from critical alerts cards
+  const alertsRow = el.querySelectorAll('.dash-cards-row')[0]
+  if (alertsRow) {
+    alertsRow.querySelectorAll('.card').forEach(card => {
+      card.style.background = ''
+      card.style.opacity = '1'
+    })
+  }
+}
+
+function updateSystemHealth(el) {
+  // Update Zero Trust
+  const zt_status = el.querySelector('#dash-zt-status')
+  const zt_pillars = el.querySelector('#dash-zt-pillars')
+  if (zt_status) zt_status.textContent = 'No Assessment'
+  if (zt_pillars) zt_pillars.textContent = 'Pillars: 4 • Controls: 12'
+
+  // Update CIS Controls
+  const cis_comp = el.querySelector('#dash-cis-compliance')
+  const cis_topics = el.querySelector('#dash-cis-topics')
+  const cis_trend = el.querySelector('#dash-cis-trend')
+  if (cis_comp) cis_comp.textContent = '78%'
+  if (cis_topics) cis_topics.textContent = '9'
+  if (cis_trend) cis_trend.textContent = '📊 Trend: ↑ +2%'
+
+  // Update License
+  const lic_pct = el.querySelector('#dash-license-pct')
+  const lic_count = el.querySelector('#dash-license-count')
+  const lic_risk = el.querySelector('#dash-license-risk')
+  if (lic_pct) lic_pct.textContent = '95%'
+  if (lic_count) lic_count.textContent = '1.2K / 1.3K'
+  if (lic_risk) lic_risk.textContent = '⚠ Risk: 50 unused'
+
+  // Update Device Compliance
+  const dev_comp = el.querySelector('#dash-device-compliance')
+  const dev_count = el.querySelector('#dash-device-count')
+  const dev_non = el.querySelector('#dash-device-noncompliant')
+  if (dev_comp) dev_comp.textContent = '98%'
+  if (dev_count) dev_count.textContent = '847'
+  if (dev_non) dev_non.textContent = '⚠ Non-Compliant: 15'
+
+  // Remove opacity from system health cards
+  el.querySelectorAll('.dash-cards-row')[1]?.querySelectorAll('.card')?.forEach(card => {
+    card.style.background = ''
+    card.style.opacity = '1'
+  })
+}
+
+function updateApplicationsHealth(el) {
+  // Update Entra Apps
+  const apps_exp = el.querySelector('#dash-apps-expiring')
+  const apps_total = el.querySelector('#dash-apps-total')
+  const apps_status = el.querySelector('#dash-apps-status')
+  if (apps_exp) apps_exp.textContent = '3'
+  if (apps_total) apps_total.textContent = '5'
+  if (apps_status) apps_status.textContent = '⚠ Secrets expiring soon'
+
+  // Update Risk Analysis
+  const risk_high = el.querySelector('#dash-risk-high')
+  const risk_users = el.querySelector('#dash-risk-users')
+  const risk_score = el.querySelector('#dash-risk-score')
+  if (risk_high) risk_high.textContent = '3'
+  if (risk_users) risk_users.textContent = '15'
+  if (risk_score) risk_score.textContent = '📊 Risk Score: 42'
+
+  // Update AI Agents
+  const agents_active = el.querySelector('#dash-agents-active')
+  const agents_healthy = el.querySelector('#dash-agents-healthy')
+  const agents_uptime = el.querySelector('#dash-agents-uptime')
+  if (agents_active) agents_active.textContent = '6'
+  if (agents_healthy) agents_healthy.textContent = '4'
+  if (agents_uptime) agents_uptime.textContent = '📊 Uptime: 99.8%'
+
+  // Update Approvals
+  const app_pending = el.querySelector('#dash-approvals-pending')
+  const app_total = el.querySelector('#dash-approvals-total')
+  const app_time = el.querySelector('#dash-approvals-time')
+  if (app_pending) app_pending.textContent = '3'
+  if (app_total) app_total.textContent = '7'
+  if (app_time) app_time.textContent = '⏱ Oldest: 5 hours'
+
+  // Remove opacity from applications health cards
+  el.querySelectorAll('.dash-cards-row')[2]?.querySelectorAll('.card')?.forEach(card => {
+    card.style.background = ''
+    card.style.opacity = '1'
+  })
 }
 
 function updateConsentsBanner(el) {
