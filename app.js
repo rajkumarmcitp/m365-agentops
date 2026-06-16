@@ -14,6 +14,7 @@ import { initPrivAccts } from './pages/privaccts.js'
 import { initLicenses } from './pages/licenses.js'
 import { initAgents } from './pages/agents.js'
 import { initApprovals } from './pages/approvals.js'
+import { initAgent } from './pages/agent.js'
 import { initPortal } from './pages/portal.js'
 import { initMyReqs } from './pages/myreqs.js'
 import { initChat } from './pages/chat.js'
@@ -164,6 +165,7 @@ const PAGE_INIT = {
   licenses: initLicenses,
   agents: initAgents,
   approvals: initApprovals,
+  agent: initAgent,  // Phase 3 - Agent Processing Queue
   portal: initPortal,
   myreqs: initMyReqs,
   myaccount: initMyAccount,

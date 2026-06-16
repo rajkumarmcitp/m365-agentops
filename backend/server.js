@@ -25,6 +25,9 @@ import {
   rejectRequest as rejectSSRequest, completeRequest, getAllRequests,
   setSelfServiceGraphClient, initializeSelfServiceLists
 } from './self-service.js'
+import {
+  provisionRequest, setProvisioningGraphClient, getProvisioningErrorMessage
+} from './provisioning.js'
 
 dotenv.config()
 
@@ -5510,7 +5513,7 @@ app.use((req, res) => {
 })
 
 // ============================================================
-// Self Service Portal API
+// Self Service Portal API - Phase 1 & 2
 // ============================================================
 app.post('/api/self-service/requests/submit', async (req, res) => {
   try {
@@ -5789,6 +5792,170 @@ app.get('/api/self-service/requests', async (req, res) => {
       error: error.message,
       data: [],
       stats: {}
+    })
+  }
+})
+
+// ============================================================
+// Agent Processing API - Phase 3
+// ============================================================
+app.post('/api/self-service/requests/:requestId/process', async (req, res) => {
+  try {
+    const { requestId } = req.params
+    const { agentId } = req.body
+
+    if (!agentId) {
+      return res.status(400).json({
+        success: false,
+        error: 'agentId is required'
+      })
+    }
+
+    const siteUrl = process.env.VITE_SHAREPOINT_SITE || 'root'
+
+    // Get request details
+    if (graphClient) {
+      try {
+        const sites = await graphClient.api(`/sites/${siteUrl}`).get()
+        const siteId = sites.id
+
+        setSelfServiceGraphClient(graphClient)
+        const requestData = await getRequest(siteId, requestId)
+
+        if (!requestData.success || !requestData.data) {
+          return res.status(404).json({
+            success: false,
+            error: 'Request not found'
+          })
+        }
+
+        const req = requestData.data
+
+        // Check if request is approved
+        if (req.status !== 'Approved') {
+          return res.status(400).json({
+            success: false,
+            error: `Request must be approved before processing. Current status: ${req.status}`
+          })
+        }
+
+        console.log(`🤖 Agent ${agentId} processing request ${requestId}`)
+
+        // Set Graph Client for provisioning
+        setProvisioningGraphClient(graphClient)
+
+        // Provision the resource
+        const provisioningResult = await provisionRequest(
+          req.service,
+          req.operation,
+          req.formData
+        )
+
+        if (provisioningResult.success) {
+          // Mark request as completed
+          const completionResult = await completeRequest(siteId, requestId, {
+            processedBy: agentId,
+            processedAt: new Date().toISOString(),
+            provisioningResult: provisioningResult.data,
+            resourceId: provisioningResult.data?.resourceId,
+            resourceUrl: provisioningResult.data?.resourceUrl
+          })
+
+          console.log(`✓ Request ${requestId} completed successfully`)
+
+          res.json({
+            success: true,
+            message: 'Request processed and resource provisioned',
+            data: {
+              requestId: requestId,
+              status: 'Completed',
+              resource: provisioningResult.data
+            }
+          })
+        } else {
+          // Provisioning failed - log error but don't mark complete
+          console.error(`❌ Provisioning failed for ${requestId}:`, provisioningResult.error)
+
+          res.status(500).json({
+            success: false,
+            error: `Provisioning failed: ${provisioningResult.error}`,
+            requestId: requestId
+          })
+        }
+      } catch (error) {
+        console.warn('⚠️  SharePoint/Graph operation failed:', error.message)
+        res.status(500).json({
+          success: false,
+          error: error.message
+        })
+      }
+    } else {
+      // Simulation mode
+      res.json({
+        success: true,
+        message: 'Request processed (simulated)',
+        data: {
+          requestId: requestId,
+          status: 'Completed',
+          resource: {
+            type: 'Simulated Resource',
+            message: 'Resource created in simulation mode'
+          }
+        }
+      })
+    }
+  } catch (error) {
+    console.error('❌ Error processing request:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+app.get('/api/self-service/requests/pending-processing', async (req, res) => {
+  try {
+    const siteUrl = process.env.VITE_SHAREPOINT_SITE || 'root'
+
+    if (graphClient) {
+      try {
+        const sites = await graphClient.api(`/sites/${siteUrl}`).get()
+        const siteId = sites.id
+
+        setSelfServiceGraphClient(graphClient)
+
+        // Get all approved requests
+        const result = await getAllRequests(siteId, { status: 'Approved' })
+
+        res.json({
+          success: true,
+          data: result.data || [],
+          count: result.count || 0
+        })
+      } catch (error) {
+        console.warn('⚠️  SharePoint retrieval failed:', error.message)
+        res.json({
+          success: true,
+          data: [],
+          count: 0,
+          message: 'In-memory mode: no approved requests'
+        })
+      }
+    } else {
+      res.json({
+        success: true,
+        data: [],
+        count: 0,
+        message: 'Graph Client not initialized'
+      })
+    }
+  } catch (error) {
+    console.error('❌ Error retrieving pending requests:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      data: [],
+      count: 0
     })
   }
 })
