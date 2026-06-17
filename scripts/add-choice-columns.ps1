@@ -5,21 +5,21 @@
 # Install PnP PowerShell if needed:
 # Install-Module PnP.PowerShell -Scope CurrentUser
 
-# Configuration - UPDATE WITH YOUR VALUES
-$SiteUrl = "https://[tenant].sharepoint.com/sites/[YourSiteName]"  # Update with your site URL
-$TenantId = "YOUR_TENANT_ID"  # From Azure AD
-$ClientId = "YOUR_CLIENT_ID"  # From App Registration
-$ClientSecret = "YOUR_CLIENT_SECRET"  # From App Registration
+# Configuration - ENTER YOUR VALUES HERE
+$SiteUrl = "https://nasstech.sharepoint.com/"  # Root site URL
+$TenantId = ""  # Fill this in - Get from Azure AD Properties
+$ClientId = ""  # Fill this in - Get from App Registration
+$ClientSecret = ""  # Fill this in - Get from App Registration Secrets
 
 # Get values from environment or prompt if not set
-if ([string]::IsNullOrEmpty($TenantId) -or $TenantId -eq "YOUR_TENANT_ID") {
-    $TenantId = Read-Host "Enter your Tenant ID"
+if ([string]::IsNullOrEmpty($TenantId)) {
+    $TenantId = Read-Host "Enter your Tenant ID (from Azure AD)"
 }
-if ([string]::IsNullOrEmpty($ClientId) -or $ClientId -eq "YOUR_CLIENT_ID") {
-    $ClientId = Read-Host "Enter your Client ID (App ID)"
+if ([string]::IsNullOrEmpty($ClientId)) {
+    $ClientId = Read-Host "Enter your Client ID (from App Registration)"
 }
-if ([string]::IsNullOrEmpty($ClientSecret) -or $ClientSecret -eq "YOUR_CLIENT_SECRET") {
-    $ClientSecret = Read-Host -AsSecureString "Enter your Client Secret"
+if ([string]::IsNullOrEmpty($ClientSecret)) {
+    $ClientSecret = Read-Host -AsSecureString "Enter your Client Secret (from App Registration)"
     $ClientSecret = [System.Net.NetworkCredential]::new('', $ClientSecret).Password
 }
 
