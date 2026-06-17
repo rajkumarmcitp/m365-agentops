@@ -5480,14 +5480,11 @@ app.post('/api/self-service/requests/submit', async (req, res) => {
     }
 
     // Get SharePoint site ID from environment
-    const siteUrl = process.env.VITE_SHAREPOINT_SITE || 'root'
+    const siteId = process.env.SHAREPOINT_SITE_ID
 
-    // If Graph Client available, use SharePoint Lists
-    if (graphClient) {
+    // If Graph Client available and SharePoint configured, use real SharePoint Lists
+    if (graphClient && siteId) {
       try {
-        const sites = await graphClient.api(`/sites/${siteUrl}`).get()
-        const siteId = sites.id
-
         setSelfServiceGraphClient(graphClient)
         const result = await submitRequest(siteId, {
           serviceId,
@@ -5498,32 +5495,33 @@ app.post('/api/self-service/requests/submit', async (req, res) => {
         })
 
         if (result.success) {
+          console.log(`✅ Request ${result.requestId} submitted to SharePoint`)
           res.json({
             success: true,
             requestId: result.requestId,
             message: result.message
           })
         } else {
+          console.error('❌ SharePoint submission error:', result.error)
           res.status(500).json(result)
         }
       } catch (error) {
-        console.warn('⚠️  SharePoint submission failed, using in-memory:', error.message)
-        // Fallback to in-memory
-        const requestId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
-        res.json({
-          success: true,
-          requestId,
-          message: 'Request submitted successfully (in-memory mode)',
-          simulated: true
+        console.error('❌ SharePoint submission failed:', error.message)
+        res.status(500).json({
+          success: false,
+          error: 'Failed to submit request to SharePoint: ' + error.message
         })
       }
     } else {
-      const requestId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
-      res.json({
-        success: true,
-        requestId,
-        message: 'Request submitted successfully (in-memory mode)',
-        simulated: true
+      if (!graphClient) {
+        console.warn('⚠️ Graph Client not initialized')
+      }
+      if (!siteId) {
+        console.warn('⚠️ SHAREPOINT_SITE_ID not configured')
+      }
+      res.status(503).json({
+        success: false,
+        error: 'SharePoint not configured. Please set GRAPH_* and SHAREPOINT_SITE_ID environment variables.'
       })
     }
   } catch (error) {
@@ -5546,33 +5544,31 @@ app.get('/api/self-service/requests/my-requests', async (req, res) => {
       })
     }
 
-    const siteUrl = process.env.VITE_SHAREPOINT_SITE || 'root'
+    const siteId = process.env.SHAREPOINT_SITE_ID
 
-    if (graphClient) {
-      try {
-        const sites = await graphClient.api(`/sites/${siteUrl}`).get()
-        const siteId = sites.id
+    if (!graphClient || !siteId) {
+      return res.status(503).json({
+        success: false,
+        error: 'SharePoint not configured',
+        data: []
+      })
+    }
 
-        setSelfServiceGraphClient(graphClient)
-        const result = await getUserRequests(siteId, userEmail)
-        res.json(result)
-      } catch (error) {
-        console.warn('⚠️  SharePoint retrieval failed:', error.message)
-        res.json({
-          success: true,
-          data: [],
-          message: 'In-memory mode: no requests stored'
-        })
-      }
-    } else {
-      res.json({
-        success: true,
-        data: [],
-        message: 'Graph Client not initialized'
+    try {
+      setSelfServiceGraphClient(graphClient)
+      const result = await getUserRequests(siteId, userEmail)
+      console.log(`✅ Retrieved ${result.data?.length || 0} requests for ${userEmail}`)
+      res.json(result)
+    } catch (error) {
+      console.error('❌ Error retrieving user requests:', error.message)
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        data: []
       })
     }
   } catch (error) {
-    console.error('❌ Error retrieving requests:', error.message)
+    console.error('❌ Error in my-requests:', error.message)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -5584,31 +5580,34 @@ app.get('/api/self-service/requests/my-requests', async (req, res) => {
 app.get('/api/self-service/requests/:requestId', async (req, res) => {
   try {
     const { requestId } = req.params
-    const siteUrl = process.env.VITE_SHAREPOINT_SITE || 'root'
+    const siteId = process.env.SHAREPOINT_SITE_ID
 
-    if (graphClient) {
-      try {
-        const sites = await graphClient.api(`/sites/${siteUrl}`).get()
-        const siteId = sites.id
-
-        setSelfServiceGraphClient(graphClient)
-        const result = await getRequest(siteId, requestId)
-        res.json(result)
-      } catch (error) {
-        console.warn('⚠️  SharePoint retrieval failed:', error.message)
-        res.status(404).json({
-          success: false,
-          error: 'Request not found'
-        })
-      }
-    } else {
-      res.status(404).json({
+    if (!graphClient || !siteId) {
+      return res.status(503).json({
         success: false,
-        error: 'Graph Client not initialized'
+        error: 'SharePoint not configured'
+      })
+    }
+
+    try {
+      setSelfServiceGraphClient(graphClient)
+      const result = await getRequest(siteId, requestId)
+      if (result.success) {
+        console.log(`✅ Retrieved request ${requestId}`)
+        res.json(result)
+      } else {
+        console.warn(`⚠️  Request ${requestId} not found`)
+        res.status(404).json(result)
+      }
+    } catch (error) {
+      console.error('❌ Error retrieving request:', error.message)
+      res.status(500).json({
+        success: false,
+        error: error.message
       })
     }
   } catch (error) {
-    console.error('❌ Error retrieving request:', error.message)
+    console.error('❌ Error in get request:', error.message)
     res.status(500).json({
       success: false,
       error: error.message
@@ -5628,25 +5627,32 @@ app.put('/api/self-service/requests/:requestId/approve', async (req, res) => {
       })
     }
 
-    const siteUrl = process.env.VITE_SHAREPOINT_SITE || 'root'
+    const siteId = process.env.SHAREPOINT_SITE_ID
 
-    let result = {
-      success: true,
-      message: 'Request approved (in-memory mode)',
-      requestId
+    if (!graphClient || !siteId) {
+      return res.status(503).json({
+        success: false,
+        error: 'SharePoint not configured'
+      })
     }
 
-    if (graphClient) {
-      try {
-        const sites = await graphClient.api(`/sites/${siteUrl}`).get()
-        const siteId = sites.id
+    try {
+      setSelfServiceGraphClient(graphClient)
+      const result = await approveSSRequest(siteId, requestId, approverId, comment || '')
 
-        setSelfServiceGraphClient(graphClient)
-        result = await approveSSRequest(siteId, requestId, approverId, comment || '')
-      } catch (error) {
-        console.warn('⚠️  SharePoint update failed:', error.message)
-        // Continue with in-memory mode
+      if (result.success) {
+        console.log(`✅ Request ${requestId} approved in SharePoint`)
+        res.json(result)
+      } else {
+        console.error('❌ Approval failed:', result.error)
+        res.status(500).json(result)
       }
+    } catch (error) {
+      console.error('❌ Approval error:', error.message)
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
     }
 
     // Send approval notification email
@@ -5677,8 +5683,6 @@ app.put('/api/self-service/requests/:requestId/reject', async (req, res) => {
     const { requestId } = req.params
     const { rejectedBy, reason } = req.body
 
-    console.log(`⚠️  Rejecting request ${requestId} - Reason: ${reason}`)
-
     if (!rejectedBy) {
       return res.status(400).json({
         success: false,
@@ -5686,27 +5690,32 @@ app.put('/api/self-service/requests/:requestId/reject', async (req, res) => {
       })
     }
 
-    const siteUrl = process.env.VITE_SHAREPOINT_SITE || 'root'
+    const siteId = process.env.SHAREPOINT_SITE_ID
 
-    if (graphClient) {
-      try {
-        const sites = await graphClient.api(`/sites/${siteUrl}`).get()
-        const siteId = sites.id
+    if (!graphClient || !siteId) {
+      return res.status(503).json({
+        success: false,
+        error: 'SharePoint not configured'
+      })
+    }
 
-        setSelfServiceGraphClient(graphClient)
-        const result = await rejectSSRequest(siteId, requestId, rejectedBy, reason || '')
+    try {
+      console.log(`⚠️  Rejecting request ${requestId} - Reason: ${reason}`)
+      setSelfServiceGraphClient(graphClient)
+      const result = await rejectSSRequest(siteId, requestId, rejectedBy, reason || '')
+
+      if (result.success) {
+        console.log(`✅ Request ${requestId} rejected in SharePoint`)
         res.json(result)
-      } catch (error) {
-        console.warn('⚠️  SharePoint update failed:', error.message)
-        res.json({
-          success: true,
-          message: 'Request rejected (in-memory mode)'
-        })
+      } else {
+        console.error('❌ Rejection failed:', result.error)
+        res.status(500).json(result)
       }
-    } else {
-      res.json({
-        success: true,
-        message: 'Request rejected (in-memory mode)'
+    } catch (error) {
+      console.error('❌ Rejection error:', error.message)
+      res.status(500).json({
+        success: false,
+        error: error.message
       })
     }
   } catch (error) {
@@ -5721,39 +5730,37 @@ app.put('/api/self-service/requests/:requestId/reject', async (req, res) => {
 app.get('/api/self-service/requests', async (req, res) => {
   try {
     const { status, service } = req.query
-    const siteUrl = process.env.VITE_SHAREPOINT_SITE || 'root'
+    const siteId = process.env.SHAREPOINT_SITE_ID
 
-    if (graphClient) {
-      try {
-        const sites = await graphClient.api(`/sites/${siteUrl}`).get()
-        const siteId = sites.id
-
-        setSelfServiceGraphClient(graphClient)
-        const filters = {}
-        if (status) filters.status = status
-        if (service) filters.service = service
-
-        const result = await getAllRequests(siteId, filters)
-        res.json(result)
-      } catch (error) {
-        console.warn('⚠️  SharePoint retrieval failed:', error.message)
-        res.json({
-          success: true,
-          data: [],
-          stats: {},
-          message: 'In-memory mode: no requests stored'
-        })
-      }
-    } else {
-      res.json({
-        success: true,
+    if (!graphClient || !siteId) {
+      return res.status(503).json({
+        success: false,
+        error: 'SharePoint not configured',
         data: [],
-        stats: {},
-        message: 'Graph Client not initialized'
+        stats: {}
+      })
+    }
+
+    try {
+      setSelfServiceGraphClient(graphClient)
+      const filters = {}
+      if (status) filters.status = status
+      if (service) filters.service = service
+
+      const result = await getAllRequests(siteId, filters)
+      console.log(`✅ Retrieved ${result.data?.length || 0} requests from SharePoint`)
+      res.json(result)
+    } catch (error) {
+      console.error('❌ SharePoint retrieval failed:', error.message)
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        data: [],
+        stats: {}
       })
     }
   } catch (error) {
-    console.error('❌ Error retrieving all requests:', error.message)
+    console.error('❌ Error retrieving requests:', error.message)
     res.status(500).json({
       success: false,
       error: error.message,
