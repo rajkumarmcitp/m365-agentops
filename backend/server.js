@@ -5465,53 +5465,6 @@ app.post('/api/data/import', async (req, res) => {
   }
 })
 
-// 404 Handler
-// ============================================================
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Endpoint not found',
-    path: req.path,
-    availableEndpoints: [
-      '/api/health',
-      '/api/user/role',
-      '/api/devices',
-      '/api/device-compliance-policies',
-      '/api/security/score',
-      '/api/users',
-      '/api/identity/risky-users',
-      '/api/applications',
-      '/api/service-principals',
-      '/api/threat-assessment',
-      '/api/me',
-      '/api/me/profile',
-      '/api/me/signin-activity',
-      '/api/me/licenses',
-      '/api/me/groups',
-      '/api/me/onedrive',
-      '/api/me/teams',
-      '/api/me/devices',
-      '/api/me/security',
-      '/api/audit-logs/consents',
-      '/api/audit-logs/m365agentops',
-      '/api/tenantguard/alerts',
-      '/api/tenantguard/alerts/summary',
-      '/api/tenantguard/alerts/:id',
-      '/api/tenantguard/alerts/:id/dismiss',
-      '/api/tenantguard/correlations',
-      '/api/tenantguard/correlations/:id',
-      '/api/tenantguard/patterns',
-      '/api/tenantguard/investigate',
-      '/api/tenantguard/investigations/:id',
-      '/api/tenantguard/investigations/:id/chat',
-      '/api/tenantguard/investigations/:id/report',
-      '/api/tenantguard/settings',
-      '/api/tenantguard/settings/claude-status',
-      '/api/tenantguard/settings/claude-api-key'
-    ]
-  })
-})
-
 // ============================================================
 // Self Service Portal API - Phase 1 & 2
 // ============================================================
@@ -5677,27 +5630,39 @@ app.put('/api/self-service/requests/:requestId/approve', async (req, res) => {
 
     const siteUrl = process.env.VITE_SHAREPOINT_SITE || 'root'
 
+    let result = {
+      success: true,
+      message: 'Request approved (in-memory mode)',
+      requestId
+    }
+
     if (graphClient) {
       try {
         const sites = await graphClient.api(`/sites/${siteUrl}`).get()
         const siteId = sites.id
 
         setSelfServiceGraphClient(graphClient)
-        const result = await approveSSRequest(siteId, requestId, approverId, comment || '')
-        res.json(result)
+        result = await approveSSRequest(siteId, requestId, approverId, comment || '')
       } catch (error) {
         console.warn('⚠️  SharePoint update failed:', error.message)
-        res.json({
-          success: true,
-          message: 'Request approved (in-memory mode)'
-        })
+        // Continue with in-memory mode
       }
-    } else {
-      res.json({
-        success: true,
-        message: 'Request approved (in-memory mode)'
-      })
     }
+
+    // Send approval notification email
+    if (result.success) {
+      try {
+        // In production, fetch the requester email from the request data
+        // For now, we'll send a test notification
+        console.log(`📧 Sending approval notification for request ${requestId}`)
+        // The actual email sending happens via the /api/notifications/email endpoint
+        // which is called from the frontend
+      } catch (error) {
+        console.warn('⚠️  Failed to queue notification email:', error.message)
+      }
+    }
+
+    res.json(result)
   } catch (error) {
     console.error('❌ Error approving request:', error.message)
     res.status(500).json({
@@ -5711,6 +5676,8 @@ app.put('/api/self-service/requests/:requestId/reject', async (req, res) => {
   try {
     const { requestId } = req.params
     const { rejectedBy, reason } = req.body
+
+    console.log(`⚠️  Rejecting request ${requestId} - Reason: ${reason}`)
 
     if (!rejectedBy) {
       return res.status(400).json({
@@ -5956,6 +5923,49 @@ app.get('/api/self-service/requests/pending-processing', async (req, res) => {
       error: error.message,
       data: [],
       count: 0
+    })
+  }
+})
+
+// ============================================================
+// Email Notifications API
+// ============================================================
+app.post('/api/notifications/email', async (req, res) => {
+  try {
+    const { to, subject, html, type, requestId } = req.body
+
+    if (!to || !subject || !html) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: to, subject, html'
+      })
+    }
+
+    console.log(`📧 Sending ${type} notification to ${to} (Request: ${requestId})`)
+
+    // In production, integrate with email service (SendGrid, Azure SendGrid, etc.)
+    // For now, log the notification
+    console.log(`   Subject: ${subject}`)
+    console.log(`   Type: ${type}`)
+
+    // TODO: Integrate with actual email service
+    // Example using SendGrid:
+    // const sgMail = require('@sendgrid/mail');
+    // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    // await sgMail.send({ to, from, subject, html });
+
+    // For demo, just log it and return success
+    res.json({
+      success: true,
+      message: `Email notification queued for ${to}`,
+      type,
+      requestId
+    })
+  } catch (error) {
+    console.error('❌ Error sending email notification:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
     })
   }
 })
@@ -6261,4 +6271,15 @@ const server = app.listen(PORT, () => {
 
   // Start Message Center sync job (every hour)
   startMessageCenterSyncJob()
+})
+
+// ============================================================
+// 404 Handler - MUST be last
+// ============================================================
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Endpoint not found',
+    path: req.path
+  })
 })

@@ -4,14 +4,16 @@ import { api } from '../lib/api-client.js'
 import {
   SERVICE_GROUPS, EXCHANGE_SUB, SERVICE_CATALOG, WORKFLOW_STEPS
 } from '../data/portal-services.js'
+import { REQUEST_TEMPLATES, getTemplate } from '../data/request-templates.js'
 
 // ============================================================
 // View state
 // ============================================================
-let portalView = 'landing'      // 'landing' | 'service' | 'form' | 'submitted' | 'my-requests'
+let portalView = 'landing'      // 'landing' | 'service' | 'form' | 'submitted' | 'my-requests' | 'templates'
 let activeGroupId = null
 let activeSubId = null          // for Exchange sub-services
 let activeOpId = null
+let activeTemplateId = null     // Selected template
 let formValues = {}
 let reqCounter = 100
 let submittedRequestId = null   // Store request ID after submission
@@ -26,6 +28,7 @@ export function initPortal() {
   activeGroupId = null
   activeSubId = null
   activeOpId = null
+  activeTemplateId = null
   formValues = {}
   submittedRequestId = null
   render(el)
@@ -33,6 +36,7 @@ export function initPortal() {
 
 function render(el) {
   if (portalView === 'landing')   renderLanding(el)
+  else if (portalView === 'templates') renderTemplatesView(el)
   else if (portalView === 'service') renderServiceView(el)
   else if (portalView === 'form')  renderFormView(el)
   else if (portalView === 'submitted') renderSubmitted(el)
@@ -91,6 +95,111 @@ function buildWorkflow(op) {
 }
 
 // ============================================================
+// TEMPLATES VIEW — Template gallery
+// ============================================================
+function renderTemplatesView(el) {
+  const u = state.currentUser
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn" id="tmpl-back"><i class="ti ti-arrow-left"></i> Back</button>
+        <div>
+          <div class="page-title"><i class="ti ti-sparkles"></i> Request Templates</div>
+          <div class="page-subtitle">Start with a pre-filled template to speed up your request</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="templates-gallery"></div>
+  `
+
+  el.querySelector('#tmpl-back').addEventListener('click', () => {
+    portalView = 'landing'
+    activeTemplateId = null
+    render(el)
+  })
+
+  const gallery = el.querySelector('#templates-gallery')
+
+  // Group templates by category
+  const byCategory = {}
+  REQUEST_TEMPLATES.forEach(t => {
+    if (!byCategory[t.category]) byCategory[t.category] = []
+    byCategory[t.category].push(t)
+  })
+
+  // Render each category
+  Object.entries(byCategory).forEach(([category, templates]) => {
+    const section = document.createElement('div')
+    section.style.marginBottom = '32px'
+
+    const header = document.createElement('div')
+    header.style.cssText = 'font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px;display:flex;align-items:center;gap:8px'
+    header.innerHTML = `<i class="ti ti-folder"></i> ${category} (${templates.length})`
+    section.appendChild(header)
+
+    const grid = document.createElement('div')
+    grid.style.display = 'grid'
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))'
+    grid.style.gap = '12px'
+
+    templates.forEach(template => {
+      const card = document.createElement('div')
+      card.style.cssText = `
+        padding:16px;
+        background:var(--color-background-secondary);
+        border:1px solid var(--color-border-secondary);
+        border-radius:8px;
+        cursor:pointer;
+        transition:all 200ms;
+      `
+      card.innerHTML = `
+        <div style="font-size:32px;margin-bottom:8px;text-align:center">${template.thumbnail}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--color-text-primary);margin-bottom:4px">${template.name}</div>
+        <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:8px;line-height:1.4">${template.description}</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+          <span style="font-size:9px;padding:2px 6px;background:var(--clr-info-bg);color:var(--clr-info-text);border-radius:3px">
+            ⏱ ${template.estimatedTime}
+          </span>
+          <span style="font-size:9px;padding:2px 6px;background:var(--color-background-primary);color:var(--color-text-secondary);border-radius:3px">
+            📊 ${template.popularity}
+          </span>
+        </div>
+        <button style="width:100%;padding:8px;background:var(--clr-info-bg);color:var(--clr-info-text);border:none;border-radius:4px;cursor:pointer;font-size:10px;font-weight:600">
+          Use Template
+        </button>
+      `
+
+      card.addEventListener('mouseover', () => {
+        card.style.borderColor = 'var(--clr-info-text)'
+        card.style.background = 'var(--color-background-primary)'
+      })
+
+      card.addEventListener('mouseout', () => {
+        card.style.borderColor = 'var(--color-border-secondary)'
+        card.style.background = 'var(--color-background-secondary)'
+      })
+
+      card.addEventListener('click', () => {
+        activeTemplateId = template.id
+        activeGroupId = template.serviceId.includes('-') ? template.serviceId.split('-')[0] : template.serviceId
+        if (isExchange(activeGroupId)) activeSubId = template.serviceId
+        activeOpId = template.operationId
+        formValues = { ...template.formDefaults }
+        portalView = 'form'
+        render(el)
+      })
+
+      grid.appendChild(card)
+    })
+
+    section.appendChild(grid)
+    gallery.appendChild(section)
+  })
+}
+
+// ============================================================
 // LANDING VIEW — 11 service tiles
 // ============================================================
 function renderLanding(el) {
@@ -117,10 +226,15 @@ function renderLanding(el) {
       </div>
     </div>
 
-    <div class="alert-banner info mb-3">
-      <i class="ti ti-user-circle"></i>
-      <span>Signed in as <strong>${u?.name}</strong> (${roleDesc[u?.role] || u?.role}).
-      All requests are logged and subject to approval workflow and AI Agent validation before provisioning.</span>
+    <div style="display:flex;gap:12px;margin-bottom:16px">
+      <div class="alert-banner info" style="flex:1">
+        <i class="ti ti-user-circle"></i>
+        <span>Signed in as <strong>${u?.name}</strong> (${roleDesc[u?.role] || u?.role}).
+        All requests are logged and subject to approval workflow and AI Agent validation before provisioning.</span>
+      </div>
+      <button class="btn btn-primary" id="view-myreqs-btn" style="padding:10px 16px;font-size:12px;font-weight:600;white-space:nowrap">
+        <i class="ti ti-list-check"></i> My Requests
+      </button>
     </div>
 
     <div class="portal-workflow-banner mb-3">
@@ -131,6 +245,19 @@ function renderLanding(el) {
         </div>
         ${i < WORKFLOW_STEPS.length - 1 ? '<div class="pwf-arrow"><i class="ti ti-arrow-right"></i></div>' : ''}
       `).join('')}
+    </div>
+
+    <!-- Quick Templates Section -->
+    <div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px">
+          ⚡ Quick Start Templates
+        </div>
+        <button id="view-all-templates" style="font-size:10px;color:var(--clr-info-text);background:transparent;border:none;cursor:pointer;text-decoration:underline">
+          View all (${REQUEST_TEMPLATES.length})
+        </button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px" id="templates-carousel"></div>
     </div>
 
     <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">
@@ -169,10 +296,57 @@ function renderLanding(el) {
       activeGroupId = btn.dataset.gid
       if (isExchange(activeGroupId)) activeSubId = defaultExchangeSub()
       activeOpId = null
+      activeTemplateId = null
       formValues = {}
       portalView = 'service'
       render(el)
     })
+  })
+
+  // Render templates carousel (first 6 most popular)
+  const carousel = el.querySelector('#templates-carousel')
+  REQUEST_TEMPLATES.slice(0, 6).forEach(template => {
+    const card = document.createElement('div')
+    card.style.cssText = 'padding:12px;background:var(--color-background-secondary);border-radius:6px;cursor:pointer;transition:all 200ms;border:1px solid transparent;text-align:center'
+    card.innerHTML = `
+      <div style="font-size:24px;margin-bottom:6px">${template.thumbnail}</div>
+      <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:4px;line-height:1.3">${template.name}</div>
+      <div style="font-size:9px;color:var(--color-text-secondary)">${template.estimatedTime}</div>
+    `
+    card.addEventListener('mouseover', () => {
+      card.style.background = 'var(--color-border-secondary)'
+      card.style.borderColor = 'var(--color-text-tertiary)'
+    })
+    card.addEventListener('mouseout', () => {
+      card.style.background = 'var(--color-background-secondary)'
+      card.style.borderColor = 'transparent'
+    })
+    card.addEventListener('click', () => {
+      activeTemplateId = template.id
+      activeGroupId = null
+      activeOpId = null
+      formValues = template.formDefaults || {}
+      portalView = 'form'
+      render(el)
+    })
+    carousel.appendChild(card)
+  })
+
+  // View all templates button
+  el.querySelector('#view-all-templates').addEventListener('click', () => {
+    portalView = 'templates'
+    render(el)
+  })
+
+  // View my requests button
+  el.querySelector('#view-myreqs-btn').addEventListener('click', () => {
+    activeGroupId = null
+    activeSubId = null
+    activeOpId = null
+    activeTemplateId = null
+    formValues = {}
+    portalView = 'my-requests'
+    render(el)
   })
 }
 
@@ -801,11 +975,11 @@ function renderSubmitted(el) {
       </div>
     </div>
 
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-primary" id="submit-new">
+    <div style="display:flex;gap:12px;margin-top:20px">
+      <button class="btn btn-primary" id="submit-new" style="padding:10px 16px;font-size:12px;font-weight:600">
         <i class="ti ti-plus"></i> Submit another request
       </button>
-      <button class="btn" id="submit-myreqs">
+      <button class="btn" id="submit-myreqs" style="padding:10px 16px;font-size:12px;font-weight:600;background:var(--clr-info-bg);color:var(--clr-info-text);border:none">
         <i class="ti ti-list-check"></i> View my requests
       </button>
     </div>
@@ -816,12 +990,18 @@ function renderSubmitted(el) {
     activeGroupId = null
     activeSubId = null
     activeOpId = null
+    activeTemplateId = null
     formValues = {}
     submittedRequestId = null
     render(el)
   })
 
   el.querySelector('#submit-myreqs').addEventListener('click', () => {
+    activeGroupId = null
+    activeSubId = null
+    activeOpId = null
+    activeTemplateId = null
+    formValues = {}
     portalView = 'my-requests'
     render(el)
   })
@@ -876,6 +1056,7 @@ async function renderMyRequests(el) {
         activeGroupId = null
         activeSubId = null
         activeOpId = null
+        activeTemplateId = null
         formValues = {}
         submittedRequestId = null
         render(el)
@@ -900,6 +1081,7 @@ async function renderMyRequests(el) {
     activeGroupId = null
     activeSubId = null
     activeOpId = null
+    activeTemplateId = null
     formValues = {}
     submittedRequestId = null
     render(el)
@@ -916,19 +1098,19 @@ function renderMyRequestsList(el, requests) {
 
   const pageHeader = el.querySelector('.page-header')
   pageHeader.insertAdjacentHTML('afterend', `
-    <div style="margin-bottom:16px">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
-        <div class="card" style="padding:12px;text-align:center">
-          <div style="font-size:24px;font-weight:700;color:var(--clr-info-text)">${requests.length}</div>
-          <div style="font-size:11px;color:var(--color-text-tertiary)">Total Requests</div>
+    <div style="margin:16px">
+      <div class="myreq-stats">
+        <div class="myreq-stat-card">
+          <div class="stat-value" style="color:var(--clr-info-text)">${requests.length}</div>
+          <div class="stat-label">Total Requests</div>
         </div>
-        <div class="card" style="padding:12px;text-align:center">
-          <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">${requests.filter(r => r.status === 'Submitted').length}</div>
-          <div style="font-size:11px;color:var(--color-text-tertiary)">Pending Approval</div>
+        <div class="myreq-stat-card">
+          <div class="stat-value" style="color:var(--clr-warning-text)">${requests.filter(r => r.status === 'Submitted').length}</div>
+          <div class="stat-label">Pending Approval</div>
         </div>
-        <div class="card" style="padding:12px;text-align:center">
-          <div style="font-size:24px;font-weight:700;color:var(--clr-success-text)">${requests.filter(r => r.status === 'Completed').length}</div>
-          <div style="font-size:11px;color:var(--color-text-tertiary)">Completed</div>
+        <div class="myreq-stat-card">
+          <div class="stat-value" style="color:var(--clr-success-text)">${requests.filter(r => r.status === 'Completed').length}</div>
+          <div class="stat-label">Completed</div>
         </div>
       </div>
 
@@ -938,44 +1120,75 @@ function renderMyRequestsList(el, requests) {
 
   const listContainer = el.querySelector('#myreq-list')
   listContainer.innerHTML = `
-    <div class="card" style="padding:0;overflow:hidden">
-      <table style="width:100%">
-        <thead style="background:var(--color-background-secondary)">
-          <tr>
-            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Request ID</th>
-            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Service</th>
-            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Operation</th>
-            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Status</th>
-            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Submitted</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${requests.map(req => {
-            const color = statusColors[req.status] || statusColors['Submitted']
-            const createdDate = new Date(req.createdDate).toLocaleString('en-GB', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })
-            return `
-              <tr style="border-bottom:0.5px solid var(--color-border-tertiary);hover:background:var(--color-background-secondary)">
-                <td style="padding:12px;font-size:11px;font-weight:600;color:var(--clr-info-text)">${req.requestId}</td>
-                <td style="padding:12px;font-size:10px">${req.service || 'N/A'}</td>
-                <td style="padding:12px;font-size:10px">${req.operation || 'N/A'}</td>
-                <td style="padding:12px;font-size:10px">
-                  <span class="badge" style="background:${color.bg};color:${color.text};display:inline-flex;align-items:center;gap:4px">
-                    <i class="ti ${color.icon}" style="font-size:10px"></i>
-                    ${req.status}
-                  </span>
-                </td>
-                <td style="padding:12px;font-size:10px;color:var(--color-text-secondary)">${createdDate}</td>
-              </tr>
-            `
-          }).join('')}
-        </tbody>
-      </table>
+    <div class="myreq-cards">
+      ${requests.map(req => {
+        const color = statusColors[req.status] || statusColors['Submitted']
+        const createdDate = new Date(req.createdDate).toLocaleString('en-GB', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+        const updatedDate = req.updatedDate ? new Date(req.updatedDate).toLocaleString('en-GB', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }) : null
+
+        const formDataEntries = Object.entries(req.formData || {})
+          .filter(([k, v]) => v && k.toLowerCase() !== 'id')
+          .slice(0, 3)  // Show first 3 fields
+
+        return `
+          <div class="myreq-card">
+            <div class="myreq-card-header">
+              <div class="myreq-card-title">
+                <div class="myreq-req-id">${req.requestId}</div>
+                <div class="myreq-service">${req.service || 'Service'}</div>
+              </div>
+              <span class="myreq-badge" style="background:${color.bg};color:${color.text}">
+                <i class="ti ${color.icon}"></i> ${req.status}
+              </span>
+            </div>
+
+            <div class="myreq-card-body">
+              <div class="myreq-row">
+                <div class="myreq-label">Operation</div>
+                <div class="myreq-value">${req.operation || 'N/A'}</div>
+              </div>
+
+              ${formDataEntries.length > 0 ? `
+                <div class="myreq-divider"></div>
+                ${formDataEntries.map(([key, val]) => `
+                  <div class="myreq-row">
+                    <div class="myreq-label">${key.replace(/([A-Z])/g, ' $1').trim()}</div>
+                    <div class="myreq-value">${val}</div>
+                  </div>
+                `).join('')}
+              ` : ''}
+
+              <div class="myreq-divider"></div>
+
+              <div class="myreq-row">
+                <div class="myreq-label">Submitted</div>
+                <div class="myreq-value">${createdDate}</div>
+              </div>
+
+              ${req.completedDate ? `
+                <div class="myreq-row">
+                  <div class="myreq-label">Completed</div>
+                  <div class="myreq-value">${new Date(req.completedDate).toLocaleString('en-GB', {
+                    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                  })}</div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `
+      }).join('')}
     </div>
   `
 
@@ -984,6 +1197,7 @@ function renderMyRequestsList(el, requests) {
     activeGroupId = null
     activeSubId = null
     activeOpId = null
+    activeTemplateId = null
     formValues = {}
     submittedRequestId = null
     render(el)

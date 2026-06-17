@@ -208,16 +208,27 @@ export async function getUserRequests(siteId, userEmail) {
       .select('id,fields')
       .get()
 
-    const requests = items.value.map(item => ({
-      id: item.id,
-      requestId: item.fields.Title,
-      service: item.fields.Service,
-      operation: item.fields.Operation,
-      status: item.fields.Status,
-      createdDate: item.fields.CreatedDate,
-      approvedDate: item.fields.ApprovedDate,
-      completedDate: item.fields.CompletedDate
-    }))
+    const requests = items.value.map(item => {
+      let formData = {}
+      try {
+        formData = item.fields.FormData ? JSON.parse(item.fields.FormData) : {}
+      } catch (e) {
+        formData = {}
+      }
+
+      return {
+        id: item.id,
+        requestId: item.fields.Title,
+        service: item.fields.Service,
+        operation: item.fields.Operation,
+        status: item.fields.Status,
+        createdDate: item.fields.CreatedDate,
+        approvedDate: item.fields.ApprovedDate,
+        completedDate: item.fields.CompletedDate,
+        description: item.fields.Description || '',
+        formData: formData
+      }
+    })
 
     return {
       success: true,

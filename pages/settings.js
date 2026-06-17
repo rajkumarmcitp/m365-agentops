@@ -176,18 +176,38 @@ function renderSettings(el) {
       </div>
 
       <div id="portal-services-section">
-        <!-- Main services -->
-        <div class="section-heading" style="margin-bottom:8px">Service Availability</div>
-        <div class="portal-svc-settings-grid" id="portal-main-toggles"></div>
+        <!-- Collapsible Service Availability -->
+        <div style="border:1px solid var(--color-border-primary);border-radius:var(--border-radius-md);overflow:hidden">
+          <button id="svc-availability-toggle" style="width:100%;padding:12px;background:var(--color-background-secondary);border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;color:var(--color-text-secondary);transition:background var(--transition)">
+            <span style="display:flex;align-items:center;gap:8px">
+              <i class="ti ti-grid-dots" style="color:var(--clr-info-text)"></i>
+              Service Availability
+            </span>
+            <i class="ti ti-chevron-down" style="transition:transform var(--transition)"></i>
+          </button>
+          <div id="svc-availability-content" style="display:none;padding:12px;border-top:1px solid var(--color-border-primary)">
+            <div class="portal-svc-settings-grid" id="portal-main-toggles" style="margin-bottom:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px"></div>
 
-        <!-- Exchange sub-services -->
-        <div class="section-heading" style="margin-top:16px;margin-bottom:8px">
-          Exchange Online — Sub-Services
-          <span style="font-size:10px;color:var(--color-text-tertiary);text-transform:none;letter-spacing:0;font-weight:400;margin-left:6px">
-            Only applies when Exchange Online is enabled above
-          </span>
+            <!-- Exchange sub-services -->
+            <div class="section-heading" style="margin-bottom:8px;margin-top:12px">
+              Exchange Online — Sub-Services
+              <span style="font-size:10px;color:var(--color-text-tertiary);text-transform:none;letter-spacing:0;font-weight:400;margin-left:6px">
+                Only applies when Exchange Online is enabled
+              </span>
+            </div>
+            <div class="portal-svc-settings-grid" id="portal-exchange-toggles" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px"></div>
+          </div>
         </div>
-        <div class="portal-svc-settings-grid" id="portal-exchange-toggles"></div>
+      </div>
+
+      <!-- Approval Workflow Configuration -->
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--color-border-tertiary)">
+        <div class="section-heading" style="margin-bottom:12px">Approval Workflow Configuration</div>
+        <div class="alert-banner info mb-3" style="margin-bottom:12px">
+          <i class="ti ti-info-circle"></i>
+          Configure the approval workflow required for each service type before the AI Agent can process the request.
+        </div>
+        <div id="workflow-config" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px"></div>
       </div>
     </div>
 
@@ -363,16 +383,16 @@ function renderSettings(el) {
   const mainGrid = el.querySelector('#portal-main-toggles')
   SERVICE_GROUPS.forEach(group => {
     const key = 'portal_' + group.id.replace(/-/g, '_')
-    const row = document.createElement('div')
-    row.className = 'portal-svc-setting-row'
-    row.innerHTML = `
-      <div class="psc-icon" style="background:${group.bg};color:${group.color};width:28px;height:28px;font-size:13px;border-radius:6px;flex-shrink:0">
+    const card = document.createElement('div')
+    card.style.cssText = 'padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:1px solid var(--color-border-primary);display:flex;align-items:center;gap:10px'
+    card.innerHTML = `
+      <div class="psc-icon" style="background:${group.bg};color:${group.color};width:28px;height:28px;font-size:12px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
         <i class="ti ${group.icon}"></i>
       </div>
-      <span style="flex:1;font-size:11px;font-weight:500">${group.name}</span>
+      <span style="flex:1;font-size:11px;font-weight:600">${group.name}</span>
       <div id="portal-toggle-${key}"></div>
     `
-    mainGrid.appendChild(row)
+    mainGrid.appendChild(card)
 
     const toggle = createToggle({
       id: `chk-${key}`,
@@ -380,7 +400,7 @@ function renderSettings(el) {
       label: '',
       onChange: (v) => { state.settings[key] = v; saveState() },
     })
-    row.querySelector(`#portal-toggle-${key}`).appendChild(toggle)
+    card.querySelector(`#portal-toggle-${key}`).appendChild(toggle)
   })
 
   // ---- Exchange sub-service toggles ----
@@ -393,14 +413,14 @@ function renderSettings(el) {
   }
   EXCHANGE_SUB.forEach(sub => {
     const key = subKeys[sub.id]
-    const row = document.createElement('div')
-    row.className = 'portal-svc-setting-row'
-    row.innerHTML = `
-      <i class="ti ${sub.icon}" style="color:var(--color-text-secondary)"></i>
-      <span style="flex:1;font-size:11px;font-weight:500">${sub.name}</span>
+    const card = document.createElement('div')
+    card.style.cssText = 'padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:1px solid var(--color-border-primary);display:flex;align-items:center;gap:10px'
+    card.innerHTML = `
+      <i class="ti ${sub.icon}" style="color:var(--clr-info-text);font-size:14px;flex-shrink:0"></i>
+      <span style="flex:1;font-size:11px;font-weight:600">${sub.name}</span>
       <div id="portal-toggle-${key}"></div>
     `
-    exGrid.appendChild(row)
+    exGrid.appendChild(card)
 
     const toggle = createToggle({
       id: `chk-${key}`,
@@ -408,7 +428,50 @@ function renderSettings(el) {
       label: '',
       onChange: (v) => { state.settings[key] = v; saveState() },
     })
-    row.querySelector(`#portal-toggle-${key}`).appendChild(toggle)
+    card.querySelector(`#portal-toggle-${key}`).appendChild(toggle)
+  })
+
+  // ---- Service Availability Collapse Toggle ----
+  const svcToggleBtn = el.querySelector('#svc-availability-toggle')
+  const svcContent = el.querySelector('#svc-availability-content')
+  const svcChevron = svcToggleBtn.querySelector('.ti-chevron-down')
+
+  svcToggleBtn.addEventListener('click', () => {
+    const isHidden = svcContent.style.display === 'none'
+    svcContent.style.display = isHidden ? 'block' : 'none'
+    svcChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)'
+  })
+
+  // ---- Approval Workflow Configuration ----
+  const workflowConfig = el.querySelector('#workflow-config')
+  SERVICE_GROUPS.forEach(group => {
+    const workflowKey = 'workflow_' + group.id.replace(/-/g, '_')
+    const currentWorkflow = s[workflowKey] || 'admin-only'
+
+    const card = document.createElement('div')
+    card.style.cssText = 'padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:1px solid var(--color-border-primary)'
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+        <div class="psc-icon" style="background:${group.bg};color:${group.color};width:24px;height:24px;font-size:11px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+          <i class="ti ${group.icon}"></i>
+        </div>
+        <span style="font-weight:600;font-size:11px">${group.name}</span>
+      </div>
+      <select class="form-select" style="font-size:11px" id="workflow-${group.id}">
+        <option value="no-approval" ${currentWorkflow === 'no-approval' ? 'selected' : ''}>No Approval Required (Direct to Agent)</option>
+        <option value="admin-only" ${currentWorkflow === 'admin-only' ? 'selected' : ''}>Admin Approval Only</option>
+        <option value="manager-then-admin" ${currentWorkflow === 'manager-then-admin' ? 'selected' : ''}>Manager Approval → Admin Approval</option>
+        <option value="manager-only" ${currentWorkflow === 'manager-only' ? 'selected' : ''}>Manager Approval Only</option>
+      </select>
+    `
+    workflowConfig.appendChild(card)
+
+    const select = card.querySelector(`#workflow-${group.id}`)
+    select.addEventListener('change', (e) => {
+      state.settings[workflowKey] = e.target.value
+      saveState()
+      showToast(`Workflow updated for ${group.name}`, 'success')
+    })
   })
 
   // ---- Save & Reset ----
