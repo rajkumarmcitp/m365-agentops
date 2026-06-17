@@ -5,11 +5,11 @@
 # Install PnP PowerShell if needed:
 # Install-Module PnP.PowerShell -Scope CurrentUser
 
-# Configuration - ENTER YOUR VALUES HERE
-$SiteUrl = "https://nasstech.sharepoint.com/"  # Root site URL
-$TenantId = ""  # Fill this in - Get from Azure AD Properties
-$ClientId = ""  # Fill this in - Get from App Registration
-$ClientSecret = ""  # Fill this in - Get from App Registration Secrets
+# Configuration - ENTER YOUR VALUES BELOW
+$SiteUrl = "https://nasstech.sharepoint.com/"  # Root site URL - no changes needed
+$TenantId = ""  # TODO: Get from Azure AD Properties (copy your Tenant ID here)
+$ClientId = ""  # TODO: Get from App Registration (copy your Client ID here)
+$ClientSecret = ""  # TODO: Get from App Registration Secrets (copy your Client Secret here)
 
 # Get values from environment or prompt if not set
 if ([string]::IsNullOrEmpty($TenantId)) {
@@ -26,7 +26,7 @@ if ([string]::IsNullOrEmpty($ClientSecret)) {
 Write-Host "🔐 Connecting to SharePoint..."
 
 # Connect using app credentials
-Connect-PnPOnline -Url $SiteUrl -ClientId $ClientId -ClientSecret $ClientSecret -Tenant "$TenantId.onmicrosoft.com"
+Connect-PnPOnline -Url $SiteUrl -ClientId $ClientId -ClientSecret $ClientSecret -Tenant "nasstech.onmicrosoft.com"
 
 Write-Host "✅ Connected to SharePoint`n"
 
@@ -81,13 +81,16 @@ foreach ($column in $ChoiceColumnsToAdd) {
             continue
         }
 
-        # Add the choice column
-        Add-PnPField -List $listName `
-            -DisplayName $columnName `
-            -InternalName $columnName `
-            -Type Choice `
-            -Choices $choices `
-            -Required $false
+        # Add the choice column using XML for better compatibility
+        $choiceXml = ($choices | ForEach-Object { "<CHOICE>$_</CHOICE>" }) -join "`n    "
+        $fieldXml = @"
+<Field Type="Choice" DisplayName="$columnName" Name="$columnName" Required="FALSE" Format="Dropdown">
+    <Default></Default>
+    $choiceXml
+</Field>
+"@
+
+        Add-PnPFieldFromXml -Xml $fieldXml -List $listName
 
         Write-Host "✅ Successfully added $columnName to $listName"
 
