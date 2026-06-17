@@ -71,20 +71,25 @@ app.use(express.json())
 let graphClient = null
 
 // Only initialize Graph Client if credentials are valid (not placeholders)
+// Support both AZURE_* and GRAPH_* environment variables
+const tenantId = process.env.GRAPH_TENANT_ID || process.env.AZURE_TENANT_ID
+const clientId = process.env.GRAPH_CLIENT_ID || process.env.AZURE_CLIENT_ID
+const clientSecret = process.env.GRAPH_CLIENT_SECRET || process.env.AZURE_CLIENT_SECRET
+
 const isValidCredentials =
-  process.env.AZURE_TENANT_ID &&
-  !process.env.AZURE_TENANT_ID.includes('YOUR_') &&
-  process.env.AZURE_CLIENT_ID &&
-  !process.env.AZURE_CLIENT_ID.includes('YOUR_') &&
-  process.env.AZURE_CLIENT_SECRET &&
-  !process.env.AZURE_CLIENT_SECRET.includes('YOUR_')
+  tenantId &&
+  !tenantId.includes('YOUR_') &&
+  clientId &&
+  !clientId.includes('YOUR_') &&
+  clientSecret &&
+  !clientSecret.includes('YOUR_')
 
 if (isValidCredentials) {
   try {
     const credential = new ClientSecretCredential(
-      process.env.AZURE_TENANT_ID,
-      process.env.AZURE_CLIENT_ID,
-      process.env.AZURE_CLIENT_SECRET
+      tenantId,
+      clientId,
+      clientSecret
     )
 
     const authProvider = new TokenCredentialAuthenticationProvider(credential, {
@@ -99,7 +104,7 @@ if (isValidCredentials) {
   }
 } else {
   console.log('ℹ️ Azure credentials not configured - using simulated data')
-  console.log('ℹ️ Set AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET to use real Graph API')
+  console.log('ℹ️ Set GRAPH_TENANT_ID, GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET (or AZURE_*) to use real Graph API')
 }
 
 // ============================================================
