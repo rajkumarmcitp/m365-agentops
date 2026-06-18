@@ -700,6 +700,8 @@ function handleSubmit(el, op) {
     if (inp) formValues[f.id] = inp.type === 'checkbox' ? inp.checked : inp.value
   })
 
+  console.log('📝 Form values collected:', JSON.stringify(formValues))
+
   // ============================================================
   // Call Agent Validation
   // ============================================================
@@ -867,16 +869,19 @@ async function completeSubmission(el, op, validation) {
     }
 
     const serviceId = resolveServiceId()
+    const submitPayload = {
+      serviceId: serviceId,
+      operationId: op.id,
+      formData: formValues,
+      requesterId: state.currentUser?.email || window.userEmail,
+      description: op.label
+    }
+    console.log('📤 Submitting request with formData:', JSON.stringify(submitPayload.formData))
+
     const response = await fetch(`${api}/self-service/requests/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        serviceId: serviceId,
-        operationId: op.id,
-        formData: formValues,
-        requesterId: state.currentUser?.email || window.userEmail,
-        description: op.label
-      })
+      body: JSON.stringify(submitPayload)
     })
 
     const result = await response.json()
