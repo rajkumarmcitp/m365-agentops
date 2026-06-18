@@ -31,6 +31,7 @@ import {
 import {
   startProvisioningJob, setProvisioningJobGraphClient
 } from './provisioning-job.js'
+import { loadSelfServiceConfig, saveSelfServiceConfig } from './services/config-service.js'
 
 dotenv.config()
 
@@ -113,8 +114,14 @@ if (isValidCredentials) {
 // ============================================================
 // Configuration Variables
 // ============================================================
-let selfServiceSiteId = process.env.SHAREPOINT_SITE_ID || null
-let selfServiceSiteUrl = null
+// Load Self Service Portal configuration from disk
+const savedConfig = loadSelfServiceConfig()
+let selfServiceSiteId = process.env.SHAREPOINT_SITE_ID || savedConfig.siteId || null
+let selfServiceSiteUrl = savedConfig.siteUrl || null
+
+if (selfServiceSiteId) {
+  console.log(`✅ Loaded Self Service Portal config from disk: ${selfServiceSiteUrl}`)
+}
 
 // ============================================================
 // Azure AD Group IDs for Role Mapping
@@ -3812,6 +3819,7 @@ app.post('/api/self-service/validate-sharepoint', async (req, res) => {
       // Save the configuration
       selfServiceSiteId = siteId
       selfServiceSiteUrl = siteUrl
+      saveSelfServiceConfig(siteId, siteUrl)
       console.log(`✓ Self Service Portal site configured: ${siteUrl} (${siteId})`)
 
       // Initialize lists and fields on the new site
