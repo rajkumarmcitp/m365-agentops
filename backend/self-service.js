@@ -364,7 +364,6 @@ export async function approveRequest(siteId, requestId, approverId, comment) {
       .patch({
         fields: {
           Status: 'Approved',
-          ApprovedBy: approverId,
           ApprovedDate: new Date().toISOString()
         }
       })
