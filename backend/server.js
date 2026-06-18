@@ -31,7 +31,10 @@ import {
 import {
   startProvisioningJob, setProvisioningJobGraphClient
 } from './provisioning-job.js'
-import { loadSelfServiceConfig, saveSelfServiceConfig } from './services/config-service.js'
+import {
+  loadSelfServiceConfig, saveSelfServiceConfig,
+  loadChangeIntelligenceConfig, saveChangeIntelligenceConfig
+} from './services/config-service.js'
 
 dotenv.config()
 
@@ -121,6 +124,15 @@ let selfServiceSiteUrl = savedConfig.siteUrl || null
 
 if (selfServiceSiteId) {
   console.log(`✅ Loaded Self Service Portal config from disk: ${selfServiceSiteUrl}`)
+}
+
+// Load Change Intelligence configuration from disk
+const savedChangeIntelligenceConfig = loadChangeIntelligenceConfig()
+let changeIntelligenceSiteId = savedChangeIntelligenceConfig.siteId || null
+let changeIntelligenceSiteUrl = savedChangeIntelligenceConfig.siteUrl || null
+
+if (changeIntelligenceSiteId) {
+  console.log(`✅ Loaded Change Intelligence config from disk: ${changeIntelligenceSiteUrl}`)
 }
 
 // ============================================================
@@ -3730,6 +3742,61 @@ app.get('/api/msgcenter/health', async (req, res) => {
   }
 })
 
+// Helper function to initialize Change Intelligence lists and fields
+async function initializeChangeIntelligenceLists(client, siteId) {
+  try {
+    const lists = await client.api(`/sites/${siteId}/lists`).get()
+    let listId
+
+    const existingList = lists.value?.find(l => l.displayName === 'Change Announcements')
+    if (existingList) {
+      listId = existingList.id
+      console.log('✓ Change Announcements list exists')
+    } else {
+      const newList = await client.api(`/sites/${siteId}/lists`).post({
+        displayName: 'Change Announcements',
+        list: { template: 'genericList' }
+      })
+      listId = newList.id
+      console.log('✓ Created Change Announcements list')
+    }
+
+    // Create fields
+    const fieldsToCreate = [
+      { displayName: 'ReviewStatus', choices: ['Not Reviewed', 'Reviewed'] },
+      { displayName: 'TaskStatus', choices: ['Not Started', 'In Progress', 'Resolved'] },
+      { displayName: 'ActionDeadline' },
+      { displayName: 'Notes' }
+    ]
+
+    for (const fieldDef of fieldsToCreate) {
+      try {
+        const existing = await client.api(`/sites/${siteId}/lists/${listId}/columns`).get()
+        const fieldExists = existing.value?.some(f => f.displayName === fieldDef.displayName)
+
+        if (!fieldExists) {
+          let payload = { displayName: fieldDef.displayName }
+          if (fieldDef.choices) {
+            payload.choice = { choices: fieldDef.choices }
+          } else if (fieldDef.displayName === 'ActionDeadline') {
+            payload.dateTime = {}
+          } else {
+            payload.text = {}
+          }
+
+          await client.api(`/sites/${siteId}/lists/${listId}/columns`).post(payload)
+          console.log(`  ✓ Created field: ${fieldDef.displayName}`)
+        }
+      } catch (fieldError) {
+        console.warn(`  ⚠️ Could not create field: ${fieldError.message}`)
+      }
+    }
+  } catch (error) {
+    console.error('Error initializing Change Intelligence lists:', error.message)
+    throw error
+  }
+}
+
 // Validate SharePoint site connection
 app.post('/api/msgcenter/validate-sharepoint', async (req, res) => {
   try {
@@ -3745,10 +3812,52 @@ app.post('/api/msgcenter/validate-sharepoint', async (req, res) => {
     let siteId
     let siteName
     try {
-      const site = await graphClient.api(`/sites/${siteUrl}`).get()
-      siteId = site.id
-      siteName = site.displayName || site.name || siteUrl
-      console.log(`✓ SharePoint site validated: ${siteName}`)
+      // Try direct lookup first
+      let site
+      try {
+        site = await graphClient.api(`/sites/${siteUrl}`).get()
+        siteId = site.id
+        siteName = site.displayName || site.name || siteUrl
+      } catch (directError) {
+        // If direct lookup fails, search for the site
+        console.log(`⚠️ Direct lookup failed for ${siteUrl}, searching...`)
+        const searchName = siteUrl.split('/').pop().toLowerCase()
+        const sites = await graphClient.api('/sites').get()
+        const matching = sites.value?.filter(s =>
+          (s.name || '').toLowerCase() === searchName ||
+          (s.displayName || '').toLowerCase() === searchName ||
+          (s.webUrl || '').toLowerCase().includes(searchName)
+        ) || []
+        console.log(`🔍 Searching for site matching: "${searchName}" (case-insensitive)`)
+
+        if (matching.length === 0) {
+          throw new Error(`No SharePoint site found matching "${searchName}"`)
+        }
+
+        // Handle duplicates: use most recent
+        if (matching.length > 1) {
+          console.log(`ℹ️ Found ${matching.length} sites, using most recent`)
+          matching.sort((a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime))
+        }
+
+        site = matching[0]
+        siteId = site.id
+        siteName = site.displayName || site.name || searchName
+        console.log(`✓ Found site via search: ${siteName}`)
+      }
+
+      console.log(`✓ Change Intelligence SharePoint site validated: ${siteName}`)
+
+      // Save the configuration
+      changeIntelligenceSiteId = siteId
+      changeIntelligenceSiteUrl = siteUrl
+      saveChangeIntelligenceConfig(siteId, siteUrl)
+      console.log(`✓ Change Intelligence site configured: ${siteUrl} (${siteId})`)
+
+      // Initialize lists and fields on the new site
+      console.log('🚀 Initializing Change Intelligence lists and fields...')
+      await initializeChangeIntelligenceLists(graphClient, siteId)
+      console.log('✅ Change Intelligence lists and fields ready for use')
     } catch (error) {
       return res.status(400).json({ success: false, error: `Could not access site: ${error.message}` })
     }
@@ -3760,7 +3869,7 @@ app.post('/api/msgcenter/validate-sharepoint', async (req, res) => {
       message: `Connected to ${siteName}`
     })
   } catch (error) {
-    console.error('Error validating SharePoint:', error.message)
+    console.error('Error validating Change Intelligence SharePoint:', error.message)
     res.status(500).json({ success: false, error: error.message })
   }
 })
@@ -3853,6 +3962,16 @@ app.get('/api/self-service/config', (req, res) => {
   })
 })
 
+// Get Change Intelligence SharePoint configuration
+app.get('/api/msgcenter/config', (req, res) => {
+  res.json({
+    success: true,
+    siteUrl: changeIntelligenceSiteUrl,
+    siteId: changeIntelligenceSiteId,
+    configured: !!changeIntelligenceSiteId
+  })
+})
+
 // Initialize/create Self Service Portal lists and fields
 app.post('/api/self-service/initialize', async (req, res) => {
   try {
@@ -3889,76 +4008,20 @@ app.post('/api/msgcenter/initialize', async (req, res) => {
       return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
     }
 
-    const siteUrl = req.body?.siteUrl || process.env.SHAREPOINT_SITE_ID || 'root'
-
-    console.log(`🚀 Initializing Change Intelligence lists for site: ${siteUrl}`)
-
-    // Get SharePoint site ID
-    let siteId
-    try {
-      const sites = await graphClient.api(`/sites/${siteUrl}`).get()
-      siteId = sites.id
-    } catch (error) {
-      return res.status(400).json({ success: false, error: `Could not access SharePoint site: ${error.message}` })
+    if (!changeIntelligenceSiteId) {
+      return res.status(400).json({ success: false, error: 'Change Intelligence site not configured. Please configure a site first.' })
     }
 
-    // Create Change Announcements list
-    try {
-      const lists = await graphClient.api(`/sites/${siteId}/lists`).get()
-      let listId
+    console.log(`🚀 Manually triggering list initialization for site: ${changeIntelligenceSiteUrl} (${changeIntelligenceSiteId})`)
 
-      const existingList = lists.value?.find(l => l.displayName === 'Change Announcements')
-      if (existingList) {
-        listId = existingList.id
-        console.log('✓ Change Announcements list exists')
-      } else {
-        const newList = await graphClient.api(`/sites/${siteId}/lists`).post({
-          displayName: 'Change Announcements',
-          list: { template: 'genericList' }
-        })
-        listId = newList.id
-        console.log('✓ Created Change Announcements list')
-      }
-
-      // Create fields
-      const fieldsToCreate = [
-        { displayName: 'ReviewStatus', choices: ['Not Reviewed', 'Reviewed'] },
-        { displayName: 'TaskStatus', choices: ['Not Started', 'In Progress', 'Resolved'] },
-        { displayName: 'ActionDeadline' },
-        { displayName: 'Notes' }
-      ]
-
-      for (const fieldDef of fieldsToCreate) {
-        try {
-          const existing = await graphClient.api(`/sites/${siteId}/lists/${listId}/columns`).get()
-          const fieldExists = existing.value?.some(f => f.displayName === fieldDef.displayName)
-
-          if (!fieldExists) {
-            let payload = { displayName: fieldDef.displayName }
-            if (fieldDef.choices) {
-              payload.choice = { choices: fieldDef.choices }
-            } else if (fieldDef.displayName === 'ActionDeadline') {
-              payload.dateTime = {}
-            } else {
-              payload.text = {}
-            }
-
-            await graphClient.api(`/sites/${siteId}/lists/${listId}/columns`).post(payload)
-            console.log(`  ✓ Created field: ${fieldDef.displayName}`)
-          }
-        } catch (fieldError) {
-          console.warn(`  ⚠️ Could not create field: ${fieldError.message}`)
-        }
-      }
-    } catch (error) {
-      return res.status(500).json({ success: false, error: `Could not create lists: ${error.message}` })
-    }
+    // Initialize lists and fields
+    await initializeChangeIntelligenceLists(graphClient, changeIntelligenceSiteId)
 
     res.json({
       success: true,
       message: 'Change Intelligence lists and fields created successfully',
-      siteUrl,
-      siteId
+      siteUrl: changeIntelligenceSiteUrl,
+      siteId: changeIntelligenceSiteId
     })
   } catch (error) {
     console.error('Error initializing Change Intelligence lists:', error.message)
