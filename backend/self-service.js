@@ -195,6 +195,8 @@ export async function submitRequest(siteId, requestData) {
 
     const listId = listResponse.value[0].id
 
+    console.log('📝 Saving request to SharePoint with formData:', JSON.stringify(formData))
+
     const requestItem = {
       fields: {
         Title: requestId,
@@ -207,6 +209,8 @@ export async function submitRequest(siteId, requestData) {
         Description: description || ''
       }
     }
+
+    console.log('📤 Request payload fields.FormData:', requestItem.fields.FormData)
 
     const result = await graphClient
       .api(`/sites/${siteId}/lists/${listId}/items`)
