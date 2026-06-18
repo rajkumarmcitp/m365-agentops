@@ -4001,6 +4001,62 @@ app.post('/api/self-service/initialize', async (req, res) => {
   }
 })
 
+// Recreate FormData field (fixes field type issues)
+app.post('/api/self-service/fix-formdata-field', async (req, res) => {
+  try {
+    if (!graphClient || !selfServiceSiteId) {
+      return res.status(400).json({ success: false, error: 'Self Service Portal not configured' })
+    }
+
+    // Get SelfServiceRequests list
+    const listResponse = await graphClient
+      .api(`/sites/${selfServiceSiteId}/lists`)
+      .filter(`displayName eq 'SelfServiceRequests'`)
+      .get()
+
+    if (!listResponse.value.length) {
+      return res.status(400).json({ success: false, error: 'SelfServiceRequests list not found' })
+    }
+
+    const listId = listResponse.value[0].id
+
+    // Get existing columns
+    const columnsResponse = await graphClient
+      .api(`/sites/${selfServiceSiteId}/lists/${listId}/columns`)
+      .get()
+
+    const existingFormDataField = columnsResponse.value?.find(f => f.displayName === 'FormData')
+
+    // Delete old FormData field if it exists
+    if (existingFormDataField) {
+      console.log('🗑️  Deleting old FormData field...')
+      await graphClient
+        .api(`/sites/${selfServiceSiteId}/lists/${listId}/columns/${existingFormDataField.id}`)
+        .delete()
+      console.log('✓ FormData field deleted')
+    }
+
+    // Create new FormData field as multi-line text
+    console.log('📝 Creating new FormData field (multi-line text)...')
+    await graphClient
+      .api(`/sites/${selfServiceSiteId}/lists/${listId}/columns`)
+      .post({
+        displayName: 'FormData',
+        name: 'FormData',
+        text: { allowMultipleLines: true }
+      })
+    console.log('✓ FormData field created successfully (multi-line text)')
+
+    res.json({
+      success: true,
+      message: 'FormData field recreated successfully as multi-line text'
+    })
+  } catch (error) {
+    console.error('Error fixing FormData field:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 // Initialize/create Change Intelligence lists and fields
 app.post('/api/msgcenter/initialize', async (req, res) => {
   try {
