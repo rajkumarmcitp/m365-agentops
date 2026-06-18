@@ -500,6 +500,38 @@ async function createGroup(formData) {
       result
     }
   } catch (error) {
+    // Debug: log the actual error message
+    console.log(`🔍 DEBUG Error message: "${error.message}"`)
+    console.log(`🔍 DEBUG Contains 'mailNickname already exists'? ${error.message.includes('mailNickname already exists')}`)
+
+    // Handle "already exists" case - treat as success
+    if (error.message.includes('mailNickname already exists')) {
+      console.log(`⚠️ Group with alias '${mailAlias}' already exists, looking up existing group...`)
+      try {
+        // Try to find the existing group
+        const mailNickname = mailAlias.toLowerCase().replace(/\s+/g, '')
+        const groups = await graphClient
+          .api('/groups')
+          .filter(`mailNickname eq '${mailNickname}'`)
+          .select('id,displayName,mailNickname')
+          .get()
+
+        if (groups.value && groups.value.length > 0) {
+          const existingGroup = groups.value[0]
+          console.log(`✅ Found existing group: ${existingGroup.displayName} (${existingGroup.id})`)
+          return {
+            operation: 'Create Group',
+            status: 'completed',
+            displayName: existingGroup.displayName,
+            mailAlias: existingGroup.mailNickname,
+            groupId: existingGroup.id,
+            message: 'Group already exists'
+          }
+        }
+      } catch (lookupError) {
+        console.error(`❌ Could not lookup existing group: ${lookupError.message}`)
+      }
+    }
     throw new Error(`Failed to create group: ${error.message}`)
   }
 }
