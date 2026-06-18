@@ -3773,9 +3773,39 @@ app.post('/api/self-service/validate-sharepoint', async (req, res) => {
     let siteId
     let siteName
     try {
-      const site = await graphClient.api(`/sites/${siteUrl}`).get()
-      siteId = site.id
-      siteName = site.displayName || site.name || siteUrl
+      // Try direct lookup first
+      let site
+      try {
+        site = await graphClient.api(`/sites/${siteUrl}`).get()
+        siteId = site.id
+        siteName = site.displayName || site.name || siteUrl
+      } catch (directError) {
+        // If direct lookup fails, search for the site
+        console.log(`⚠️ Direct lookup failed for ${siteUrl}, searching...`)
+        const siteName = siteUrl.split('/').pop()
+        const sites = await graphClient.api('/sites').get()
+        const matching = sites.value?.filter(s =>
+          s.name === siteName ||
+          s.displayName === siteName ||
+          s.webUrl?.includes(siteName)
+        ) || []
+
+        if (matching.length === 0) {
+          throw new Error(`No SharePoint site found matching "${siteName}"`)
+        }
+
+        // Handle duplicates: use most recent
+        if (matching.length > 1) {
+          console.log(`ℹ️ Found ${matching.length} sites, using most recent`)
+          matching.sort((a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime))
+        }
+
+        site = matching[0]
+        siteId = site.id
+        siteName = site.displayName || site.name || siteName
+        console.log(`✓ Found site via search: ${siteName}`)
+      }
+
       console.log(`✓ Self Service Portal SharePoint site validated: ${siteName}`)
 
       // Save the configuration
