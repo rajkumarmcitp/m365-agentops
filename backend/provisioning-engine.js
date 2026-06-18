@@ -441,6 +441,7 @@ async function handleM365Groups(operation, formData) {
   const op = normalizeOperation(operation)
   switch (op) {
     case 'create-group':
+    case 'create-m365-group':
     case 'Create Group':
       return await createGroup(formData)
     case 'add-member-to-group':
