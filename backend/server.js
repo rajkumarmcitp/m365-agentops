@@ -3782,17 +3782,17 @@ app.post('/api/self-service/validate-sharepoint', async (req, res) => {
       } catch (directError) {
         // If direct lookup fails, search for the site
         console.log(`⚠️ Direct lookup failed for ${siteUrl}, searching...`)
-        const siteName = siteUrl.split('/').pop().toLowerCase()
+        const searchName = siteUrl.split('/').pop().toLowerCase()
         const sites = await graphClient.api('/sites').get()
         const matching = sites.value?.filter(s =>
-          (s.name || '').toLowerCase() === siteName ||
-          (s.displayName || '').toLowerCase() === siteName ||
-          (s.webUrl || '').toLowerCase().includes(siteName)
+          (s.name || '').toLowerCase() === searchName ||
+          (s.displayName || '').toLowerCase() === searchName ||
+          (s.webUrl || '').toLowerCase().includes(searchName)
         ) || []
-        console.log(`🔍 Searching for site matching: "${siteName}" (case-insensitive)`)
+        console.log(`🔍 Searching for site matching: "${searchName}" (case-insensitive)`)
 
         if (matching.length === 0) {
-          throw new Error(`No SharePoint site found matching "${siteName}"`)
+          throw new Error(`No SharePoint site found matching "${searchName}"`)
         }
 
         // Handle duplicates: use most recent
@@ -3803,7 +3803,7 @@ app.post('/api/self-service/validate-sharepoint', async (req, res) => {
 
         site = matching[0]
         siteId = site.id
-        siteName = site.displayName || site.name || siteName
+        siteName = site.displayName || site.name || searchName
         console.log(`✓ Found site via search: ${siteName}`)
       }
 
