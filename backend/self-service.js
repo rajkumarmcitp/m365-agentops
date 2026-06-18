@@ -31,7 +31,7 @@ export async function initializeSelfServiceLists(graphClientInstance, siteId) {
         { displayName: 'Status', type: 'choice', choices: ['Submitted', 'Approved', 'Rejected', 'Completed', 'Cancelled'] },
         { displayName: 'Priority', type: 'choice', choices: ['Low', 'Normal', 'High', 'Critical'] },
         { displayName: 'RequesterId', type: 'text' },
-        { displayName: 'FormData', type: 'text' },
+        { displayName: 'FormData', type: 'multiText' },
         { displayName: 'Description', type: 'text' },
         { displayName: 'CreatedDate', type: 'dateTime' },
         { displayName: 'ApprovedDate', type: 'dateTime' },
@@ -109,6 +109,8 @@ export async function initializeSelfServiceLists(graphClientInstance, siteId) {
                   allowTextEntry: false,
                   displayAs: 'dropDownMenu'
                 }
+              } else if (field.type === 'multiText') {
+                fieldPayload.text = { allowMultipleLines: true }
               } else if (field.type === 'text') {
                 fieldPayload.text = {}
               } else if (field.type === 'dateTime') {
