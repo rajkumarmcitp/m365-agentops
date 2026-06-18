@@ -144,17 +144,19 @@ export async function getRequest(siteId, requestId) {
 
     const listId = listResponse.value[0].id
 
+    // Fetch all items and filter in code (Title field may not be indexed)
     const items = await graphClient
       .api(`/sites/${siteId}/lists/${listId}/items`)
-      .filter(`fields/Title eq '${requestId}'`)
+      .expand('fields')
       .select('id,fields')
       .get()
 
-    if (!items.value.length) {
+    const item = items.value.find(i => i.fields && i.fields.Title === requestId)
+
+    if (!item) {
       return { success: false, error: 'Request not found' }
     }
 
-    const item = items.value[0]
     const fields = item.fields
 
     return {
@@ -171,7 +173,7 @@ export async function getRequest(siteId, requestId) {
         approvedBy: fields.ApprovedBy,
         approvedDate: fields.ApprovedDate,
         completedDate: fields.CompletedDate,
-        notes: fields.Notes ? JSON.parse(fields.Notes) : {}
+        rejectionReason: fields.RejectionReason || ''
       }
     }
   } catch (error) {
@@ -201,34 +203,36 @@ export async function getUserRequests(siteId, userEmail) {
 
     const listId = listResponse.value[0].id
 
+    // Fetch all items and filter in code (RequesterId field may not be indexed)
     const items = await graphClient
       .api(`/sites/${siteId}/lists/${listId}/items`)
-      .filter(`fields/RequesterId eq '${userEmail}'`)
-      .orderby('fields/CreatedDate desc')
+      .expand('fields')
       .select('id,fields')
       .get()
 
-    const requests = items.value.map(item => {
-      let formData = {}
-      try {
-        formData = item.fields.FormData ? JSON.parse(item.fields.FormData) : {}
-      } catch (e) {
-        formData = {}
-      }
+    const requests = items.value
+      .filter(item => item.fields && item.fields.RequesterId === userEmail)
+      .map(item => {
+        let formData = {}
+        try {
+          formData = item.fields.FormData ? JSON.parse(item.fields.FormData) : {}
+        } catch (e) {
+          formData = {}
+        }
 
-      return {
-        id: item.id,
-        requestId: item.fields.Title,
-        service: item.fields.Service,
-        operation: item.fields.Operation,
-        status: item.fields.Status,
-        createdDate: item.fields.CreatedDate,
-        approvedDate: item.fields.ApprovedDate,
-        completedDate: item.fields.CompletedDate,
-        description: item.fields.Description || '',
-        formData: formData
-      }
-    })
+        return {
+          id: item.id,
+          requestId: item.fields.Title,
+          service: item.fields.Service,
+          operation: item.fields.Operation,
+          status: item.fields.Status,
+          createdDate: item.fields.CreatedDate,
+          approvedDate: item.fields.ApprovedDate,
+          completedDate: item.fields.CompletedDate,
+          description: item.fields.Description || '',
+          formData: formData
+        }
+      })
 
     return {
       success: true,
@@ -251,8 +255,8 @@ export async function approveRequest(siteId, requestId, approverId, comment) {
     }
 
     const request = await getRequest(siteId, requestId)
-    if (!request.success) {
-      throw new Error('Request not found')
+    if (!request || !request.success) {
+      throw new Error(request?.error || 'Request not found')
     }
 
     // Update request status
@@ -260,6 +264,10 @@ export async function approveRequest(siteId, requestId, approverId, comment) {
       .api(`/sites/${siteId}/lists`)
       .filter(`displayName eq 'SelfServiceRequests'`)
       .get()
+
+    if (!listResponse.value.length) {
+      throw new Error('SelfServiceRequests list not found')
+    }
 
     const listId = listResponse.value[0].id
     const itemId = request.data.id
@@ -301,8 +309,8 @@ export async function rejectRequest(siteId, requestId, rejectedBy, reason) {
     }
 
     const request = await getRequest(siteId, requestId)
-    if (!request.success) {
-      throw new Error('Request not found')
+    if (!request || !request.success) {
+      throw new Error(request?.error || 'Request not found')
     }
 
     // Update request status
@@ -310,6 +318,10 @@ export async function rejectRequest(siteId, requestId, rejectedBy, reason) {
       .api(`/sites/${siteId}/lists`)
       .filter(`displayName eq 'SelfServiceRequests'`)
       .get()
+
+    if (!listResponse.value.length) {
+      throw new Error('SelfServiceRequests list not found')
+    }
 
     const listId = listResponse.value[0].id
     const itemId = request.data.id
@@ -319,7 +331,7 @@ export async function rejectRequest(siteId, requestId, rejectedBy, reason) {
       .patch({
         fields: {
           Status: 'Rejected',
-          Notes: JSON.stringify({ rejectionReason: reason })
+          RejectionReason: reason
         }
       })
 
@@ -425,14 +437,18 @@ export async function completeRequest(siteId, requestId, completionDetails) {
     }
 
     const request = await getRequest(siteId, requestId)
-    if (!request.success) {
-      throw new Error('Request not found')
+    if (!request || !request.success) {
+      throw new Error(request?.error || 'Request not found')
     }
 
     const listResponse = await graphClient
       .api(`/sites/${siteId}/lists`)
       .filter(`displayName eq 'SelfServiceRequests'`)
       .get()
+
+    if (!listResponse.value.length) {
+      throw new Error('SelfServiceRequests list not found')
+    }
 
     const listId = listResponse.value[0].id
     const itemId = request.data.id
@@ -442,8 +458,7 @@ export async function completeRequest(siteId, requestId, completionDetails) {
       .patch({
         fields: {
           Status: 'Completed',
-          CompletedDate: new Date().toISOString(),
-          Notes: JSON.stringify(completionDetails)
+          CompletedDate: new Date().toISOString()
         }
       })
 
@@ -485,7 +500,7 @@ export async function getAllRequests(siteId, filters = {}) {
 
     let query = graphClient
       .api(`/sites/${siteId}/lists/${listId}/items`)
-      .orderby('fields/CreatedDate desc')
+      .expand('fields')
       .select('id,fields')
 
     // Apply filters if provided
@@ -498,17 +513,19 @@ export async function getAllRequests(siteId, filters = {}) {
 
     const items = await query.get()
 
-    const requests = items.value.map(item => ({
-      id: item.id,
-      requestId: item.fields.Title,
-      service: item.fields.Service,
-      operation: item.fields.Operation,
-      requesterId: item.fields.RequesterId,
-      status: item.fields.Status,
-      createdDate: item.fields.CreatedDate,
-      approvedDate: item.fields.ApprovedDate,
-      completedDate: item.fields.CompletedDate
-    }))
+    const requests = items.value
+      .filter(item => item.fields) // Skip items without fields
+      .map(item => ({
+        id: item.id,
+        requestId: item.fields.Title || '',
+        service: item.fields.Service || '',
+        operation: item.fields.Operation || '',
+        requesterId: item.fields.RequesterId || '',
+        status: item.fields.Status || 'Submitted',
+        createdDate: item.fields.CreatedDate,
+        approvedDate: item.fields.ApprovedDate,
+        completedDate: item.fields.CompletedDate
+      }))
 
     return {
       success: true,

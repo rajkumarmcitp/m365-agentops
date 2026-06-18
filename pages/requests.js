@@ -30,6 +30,7 @@ let filters = {
   status: 'Submitted',
   service: 'All',
   dateRange: 'all',
+  priority: 'All',
   searchQuery: ''
 }
 let viewMode = 'list'
@@ -123,6 +124,7 @@ function applyFilters(el) {
   filteredRequests = allRequests.filter(req => {
     if (filters.status !== 'All' && req.status !== filters.status) return false
     if (filters.service !== 'All' && req.service !== filters.service) return false
+    if (filters.priority !== 'All' && req.priority !== filters.priority) return false
 
     if (filters.dateRange !== 'all') {
       const reqDate = new Date(req.createdDate)
@@ -189,7 +191,10 @@ function renderList(el) {
     total: allRequests.length,
     submitted: allRequests.filter(r => r.status === 'Submitted').length,
     approved: allRequests.filter(r => r.status === 'Approved').length,
-    completed: allRequests.filter(r => r.status === 'Completed').length
+    completed: allRequests.filter(r => r.status === 'Completed').length,
+    critical: allRequests.filter(r => r.priority === 'Critical').length,
+    high: allRequests.filter(r => r.priority === 'High').length,
+    pendingApproval: allRequests.filter(r => r.status === 'Submitted' || r.status === 'Approved').length
   }
 
   const statusFilters = ['All', 'Submitted', 'Approved', 'Completed']
@@ -214,12 +219,30 @@ function renderList(el) {
       </div>
       <div class="kpi-tile">
         <div class="kpi-value success">${stats.approved}</div>
-        <div class="kpi-label">Approved</div>
+        <div class="kpi-label">Processing</div>
       </div>
       <div class="kpi-tile">
         <div class="kpi-value info">${stats.completed}</div>
         <div class="kpi-label">Completed</div>
       </div>
+      ${stats.critical > 0 ? `
+      <div class="kpi-tile">
+        <div class="kpi-value danger">${stats.critical}</div>
+        <div class="kpi-label">Critical Priority</div>
+      </div>
+      ` : ''}
+      ${stats.high > 0 ? `
+      <div class="kpi-tile">
+        <div class="kpi-value warning">${stats.high}</div>
+        <div class="kpi-label">High Priority</div>
+      </div>
+      ` : ''}
+      ${stats.pendingApproval > 0 ? `
+      <div class="kpi-tile">
+        <div class="kpi-value info">${stats.pendingApproval}</div>
+        <div class="kpi-label">Awaiting Action</div>
+      </div>
+      ` : ''}
     </div>
 
     <!-- Filters & Search -->
@@ -234,7 +257,7 @@ function renderList(el) {
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
         <div>
           <label style="font-size:10px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px">Status</label>
           <select id="filter-status" style="width:100%;padding:6px 8px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-sm);font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
@@ -257,6 +280,17 @@ function renderList(el) {
             <option value="7" ${filters.dateRange === '7' ? 'selected' : ''}>Last 7 Days</option>
             <option value="30" ${filters.dateRange === '30' ? 'selected' : ''}>Last 30 Days</option>
             <option value="90" ${filters.dateRange === '90' ? 'selected' : ''}>Last 90 Days</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size:10px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px">Priority</label>
+          <select id="filter-priority" style="width:100%;padding:6px 8px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-sm);font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
+            <option value="All">All Priorities</option>
+            <option value="Critical">🔴 Critical</option>
+            <option value="High">🟠 High</option>
+            <option value="Normal">🔵 Normal</option>
+            <option value="Low">⚪ Low</option>
           </select>
         </div>
       </div>
@@ -292,78 +326,85 @@ function renderList(el) {
       </div>
     ` : ''}
 
-    <!-- Requests Table -->
-    <div class="card" style="margin-top:16px;padding:0;overflow:hidden">
-      <div class="card-header">
-        <span class="card-title">Requests (${filteredRequests.length})</span>
+    <!-- Requests List (Card Layout) -->
+    <div style="margin-top:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-weight:600;font-size:13px">Requests (${filteredRequests.length})</div>
       </div>
-      <div style="padding:0;overflow-x:auto;border-top:0.5px solid var(--color-border-secondary)">
-        ${filteredRequests.length === 0 ? `
-          <div style="padding:40px;text-align:center;color:var(--color-text-tertiary)">
-            <i class="ti ti-inbox" style="font-size:32px;margin-bottom:12px;display:block"></i>
-            <p style="margin:0">No requests found</p>
-          </div>
-        ` : `
-          <table style="width:100%;border-collapse:collapse;font-size:11px">
-            <thead style="background:var(--color-background-secondary)">
-              <tr>
-                <th style="padding:12px;text-align:center;font-weight:600;width:40px">
-                  <input type="checkbox" id="select-all-cb" style="cursor:pointer">
-                </th>
-                <th style="padding:12px;text-align:left;font-weight:600">Request ID</th>
-                <th style="padding:12px;text-align:left;font-weight:600">Service</th>
-                <th style="padding:12px;text-align:left;font-weight:600">Priority</th>
-                <th style="padding:12px;text-align:left;font-weight:600">Status</th>
-                <th style="padding:12px;text-align:left;font-weight:600">SLA</th>
-                <th style="padding:12px;text-align:center;font-weight:600">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredRequests.map(req => {
-                const priorityLevel = getPriorityLevel(req.priority || 'normal')
-                const slaStatus = getSLAStatus(req.createdDate, 'manager-only', req.status)
-                const slaColor = getSLAColor(slaStatus)
-                const isSelected = selectedRequests.has(req.requestId)
-                return `
-                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary);background:${isSelected ? 'var(--clr-info-bg)' : 'transparent'}" class="req-table-row" data-req-id="${req.requestId}">
-                    <td style="padding:12px;text-align:center">
-                      <input type="checkbox" class="req-checkbox" data-req-id="${req.requestId}" ${isSelected ? 'checked' : ''} style="cursor:pointer">
-                    </td>
-                    <td style="padding:12px;font-weight:600;color:var(--clr-info-text)">${req.requestId}</td>
-                    <td style="padding:12px">${req.service}</td>
-                    <td style="padding:12px">
-                      <span style="padding:2px 6px;border-radius:3px;background:${priorityLevel.bg};color:${priorityLevel.color};font-weight:600;font-size:9px">
-                        <i class="ti ${priorityLevel.icon}"></i> ${priorityLevel.label}
-                      </span>
-                    </td>
-                    <td style="padding:12px">
-                      <span style="padding:4px 8px;border-radius:4px;font-weight:600;font-size:10px;background:${getStatusColor(req.status).bg};color:${getStatusColor(req.status).text}">
-                        ${req.status}
-                      </span>
-                    </td>
-                    <td style="padding:12px">
-                      <div style="background:${slaColor.bg};color:${slaColor.text};padding:4px 8px;border-radius:3px;font-size:9px;font-weight:600;text-align:center">
-                        ${slaStatus.message}
-                      </div>
-                    </td>
-                    <td style="padding:12px;text-align:center">
-                      ${req.status === 'Submitted' ? `
-                        <button class="req-view-btn" data-id="${req.requestId}" style="padding:4px 8px;font-size:9px;background:var(--clr-info-bg);color:var(--clr-info-text);border:none;border-radius:3px;cursor:pointer">
-                          Review
-                        </button>
-                      ` : `
-                        <button class="req-view-btn" data-id="${req.requestId}" style="padding:4px 8px;font-size:9px;background:var(--color-background-secondary);color:var(--color-text-secondary);border:none;border-radius:3px;cursor:pointer">
-                          View
-                        </button>
-                      `}
-                    </td>
-                  </tr>
-                `
-              }).join('')}
-            </tbody>
-          </table>
-        `}
-      </div>
+
+      ${filteredRequests.length === 0 ? `
+        <div class="card" style="padding:40px;text-align:center;color:var(--color-text-tertiary)">
+          <i class="ti ti-inbox" style="font-size:32px;margin-bottom:12px;display:block"></i>
+          <p style="margin:0">No requests found</p>
+        </div>
+      ` : `
+        <div style="display:grid;gap:12px">
+          ${filteredRequests.map(req => {
+            const priorityLevel = getPriorityLevel(req.priority || 'normal')
+            const slaStatus = getSLAStatus(req.createdDate, 'manager-only', req.status)
+            const slaColor = getSLAColor(slaStatus)
+            const isSelected = selectedRequests.has(req.requestId)
+            const submittedDate = new Date(req.createdDate).toLocaleString('en-GB', {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+            const requesterEmail = req.requesterId ? req.requesterId.split('@')[0] : 'Unknown'
+            return `
+              <div class="card" style="padding:16px;border-left:3px solid ${isSelected ? 'var(--clr-info-text)' : 'var(--color-border-secondary)'};background:${isSelected ? 'var(--clr-info-bg)' : 'transparent'}" data-req-id="${req.requestId}">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+                  <div style="display:flex;align-items:center;gap:8px;flex:1">
+                    <input type="checkbox" class="req-checkbox" data-req-id="${req.requestId}" ${isSelected ? 'checked' : ''} style="cursor:pointer;width:14px;height:14px;flex-shrink:0;margin-top:2px">
+                    <div>
+                      <div style="font-weight:700;font-size:12px;color:var(--clr-info-text);margin-bottom:2px">${req.requestId}</div>
+                      <div style="font-size:11px;color:var(--color-text-secondary)">${req.service} • ${req.operation || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <span style="padding:2px 8px;border-radius:3px;background:${priorityLevel.bg};color:${priorityLevel.color};font-weight:600;font-size:9px;white-space:nowrap;margin-left:8px">
+                    <i class="ti ${priorityLevel.icon}"></i> ${priorityLevel.label}
+                  </span>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                  <div>
+                    <div style="color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;font-size:11px">Requester</div>
+                    <div style="color:var(--color-text-primary);font-size:11px">${requesterEmail}</div>
+                  </div>
+                  <div>
+                    <div style="color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;font-size:11px">Submitted</div>
+                    <div style="color:var(--color-text-primary);font-size:11px">${submittedDate}</div>
+                  </div>
+                  <div>
+                    <div style="color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;font-size:11px">Status</div>
+                    <span style="padding:3px 8px;border-radius:3px;font-weight:600;font-size:10px;background:${getStatusColor(req.status).bg};color:${getStatusColor(req.status).text}">
+                      ${req.status}
+                    </span>
+                  </div>
+                  <div>
+                    <div style="color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;font-size:11px">SLA</div>
+                    <div style="background:${slaColor.bg};color:${slaColor.text};padding:3px 8px;border-radius:3px;font-size:10px;font-weight:600;text-align:center">
+                      ${slaStatus.message}
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;border-top:0.5px solid var(--color-border-tertiary);padding-top:12px">
+                  ${req.status === 'Submitted' ? `
+                    <button class="req-view-btn" data-id="${req.requestId}" style="padding:6px 12px;font-size:10px;background:var(--clr-info-bg);color:var(--clr-info-text);border:none;border-radius:4px;cursor:pointer;font-weight:600">
+                      <i class="ti ti-eye"></i> Review
+                    </button>
+                  ` : `
+                    <button class="req-view-btn" data-id="${req.requestId}" style="padding:6px 12px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-secondary);border:none;border-radius:4px;cursor:pointer;font-weight:600">
+                      <i class="ti ti-eye"></i> View
+                    </button>
+                  `}
+                </div>
+              </div>
+            `
+          }).join('')}
+        </div>
+      `}
     </div>
   `
 
@@ -389,16 +430,13 @@ function renderList(el) {
     applyFilters(el)
   })
 
-  // Checkbox listeners
-  el.querySelector('#select-all-cb')?.addEventListener('change', (e) => {
-    if (e.target.checked) {
-      filteredRequests.forEach(req => selectedRequests.add(req.requestId))
-    } else {
-      selectedRequests.clear()
-    }
-    renderList(el)
+  el.querySelector('#filter-priority')?.addEventListener('change', (e) => {
+    const val = e.target.value
+    filters.priority = val.includes('All') ? 'All' : val.split(' ').pop()  // Extract last word (Critical, High, etc.)
+    applyFilters(el)
   })
 
+  // Checkbox listeners
   el.querySelectorAll('.req-checkbox').forEach(cb => {
     cb.addEventListener('change', (e) => {
       const reqId = e.target.dataset.reqId

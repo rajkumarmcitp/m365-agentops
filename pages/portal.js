@@ -9,7 +9,7 @@ import { REQUEST_TEMPLATES, getTemplate } from '../data/request-templates.js'
 // ============================================================
 // View state
 // ============================================================
-let portalView = 'landing'      // 'landing' | 'service' | 'form' | 'submitted' | 'my-requests' | 'templates'
+let portalView = 'landing'      // 'landing' | 'service' | 'form' | 'submitted' | 'templates'
 let activeGroupId = null
 let activeSubId = null          // for Exchange sub-services
 let activeOpId = null
@@ -40,7 +40,6 @@ function render(el) {
   else if (portalView === 'service') renderServiceView(el)
   else if (portalView === 'form')  renderFormView(el)
   else if (portalView === 'submitted') renderSubmitted(el)
-  else if (portalView === 'my-requests') renderMyRequests(el)
 }
 
 // ============================================================
@@ -232,9 +231,6 @@ function renderLanding(el) {
         <span>Signed in as <strong>${u?.name}</strong> (${roleDesc[u?.role] || u?.role}).
         All requests are logged and subject to approval workflow and AI Agent validation before provisioning.</span>
       </div>
-      <button class="btn btn-primary" id="view-myreqs-btn" style="padding:10px 16px;font-size:12px;font-weight:600;white-space:nowrap">
-        <i class="ti ti-list-check"></i> My Requests
-      </button>
     </div>
 
     <div class="portal-workflow-banner mb-3">
@@ -338,16 +334,6 @@ function renderLanding(el) {
     render(el)
   })
 
-  // View my requests button
-  el.querySelector('#view-myreqs-btn').addEventListener('click', () => {
-    activeGroupId = null
-    activeSubId = null
-    activeOpId = null
-    activeTemplateId = null
-    formValues = {}
-    portalView = 'my-requests'
-    render(el)
-  })
 }
 
 // ============================================================
@@ -666,7 +652,7 @@ function wfStepDesc(stepId, op) {
   if (stepId === 'dataowner') return `Data/resource owner confirms access appropriateness`
   if (stepId === 'agent') return `AI Agent validates: ${op.agentChecks[0]}, and ${op.agentChecks.length - 1} more checks`
   if (stepId === 'action') return `Provisioning via: ${op.systemAction}`
-  if (stepId === 'done') return `Email notification sent. Request available in My Requests.`
+  if (stepId === 'done') return `Email notification sent. Check Self Service → My Requests to track status.`
   return ''
 }
 
@@ -979,9 +965,6 @@ function renderSubmitted(el) {
       <button class="btn btn-primary" id="submit-new" style="padding:10px 16px;font-size:12px;font-weight:600">
         <i class="ti ti-plus"></i> Submit another request
       </button>
-      <button class="btn" id="submit-myreqs" style="padding:10px 16px;font-size:12px;font-weight:600;background:var(--clr-info-bg);color:var(--clr-info-text);border:none">
-        <i class="ti ti-list-check"></i> View my requests
-      </button>
     </div>
   `
 
@@ -996,210 +979,4 @@ function renderSubmitted(el) {
     render(el)
   })
 
-  el.querySelector('#submit-myreqs').addEventListener('click', () => {
-    activeGroupId = null
-    activeSubId = null
-    activeOpId = null
-    activeTemplateId = null
-    formValues = {}
-    portalView = 'my-requests'
-    render(el)
-  })
-}
-
-// ============================================================
-// MY REQUESTS VIEW — User's request history
-// ============================================================
-async function renderMyRequests(el) {
-  el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <div class="page-title"><i class="ti ti-list-check"></i> My Requests</div>
-        <div class="page-subtitle">Track status of your submitted service requests</div>
-      </div>
-      <div class="page-actions">
-        <button class="btn" id="myreq-back"><i class="ti ti-arrow-left"></i> Back to Portal</button>
-      </div>
-    </div>
-
-    <div style="padding:20px;text-align:center">
-      <div class="spinner"></div>
-      <p>Loading your requests...</p>
-    </div>
-  `
-
-  try {
-    // Fetch user's requests from backend
-    const userEmail = state.currentUser?.email || window.userEmail
-    const response = await fetch(`${api}/self-service/requests/my-requests?email=${encodeURIComponent(userEmail)}`, {
-      headers: { 'Content-Type': 'application/json' }
-    })
-
-    const result = await response.json()
-
-    if (result.success && result.data.length > 0) {
-      renderMyRequestsList(el, result.data)
-    } else {
-      el.querySelector('[class="page-header"]').insertAdjacentHTML('afterend', `
-        <div class="empty-state" style="padding:40px;text-align:center;margin-top:20px">
-          <i class="ti ti-inbox" style="font-size:48px;color:var(--color-text-tertiary);margin-bottom:16px;opacity:0.5;display:block"></i>
-          <h3 style="color:var(--color-text-secondary);margin-bottom:8px">No Requests Yet</h3>
-          <p style="color:var(--color-text-tertiary);margin-bottom:16px">You haven't submitted any service requests yet</p>
-          <button class="btn btn-primary" id="myreq-submit-new">
-            <i class="ti ti-plus"></i> Submit a Request
-          </button>
-        </div>
-      `)
-
-      el.querySelector('#myreq-submit-new').addEventListener('click', () => {
-        portalView = 'landing'
-        activeGroupId = null
-        activeSubId = null
-        activeOpId = null
-        activeTemplateId = null
-        formValues = {}
-        submittedRequestId = null
-        render(el)
-      })
-    }
-  } catch (error) {
-    console.error('Error fetching requests:', error)
-    el.querySelector('[class="page-header"]').insertAdjacentHTML('afterend', `
-      <div class="alert-banner danger" style="margin:16px">
-        <i class="ti ti-alert-triangle"></i>
-        <span>Failed to load requests. <button class="btn btn-sm" id="myreq-retry" style="margin-left:8px">Retry</button></span>
-      </div>
-    `)
-
-    el.querySelector('#myreq-retry').addEventListener('click', () => {
-      renderMyRequests(el)
-    })
-  }
-
-  el.querySelector('#myreq-back')?.addEventListener('click', () => {
-    portalView = 'landing'
-    activeGroupId = null
-    activeSubId = null
-    activeOpId = null
-    activeTemplateId = null
-    formValues = {}
-    submittedRequestId = null
-    render(el)
-  })
-}
-
-function renderMyRequestsList(el, requests) {
-  const statusColors = {
-    'Submitted': { bg: 'var(--clr-info-bg)', text: 'var(--clr-info-text)', icon: 'ti-send' },
-    'Approved': { bg: 'var(--clr-success-bg)', text: 'var(--clr-success-text)', icon: 'ti-circle-check' },
-    'Rejected': { bg: 'var(--clr-danger-bg)', text: 'var(--clr-danger-text)', icon: 'ti-circle-x' },
-    'Completed': { bg: 'var(--clr-success-bg)', text: 'var(--clr-success-text)', icon: 'ti-badge-check' }
-  }
-
-  const pageHeader = el.querySelector('.page-header')
-  pageHeader.insertAdjacentHTML('afterend', `
-    <div style="margin:16px">
-      <div class="myreq-stats">
-        <div class="myreq-stat-card">
-          <div class="stat-value" style="color:var(--clr-info-text)">${requests.length}</div>
-          <div class="stat-label">Total Requests</div>
-        </div>
-        <div class="myreq-stat-card">
-          <div class="stat-value" style="color:var(--clr-warning-text)">${requests.filter(r => r.status === 'Submitted').length}</div>
-          <div class="stat-label">Pending Approval</div>
-        </div>
-        <div class="myreq-stat-card">
-          <div class="stat-value" style="color:var(--clr-success-text)">${requests.filter(r => r.status === 'Completed').length}</div>
-          <div class="stat-label">Completed</div>
-        </div>
-      </div>
-
-      <div id="myreq-list"></div>
-    </div>
-  `)
-
-  const listContainer = el.querySelector('#myreq-list')
-  listContainer.innerHTML = `
-    <div class="myreq-cards">
-      ${requests.map(req => {
-        const color = statusColors[req.status] || statusColors['Submitted']
-        const createdDate = new Date(req.createdDate).toLocaleString('en-GB', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })
-        const updatedDate = req.updatedDate ? new Date(req.updatedDate).toLocaleString('en-GB', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }) : null
-
-        const formDataEntries = Object.entries(req.formData || {})
-          .filter(([k, v]) => v && k.toLowerCase() !== 'id')
-          .slice(0, 3)  // Show first 3 fields
-
-        return `
-          <div class="myreq-card">
-            <div class="myreq-card-header">
-              <div class="myreq-card-title">
-                <div class="myreq-req-id">${req.requestId}</div>
-                <div class="myreq-service">${req.service || 'Service'}</div>
-              </div>
-              <span class="myreq-badge" style="background:${color.bg};color:${color.text}">
-                <i class="ti ${color.icon}"></i> ${req.status}
-              </span>
-            </div>
-
-            <div class="myreq-card-body">
-              <div class="myreq-row">
-                <div class="myreq-label">Operation</div>
-                <div class="myreq-value">${req.operation || 'N/A'}</div>
-              </div>
-
-              ${formDataEntries.length > 0 ? `
-                <div class="myreq-divider"></div>
-                ${formDataEntries.map(([key, val]) => `
-                  <div class="myreq-row">
-                    <div class="myreq-label">${key.replace(/([A-Z])/g, ' $1').trim()}</div>
-                    <div class="myreq-value">${val}</div>
-                  </div>
-                `).join('')}
-              ` : ''}
-
-              <div class="myreq-divider"></div>
-
-              <div class="myreq-row">
-                <div class="myreq-label">Submitted</div>
-                <div class="myreq-value">${createdDate}</div>
-              </div>
-
-              ${req.completedDate ? `
-                <div class="myreq-row">
-                  <div class="myreq-label">Completed</div>
-                  <div class="myreq-value">${new Date(req.completedDate).toLocaleString('en-GB', {
-                    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                  })}</div>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        `
-      }).join('')}
-    </div>
-  `
-
-  el.querySelector('#myreq-back')?.addEventListener('click', () => {
-    portalView = 'landing'
-    activeGroupId = null
-    activeSubId = null
-    activeOpId = null
-    activeTemplateId = null
-    formValues = {}
-    submittedRequestId = null
-    render(el)
-  })
 }

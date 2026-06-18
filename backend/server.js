@@ -28,6 +28,9 @@ import {
 import {
   provisionRequest, setProvisioningGraphClient, getProvisioningErrorMessage
 } from './provisioning.js'
+import {
+  startProvisioningJob, setProvisioningJobGraphClient
+} from './provisioning-job.js'
 
 dotenv.config()
 
@@ -138,6 +141,13 @@ async function initializeTenantGuard() {
 
     if (graphClient) {
       startAuditCollectionJob(graphClient)
+
+      // Start provisioning job for self-service requests
+      const siteId = process.env.SHAREPOINT_SITE_ID
+      if (siteId) {
+        setProvisioningJobGraphClient(graphClient)
+        startProvisioningJob(siteId)
+      }
     } else {
       console.log('⚠️ Graph Client not available - TenantGuard will not collect audit data')
     }
@@ -5641,39 +5651,16 @@ app.put('/api/self-service/requests/:requestId/approve', async (req, res) => {
       })
     }
 
-    try {
-      setSelfServiceGraphClient(graphClient)
-      const result = await approveSSRequest(siteId, requestId, approverId, comment || '')
+    setSelfServiceGraphClient(graphClient)
+    const result = await approveSSRequest(siteId, requestId, approverId, comment || '')
 
-      if (result.success) {
-        console.log(`✅ Request ${requestId} approved in SharePoint`)
-        res.json(result)
-      } else {
-        console.error('❌ Approval failed:', result.error)
-        res.status(500).json(result)
-      }
-    } catch (error) {
-      console.error('❌ Approval error:', error.message)
-      res.status(500).json({
-        success: false,
-        error: error.message
-      })
-    }
-
-    // Send approval notification email
     if (result.success) {
-      try {
-        // In production, fetch the requester email from the request data
-        // For now, we'll send a test notification
-        console.log(`📧 Sending approval notification for request ${requestId}`)
-        // The actual email sending happens via the /api/notifications/email endpoint
-        // which is called from the frontend
-      } catch (error) {
-        console.warn('⚠️  Failed to queue notification email:', error.message)
-      }
+      console.log(`✅ Request ${requestId} approved in SharePoint`)
+      res.json(result)
+    } else {
+      console.error('❌ Approval failed:', result.error)
+      res.status(500).json(result)
     }
-
-    res.json(result)
   } catch (error) {
     console.error('❌ Error approving request:', error.message)
     res.status(500).json({
@@ -5704,24 +5691,16 @@ app.put('/api/self-service/requests/:requestId/reject', async (req, res) => {
       })
     }
 
-    try {
-      console.log(`⚠️  Rejecting request ${requestId} - Reason: ${reason}`)
-      setSelfServiceGraphClient(graphClient)
-      const result = await rejectSSRequest(siteId, requestId, rejectedBy, reason || '')
+    console.log(`⚠️  Rejecting request ${requestId} - Reason: ${reason}`)
+    setSelfServiceGraphClient(graphClient)
+    const result = await rejectSSRequest(siteId, requestId, rejectedBy, reason || '')
 
-      if (result.success) {
-        console.log(`✅ Request ${requestId} rejected in SharePoint`)
-        res.json(result)
-      } else {
-        console.error('❌ Rejection failed:', result.error)
-        res.status(500).json(result)
-      }
-    } catch (error) {
-      console.error('❌ Rejection error:', error.message)
-      res.status(500).json({
-        success: false,
-        error: error.message
-      })
+    if (result.success) {
+      console.log(`✅ Request ${requestId} rejected in SharePoint`)
+      res.json(result)
+    } else {
+      console.error('❌ Rejection failed:', result.error)
+      res.status(500).json(result)
     }
   } catch (error) {
     console.error('❌ Error rejecting request:', error.message)

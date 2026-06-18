@@ -182,7 +182,7 @@ ul { list-style: none; }
 }
 
 .role-badge {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 20px;
@@ -279,7 +279,7 @@ ul { list-style: none; }
 .kpi-value.purple  { color: var(--clr-purple-text); }
 
 .kpi-label {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -293,7 +293,7 @@ ul { list-style: none; }
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 20px;
@@ -318,7 +318,7 @@ ul { list-style: none; }
 
 /* Nav badges */
 .nav-badge {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   padding: 1px 5px;
   border-radius: 10px;
@@ -338,7 +338,7 @@ ul { list-style: none; }
   gap: 5px;
   border-radius: var(--border-radius-md);
   padding: 6px 12px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   border: 0.5px solid var(--color-border-primary);
   background: var(--color-background-primary);
@@ -376,13 +376,13 @@ ul { list-style: none; }
 }
 
 .btn-sm {
-  padding: 3px 8px;
-  font-size: 10px;
+  padding: 4px 10px;
+  font-size: 11px;
 }
 
 .btn-xs {
-  padding: 2px 6px;
-  font-size: 10px;
+  padding: 3px 8px;
+  font-size: 11px;
 }
 
 .btn-icon {
@@ -405,7 +405,7 @@ table {
 
 th {
   text-align: left;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--color-text-tertiary);
   text-transform: uppercase;
@@ -484,7 +484,7 @@ tr:hover td { background: var(--color-background-secondary); }
   user-select: none;
 }
 .toggle-sublabel {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-tertiary);
   margin-top: 1px;
 }
@@ -617,7 +617,7 @@ tr:hover td { background: var(--color-background-secondary); }
   align-items: center;
   justify-content: space-between;
   margin-bottom: 6px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-tertiary);
   font-family: inherit;
 }
@@ -693,8 +693,8 @@ tr:hover td { background: var(--color-background-secondary); }
 }
 
 .tab-btn {
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 4px 8px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--color-text-secondary);
   background: var(--color-background-primary) !important;
@@ -704,6 +704,12 @@ tr:hover td { background: var(--color-background-secondary); }
   cursor: pointer;
   transition: all var(--transition);
   white-space: nowrap;
+  height: auto;
+  line-height: 1.2;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tab-btn:hover {
@@ -891,7 +897,7 @@ tr:hover td { background: var(--color-background-secondary); }
 }
 
 .login-divider {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-tertiary);
   text-align: center;
   margin: 16px 0;
@@ -937,7 +943,7 @@ tr:hover td { background: var(--color-background-secondary); }
   color: var(--color-text-primary);
 }
 .user-tile-info p {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-tertiary);
 }
 
@@ -1042,7 +1048,7 @@ tr:hover td { background: var(--color-background-secondary); }
 }
 
 .pill {
-  font-size: 10px;
+  font-size: 11px;
   padding: 2px 7px;
   border-radius: 20px;
   background: var(--color-background-tertiary);
@@ -1058,7 +1064,7 @@ tr:hover td { background: var(--color-background-secondary); }
 
 /* Section heading */
 .section-heading {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--color-text-tertiary);
   text-transform: uppercase;
@@ -1308,13 +1314,13 @@ tr:hover td { background: var(--color-background-secondary); }
   }
 
   .score-grid > div > div:last-child {
-    font-size: 9px !important;
+    font-size: 10px !important;
     margin-top: 2px !important;
   }
 
   /* Tables - responsive with horizontal scroll */
   table {
-    font-size: 9px !important;
+    font-size: 10px !important;
     display: block;
     overflow-x: auto;
     white-space: nowrap;
@@ -1426,7 +1432,7 @@ tr:hover td { background: var(--color-background-secondary); }
   /* Buttons */
   .btn {
     padding: 5px 8px !important;
-    font-size: 9px !important;
+    font-size: 10px !important;
   }
 
   .btn-xs {
@@ -1437,12 +1443,12 @@ tr:hover td { background: var(--color-background-secondary); }
   /* Badge sizes */
   .badge {
     padding: 2px 5px !important;
-    font-size: 9px !important;
+    font-size: 10px !important;
   }
 
   /* Tables */
   table {
-    font-size: 9px !important;
+    font-size: 10px !important;
   }
 
   th, td {
@@ -1474,7 +1480,7 @@ tr:hover td { background: var(--color-background-secondary); }
     white-space: nowrap;
     flex-shrink: 0;
     padding: 5px 10px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   /* Filter buttons responsive */
@@ -1487,7 +1493,7 @@ tr:hover td { background: var(--color-background-secondary); }
     flex-shrink: 0;
     white-space: nowrap;
     padding: 5px 10px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   /* Score grid - 3 columns on tablet */
@@ -1541,6 +1547,241 @@ tr:hover td { background: var(--color-background-secondary); }
 
   code {
     word-break: break-all;
-    font-size: 9px !important;
+    font-size: 10px !important;
+  }
+}
+
+/* ============================================================
+   Enhanced Mobile Responsiveness
+   ============================================================ */
+
+/* Touch-friendly targets (minimum 44px for mobile) */
+@media (max-width: 768px) {
+  button, .btn, input, select, textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Mobile-friendly form inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 12px 8px;
+  }
+
+  /* Mobile table as cards */
+  @supports (display: grid) {
+    table {
+      display: block;
+      width: 100%;
+    }
+
+    thead {
+      display: none;
+    }
+
+    tbody {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    tr {
+      display: block;
+      border: 1px solid var(--color-border-secondary);
+      border-radius: 6px;
+      padding: 12px;
+      background: var(--color-background-primary);
+    }
+
+    td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border: none;
+      gap: 8px;
+    }
+
+    td::before {
+      content: attr(data-label);
+      font-weight: 600;
+      font-size: 11px;
+      min-width: 80px;
+      text-transform: uppercase;
+      color: var(--color-text-secondary);
+    }
+  }
+
+  /* Mobile grid optimization */
+  .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Mobile filter stack */
+  .filter-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Collapsible filters on mobile */
+  .filters-panel {
+    max-height: none;
+  }
+
+  /* Better button stacking */
+  .button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .button-group .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* Modal improvements for mobile */
+  .modal {
+    width: 95vw !important;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-content {
+    max-width: 100%;
+  }
+
+  /* Sidebar improvements */
+  #sidebar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better spacing for mobile */
+  .card {
+    margin-bottom: 12px;
+  }
+
+  /* Form label improvements */
+  label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  /* Better typography on mobile */
+  h1, .page-title {
+    font-size: 20px;
+    line-height: 1.3;
+  }
+
+  h2 {
+    font-size: 16px;
+    line-height: 1.3;
+  }
+
+  p {
+    line-height: 1.5;
+  }
+
+  /* Prevent horizontal scroll */
+  body, html {
+    overflow-x: hidden;
+  }
+
+  /* Touch-friendly spacing */
+  .kpi-tile {
+    padding: 12px;
+    min-height: 80px;
+  }
+
+  /* Better status badges on mobile */
+  .status-badge {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  /* Improve list items */
+  li, .list-item {
+    padding: 12px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Better dropdown menu sizing */
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 1.5em;
+    padding-right: 2.5em;
+  }
+}
+
+/* Extra small phones (max-width: 360px) */
+@media (max-width: 360px) {
+  #page-area {
+    padding: 8px 4px;
+  }
+
+  .page-title {
+    font-size: 14px;
+  }
+
+  .card {
+    padding: 8px;
+  }
+
+  .btn {
+    padding: 8px 6px !important;
+    font-size: 10px !important;
+  }
+
+  /* Hide less important info on tiny screens */
+  .subtitle, .secondary-text {
+    display: none;
+  }
+
+  /* Smaller tables */
+  table {
+    font-size: 10px !important;
+  }
+
+  th, td {
+    padding: 4px 2px !important;
+  }
+
+  /* Stack everything */
+  .flex-row {
+    flex-direction: column;
+  }
+}
+
+/* Landscape mode optimization */
+@media (max-width: 768px) and (orientation: landscape) {
+  #sidebar {
+    width: 60px;
+    padding: 8px 4px;
+  }
+
+  #page-area {
+    padding: 12px;
+  }
+
+  .page-title {
+    font-size: 14px;
+  }
+
+  /* Hide text labels in landscape */
+  .sidebar-item-text {
+    display: none;
   }
 }
