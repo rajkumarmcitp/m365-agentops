@@ -3845,6 +3845,35 @@ app.get('/api/self-service/config', (req, res) => {
   })
 })
 
+// Initialize/create Self Service Portal lists and fields
+app.post('/api/self-service/initialize', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    if (!selfServiceSiteId) {
+      return res.status(400).json({ success: false, error: 'Self Service Portal site not configured. Please configure a site first.' })
+    }
+
+    console.log(`🚀 Manually triggering list initialization for site: ${selfServiceSiteUrl} (${selfServiceSiteId})`)
+
+    // Initialize lists and fields
+    setSelfServiceGraphClient(graphClient)
+    await initializeSelfServiceLists(graphClient, selfServiceSiteId)
+
+    res.json({
+      success: true,
+      message: 'Self Service Portal lists and fields created successfully',
+      siteUrl: selfServiceSiteUrl,
+      siteId: selfServiceSiteId
+    })
+  } catch (error) {
+    console.error('Error initializing Self Service Portal lists:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 // Sync announcements from Graph API to SharePoint
 app.post('/api/msgcenter/sync-announcements', async (req, res) => {
   try {

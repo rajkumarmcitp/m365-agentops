@@ -154,6 +154,14 @@ function renderSettings(el) {
       <div id="settings-selfservice-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none">
         Status will appear here
       </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-primary" id="settings-selfservice-init" style="white-space:nowrap"><i class="ti ti-database"></i> Initialize Lists</button>
+        <div style="font-size:10px;color:var(--color-text-tertiary);padding:8px">Creates SharePoint lists and fields for Self Service Portal</div>
+      </div>
+      <div id="settings-selfservice-init-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none;margin-top:8px">
+        Initialization status will appear here
+      </div>
     </div>
 
     <!-- Task Resolution Approvers -->
@@ -401,6 +409,46 @@ function renderSettings(el) {
     } finally {
       selfServiceTestBtn.disabled = false
       selfServiceTestBtn.innerHTML = '<i class="ti ti-check"></i> Test'
+    }
+  })
+
+  // Initialize Lists button
+  const selfServiceInitBtn = el.querySelector('#settings-selfservice-init')
+  const selfServiceInitStatus = el.querySelector('#settings-selfservice-init-status')
+
+  selfServiceInitBtn.addEventListener('click', async () => {
+    selfServiceInitBtn.disabled = true
+    selfServiceInitBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Initializing...'
+    selfServiceInitStatus.style.display = 'block'
+    selfServiceInitStatus.textContent = 'Creating lists and fields...'
+
+    try {
+      const response = await fetch(`${api}/self-service/initialize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        selfServiceInitStatus.style.background = '#e8f5e9'
+        selfServiceInitStatus.style.color = '#2e7d32'
+        selfServiceInitStatus.textContent = `✓ ${result.message}`
+        showToast('Lists and fields created successfully', 'success')
+      } else {
+        selfServiceInitStatus.style.background = '#ffebee'
+        selfServiceInitStatus.style.color = '#c62828'
+        selfServiceInitStatus.textContent = `✗ Error: ${result.error || 'Could not initialize lists'}`
+        showToast('List initialization failed', 'error')
+      }
+    } catch (error) {
+      selfServiceInitStatus.style.background = '#ffebee'
+      selfServiceInitStatus.style.color = '#c62828'
+      selfServiceInitStatus.textContent = `✗ Error: ${error.message}`
+      showToast('List initialization error', 'error')
+    } finally {
+      selfServiceInitBtn.disabled = false
+      selfServiceInitBtn.innerHTML = '<i class="ti ti-database"></i> Initialize Lists'
     }
   })
 
