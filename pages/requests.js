@@ -247,14 +247,17 @@ function renderList(el) {
 
     <!-- Filters & Search -->
     <div class="card" style="padding:16px">
-      <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:12px">
-        <div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:12px">
+        <div style="flex:1">
           <label style="font-size:10px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px">
             <i class="ti ti-search"></i> Search Requests
           </label>
           <input id="filter-search" type="text" placeholder="Search by ID, service, operation, or requester..." value="${filters.searchQuery}"
             style="width:100%;padding:8px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-sm);font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
         </div>
+        <button id="refresh-requests-btn" style="padding:8px 12px;background:var(--color-background-secondary);color:var(--color-text-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-sm);cursor:pointer;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:22px;white-space:nowrap">
+          <i class="ti ti-rotate-clockwise-2"></i> Refresh
+        </button>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
@@ -523,6 +526,18 @@ function renderList(el) {
     const val = e.target.value
     filters.priority = val.includes('All') ? 'All' : val.split(' ').pop()  // Extract last word (Critical, High, etc.)
     applyFilters(el)
+  })
+
+  // Refresh button listener
+  el.querySelector('#refresh-requests-btn')?.addEventListener('click', async () => {
+    const btn = el.querySelector('#refresh-requests-btn')
+    const originalHTML = btn.innerHTML
+    btn.disabled = true
+    btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Refreshing...'
+    await loadSelfServiceRequests(el)
+    btn.innerHTML = originalHTML
+    btn.disabled = false
+    showToast('Requests refreshed', 'success')
   })
 
   // Checkbox listeners
