@@ -99,7 +99,8 @@ export async function initializeSelfServiceLists(graphClientInstance, siteId) {
               console.log(`  📌 Creating field: ${field.displayName}`)
 
               let fieldPayload = {
-                displayName: field.displayName
+                displayName: field.displayName,
+                name: field.displayName.replace(/\s+/g, '')  // Remove spaces for column name
               }
 
               if (field.type === 'choice') {
