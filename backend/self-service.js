@@ -114,14 +114,17 @@ export async function initializeSelfServiceLists(graphClientInstance, siteId) {
                 fieldPayload.dateTime = { format: 'dateTime' }
               }
 
-              await graphClient
+              console.log(`    Payload: ${JSON.stringify(fieldPayload)}`)
+              const response = await graphClient
                 .api(`/sites/${siteId}/lists/${listId}/columns`)
                 .post(fieldPayload)
+              console.log(`    ✓ Field created: ${field.displayName}`)
             } else {
               console.log(`  ✓ Field exists: ${field.displayName}`)
             }
           } catch (fieldError) {
-            console.warn(`  ⚠️  Could not create field ${field.displayName}:`, fieldError.message)
+            console.error(`  ❌ ERROR creating field ${field.displayName}:`, fieldError.message)
+            console.error(`    Full error:`, fieldError)
           }
         }
       }
