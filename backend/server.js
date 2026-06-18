@@ -3782,13 +3782,14 @@ app.post('/api/self-service/validate-sharepoint', async (req, res) => {
       } catch (directError) {
         // If direct lookup fails, search for the site
         console.log(`⚠️ Direct lookup failed for ${siteUrl}, searching...`)
-        const siteName = siteUrl.split('/').pop()
+        const siteName = siteUrl.split('/').pop().toLowerCase()
         const sites = await graphClient.api('/sites').get()
         const matching = sites.value?.filter(s =>
-          s.name === siteName ||
-          s.displayName === siteName ||
-          s.webUrl?.includes(siteName)
+          (s.name || '').toLowerCase() === siteName ||
+          (s.displayName || '').toLowerCase() === siteName ||
+          (s.webUrl || '').toLowerCase().includes(siteName)
         ) || []
+        console.log(`🔍 Searching for site matching: "${siteName}" (case-insensitive)`)
 
         if (matching.length === 0) {
           throw new Error(`No SharePoint site found matching "${siteName}"`)
