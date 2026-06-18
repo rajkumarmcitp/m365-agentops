@@ -3874,6 +3874,90 @@ app.post('/api/self-service/initialize', async (req, res) => {
   }
 })
 
+// Initialize/create Change Intelligence lists and fields
+app.post('/api/msgcenter/initialize', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const siteUrl = req.body?.siteUrl || process.env.SHAREPOINT_SITE_ID || 'root'
+
+    console.log(`🚀 Initializing Change Intelligence lists for site: ${siteUrl}`)
+
+    // Get SharePoint site ID
+    let siteId
+    try {
+      const sites = await graphClient.api(`/sites/${siteUrl}`).get()
+      siteId = sites.id
+    } catch (error) {
+      return res.status(400).json({ success: false, error: `Could not access SharePoint site: ${error.message}` })
+    }
+
+    // Create Change Announcements list
+    try {
+      const lists = await graphClient.api(`/sites/${siteId}/lists`).get()
+      let listId
+
+      const existingList = lists.value?.find(l => l.displayName === 'Change Announcements')
+      if (existingList) {
+        listId = existingList.id
+        console.log('✓ Change Announcements list exists')
+      } else {
+        const newList = await graphClient.api(`/sites/${siteId}/lists`).post({
+          displayName: 'Change Announcements',
+          list: { template: 'genericList' }
+        })
+        listId = newList.id
+        console.log('✓ Created Change Announcements list')
+      }
+
+      // Create fields
+      const fieldsToCreate = [
+        { displayName: 'ReviewStatus', choices: ['Not Reviewed', 'Reviewed'] },
+        { displayName: 'TaskStatus', choices: ['Not Started', 'In Progress', 'Resolved'] },
+        { displayName: 'ActionDeadline' },
+        { displayName: 'Notes' }
+      ]
+
+      for (const fieldDef of fieldsToCreate) {
+        try {
+          const existing = await graphClient.api(`/sites/${siteId}/lists/${listId}/columns`).get()
+          const fieldExists = existing.value?.some(f => f.displayName === fieldDef.displayName)
+
+          if (!fieldExists) {
+            let payload = { displayName: fieldDef.displayName }
+            if (fieldDef.choices) {
+              payload.choice = { choices: fieldDef.choices }
+            } else if (fieldDef.displayName === 'ActionDeadline') {
+              payload.dateTime = {}
+            } else {
+              payload.text = {}
+            }
+
+            await graphClient.api(`/sites/${siteId}/lists/${listId}/columns`).post(payload)
+            console.log(`  ✓ Created field: ${fieldDef.displayName}`)
+          }
+        } catch (fieldError) {
+          console.warn(`  ⚠️ Could not create field: ${fieldError.message}`)
+        }
+      }
+    } catch (error) {
+      return res.status(500).json({ success: false, error: `Could not create lists: ${error.message}` })
+    }
+
+    res.json({
+      success: true,
+      message: 'Change Intelligence lists and fields created successfully',
+      siteUrl,
+      siteId
+    })
+  } catch (error) {
+    console.error('Error initializing Change Intelligence lists:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 // Sync announcements from Graph API to SharePoint
 app.post('/api/msgcenter/sync-announcements', async (req, res) => {
   try {

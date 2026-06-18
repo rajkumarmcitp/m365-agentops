@@ -131,6 +131,14 @@ function renderSettings(el) {
         <div id="settings-sharepoint-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none">
           Status will appear here
         </div>
+
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn btn-primary" id="settings-msgcenter-init" style="white-space:nowrap"><i class="ti ti-database"></i> Initialize Lists</button>
+          <div style="font-size:10px;color:var(--color-text-tertiary);padding:8px">Creates SharePoint lists and fields for Change Announcements</div>
+        </div>
+        <div id="settings-msgcenter-init-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none;margin-top:8px">
+          Initialization status will appear here
+        </div>
       </div>
     </div>
 
@@ -320,6 +328,8 @@ function renderSettings(el) {
   const sharepointInput = el.querySelector('#settings-sharepoint-site')
   const sharepointTestBtn = el.querySelector('#settings-sharepoint-test')
   const sharepointStatus = el.querySelector('#settings-sharepoint-status')
+  const msgcenterInitBtn = el.querySelector('#settings-msgcenter-init')
+  const msgcenterInitStatus = el.querySelector('#settings-msgcenter-init-status')
 
   sharepointInput.value = s.sharepointSiteUrl || 'root'
 
@@ -361,6 +371,45 @@ function renderSettings(el) {
     } finally {
       sharepointTestBtn.disabled = false
       sharepointTestBtn.innerHTML = '<i class="ti ti-check"></i> Test'
+    }
+  })
+
+  // Initialize Change Intelligence Lists
+  msgcenterInitBtn.addEventListener('click', async () => {
+    const siteUrl = sharepointInput.value.trim() || 'root'
+    msgcenterInitBtn.disabled = true
+    msgcenterInitBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Initializing...'
+    msgcenterInitStatus.style.display = 'block'
+    msgcenterInitStatus.textContent = 'Creating lists and fields...'
+
+    try {
+      const response = await fetch(`${api}/msgcenter/initialize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteUrl })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        msgcenterInitStatus.style.background = '#e8f5e9'
+        msgcenterInitStatus.style.color = '#2e7d32'
+        msgcenterInitStatus.textContent = `✓ ${result.message}`
+        showToast('Change Intelligence lists created successfully', 'success')
+      } else {
+        msgcenterInitStatus.style.background = '#ffebee'
+        msgcenterInitStatus.style.color = '#c62828'
+        msgcenterInitStatus.textContent = `✗ Error: ${result.error || 'Could not initialize lists'}`
+        showToast('List initialization failed', 'error')
+      }
+    } catch (error) {
+      msgcenterInitStatus.style.background = '#ffebee'
+      msgcenterInitStatus.style.color = '#c62828'
+      msgcenterInitStatus.textContent = `✗ Error: ${error.message}`
+      showToast('List initialization error', 'error')
+    } finally {
+      msgcenterInitBtn.disabled = false
+      msgcenterInitBtn.innerHTML = '<i class="ti ti-database"></i> Initialize Lists'
     }
   })
 
