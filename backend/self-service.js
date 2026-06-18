@@ -35,6 +35,7 @@ export async function initializeSelfServiceLists(graphClientInstance, siteId) {
         { displayName: 'Description', type: 'text' },
         { displayName: 'CreatedDate', type: 'dateTime' },
         { displayName: 'ApprovedDate', type: 'dateTime' },
+        { displayName: 'CompletedDate', type: 'dateTime' },
         { displayName: 'RejectionReason', type: 'text' }
       ]
     },
@@ -568,17 +569,23 @@ export async function completeRequest(siteId, requestId, completionDetails) {
     const listId = listResponse.value[0].id
     const itemId = request.data.id
 
-    await graphClient
-      .api(`/sites/${siteId}/lists/${listId}/items/${itemId}`)
-      .patch({
-        fields: {
-          Status: 'Completed',
-          CompletedDate: new Date().toISOString()
-        }
-      })
+    // Update status to Completed
+    try {
+      await graphClient
+        .api(`/sites/${siteId}/lists/${listId}/items/${itemId}`)
+        .patch({ fields: { Status: 'Completed' } })
+      console.log(`✓ Status updated to Completed: ${requestId}`)
+    } catch (statusError) {
+      console.error(`⚠️  Could not update Status: ${statusError.message}`)
+      throw statusError
+    }
 
-    // Create audit log
-    await createAuditLog(siteId, requestId, 'Completed', 'Agent', completionDetails)
+    // Create audit log (non-blocking if it fails)
+    try {
+      await createAuditLog(siteId, requestId, 'Completed', 'Agent', completionDetails)
+    } catch (auditError) {
+      console.warn(`⚠️  Could not create audit log: ${auditError.message}`)
+    }
 
     console.log(`✓ Request completed: ${requestId}`)
 
