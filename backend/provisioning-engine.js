@@ -474,16 +474,22 @@ async function createGroup(formData) {
   }
 
   try {
+    const payload = {
+      displayName: displayName,
+      mailEnabled: true,
+      mailNickname: mailAlias.toLowerCase().replace(/\s+/g, ''),
+      securityEnabled: false,
+      'groupTypes': ['Unified']
+    }
+
+    // Only include description if it's not empty (Graph API rejects empty strings)
+    if (description && description.trim()) {
+      payload.description = description
+    }
+
     const result = await graphClient
       .api('/groups')
-      .post({
-        displayName: displayName,
-        description: description,
-        mailEnabled: true,
-        mailNickname: mailAlias.toLowerCase().replace(/\s+/g, ''),
-        securityEnabled: false,
-        'groupTypes': ['Unified']
-      })
+      .post(payload)
 
     return {
       operation: 'Create Group',
