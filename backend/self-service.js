@@ -623,17 +623,30 @@ export async function getAllRequests(siteId, filters = {}) {
 
     let requests = items.value
       .filter(item => item.fields) // Skip items without fields
-      .map(item => ({
-        id: item.id,
-        requestId: item.fields.Title || '',
-        service: item.fields.Service || '',
-        operation: item.fields.Operation || '',
-        requesterId: item.fields.RequesterId || '',
-        status: item.fields.Status || 'Submitted',
-        createdDate: item.fields.CreatedDate,
-        approvedDate: item.fields.ApprovedDate,
-        completedDate: item.fields.CompletedDate
-      }))
+      .map(item => {
+        // Parse FormData JSON if it exists
+        let formData = {}
+        if (item.fields.FormData) {
+          try {
+            formData = JSON.parse(item.fields.FormData)
+          } catch (e) {
+            console.warn(`Warning: Could not parse FormData for ${item.fields.Title}:`, e.message)
+          }
+        }
+
+        return {
+          id: item.id,
+          requestId: item.fields.Title || '',
+          service: item.fields.Service || '',
+          operation: item.fields.Operation || '',
+          requesterId: item.fields.RequesterId || '',
+          status: item.fields.Status || 'Submitted',
+          formData: formData,
+          createdDate: item.fields.CreatedDate,
+          approvedDate: item.fields.ApprovedDate,
+          completedDate: item.fields.CompletedDate
+        }
+      })
 
     // Apply filters on client side instead of in API query
     if (filters.status) {
