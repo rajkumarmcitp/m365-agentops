@@ -460,20 +460,27 @@ async function handleM365Groups(operation, formData) {
 }
 
 async function createGroup(formData) {
-  const { groupName, description, owners, members } = formData
+  // Map form field names to Graph API field names
+  const displayName = formData.displayName || formData.groupName
+  const mailAlias = formData.alias || formData.mailNickname || formData.alias
+  const description = formData.description || ''
+  const members = formData.members ? formData.members.split(',').map(m => m.trim()) : []
 
-  if (!groupName) {
-    throw new Error('groupName is required to create a group')
+  if (!displayName) {
+    throw new Error('displayName is required to create a group')
+  }
+  if (!mailAlias) {
+    throw new Error('Email alias is required to create a group')
   }
 
   try {
     const result = await graphClient
       .api('/groups')
       .post({
-        displayName: groupName,
-        description: description || '',
+        displayName: displayName,
+        description: description,
         mailEnabled: true,
-        mailNickname: groupName.toLowerCase().replace(/\s+/g, ''),
+        mailNickname: mailAlias.toLowerCase().replace(/\s+/g, ''),
         securityEnabled: false,
         'groupTypes': ['Unified']
       })
@@ -481,7 +488,8 @@ async function createGroup(formData) {
     return {
       operation: 'Create Group',
       status: 'completed',
-      groupName,
+      displayName: displayName,
+      mailAlias: mailAlias,
       groupId: result.id,
       result
     }
