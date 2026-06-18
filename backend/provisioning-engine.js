@@ -49,6 +49,7 @@ export async function processApprovedRequest(requestData) {
         break
       case 'm365 groups':
       case 'm365groups':
+      case 'exchange-groups':
         result = await handleM365Groups(operation, form)
         break
       case 'licenses':
