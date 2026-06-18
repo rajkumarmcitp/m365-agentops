@@ -326,86 +326,175 @@ function renderList(el) {
       </div>
     ` : ''}
 
-    <!-- Requests List (Card Layout) -->
-    <div style="margin-top:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-weight:600;font-size:13px">Requests (${filteredRequests.length})</div>
+    <!-- Requests List -->
+    <div class="card" style="margin-top:16px;padding:0;overflow:hidden">
+      <div class="card-header">
+        <span class="card-title">Requests (${filteredRequests.length})</span>
       </div>
+      <div style="padding:0;overflow-x:auto;border-top:0.5px solid var(--color-border-secondary)">
+        ${filteredRequests.length === 0 ? `
+          <div style="padding:40px;text-align:center;color:var(--color-text-tertiary)">
+            <i class="ti ti-inbox" style="font-size:32px;margin-bottom:12px;display:block"></i>
+            <p style="margin:0">No requests found</p>
+          </div>
+        ` : `
+          <!-- Desktop Table View -->
+          <table style="width:100%;border-collapse:collapse;font-size:11px;display:none" class="requests-table-desktop">
+            <thead style="background:var(--color-background-secondary)">
+              <tr>
+                <th style="padding:12px;text-align:center;font-weight:600;width:40px">
+                  <input type="checkbox" id="select-all-cb" style="cursor:pointer">
+                </th>
+                <th style="padding:12px;text-align:left;font-weight:600">Request ID</th>
+                <th style="padding:12px;text-align:left;font-weight:600">Service</th>
+                <th style="padding:12px;text-align:left;font-weight:600">Operation</th>
+                <th style="padding:12px;text-align:left;font-weight:600">Requester</th>
+                <th style="padding:12px;text-align:left;font-weight:600">Submitted</th>
+                <th style="padding:12px;text-align:left;font-weight:600">Priority</th>
+                <th style="padding:12px;text-align:left;font-weight:600">Status</th>
+                <th style="padding:12px;text-align:left;font-weight:600">SLA</th>
+                <th style="padding:12px;text-align:center;font-weight:600">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredRequests.map(req => {
+                const priorityLevel = getPriorityLevel(req.priority || 'normal')
+                const slaStatus = getSLAStatus(req.createdDate, 'manager-only', req.status)
+                const slaColor = getSLAColor(slaStatus)
+                const isSelected = selectedRequests.has(req.requestId)
+                const submittedDate = new Date(req.createdDate).toLocaleString('en-GB', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+                const requesterEmail = req.requesterId ? req.requesterId.split('@')[0] : 'Unknown'
+                return `
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary);background:${isSelected ? 'var(--clr-info-bg)' : 'transparent'}" class="req-table-row" data-req-id="${req.requestId}">
+                    <td style="padding:12px;text-align:center">
+                      <input type="checkbox" class="req-checkbox" data-req-id="${req.requestId}" ${isSelected ? 'checked' : ''} style="cursor:pointer">
+                    </td>
+                    <td style="padding:12px;font-weight:600;color:var(--clr-info-text)">${req.requestId}</td>
+                    <td style="padding:12px;font-size:10px">${req.service}</td>
+                    <td style="padding:12px;font-size:10px">${req.operation || 'N/A'}</td>
+                    <td style="padding:12px;font-size:10px" title="${req.requesterId}">${requesterEmail}</td>
+                    <td style="padding:12px;font-size:10px">${submittedDate}</td>
+                    <td style="padding:12px">
+                      <span style="padding:2px 6px;border-radius:3px;background:${priorityLevel.bg};color:${priorityLevel.color};font-weight:600;font-size:9px">
+                        <i class="ti ${priorityLevel.icon}"></i> ${priorityLevel.label}
+                      </span>
+                    </td>
+                    <td style="padding:12px">
+                      <span style="padding:4px 8px;border-radius:4px;font-weight:600;font-size:10px;background:${getStatusColor(req.status).bg};color:${getStatusColor(req.status).text}">
+                        ${req.status}
+                      </span>
+                    </td>
+                    <td style="padding:12px">
+                      <div style="background:${slaColor.bg};color:${slaColor.text};padding:4px 8px;border-radius:3px;font-size:9px;font-weight:600;text-align:center">
+                        ${slaStatus.message}
+                      </div>
+                    </td>
+                    <td style="padding:12px;text-align:center">
+                      ${req.status === 'Submitted' ? `
+                        <button class="req-view-btn" data-id="${req.requestId}" style="padding:4px 8px;font-size:9px;background:var(--clr-info-bg);color:var(--clr-info-text);border:none;border-radius:3px;cursor:pointer">
+                          Review
+                        </button>
+                      ` : `
+                        <button class="req-view-btn" data-id="${req.requestId}" style="padding:4px 8px;font-size:9px;background:var(--color-background-secondary);color:var(--color-text-secondary);border:none;border-radius:3px;cursor:pointer">
+                          View
+                        </button>
+                      `}
+                    </td>
+                  </tr>
+                `
+              }).join('')}
+            </tbody>
+          </table>
 
-      ${filteredRequests.length === 0 ? `
-        <div class="card" style="padding:40px;text-align:center;color:var(--color-text-tertiary)">
-          <i class="ti ti-inbox" style="font-size:32px;margin-bottom:12px;display:block"></i>
-          <p style="margin:0">No requests found</p>
-        </div>
-      ` : `
-        <div style="display:grid;gap:12px">
-          ${filteredRequests.map(req => {
-            const priorityLevel = getPriorityLevel(req.priority || 'normal')
-            const slaStatus = getSLAStatus(req.createdDate, 'manager-only', req.status)
-            const slaColor = getSLAColor(slaStatus)
-            const isSelected = selectedRequests.has(req.requestId)
-            const submittedDate = new Date(req.createdDate).toLocaleString('en-GB', {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })
-            const requesterEmail = req.requesterId ? req.requesterId.split('@')[0] : 'Unknown'
-            return `
-              <div class="card" style="padding:16px;border-left:3px solid ${isSelected ? 'var(--clr-info-text)' : 'var(--color-border-secondary)'};background:${isSelected ? 'var(--clr-info-bg)' : 'transparent'}" data-req-id="${req.requestId}">
-                <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
-                  <div style="display:flex;align-items:center;gap:8px;flex:1">
-                    <input type="checkbox" class="req-checkbox" data-req-id="${req.requestId}" ${isSelected ? 'checked' : ''} style="cursor:pointer;width:14px;height:14px;flex-shrink:0;margin-top:2px">
-                    <div>
-                      <div style="font-weight:700;font-size:12px;color:var(--clr-info-text);margin-bottom:2px">${req.requestId}</div>
-                      <div style="font-size:11px;color:var(--color-text-secondary)">${req.service} • ${req.operation || 'N/A'}</div>
+          <!-- Mobile Card View -->
+          <div style="display:none" class="requests-cards-mobile">
+            <div style="display:grid;gap:12px;padding:16px">
+              ${filteredRequests.map(req => {
+                const priorityLevel = getPriorityLevel(req.priority || 'normal')
+                const slaStatus = getSLAStatus(req.createdDate, 'manager-only', req.status)
+                const slaColor = getSLAColor(slaStatus)
+                const isSelected = selectedRequests.has(req.requestId)
+                const submittedDate = new Date(req.createdDate).toLocaleString('en-GB', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+                const requesterEmail = req.requesterId ? req.requesterId.split('@')[0] : 'Unknown'
+                return `
+                  <div class="card" style="padding:16px;border-left:3px solid ${isSelected ? 'var(--clr-info-text)' : 'var(--color-border-secondary)'};background:${isSelected ? 'var(--clr-info-bg)' : 'transparent'}" data-req-id="${req.requestId}">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+                      <div style="display:flex;align-items:center;gap:8px;flex:1">
+                        <input type="checkbox" class="req-checkbox" data-req-id="${req.requestId}" ${isSelected ? 'checked' : ''} style="cursor:pointer;width:14px;height:14px;flex-shrink:0;margin-top:2px">
+                        <div>
+                          <div style="font-weight:700;font-size:12px;color:var(--clr-info-text);margin-bottom:2px">${req.requestId}</div>
+                          <div style="font-size:11px;color:var(--color-text-secondary)">${req.service} • ${req.operation || 'N/A'}</div>
+                        </div>
+                      </div>
+                      <span style="padding:2px 8px;border-radius:3px;background:${priorityLevel.bg};color:${priorityLevel.color};font-weight:600;font-size:9px;white-space:nowrap;margin-left:8px">
+                        <i class="ti ${priorityLevel.icon}"></i> ${priorityLevel.label}
+                      </span>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                      <div>
+                        <div style="color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;font-size:11px">Requester</div>
+                        <div style="color:var(--color-text-primary);font-size:11px">${requesterEmail}</div>
+                      </div>
+                      <div>
+                        <div style="color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;font-size:11px">Submitted</div>
+                        <div style="color:var(--color-text-primary);font-size:11px">${submittedDate}</div>
+                      </div>
+                      <div>
+                        <div style="color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;font-size:11px">Status</div>
+                        <span style="padding:3px 8px;border-radius:3px;font-weight:600;font-size:10px;background:${getStatusColor(req.status).bg};color:${getStatusColor(req.status).text}">
+                          ${req.status}
+                        </span>
+                      </div>
+                      <div>
+                        <div style="color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;font-size:11px">SLA</div>
+                        <div style="background:${slaColor.bg};color:${slaColor.text};padding:3px 8px;border-radius:3px;font-size:10px;font-weight:600;text-align:center">
+                          ${slaStatus.message}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style="display:flex;gap:8px;justify-content:flex-end;border-top:0.5px solid var(--color-border-tertiary);padding-top:12px">
+                      ${req.status === 'Submitted' ? `
+                        <button class="req-view-btn" data-id="${req.requestId}" style="padding:6px 12px;font-size:10px;background:var(--clr-info-bg);color:var(--clr-info-text);border:none;border-radius:4px;cursor:pointer;font-weight:600">
+                          <i class="ti ti-eye"></i> Review
+                        </button>
+                      ` : `
+                        <button class="req-view-btn" data-id="${req.requestId}" style="padding:6px 12px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-secondary);border:none;border-radius:4px;cursor:pointer;font-weight:600">
+                          <i class="ti ti-eye"></i> View
+                        </button>
+                      `}
                     </div>
                   </div>
-                  <span style="padding:2px 8px;border-radius:3px;background:${priorityLevel.bg};color:${priorityLevel.color};font-weight:600;font-size:9px;white-space:nowrap;margin-left:8px">
-                    <i class="ti ${priorityLevel.icon}"></i> ${priorityLevel.label}
-                  </span>
-                </div>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-                  <div>
-                    <div style="color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;font-size:11px">Requester</div>
-                    <div style="color:var(--color-text-primary);font-size:11px">${requesterEmail}</div>
-                  </div>
-                  <div>
-                    <div style="color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;font-size:11px">Submitted</div>
-                    <div style="color:var(--color-text-primary);font-size:11px">${submittedDate}</div>
-                  </div>
-                  <div>
-                    <div style="color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;font-size:11px">Status</div>
-                    <span style="padding:3px 8px;border-radius:3px;font-weight:600;font-size:10px;background:${getStatusColor(req.status).bg};color:${getStatusColor(req.status).text}">
-                      ${req.status}
-                    </span>
-                  </div>
-                  <div>
-                    <div style="color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;font-size:11px">SLA</div>
-                    <div style="background:${slaColor.bg};color:${slaColor.text};padding:3px 8px;border-radius:3px;font-size:10px;font-weight:600;text-align:center">
-                      ${slaStatus.message}
-                    </div>
-                  </div>
-                </div>
-
-                <div style="display:flex;gap:8px;justify-content:flex-end;border-top:0.5px solid var(--color-border-tertiary);padding-top:12px">
-                  ${req.status === 'Submitted' ? `
-                    <button class="req-view-btn" data-id="${req.requestId}" style="padding:6px 12px;font-size:10px;background:var(--clr-info-bg);color:var(--clr-info-text);border:none;border-radius:4px;cursor:pointer;font-weight:600">
-                      <i class="ti ti-eye"></i> Review
-                    </button>
-                  ` : `
-                    <button class="req-view-btn" data-id="${req.requestId}" style="padding:6px 12px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-secondary);border:none;border-radius:4px;cursor:pointer;font-weight:600">
-                      <i class="ti ti-eye"></i> View
-                    </button>
-                  `}
-                </div>
-              </div>
-            `
-          }).join('')}
-        </div>
-      `}
+                `
+              }).join('')}
+            </div>
+          </div>
+        `}
+      </div>
     </div>
+
+    <!-- CSS to toggle views based on screen size -->
+    <style>
+      @media (max-width: 768px) {
+        .requests-table-desktop { display: none !important; }
+        .requests-cards-mobile { display: block !important; }
+      }
+      @media (min-width: 769px) {
+        .requests-table-desktop { display: table !important; }
+        .requests-cards-mobile { display: none !important; }
+      }
+    </style>
   `
 
   // Search listener
