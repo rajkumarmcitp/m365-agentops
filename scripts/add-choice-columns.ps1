@@ -9,7 +9,7 @@
 $SiteUrl = "https://nasstech.sharepoint.com/"  # Root site URL - no changes needed
 $TenantId = "b9cc8284-05ed-452f-877a-970779430dcb"  # TODO: Get from Azure AD Properties (copy your Tenant ID here)
 $ClientId = "04d3be8d-d433-4367-893e-eccc82190a11"  # TODO: Get from App Registration (copy your Client ID here)
-$ClientSecret = "wem8Q~XScY3hJhiqKMcCeaSzYcodlCQB459DtaTy"  # TODO: Get from App Registration Secrets (copy your Client Secret here)
+$ClientSecret = ""  # TODO: Get from App Registration Secrets (copy your Client Secret here)
 
 # Get values from environment or prompt if not set
 if ([string]::IsNullOrEmpty($TenantId)) {
