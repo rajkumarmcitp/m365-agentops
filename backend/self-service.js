@@ -584,22 +584,15 @@ export async function getAllRequests(siteId, filters = {}) {
 
     const listId = listResponse.value[0].id
 
-    let query = graphClient
+    // Get all items (don't filter by Status/Service in API query - use client-side filtering)
+    // SharePoint Choice columns are not indexed by default, causing filter errors
+    const items = await graphClient
       .api(`/sites/${siteId}/lists/${listId}/items`)
       .expand('fields')
       .select('id,fields')
+      .get()
 
-    // Apply filters if provided
-    if (filters.status) {
-      query = query.filter(`fields/Status eq '${filters.status}'`)
-    }
-    if (filters.service) {
-      query = query.filter(`fields/Service eq '${filters.service}'`)
-    }
-
-    const items = await query.get()
-
-    const requests = items.value
+    let requests = items.value
       .filter(item => item.fields) // Skip items without fields
       .map(item => ({
         id: item.id,
@@ -612,6 +605,14 @@ export async function getAllRequests(siteId, filters = {}) {
         approvedDate: item.fields.ApprovedDate,
         completedDate: item.fields.CompletedDate
       }))
+
+    // Apply filters on client side instead of in API query
+    if (filters.status) {
+      requests = requests.filter(r => r.status === filters.status)
+    }
+    if (filters.service) {
+      requests = requests.filter(r => r.service === filters.service)
+    }
 
     return {
       success: true,
