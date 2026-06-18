@@ -607,7 +607,9 @@ function renderList(el) {
     modal.querySelector('.confirm-bulk-approve').addEventListener('click', async () => {
       for (const req of selectedReqs) {
         try {
-          await callAPI(`/self-service/requests/${req.requestId}/approve`, 'PUT', {})
+          await callAPI(`/self-service/requests/${req.requestId}/approve`, 'PUT', {
+            approverId: state.currentUser?.email || window.userEmail || 'admin@contoso.com'
+          })
           req.status = 'Approved'
           req.approvedDate = new Date().toISOString()
           notifyRequestApproved(req, 'admin@contoso.com')
@@ -668,7 +670,10 @@ function renderList(el) {
 
       for (const req of selectedReqs) {
         try {
-          await callAPI(`/self-service/requests/${req.requestId}/reject`, 'PUT', { reason })
+          await callAPI(`/self-service/requests/${req.requestId}/reject`, 'PUT', {
+            rejectedBy: state.currentUser?.email || window.userEmail || 'admin@contoso.com',
+            reason
+          })
           req.status = 'Rejected'
           notifyRequestRejected(req, 'admin@contoso.com', reason)
         } catch (err) {
