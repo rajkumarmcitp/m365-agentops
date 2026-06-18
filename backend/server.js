@@ -111,6 +111,12 @@ if (isValidCredentials) {
 }
 
 // ============================================================
+// Configuration Variables
+// ============================================================
+let selfServiceSiteId = process.env.SHAREPOINT_SITE_ID || null
+let selfServiceSiteUrl = null
+
+// ============================================================
 // Azure AD Group IDs for Role Mapping
 // ============================================================
 const ROLE_GROUPS = {
@@ -143,7 +149,7 @@ async function initializeTenantGuard() {
       startAuditCollectionJob(graphClient)
 
       // Start provisioning job for self-service requests
-      const siteId = process.env.SHAREPOINT_SITE_ID
+      const siteId = selfServiceSiteId || process.env.SHAREPOINT_SITE_ID
       if (siteId) {
         setProvisioningJobGraphClient(graphClient)
         startProvisioningJob(siteId)
@@ -3752,6 +3758,56 @@ app.post('/api/msgcenter/validate-sharepoint', async (req, res) => {
   }
 })
 
+// Validate & configure Self Service Portal SharePoint site
+app.post('/api/self-service/validate-sharepoint', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const { siteUrl } = req.body
+    if (!siteUrl) {
+      return res.status(400).json({ success: false, error: 'Site URL is required' })
+    }
+
+    let siteId
+    let siteName
+    try {
+      const site = await graphClient.api(`/sites/${siteUrl}`).get()
+      siteId = site.id
+      siteName = site.displayName || site.name || siteUrl
+      console.log(`✓ Self Service Portal SharePoint site validated: ${siteName}`)
+
+      // Save the configuration
+      selfServiceSiteId = siteId
+      selfServiceSiteUrl = siteUrl
+      console.log(`✓ Self Service Portal site configured: ${siteUrl} (${siteId})`)
+    } catch (error) {
+      return res.status(400).json({ success: false, error: `Could not access site: ${error.message}` })
+    }
+
+    res.json({
+      success: true,
+      siteId: siteId,
+      siteName: siteName,
+      message: `Connected to ${siteName}`
+    })
+  } catch (error) {
+    console.error('Error validating Self Service Portal SharePoint:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Get Self Service Portal SharePoint configuration
+app.get('/api/self-service/config', (req, res) => {
+  res.json({
+    success: true,
+    siteUrl: selfServiceSiteUrl,
+    siteId: selfServiceSiteId,
+    configured: !!selfServiceSiteId
+  })
+})
+
 // Sync announcements from Graph API to SharePoint
 app.post('/api/msgcenter/sync-announcements', async (req, res) => {
   try {
@@ -5494,8 +5550,8 @@ app.post('/api/self-service/requests/submit', async (req, res) => {
       })
     }
 
-    // Get SharePoint site ID from environment
-    const siteId = process.env.SHAREPOINT_SITE_ID
+    // Get SharePoint site ID from configuration
+    const siteId = selfServiceSiteId || process.env.SHAREPOINT_SITE_ID
 
     // If Graph Client available and SharePoint configured, use real SharePoint Lists
     if (graphClient && siteId) {
@@ -5559,7 +5615,7 @@ app.get('/api/self-service/requests/my-requests', async (req, res) => {
       })
     }
 
-    const siteId = process.env.SHAREPOINT_SITE_ID
+    const siteId = selfServiceSiteId || process.env.SHAREPOINT_SITE_ID
 
     if (!graphClient || !siteId) {
       return res.status(503).json({
@@ -5595,7 +5651,7 @@ app.get('/api/self-service/requests/my-requests', async (req, res) => {
 app.get('/api/self-service/requests/:requestId', async (req, res) => {
   try {
     const { requestId } = req.params
-    const siteId = process.env.SHAREPOINT_SITE_ID
+    const siteId = selfServiceSiteId || process.env.SHAREPOINT_SITE_ID
 
     if (!graphClient || !siteId) {
       return res.status(503).json({
@@ -5642,7 +5698,7 @@ app.put('/api/self-service/requests/:requestId/approve', async (req, res) => {
       })
     }
 
-    const siteId = process.env.SHAREPOINT_SITE_ID
+    const siteId = selfServiceSiteId || process.env.SHAREPOINT_SITE_ID
 
     if (!graphClient || !siteId) {
       return res.status(503).json({
@@ -5682,7 +5738,7 @@ app.put('/api/self-service/requests/:requestId/reject', async (req, res) => {
       })
     }
 
-    const siteId = process.env.SHAREPOINT_SITE_ID
+    const siteId = selfServiceSiteId || process.env.SHAREPOINT_SITE_ID
 
     if (!graphClient || !siteId) {
       return res.status(503).json({
@@ -5714,7 +5770,7 @@ app.put('/api/self-service/requests/:requestId/reject', async (req, res) => {
 app.get('/api/self-service/requests', async (req, res) => {
   try {
     const { status, service } = req.query
-    const siteId = process.env.SHAREPOINT_SITE_ID
+    const siteId = selfServiceSiteId || process.env.SHAREPOINT_SITE_ID
 
     if (!graphClient || !siteId) {
       return res.status(503).json({

@@ -131,6 +131,29 @@ function renderSettings(el) {
         <div id="settings-sharepoint-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none">
           Status will appear here
         </div>
+      </div>
+    </div>
+
+    <!-- Self Service Portal SharePoint Configuration -->
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-layout-kanban"></i> Self Service Portal — SharePoint Configuration</div>
+      <div style="background:#e3f2fd;border-left:4px solid #2196f3;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#1565c0">
+        <strong>Configuration:</strong> Specify the SharePoint site where Self Service Portal requests, approvals, and audit logs will be stored.
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label class="form-label">SharePoint Site URL</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" class="form-input" id="settings-selfservice-site" placeholder="e.g., root or /sites/SelfService" style="flex:1">
+          <button class="btn" id="settings-selfservice-test" style="white-space:nowrap"><i class="ti ti-check"></i> Test</button>
+        </div>
+        <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px">
+          Enter "root" for tenant root site, or "/sites/SiteName" for a specific site. Lists will be created here: SelfServiceRequests, SelfServiceApprovals, SelfServiceAudit
+        </div>
+      </div>
+      <div id="settings-selfservice-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none">
+        Status will appear here
+      </div>
 
         <div style="margin-top:16px;border-top:1px solid #ddd;padding-top:14px">
           <label class="form-label">Task Resolution Approvers</label>
@@ -282,7 +305,7 @@ function renderSettings(el) {
     })
   }
 
-  // ---- SharePoint Configuration ----
+  // ---- SharePoint Configuration (Change Intelligence) ----
   const sharepointInput = el.querySelector('#settings-sharepoint-site')
   const sharepointTestBtn = el.querySelector('#settings-sharepoint-test')
   const sharepointStatus = el.querySelector('#settings-sharepoint-status')
@@ -327,6 +350,54 @@ function renderSettings(el) {
     } finally {
       sharepointTestBtn.disabled = false
       sharepointTestBtn.innerHTML = '<i class="ti ti-check"></i> Test'
+    }
+  })
+
+  // ---- Self Service Portal SharePoint Configuration ----
+  const selfServiceInput = el.querySelector('#settings-selfservice-site')
+  const selfServiceTestBtn = el.querySelector('#settings-selfservice-test')
+  const selfServiceStatus = el.querySelector('#settings-selfservice-status')
+
+  selfServiceInput.value = s.selfServiceSiteUrl || 'root'
+
+  selfServiceTestBtn.addEventListener('click', async () => {
+    const siteUrl = selfServiceInput.value.trim() || 'root'
+    selfServiceTestBtn.disabled = true
+    selfServiceTestBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Testing...'
+    selfServiceStatus.style.display = 'block'
+    selfServiceStatus.textContent = 'Testing connection...'
+
+    try {
+      const response = await fetch(`${api}/self-service/validate-sharepoint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteUrl })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        selfServiceStatus.style.background = '#e8f5e9'
+        selfServiceStatus.style.color = '#2e7d32'
+        selfServiceStatus.textContent = `✓ Connected! Site: ${result.siteName || siteUrl}`
+        state.settings.selfServiceSiteUrl = siteUrl
+        state.settings.selfServiceSiteId = result.siteId
+        saveState()
+        showToast('Self Service Portal SharePoint site configured successfully', 'success')
+      } else {
+        selfServiceStatus.style.background = '#ffebee'
+        selfServiceStatus.style.color = '#c62828'
+        selfServiceStatus.textContent = `✗ Error: ${result.error || 'Could not connect to site'}`
+        showToast('SharePoint connection failed', 'error')
+      }
+    } catch (error) {
+      selfServiceStatus.style.background = '#ffebee'
+      selfServiceStatus.style.color = '#c62828'
+      selfServiceStatus.textContent = `✗ Error: ${error.message}`
+      showToast('SharePoint connection error', 'error')
+    } finally {
+      selfServiceTestBtn.disabled = false
+      selfServiceTestBtn.innerHTML = '<i class="ti ti-check"></i> Test'
     }
   })
 
