@@ -327,8 +327,19 @@ export async function getUserRequests(siteId, userEmail) {
       .select('id,fields')
       .get()
 
+    // Debug: log what we're filtering by
+    console.log(`🔍 Looking for requests by user: "${userEmail}"`)
+
     const requests = items.value
-      .filter(item => item.fields && item.fields.RequesterId === userEmail)
+      .filter(item => {
+        if (!item.fields) return false
+        const requesterId = item.fields.RequesterId || ''
+        const matches = requesterId.toLowerCase() === userEmail.toLowerCase()
+        if (matches) {
+          console.log(`✅ Found request ${item.fields.Title} for ${requesterId}`)
+        }
+        return matches
+      })
       .map(item => {
         let formData = {}
         try {
@@ -350,6 +361,8 @@ export async function getUserRequests(siteId, userEmail) {
           formData: formData
         }
       })
+
+    console.log(`📋 Retrieved ${requests.length} requests for ${userEmail}`)
 
     return {
       success: true,
