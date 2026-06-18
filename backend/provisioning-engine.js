@@ -108,6 +108,10 @@ async function handleExchange(operation, formData) {
 async function createSharedMailbox(formData) {
   const { mailboxName, displayName, ownerEmail } = formData
 
+  if (!mailboxName) {
+    throw new Error('mailboxName is required to create a shared mailbox')
+  }
+
   try {
     // Create mailbox via Graph API
     const result = await graphClient
@@ -457,6 +461,10 @@ async function handleM365Groups(operation, formData) {
 
 async function createGroup(formData) {
   const { groupName, description, owners, members } = formData
+
+  if (!groupName) {
+    throw new Error('groupName is required to create a group')
+  }
 
   try {
     const result = await graphClient
