@@ -93,9 +93,9 @@ export async function initializeSelfServiceLists(graphClientInstance, siteId) {
               .api(`/sites/${siteId}/lists/${listId}/columns`)
               .get()
 
-            const fieldExists = fieldsResponse.value?.some(f => f.displayName === field.displayName)
+            const existingField = fieldsResponse.value?.find(f => f.displayName === field.displayName)
 
-            if (!fieldExists) {
+            if (!existingField) {
               console.log(`  📌 Creating field: ${field.displayName}`)
 
               let fieldPayload = {
@@ -122,6 +122,29 @@ export async function initializeSelfServiceLists(graphClientInstance, siteId) {
                 .api(`/sites/${siteId}/lists/${listId}/columns`)
                 .post(fieldPayload)
               console.log(`    ✓ Field created: ${field.displayName}`)
+            } else if (field.displayName === 'FormData' && field.type === 'multiText') {
+              // Special case: FormData field needs to be multi-line text, not single-line
+              // Delete and recreate if it's the wrong type
+              console.log(`  ⚠️  FormData field exists but needs type update, deleting...`)
+              try {
+                await graphClient
+                  .api(`/sites/${siteId}/lists/${listId}/columns/${existingField.id}`)
+                  .delete()
+                console.log(`  ✓ Deleted old FormData field`)
+
+                // Now create the new multi-line version
+                const fieldPayload = {
+                  displayName: 'FormData',
+                  name: 'FormData',
+                  text: { allowMultipleLines: true }
+                }
+                await graphClient
+                  .api(`/sites/${siteId}/lists/${listId}/columns`)
+                  .post(fieldPayload)
+                console.log(`  ✓ Created new FormData field (multi-line)`)
+              } catch (updateError) {
+                console.warn(`  ⚠️  Could not update FormData field:`, updateError.message)
+              }
             } else {
               console.log(`  ✓ Field exists: ${field.displayName}`)
             }
