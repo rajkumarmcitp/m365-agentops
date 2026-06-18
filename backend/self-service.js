@@ -22,9 +22,45 @@ export async function initializeSelfServiceLists(graphClientInstance, siteId) {
   graphClient = graphClientInstance
 
   const lists = [
-    { name: 'SelfServiceRequests', description: 'User submitted service requests' },
-    { name: 'SelfServiceApprovals', description: 'Approval decisions and workflows' },
-    { name: 'SelfServiceAudit', description: 'Audit trail of all actions' }
+    {
+      name: 'SelfServiceRequests',
+      description: 'User submitted service requests',
+      fields: [
+        { displayName: 'Service', type: 'choice', choices: ['Exchange', 'Teams', 'SharePoint', 'M365 Groups', 'User Management', 'Other'] },
+        { displayName: 'Operation', type: 'text' },
+        { displayName: 'Status', type: 'choice', choices: ['Submitted', 'Approved', 'Rejected', 'Completed', 'Cancelled'] },
+        { displayName: 'Priority', type: 'choice', choices: ['Low', 'Normal', 'High', 'Critical'] },
+        { displayName: 'RequesterId', type: 'text' },
+        { displayName: 'FormData', type: 'text' },
+        { displayName: 'Description', type: 'text' },
+        { displayName: 'CreatedDate', type: 'dateTime' },
+        { displayName: 'ApprovedDate', type: 'dateTime' },
+        { displayName: 'RejectionReason', type: 'text' }
+      ]
+    },
+    {
+      name: 'SelfServiceApprovals',
+      description: 'Approval decisions and workflows',
+      fields: [
+        { displayName: 'RequestId', type: 'text' },
+        { displayName: 'Status', type: 'choice', choices: ['Pending', 'Approved', 'Rejected'] },
+        { displayName: 'ApprovalLevel', type: 'choice', choices: ['Manager', 'Admin', 'Executive'] },
+        { displayName: 'ApprovedBy', type: 'text' },
+        { displayName: 'ApprovedDate', type: 'dateTime' },
+        { displayName: 'Notes', type: 'text' }
+      ]
+    },
+    {
+      name: 'SelfServiceAudit',
+      description: 'Audit trail of all actions',
+      fields: [
+        { displayName: 'RequestId', type: 'text' },
+        { displayName: 'Action', type: 'choice', choices: ['Submitted', 'Approved', 'Rejected', 'Completed', 'Commented', 'Delegated', 'Escalated'] },
+        { displayName: 'PerformedBy', type: 'text' },
+        { displayName: 'Timestamp', type: 'dateTime' },
+        { displayName: 'Details', type: 'text' }
+      ]
+    }
   ]
 
   for (const list of lists) {
@@ -34,20 +70,67 @@ export async function initializeSelfServiceLists(graphClientInstance, siteId) {
         .filter(`displayName eq '${list.name}'`)
         .get()
 
+      let listId
       if (existing.value.length === 0) {
         console.log(`📝 Creating SharePoint list: ${list.name}`)
-        await graphClient.api(`/sites/${siteId}/lists`).post({
+        const newList = await graphClient.api(`/sites/${siteId}/lists`).post({
           displayName: list.name,
           description: list.description,
           template: 'genericList'
         })
+        listId = newList.id
       } else {
         console.log(`✓ List exists: ${list.name}`)
+        listId = existing.value[0].id
+      }
+
+      // Create fields
+      if (list.fields) {
+        for (const field of list.fields) {
+          try {
+            // Check if field exists
+            const fieldsResponse = await graphClient
+              .api(`/sites/${siteId}/lists/${listId}/columns`)
+              .get()
+
+            const fieldExists = fieldsResponse.value?.some(f => f.displayName === field.displayName)
+
+            if (!fieldExists) {
+              console.log(`  📌 Creating field: ${field.displayName}`)
+
+              let fieldPayload = {
+                displayName: field.displayName
+              }
+
+              if (field.type === 'choice') {
+                fieldPayload.choice = {
+                  choices: field.choices,
+                  allowTextEntry: false,
+                  displayAs: 'dropDownMenu'
+                }
+              } else if (field.type === 'text') {
+                fieldPayload.text = {}
+              } else if (field.type === 'dateTime') {
+                fieldPayload.dateTime = { format: 'dateTime' }
+              }
+
+              await graphClient
+                .api(`/sites/${siteId}/lists/${listId}/columns`)
+                .post(fieldPayload)
+            } else {
+              console.log(`  ✓ Field exists: ${field.displayName}`)
+            }
+          } catch (fieldError) {
+            console.warn(`  ⚠️  Could not create field ${field.displayName}:`, fieldError.message)
+          }
+        }
       }
     } catch (error) {
       console.warn(`⚠️  Could not set up list ${list.name}:`, error.message)
     }
   }
+
+  console.log('✅ Self Service Portal lists and fields initialized')
 }
 
 // ============================================================

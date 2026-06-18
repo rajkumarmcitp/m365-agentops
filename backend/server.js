@@ -3813,6 +3813,12 @@ app.post('/api/self-service/validate-sharepoint', async (req, res) => {
       selfServiceSiteId = siteId
       selfServiceSiteUrl = siteUrl
       console.log(`✓ Self Service Portal site configured: ${siteUrl} (${siteId})`)
+
+      // Initialize lists and fields on the new site
+      console.log('🚀 Initializing Self Service Portal lists and fields...')
+      setSelfServiceGraphClient(graphClient)
+      await initializeSelfServiceLists(graphClient, siteId)
+      console.log('✅ Lists and fields ready for use')
     } catch (error) {
       return res.status(400).json({ success: false, error: `Could not access site: ${error.message}` })
     }
