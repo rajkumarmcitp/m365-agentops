@@ -154,9 +154,12 @@ function renderSettings(el) {
       <div id="settings-selfservice-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none">
         Status will appear here
       </div>
+    </div>
 
-        <div style="margin-top:16px;border-top:1px solid #ddd;padding-top:14px">
-          <label class="form-label">Task Resolution Approvers</label>
+    <!-- Task Resolution Approvers -->
+    <div class="card mb-3">
+      <div style="margin-top:0">
+        <label class="form-label">Task Resolution Approvers</label>
           <div style="background:#fff3cd;border-left:4px solid #ff9800;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#ff6600">
             <strong>Governance:</strong> Designate 2 accounts (Primary & Secondary) who must approve before tasks can be marked as Resolved.
           </div>
