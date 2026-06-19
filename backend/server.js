@@ -6570,6 +6570,51 @@ async function ensureSharePointListsExist() {
 }
 
 // ============================================================
+// User Search API - for autocomplete in forms
+// ============================================================
+app.get('/api/search/users', async (req, res) => {
+  try {
+    const { query } = req.query
+
+    if (!query || query.length < 2) {
+      return res.json({ success: true, data: [] })
+    }
+
+    if (!graphClient) {
+      return res.status(503).json({
+        success: false,
+        error: 'Graph Client not initialized'
+      })
+    }
+
+    // Search users by displayName or mail (limit to 10 results)
+    const users = await graphClient
+      .api('/users')
+      .filter(`startswith(displayName,'${query}') or startswith(mail,'${query}')`)
+      .select('id,displayName,mail,userPrincipalName')
+      .top(10)
+      .get()
+
+    const results = (users.value || []).map(user => ({
+      id: user.id,
+      displayName: user.displayName || user.mail,
+      email: user.mail || user.userPrincipalName,
+      userPrincipalName: user.userPrincipalName
+    }))
+
+    console.log(`🔍 User search for "${query}": found ${results.length} users`)
+    res.json({ success: true, data: results })
+  } catch (error) {
+    console.error('❌ Error searching users:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      data: []
+    })
+  }
+})
+
+// ============================================================
 // Start Server
 // ============================================================
 const server = app.listen(PORT, () => {

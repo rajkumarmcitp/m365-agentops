@@ -591,6 +591,9 @@ function renderFormView(el) {
 
   // Wire conditional field visibility
   wireFieldDependencies(el, op)
+
+  // Setup user search autocomplete for members fields
+  setupUserSearch(el)
 }
 
 function renderField(f) {
@@ -598,9 +601,12 @@ function renderField(f) {
   const hint = f.hint ? `<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:3px">${f.hint}</div>` : ''
 
   if (f.type === 'text' || f.type === 'email') {
-    return `<div class="form-group" data-field="${f.id}">
+    const isMembers = f.id === 'members' || f.label.toLowerCase().includes('member')
+    const autocompleteClass = isMembers ? 'user-search-input' : ''
+    return `<div class="form-group" data-field="${f.id}" ${isMembers ? 'style="position:relative"' : ''}>
       <label class="form-label" for="ff-${f.id}">${f.label}${req}</label>
-      <input type="${f.type}" class="form-input" id="ff-${f.id}" name="${f.id}" placeholder="${f.placeholder || ''}" ${f.required ? 'required' : ''}>
+      <input type="${f.type}" class="form-input ${autocompleteClass}" id="ff-${f.id}" name="${f.id}" placeholder="${f.placeholder || ''}" ${f.required ? 'required' : ''} autocomplete="off">
+      ${isMembers ? '<div class="user-dropdown" id="dd-' + f.id + '" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ccc;border-radius:4px;max-height:200px;overflow-y:auto;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.1)"></div>' : ''}
       ${hint}
     </div>`
   }
@@ -642,6 +648,63 @@ function renderField(f) {
 
 function wireFieldDependencies(el) {
   // No complex conditional logic needed for now — all fields shown
+}
+
+async function setupUserSearch(el) {
+  // Dynamically import api-client to get the correct API URL
+  const { api } = await import('../lib/api-client.js')
+  const searchInputs = el.querySelectorAll('.user-search-input')
+
+  searchInputs.forEach(input => {
+    const dropdownId = 'dd-' + input.id
+    const dropdown = el.querySelector('#' + dropdownId)
+    if (!dropdown) return
+
+    input.addEventListener('input', async (e) => {
+      const query = e.target.value.trim()
+
+      if (query.length < 2) {
+        dropdown.style.display = 'none'
+        return
+      }
+
+      try {
+        const response = await fetch(`${api}/search/users?query=${encodeURIComponent(query)}`)
+        const result = await response.json()
+
+        if (result.success && result.data.length > 0) {
+          dropdown.innerHTML = result.data.map(user => `
+            <div class="user-option" data-email="${user.email}" style="padding:10px;cursor:pointer;border-bottom:1px solid #eee;hover:background:var(--color-background-secondary)">
+              <div style="font-weight:600">${user.displayName}</div>
+              <div style="font-size:9px;color:var(--color-text-secondary)">${user.email}</div>
+            </div>
+          `).join('')
+          dropdown.style.display = 'block'
+
+          // Click handlers for user options
+          dropdown.querySelectorAll('.user-option').forEach(option => {
+            option.addEventListener('click', () => {
+              input.value = option.dataset.email
+              dropdown.style.display = 'none'
+            })
+          })
+        } else {
+          dropdown.innerHTML = '<div style="padding:10px;color:var(--color-text-tertiary)">No users found</div>'
+          dropdown.style.display = 'block'
+        }
+      } catch (error) {
+        console.error('User search error:', error)
+        dropdown.style.display = 'none'
+      }
+    })
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (e.target !== input) {
+        dropdown.style.display = 'none'
+      }
+    })
+  })
 }
 
 function wfStepDesc(stepId, op) {
