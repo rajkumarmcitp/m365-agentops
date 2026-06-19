@@ -77,9 +77,9 @@ export const SERVICE_CATALOG = {
         agentChecks: ['Verify group membership', 'Check if member is owner'],
         systemAction: 'DELETE /v1.0/groups/{id}/members/{userId}/$ref',
         fields: [
-          { id: 'groupName',    label: 'Group Name / Email',    type: 'text',     required: true,  placeholder: 'marketing-emea@contoso.com' },
-          { id: 'members',      label: 'Members to Remove',     type: 'textarea', required: true,  placeholder: 'One UPN per line' },
-          { id: 'justification',label: 'Reason',                type: 'textarea', required: true },
+          { id: 'groupName',    label: 'Group Name / Email',    type: 'text',     required: true,  placeholder: 'Search for group...', hint: 'Type to search M365 Groups' },
+          { id: 'members',      label: 'Members to Remove',     type: 'text',     required: true,  placeholder: 'user1@contoso.com, user2@contoso.com', hint: 'Comma-separated UPNs or search for users' },
+          { id: 'justification',label: 'Reason',                type: 'textarea', required: true,  placeholder: 'Why are these members being removed?' },
         ],
       },
       {
