@@ -661,9 +661,11 @@ function setupUserSearch(el) {
   console.log(`🔍 Found ${searchInputs.length} user search input(s)`)
 
   searchInputs.forEach(input => {
-    const dropdownId = 'dd-' + input.id
+    // Strip 'ff-' prefix from input ID to get field ID (e.g., 'ff-members' → 'members')
+    const fieldId = input.id.replace('ff-', '')
+    const dropdownId = 'dd-' + fieldId
     const dropdown = el.querySelector('#' + dropdownId)
-    console.log(`🔍 Input: ${input.id}, Dropdown ID: ${dropdownId}, Found: ${!!dropdown}`)
+    console.log(`🔍 Input: ${input.id}, Field: ${fieldId}, Dropdown ID: ${dropdownId}, Found: ${!!dropdown}`)
     if (!dropdown) return
 
     let debounceTimer = null
