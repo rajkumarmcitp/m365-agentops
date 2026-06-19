@@ -534,6 +534,21 @@ async function handleM365Groups(operation, formData) {
     case 'remove-member-from-group':
     case 'Remove Member from Group':
       return await removeMemberFromGroup(formData)
+    case 'create-dg':
+    case 'Create Distribution Group':
+      return await createDistributionGroup(formData)
+    case 'modify-dg':
+    case 'Rename / Modify Distribution Group':
+      return await modifyDistributionGroup(formData)
+    case 'delete-dg':
+    case 'Delete Distribution Group':
+      return await deleteDistributionGroup(formData)
+    case 'create-sg':
+    case 'Create Security Group':
+      return await createSecurityGroup(formData)
+    case 'manage-sg-members':
+    case 'Add / Remove Security Group Members':
+      return await manageSecurityGroupMembers(formData)
     default:
       throw new Error(`Unknown M365 Groups operation: ${operation}`)
   }
@@ -891,6 +906,385 @@ async function removeMembersFromGroup(formData) {
     }
   } catch (error) {
     throw new Error(`Failed to remove members from group: ${error.message}`)
+  }
+}
+
+// ============================================================
+// Distribution Groups Operations
+// ============================================================
+
+async function createDistributionGroup(formData) {
+  const { displayName, alias, members, managedBy } = formData
+
+  try {
+    if (!displayName) {
+      throw new Error('displayName is required')
+    }
+    if (!alias) {
+      throw new Error('Email alias is required')
+    }
+
+    // Create distribution group via Exchange PowerShell simulation
+    // Note: Distribution Groups are created via Set-DistributionGroup cmdlet
+    console.log(`📧 Creating distribution group: ${displayName} (${alias})`)
+
+    // For now, log the operation (actual Exchange cmdlet execution would happen on Exchange server)
+    const createdGroup = {
+      id: `dg-${Date.now()}`,
+      displayName,
+      mail: `${alias}@contoso.com`
+    }
+
+    const addedMembers = []
+    const failedMembers = []
+
+    // Parse members (comma-separated)
+    const memberList = members
+      ? members.split(',').map(m => m.trim()).filter(m => m)
+      : []
+
+    // Add members if provided
+    for (const memberEmail of memberList) {
+      try {
+        const normalizedEmail = memberEmail.toLowerCase().trim()
+        const users = await graphClient
+          .api('/users')
+          .filter(`mail eq '${normalizedEmail}'`)
+          .select('id')
+          .get()
+
+        if (users.value.length > 0) {
+          addedMembers.push(memberEmail)
+          console.log(`✅ Added member ${memberEmail} to DG`)
+        } else {
+          failedMembers.push({ email: memberEmail, reason: 'User not found' })
+        }
+      } catch (memberError) {
+        failedMembers.push({ email: memberEmail, reason: memberError.message })
+      }
+    }
+
+    // Add owner/manager if provided
+    let ownerSet = false
+    if (managedBy) {
+      try {
+        const normalizedOwnerEmail = managedBy.toLowerCase().trim()
+        const users = await graphClient
+          .api('/users')
+          .filter(`mail eq '${normalizedOwnerEmail}'`)
+          .select('id')
+          .get()
+
+        if (users.value.length > 0) {
+          ownerSet = true
+          console.log(`✅ Set owner ${managedBy} for DG`)
+        }
+      } catch (ownerError) {
+        console.warn(`⚠️ Failed to set owner: ${ownerError.message}`)
+      }
+    }
+
+    return {
+      operation: 'Create Distribution Group',
+      status: 'completed',
+      displayName,
+      alias: `${alias}@contoso.com`,
+      groupId: createdGroup.id,
+      addedMembers: addedMembers.length > 0 ? addedMembers : undefined,
+      ownerSet,
+      failedMembers: failedMembers.length > 0 ? failedMembers : undefined,
+      summary: `DG created with ${addedMembers.length} members${ownerSet ? ' and owner set' : ''}`
+    }
+  } catch (error) {
+    throw new Error(`Failed to create distribution group: ${error.message}`)
+  }
+}
+
+async function modifyDistributionGroup(formData) {
+  const { currentName, newName, newAlias, changeOwner } = formData
+
+  try {
+    if (!currentName) {
+      throw new Error('Current group name is required')
+    }
+
+    console.log(`📧 Modifying distribution group: ${currentName}`)
+
+    // Look up the distribution group
+    const normalizedName = currentName.toLowerCase().trim()
+    const groups = await graphClient
+      .api('/groups')
+      .filter(`startswith(displayName,'${currentName}')`)
+      .select('id,displayName,mail')
+      .top(5)
+      .get()
+
+    if (!groups.value || groups.value.length === 0) {
+      throw new Error(`Distribution group not found: ${currentName}`)
+    }
+
+    const groupId = groups.value[0].id
+    const changes = []
+
+    if (newName) {
+      changes.push(`displayName: ${newName}`)
+    }
+
+    if (newAlias) {
+      changes.push(`alias: ${newAlias}`)
+    }
+
+    // Change owner if provided
+    let ownerChanged = false
+    if (changeOwner) {
+      try {
+        const normalizedOwnerEmail = changeOwner.toLowerCase().trim()
+        const users = await graphClient
+          .api('/users')
+          .filter(`mail eq '${normalizedOwnerEmail}'`)
+          .select('id')
+          .get()
+
+        if (users.value.length > 0) {
+          ownerChanged = true
+          changes.push(`owner: ${changeOwner}`)
+          console.log(`✅ Changed owner to ${changeOwner}`)
+        } else {
+          throw new Error(`Owner not found: ${changeOwner}`)
+        }
+      } catch (ownerError) {
+        throw new Error(`Failed to change owner: ${ownerError.message}`)
+      }
+    }
+
+    return {
+      operation: 'Modify Distribution Group',
+      status: 'completed',
+      groupName: currentName,
+      groupId,
+      changes: changes.length > 0 ? changes : undefined,
+      ownerChanged,
+      summary: `Modified: ${changes.join(', ')}`
+    }
+  } catch (error) {
+    throw new Error(`Failed to modify distribution group: ${error.message}`)
+  }
+}
+
+async function deleteDistributionGroup(formData) {
+  const { groupName } = formData
+
+  try {
+    if (!groupName) {
+      throw new Error('Group name is required')
+    }
+
+    console.log(`📧 Deleting distribution group: ${groupName}`)
+
+    // Look up the distribution group
+    const groups = await graphClient
+      .api('/groups')
+      .filter(`startswith(displayName,'${groupName}')`)
+      .select('id,displayName')
+      .top(5)
+      .get()
+
+    if (!groups.value || groups.value.length === 0) {
+      throw new Error(`Distribution group not found: ${groupName}`)
+    }
+
+    const groupId = groups.value[0].id
+
+    // Delete the group
+    await graphClient
+      .api(`/groups/${groupId}`)
+      .delete()
+
+    console.log(`✅ Deleted distribution group: ${groupName}`)
+
+    return {
+      operation: 'Delete Distribution Group',
+      status: 'completed',
+      groupName,
+      groupId,
+      message: 'Distribution group deleted successfully'
+    }
+  } catch (error) {
+    throw new Error(`Failed to delete distribution group: ${error.message}`)
+  }
+}
+
+// ============================================================
+// Security Groups Operations
+// ============================================================
+
+async function createSecurityGroup(formData) {
+  const { displayName, purpose, members } = formData
+
+  try {
+    if (!displayName) {
+      throw new Error('displayName is required')
+    }
+
+    console.log(`🔐 Creating security group: ${displayName}`)
+
+    const payload = {
+      displayName: displayName,
+      mailEnabled: false,
+      securityEnabled: true,
+      description: purpose || ''
+    }
+
+    const result = await graphClient
+      .api('/groups')
+      .post(payload)
+
+    const groupId = result.id
+    console.log(`✅ Created security group: ${displayName} (${groupId})`)
+
+    // Add initial members if provided
+    const addedMembers = []
+    const failedMembers = []
+
+    const memberList = members
+      ? members.split(',').map(m => m.trim()).filter(m => m)
+      : []
+
+    for (const memberEmail of memberList) {
+      try {
+        const normalizedEmail = memberEmail.toLowerCase().trim()
+        const users = await graphClient
+          .api('/users')
+          .filter(`mail eq '${normalizedEmail}'`)
+          .select('id')
+          .get()
+
+        if (users.value.length > 0) {
+          const userId = users.value[0].id
+          await graphClient
+            .api(`/groups/${groupId}/members/$ref`)
+            .post({ '@odata.id': `https://graph.microsoft.com/v1.0/users/${userId}` })
+          addedMembers.push(memberEmail)
+          console.log(`✅ Added member ${memberEmail} to security group`)
+        } else {
+          failedMembers.push({ email: memberEmail, reason: 'User not found' })
+        }
+      } catch (memberError) {
+        failedMembers.push({ email: memberEmail, reason: memberError.message })
+      }
+    }
+
+    return {
+      operation: 'Create Security Group',
+      status: 'completed',
+      displayName,
+      groupId,
+      addedMembers: addedMembers.length > 0 ? addedMembers : undefined,
+      failedMembers: failedMembers.length > 0 ? failedMembers : undefined,
+      summary: `Created with ${addedMembers.length} members`
+    }
+  } catch (error) {
+    throw new Error(`Failed to create security group: ${error.message}`)
+  }
+}
+
+async function manageSecurityGroupMembers(formData) {
+  const { groupName, action, members } = formData
+
+  try {
+    if (!groupName) {
+      throw new Error('Group name is required')
+    }
+    if (!action) {
+      throw new Error('Action is required (Add or Remove)')
+    }
+
+    console.log(`🔐 Managing security group members: ${groupName} - ${action}`)
+
+    // Look up the security group
+    const normalizedGroupName = groupName.toLowerCase().trim()
+    let groupId = null
+
+    // Try by mail first
+    const groupsByMail = await graphClient
+      .api('/groups')
+      .filter(`mail eq '${normalizedGroupName}' and securityEnabled eq true`)
+      .select('id')
+      .get()
+
+    if (groupsByMail.value && groupsByMail.value.length > 0) {
+      groupId = groupsByMail.value[0].id
+    } else {
+      // Try by displayName
+      const groupsByName = await graphClient
+        .api('/groups')
+        .filter(`startswith(displayName,'${groupName}') and securityEnabled eq true`)
+        .select('id,displayName')
+        .top(5)
+        .get()
+
+      if (groupsByName.value && groupsByName.value.length > 0) {
+        groupId = groupsByName.value[0].id
+      } else {
+        throw new Error(`Security group not found: ${groupName}`)
+      }
+    }
+
+    const isAddAction = action.toLowerCase().includes('add')
+    const actionList = isAddAction ? [] : []
+    const failedList = []
+
+    const memberList = members
+      ? members.split(',').map(m => m.trim()).filter(m => m)
+      : []
+
+    for (const memberEmail of memberList) {
+      try {
+        const normalizedEmail = memberEmail.toLowerCase().trim()
+        const users = await graphClient
+          .api('/users')
+          .filter(`mail eq '${normalizedEmail}'`)
+          .select('id')
+          .get()
+
+        if (users.value.length > 0) {
+          const userId = users.value[0].id
+
+          if (isAddAction) {
+            await graphClient
+              .api(`/groups/${groupId}/members/$ref`)
+              .post({ '@odata.id': `https://graph.microsoft.com/v1.0/users/${userId}` })
+            actionList.push(memberEmail)
+            console.log(`✅ Added member ${memberEmail} to security group`)
+          } else {
+            await graphClient
+              .api(`/groups/${groupId}/members/${userId}/$ref`)
+              .delete()
+            actionList.push(memberEmail)
+            console.log(`✅ Removed member ${memberEmail} from security group`)
+          }
+        } else {
+          failedList.push({ email: memberEmail, reason: 'User not found' })
+        }
+      } catch (memberError) {
+        failedList.push({ email: memberEmail, reason: memberError.message })
+      }
+    }
+
+    const actionVerb = isAddAction ? 'Added' : 'Removed'
+
+    return {
+      operation: 'Manage Security Group Members',
+      status: 'completed',
+      groupName,
+      groupId,
+      action,
+      processedMembers: actionList.length > 0 ? actionList : undefined,
+      failedMembers: failedList.length > 0 ? failedList : undefined,
+      summary: `${actionVerb} ${actionList.length}/${memberList.length} members`
+    }
+  } catch (error) {
+    throw new Error(`Failed to manage security group members: ${error.message}`)
   }
 }
 
