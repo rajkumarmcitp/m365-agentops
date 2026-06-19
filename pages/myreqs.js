@@ -83,7 +83,7 @@ export async function initMyReqs() {
 
     // Fetch user's requests from backend
     const response = await fetch(`${api}/self-service/requests/my-requests?email=${encodeURIComponent(userEmail)}`, {
-      targetAddressSpace: 'private'
+      targetAddressSpace: 'local'
     })
     const result = await response.json()
 
