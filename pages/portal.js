@@ -650,9 +650,13 @@ function wireFieldDependencies(el) {
   // No complex conditional logic needed for now — all fields shown
 }
 
-async function setupUserSearch(el) {
-  // Dynamically import api-client to get the correct API URL
-  const { api } = await import('../lib/api-client.js')
+function setupUserSearch(el) {
+  // Get API URL - determine if production or development
+  const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  const apiUrl = isDev
+    ? 'http://localhost:3000/api'
+    : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net/api'
+
   const searchInputs = el.querySelectorAll('.user-search-input')
 
   searchInputs.forEach(input => {
@@ -660,7 +664,12 @@ async function setupUserSearch(el) {
     const dropdown = el.querySelector('#' + dropdownId)
     if (!dropdown) return
 
+    let debounceTimer = null
+
     input.addEventListener('input', async (e) => {
+      // Debounce: wait 300ms before searching
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(async () => {
       const query = e.target.value.trim()
 
       if (query.length < 2) {
@@ -669,12 +678,14 @@ async function setupUserSearch(el) {
       }
 
       try {
-        const response = await fetch(`${api}/search/users?query=${encodeURIComponent(query)}`)
+        const response = await fetch(`${apiUrl}/search/users?query=${encodeURIComponent(query)}`, {
+          targetAddressSpace: isDev ? 'local' : undefined
+        })
         const result = await response.json()
 
         if (result.success && result.data.length > 0) {
           dropdown.innerHTML = result.data.map(user => `
-            <div class="user-option" data-email="${user.email}" style="padding:10px;cursor:pointer;border-bottom:1px solid #eee;hover:background:var(--color-background-secondary)">
+            <div class="user-option" data-email="${user.email}" style="padding:10px;cursor:pointer;border-bottom:1px solid #eee">
               <div style="font-weight:600">${user.displayName}</div>
               <div style="font-size:9px;color:var(--color-text-secondary)">${user.email}</div>
             </div>
@@ -696,6 +707,7 @@ async function setupUserSearch(el) {
         console.error('User search error:', error)
         dropdown.style.display = 'none'
       }
+      }, 300) // Wait 300ms before searching
     })
 
     // Close dropdown when clicking outside
@@ -703,7 +715,7 @@ async function setupUserSearch(el) {
       if (e.target !== input) {
         dropdown.style.display = 'none'
       }
-    })
+    }, { once: false })
   })
 }
 
