@@ -1,4 +1,5 @@
 import { SERVICE_GROUPS, SERVICE_CATALOG } from '../data/portal-services.js'
+import { api } from '../lib/api-client.js'
 
 // Helper to get service display name
 function getServiceDisplayName(serviceId) {
@@ -57,8 +58,6 @@ export async function initMyReqs() {
   const el = document.getElementById('page-myreqs')
   if (!el) return
 
-  const api = window.API_BASE || 'http://localhost:3000/api'
-
   // Show loading state
   el.innerHTML = `
     <div class="page-header">
@@ -82,9 +81,7 @@ export async function initMyReqs() {
     }
 
     // Fetch user's requests from backend
-    const response = await fetch(`${api}/self-service/requests/my-requests?email=${encodeURIComponent(userEmail)}`, {
-      targetAddressSpace: 'local'
-    })
+    const response = await fetch(`${api}/self-service/requests/my-requests?email=${encodeURIComponent(userEmail)}`)
     const result = await response.json()
 
     if (!result.success || !result.data || result.data.length === 0) {
