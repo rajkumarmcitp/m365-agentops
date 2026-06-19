@@ -6615,6 +6615,50 @@ app.get('/api/search/users', async (req, res) => {
 })
 
 // ============================================================
+// Group Search API - for autocomplete in forms
+// ============================================================
+app.get('/api/search/groups', async (req, res) => {
+  try {
+    const { query } = req.query
+
+    if (!query || query.length < 2) {
+      return res.json({ success: true, data: [] })
+    }
+
+    if (!graphClient) {
+      return res.status(503).json({
+        success: false,
+        error: 'Graph Client not initialized'
+      })
+    }
+
+    // Search groups by displayName or mail (limit to 10 results)
+    const groups = await graphClient
+      .api('/groups')
+      .filter(`(startswith(displayName,'${query}') or startswith(mail,'${query}')) and groupTypes/any(c:c eq 'Unified')`)
+      .select('id,displayName,mail')
+      .top(10)
+      .get()
+
+    const results = (groups.value || []).map(group => ({
+      id: group.id,
+      displayName: group.displayName,
+      email: group.mail
+    }))
+
+    console.log(`🔍 Group search for "${query}": found ${results.length} groups`)
+    res.json({ success: true, data: results })
+  } catch (error) {
+    console.error('❌ Error searching groups:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      data: []
+    })
+  }
+})
+
+// ============================================================
 // Start Server
 // ============================================================
 const server = app.listen(PORT, () => {

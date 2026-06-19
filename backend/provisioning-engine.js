@@ -525,6 +525,9 @@ async function handleM365Groups(operation, formData) {
     case 'add-member-to-group':
     case 'Add Member to Group':
       return await addMemberToGroup(formData)
+    case 'add-m365-members':
+    case 'Add Members to M365 Group':
+      return await addMembersToGroup(formData)
     case 'remove-member-from-group':
     case 'Remove Member from Group':
       return await removeMemberFromGroup(formData)
@@ -717,6 +720,90 @@ async function removeMemberFromGroup(formData) {
     }
   } catch (error) {
     throw new Error(`Failed to remove member from group: ${error.message}`)
+  }
+}
+
+async function addMembersToGroup(formData) {
+  const { groupName, members } = formData
+
+  try {
+    // Look up group by name/email
+    const normalizedGroupName = groupName.toLowerCase().trim()
+    let groupId = null
+
+    // Try to find group by mail first
+    const groupsByMail = await graphClient
+      .api('/groups')
+      .filter(`mail eq '${normalizedGroupName}'`)
+      .select('id')
+      .get()
+
+    if (groupsByMail.value && groupsByMail.value.length > 0) {
+      groupId = groupsByMail.value[0].id
+    } else {
+      // Try to find by displayName
+      const groupsByName = await graphClient
+        .api('/groups')
+        .filter(`startswith(displayName,'${groupName}')`)
+        .select('id,displayName')
+        .top(5)
+        .get()
+
+      if (groupsByName.value && groupsByName.value.length > 0) {
+        groupId = groupsByName.value[0].id
+      } else {
+        throw new Error(`Group not found: ${groupName}`)
+      }
+    }
+
+    console.log(`✅ Found group ${groupName} with ID: ${groupId}`)
+
+    // Parse members (comma-separated)
+    const memberList = members
+      ? members.split(',').map(m => m.trim()).filter(m => m)
+      : []
+
+    const addedMembers = []
+    const failedMembers = []
+
+    // Add each member to the group
+    for (const memberEmail of memberList) {
+      try {
+        const normalizedEmail = memberEmail.toLowerCase().trim()
+        const users = await graphClient
+          .api('/users')
+          .filter(`mail eq '${normalizedEmail}'`)
+          .select('id')
+          .get()
+
+        if (users.value.length > 0) {
+          const userId = users.value[0].id
+          await graphClient
+            .api(`/groups/${groupId}/members/$ref`)
+            .post({ '@odata.id': `https://graph.microsoft.com/v1.0/users/${userId}` })
+          addedMembers.push(memberEmail)
+          console.log(`✅ Added member ${memberEmail} to group ${groupId}`)
+        } else {
+          failedMembers.push({ email: memberEmail, reason: 'User not found' })
+          console.warn(`⚠️ User not found: ${memberEmail}`)
+        }
+      } catch (memberError) {
+        failedMembers.push({ email: memberEmail, reason: memberError.message })
+        console.warn(`⚠️ Failed to add member ${memberEmail}: ${memberError.message}`)
+      }
+    }
+
+    return {
+      operation: 'Add Members to Group',
+      status: 'completed',
+      groupName,
+      groupId,
+      addedMembers,
+      failedMembers: failedMembers.length > 0 ? failedMembers : undefined,
+      summary: `Added ${addedMembers.length}/${memberList.length} members`
+    }
+  } catch (error) {
+    throw new Error(`Failed to add members to group: ${error.message}`)
   }
 }
 

@@ -66,8 +66,8 @@ export const SERVICE_CATALOG = {
         agentChecks: ['Verify group exists', 'Check member licensing', 'Validate UPNs'],
         systemAction: 'POST /v1.0/groups/{id}/members/$ref',
         fields: [
-          { id: 'groupName',    label: 'Group Name / Email',    type: 'text',     required: true,  placeholder: 'marketing-emea@contoso.com' },
-          { id: 'members',      label: 'Members to Add',        type: 'textarea', required: true,  placeholder: 'One UPN per line' },
+          { id: 'groupName',    label: 'Group Name / Email',    type: 'text',     required: true,  placeholder: 'Search for group...', hint: 'Type to search M365 Groups' },
+          { id: 'members',      label: 'Members to Add',        type: 'text',     required: true,  placeholder: 'user1@contoso.com, user2@contoso.com', hint: 'Comma-separated UPNs or search for users' },
           { id: 'justification',label: 'Business Justification',type: 'textarea', required: true,  placeholder: 'Why do these users need to join?' },
         ],
       },

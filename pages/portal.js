@@ -603,17 +603,24 @@ function renderField(f) {
   if (f.type === 'text' || f.type === 'email') {
     // Detect user selection fields across all request types
     const userFieldIds = ['members', 'owners', 'managedBy', 'delegates', 'fullAccess', 'sendAs', 'sponsor', 'changeOwner', 'userUpn', 'reassignContent']
+    const groupFieldIds = ['groupName', 'group']
+
     const isUserField = userFieldIds.includes(f.id) ||
                        f.label.toLowerCase().includes('member') ||
                        f.label.toLowerCase().includes('owner') ||
                        f.label.toLowerCase().includes('delegate') ||
                        (f.label.toLowerCase().includes('upn') && (f.placeholder || '').toLowerCase().includes('upn'))
 
-    const autocompleteClass = isUserField ? 'user-search-input' : ''
-    return `<div class="form-group" data-field="${f.id}" ${isUserField ? 'style="position:relative"' : ''}>
+    const isGroupField = groupFieldIds.includes(f.id) ||
+                        (f.label.toLowerCase().includes('group') && f.placeholder?.toLowerCase().includes('group'))
+
+    const autocompleteClass = (isUserField ? 'user-search-input' : '') + (isGroupField ? ' group-search-input' : '')
+    const hasAutocomplete = isUserField || isGroupField
+
+    return `<div class="form-group" data-field="${f.id}" ${hasAutocomplete ? 'style="position:relative"' : ''}>
       <label class="form-label" for="ff-${f.id}">${f.label}${req}</label>
-      <input type="${f.type}" class="form-input ${autocompleteClass}" id="ff-${f.id}" name="${f.id}" placeholder="${f.placeholder || ''}" ${f.required ? 'required' : ''} autocomplete="off">
-      ${isUserField ? '<div class="user-dropdown" id="dd-' + f.id + '" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ccc;border-radius:4px;max-height:200px;overflow-y:auto;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.1)"></div>' : ''}
+      <input type="${f.type}" class="form-input ${autocompleteClass.trim()}" id="ff-${f.id}" name="${f.id}" placeholder="${f.placeholder || ''}" ${f.required ? 'required' : ''} autocomplete="off">
+      ${hasAutocomplete ? '<div class="user-dropdown" id="dd-' + f.id + '" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ccc;border-radius:4px;max-height:200px;overflow-y:auto;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.1)"></div>' : ''}
       ${hint}
     </div>`
   }
@@ -664,15 +671,20 @@ function setupUserSearch(el) {
     ? 'http://localhost:3000/api'
     : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net/api'
 
-  const searchInputs = el.querySelectorAll('.user-search-input')
-  console.log(`🔍 Found ${searchInputs.length} user search input(s)`)
+  // Handle both user and group search inputs
+  const userSearchInputs = el.querySelectorAll('.user-search-input')
+  const groupSearchInputs = el.querySelectorAll('.group-search-input')
 
-  searchInputs.forEach(input => {
+  console.log(`🔍 Found ${userSearchInputs.length} user search input(s) and ${groupSearchInputs.length} group search input(s)`)
+
+  const setupSearch = (input, searchType) => {
     // Strip 'ff-' prefix from input ID to get field ID (e.g., 'ff-members' → 'members')
     const fieldId = input.id.replace('ff-', '')
     const dropdownId = 'dd-' + fieldId
     const dropdown = el.querySelector('#' + dropdownId)
-    console.log(`🔍 Input: ${input.id}, Field: ${fieldId}, Dropdown ID: ${dropdownId}, Found: ${!!dropdown}`)
+    const endpoint = searchType === 'group' ? '/search/groups' : '/search/users'
+
+    console.log(`🔍 Setting up ${searchType} search for: ${input.id}, Field: ${fieldId}, Dropdown ID: ${dropdownId}, Found: ${!!dropdown}`)
     if (!dropdown) return
 
     let debounceTimer = null
@@ -681,53 +693,71 @@ function setupUserSearch(el) {
       // Debounce: wait 300ms before searching
       clearTimeout(debounceTimer)
       debounceTimer = setTimeout(async () => {
-      const query = e.target.value.trim()
+        const query = e.target.value.split(',').pop().trim() // Get last value for comma-separated
 
-      if (query.length < 2) {
-        dropdown.style.display = 'none'
-        return
-      }
-
-      try {
-        const response = await fetch(`${apiUrl}/search/users?query=${encodeURIComponent(query)}`, {
-          targetAddressSpace: isDev ? 'local' : undefined
-        })
-        const result = await response.json()
-
-        if (result.success && result.data.length > 0) {
-          dropdown.innerHTML = result.data.map(user => `
-            <div class="user-option" data-email="${user.email}" style="padding:10px;cursor:pointer;border-bottom:1px solid #eee">
-              <div style="font-weight:600">${user.displayName}</div>
-              <div style="font-size:9px;color:var(--color-text-secondary)">${user.email}</div>
-            </div>
-          `).join('')
-          dropdown.style.display = 'block'
-
-          // Click handlers for user options
-          dropdown.querySelectorAll('.user-option').forEach(option => {
-            option.addEventListener('click', () => {
-              input.value = option.dataset.email
-              dropdown.style.display = 'none'
-            })
-          })
-        } else {
-          dropdown.innerHTML = '<div style="padding:10px;color:var(--color-text-tertiary)">No users found</div>'
-          dropdown.style.display = 'block'
+        if (query.length < 2) {
+          dropdown.style.display = 'none'
+          return
         }
-      } catch (error) {
-        console.error('User search error:', error)
-        dropdown.style.display = 'none'
-      }
+
+        try {
+          const response = await fetch(`${apiUrl}${endpoint}?query=${encodeURIComponent(query)}`, {
+            targetAddressSpace: isDev ? 'local' : undefined
+          })
+          const result = await response.json()
+
+          if (result.success && result.data.length > 0) {
+            const resultType = searchType === 'group' ? 'group' : 'user'
+            dropdown.innerHTML = result.data.map((item, idx) => `
+              <div class="search-option" data-value="${item.email || item.displayName}" data-index="${idx}" style="padding:10px;cursor:pointer;border-bottom:1px solid #eee">
+                <div style="font-weight:600">${item.displayName}</div>
+                <div style="font-size:9px;color:var(--color-text-secondary)">${item.email}</div>
+              </div>
+            `).join('')
+            dropdown.style.display = 'block'
+
+            // Click handlers for options
+            dropdown.querySelectorAll('.search-option').forEach(option => {
+              option.addEventListener('click', () => {
+                const selectedValue = option.dataset.value
+                if (searchType === 'group') {
+                  // For group selection, just set the value
+                  input.value = selectedValue
+                } else {
+                  // For members, handle comma-separated values
+                  const currentValue = input.value
+                  const parts = currentValue.split(',')
+                  parts[parts.length - 1] = selectedValue
+                  input.value = parts.join(', ').trim()
+                }
+                dropdown.style.display = 'none'
+              })
+            })
+          } else {
+            const noResultMsg = searchType === 'group' ? 'No groups found' : 'No users found'
+            dropdown.innerHTML = `<div style="padding:10px;color:var(--color-text-tertiary)">${noResultMsg}</div>`
+            dropdown.style.display = 'block'
+          }
+        } catch (error) {
+          console.error(`${searchType} search error:`, error)
+          dropdown.style.display = 'none'
+        }
       }, 300) // Wait 300ms before searching
     })
 
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
-      if (e.target !== input) {
+      if (e.target !== input && !dropdown.contains(e.target)) {
         dropdown.style.display = 'none'
       }
     }, { once: false })
-  })
+  }
+
+  // Setup user search inputs
+  userSearchInputs.forEach(input => setupSearch(input, 'user'))
+
+  // Setup group search inputs
+  groupSearchInputs.forEach(input => setupSearch(input, 'group'))
 }
 
 function wfStepDesc(stepId, op) {
