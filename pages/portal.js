@@ -601,12 +601,19 @@ function renderField(f) {
   const hint = f.hint ? `<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:3px">${f.hint}</div>` : ''
 
   if (f.type === 'text' || f.type === 'email') {
-    const isMembers = f.id === 'members' || f.label.toLowerCase().includes('member')
-    const autocompleteClass = isMembers ? 'user-search-input' : ''
-    return `<div class="form-group" data-field="${f.id}" ${isMembers ? 'style="position:relative"' : ''}>
+    // Detect user selection fields across all request types
+    const userFieldIds = ['members', 'owners', 'managedBy', 'delegates', 'fullAccess', 'sendAs', 'sponsor', 'changeOwner', 'userUpn', 'reassignContent']
+    const isUserField = userFieldIds.includes(f.id) ||
+                       f.label.toLowerCase().includes('member') ||
+                       f.label.toLowerCase().includes('owner') ||
+                       f.label.toLowerCase().includes('delegate') ||
+                       (f.label.toLowerCase().includes('upn') && (f.placeholder || '').toLowerCase().includes('upn'))
+
+    const autocompleteClass = isUserField ? 'user-search-input' : ''
+    return `<div class="form-group" data-field="${f.id}" ${isUserField ? 'style="position:relative"' : ''}>
       <label class="form-label" for="ff-${f.id}">${f.label}${req}</label>
       <input type="${f.type}" class="form-input ${autocompleteClass}" id="ff-${f.id}" name="${f.id}" placeholder="${f.placeholder || ''}" ${f.required ? 'required' : ''} autocomplete="off">
-      ${isMembers ? '<div class="user-dropdown" id="dd-' + f.id + '" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ccc;border-radius:4px;max-height:200px;overflow-y:auto;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.1)"></div>' : ''}
+      ${isUserField ? '<div class="user-dropdown" id="dd-' + f.id + '" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ccc;border-radius:4px;max-height:200px;overflow-y:auto;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.1)"></div>' : ''}
       ${hint}
     </div>`
   }

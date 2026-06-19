@@ -256,11 +256,83 @@ async function createTeam(formData) {
       .api(`/groups/${group.id}/team`)
       .put({})
 
+    const teamId = group.id
+
+    // Add owners and members if provided
+    const ownersList = owners ? String(owners).split(',').map(o => o.trim()).filter(o => o) : []
+    const membersList = members ? String(members).split(',').map(m => m.trim()).filter(m => m) : []
+    const addedMembers = []
+    const failedMembers = []
+
+    // Add owners first
+    for (const ownerEmail of ownersList) {
+      try {
+        const normalizedEmail = ownerEmail.toLowerCase().trim()
+        const users = await graphClient
+          .api('/users')
+          .filter(`mail eq '${normalizedEmail}'`)
+          .select('id')
+          .get()
+
+        if (users.value.length > 0) {
+          const userId = users.value[0].id
+          await graphClient
+            .api(`/teams/${teamId}/members`)
+            .post({
+              '@odata.type': '#microsoft.graph.aadUserConversationMember',
+              'user@odata.bind': `https://graph.microsoft.com/v1.0/users/${userId}`,
+              'roles': ['owner']
+            })
+          addedMembers.push({ email: ownerEmail, role: 'owner' })
+          console.log(`✅ Added owner ${ownerEmail} to team ${teamId}`)
+        } else {
+          failedMembers.push({ email: ownerEmail, reason: 'User not found' })
+          console.warn(`⚠️ Owner not found: ${ownerEmail}`)
+        }
+      } catch (ownerError) {
+        failedMembers.push({ email: ownerEmail, reason: ownerError.message })
+        console.warn(`⚠️ Failed to add owner ${ownerEmail}: ${ownerError.message}`)
+      }
+    }
+
+    // Add regular members
+    for (const memberEmail of membersList) {
+      try {
+        const normalizedEmail = memberEmail.toLowerCase().trim()
+        const users = await graphClient
+          .api('/users')
+          .filter(`mail eq '${normalizedEmail}'`)
+          .select('id')
+          .get()
+
+        if (users.value.length > 0) {
+          const userId = users.value[0].id
+          await graphClient
+            .api(`/teams/${teamId}/members`)
+            .post({
+              '@odata.type': '#microsoft.graph.aadUserConversationMember',
+              'user@odata.bind': `https://graph.microsoft.com/v1.0/users/${userId}`,
+              'roles': ['member']
+            })
+          addedMembers.push({ email: memberEmail, role: 'member' })
+          console.log(`✅ Added member ${memberEmail} to team ${teamId}`)
+        } else {
+          failedMembers.push({ email: memberEmail, reason: 'User not found' })
+          console.warn(`⚠️ Member not found: ${memberEmail}`)
+        }
+      } catch (memberError) {
+        failedMembers.push({ email: memberEmail, reason: memberError.message })
+        console.warn(`⚠️ Failed to add member ${memberEmail}: ${memberError.message}`)
+      }
+    }
+
     return {
       operation: 'Create Team',
       status: 'completed',
       teamName,
-      teamId: group.id,
+      teamId: teamId,
+      addedMembers: addedMembers.length > 0 ? addedMembers : undefined,
+      failedMembers: failedMembers.length > 0 ? failedMembers : undefined,
       result: team
     }
   } catch (error) {
@@ -273,9 +345,10 @@ async function addUserToTeam(formData) {
 
   try {
     // Get user ID from email
+    const normalizedEmail = userEmail.toLowerCase().trim()
     const users = await graphClient
       .api('/users')
-      .filter(`mail eq '${userEmail}'`)
+      .filter(`mail eq '${normalizedEmail}'`)
       .select('id')
       .get()
 
@@ -311,9 +384,10 @@ async function removeUserFromTeam(formData) {
   const { teamId, userEmail } = formData
 
   try {
+    const normalizedEmail = userEmail.toLowerCase().trim()
     const users = await graphClient
       .api('/users')
-      .filter(`mail eq '${userEmail}'`)
+      .filter(`mail eq '${normalizedEmail}'`)
       .select('id')
       .get()
 
@@ -491,12 +565,47 @@ async function createGroup(formData) {
       .api('/groups')
       .post(payload)
 
+    const groupId = result.id
+
+    // Add initial members if provided
+    const addedMembers = []
+    const failedMembers = []
+    if (members.length > 0) {
+      for (const memberEmail of members) {
+        try {
+          const normalizedEmail = memberEmail.toLowerCase().trim()
+          const users = await graphClient
+            .api('/users')
+            .filter(`mail eq '${normalizedEmail}'`)
+            .select('id')
+            .get()
+
+          if (users.value.length > 0) {
+            const userId = users.value[0].id
+            await graphClient
+              .api(`/groups/${groupId}/members/$ref`)
+              .post({ '@odata.id': `https://graph.microsoft.com/v1.0/users/${userId}` })
+            addedMembers.push(memberEmail)
+            console.log(`✅ Added member ${memberEmail} to group ${groupId}`)
+          } else {
+            failedMembers.push({ email: memberEmail, reason: 'User not found' })
+            console.warn(`⚠️ User not found: ${memberEmail}`)
+          }
+        } catch (memberError) {
+          failedMembers.push({ email: memberEmail, reason: memberError.message })
+          console.warn(`⚠️ Failed to add member ${memberEmail}: ${memberError.message}`)
+        }
+      }
+    }
+
     return {
       operation: 'Create Group',
       status: 'completed',
       displayName: displayName,
       mailAlias: mailAlias,
-      groupId: result.id,
+      groupId: groupId,
+      addedMembers: addedMembers,
+      failedMembers: failedMembers.length > 0 ? failedMembers : undefined,
       result
     }
   } catch (error) {
@@ -540,9 +649,10 @@ async function addMemberToGroup(formData) {
   const { groupId, memberEmail, role } = formData
 
   try {
+    const normalizedEmail = memberEmail.toLowerCase().trim()
     const users = await graphClient
       .api('/users')
-      .filter(`mail eq '${memberEmail}'`)
+      .filter(`mail eq '${normalizedEmail}'`)
       .select('id')
       .get()
 
@@ -582,9 +692,10 @@ async function removeMemberFromGroup(formData) {
   const { groupId, memberEmail } = formData
 
   try {
+    const normalizedEmail = memberEmail.toLowerCase().trim()
     const users = await graphClient
       .api('/users')
-      .filter(`mail eq '${memberEmail}'`)
+      .filter(`mail eq '${normalizedEmail}'`)
       .select('id')
       .get()
 
