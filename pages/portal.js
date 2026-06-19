@@ -658,10 +658,12 @@ function setupUserSearch(el) {
     : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net/api'
 
   const searchInputs = el.querySelectorAll('.user-search-input')
+  console.log(`🔍 Found ${searchInputs.length} user search input(s)`)
 
   searchInputs.forEach(input => {
     const dropdownId = 'dd-' + input.id
     const dropdown = el.querySelector('#' + dropdownId)
+    console.log(`🔍 Input: ${input.id}, Dropdown ID: ${dropdownId}, Found: ${!!dropdown}`)
     if (!dropdown) return
 
     let debounceTimer = null
