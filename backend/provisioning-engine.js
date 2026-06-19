@@ -924,16 +924,22 @@ async function createDistributionGroup(formData) {
       throw new Error('Email alias is required')
     }
 
-    // Create distribution group via Exchange PowerShell simulation
-    // Note: Distribution Groups are created via Set-DistributionGroup cmdlet
+    // Create distribution group via Graph API
     console.log(`📧 Creating distribution group: ${displayName} (${alias})`)
 
-    // For now, log the operation (actual Exchange cmdlet execution would happen on Exchange server)
-    const createdGroup = {
-      id: `dg-${Date.now()}`,
-      displayName,
-      mail: `${alias}@contoso.com`
+    const payload = {
+      displayName: displayName,
+      mailEnabled: true,
+      securityEnabled: false,
+      mailNickname: alias.toLowerCase().replace(/\s+/g, ''),
+      groupTypes: [] // Empty array = Distribution Group
     }
+
+    const createdGroup = await graphClient
+      .api('/groups')
+      .post(payload)
+
+    console.log(`✅ Distribution group created: ${displayName} (${createdGroup.id})`)
 
     const addedMembers = []
     const failedMembers = []
@@ -1025,13 +1031,24 @@ async function modifyDistributionGroup(formData) {
 
     const groupId = groups.value[0].id
     const changes = []
+    const patchPayload = {}
 
     if (newName) {
+      patchPayload.displayName = newName
       changes.push(`displayName: ${newName}`)
     }
 
     if (newAlias) {
+      patchPayload.mailNickname = newAlias.toLowerCase().replace(/\s+/g, '')
       changes.push(`alias: ${newAlias}`)
+    }
+
+    // Apply group property changes via PATCH
+    if (Object.keys(patchPayload).length > 0) {
+      await graphClient
+        .api(`/groups/${groupId}`)
+        .patch(patchPayload)
+      console.log(`✅ Updated group properties: ${JSON.stringify(patchPayload)}`)
     }
 
     // Change owner if provided
@@ -1046,6 +1063,12 @@ async function modifyDistributionGroup(formData) {
           .get()
 
         if (users.value.length > 0) {
+          const userId = users.value[0].id
+          await graphClient
+            .api(`/groups/${groupId}/owners/$ref`)
+            .post({
+              '@odata.id': `https://graph.microsoft.com/v1.0/users/${userId}`
+            })
           ownerChanged = true
           changes.push(`owner: ${changeOwner}`)
           console.log(`✅ Changed owner to ${changeOwner}`)
