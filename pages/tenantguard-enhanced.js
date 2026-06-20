@@ -29,10 +29,10 @@ export async function initTenantGuardEnhanced() {
 
       <!-- KPI Row -->
       <div class="kpi-row mb-3">
-        <div class="kpi-tile">
-          <div class="kpi-value danger" id="kpi-critical">0</div>
+        <div class="kpi-tile" style="border-left:4px solid var(--clr-danger)">
+          <div class="kpi-value danger" id="kpi-critical" style="font-size:48px;font-weight:900">0</div>
           <div class="kpi-label">Critical Alerts</div>
-          <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">Immediate action required</div>
+          <div style="font-size:10px;margin-top:3px;color:var(--clr-danger);font-weight:600">Immediate action required</div>
         </div>
         <div class="kpi-tile">
           <div class="kpi-value warning" id="kpi-high">0</div>
@@ -116,6 +116,9 @@ export async function initTenantGuardEnhanced() {
           </div>
         </div>
       </div>
+
+      <!-- Visual Separator -->
+      <div style="height:1px;background:var(--color-border-secondary);margin:24px 0"></div>
 
       <!-- Alerts Section -->
       <div class="card mb-3">
@@ -259,17 +262,25 @@ function renderAlerts() {
 
     alerts.forEach(alert => {
       const severityClass = alert.severity === 'CRITICAL' ? 'danger' : 'warning'
+      const severityIcon = alert.severity === 'CRITICAL' ? 'ti-alert-circle' : 'ti-alert-triangle'
+      const typeIcon = alert.type === 'ROLE_CHANGE' ? 'ti-user-check' : alert.type === 'POLICY_CHANGE' ? 'ti-lock' : alert.type === 'AUTH_ANOMALY' ? 'ti-alert' : 'ti-alert-circle'
       const time = new Date(alert.timestamp || alert.action_timestamp).toLocaleTimeString()
+      const priority = alert.priority || 'P3'
       html += `
-        <div class="alert-item" onclick="window.showAlertDetails('${alert.id}')" style="padding:12px;margin-bottom:6px;border-left:3px solid var(--clr-${severityClass});background:var(--color-bg-secondary);border-radius:6px;cursor:pointer;transition:all 0.15s">
+        <div class="alert-item" onclick="window.showAlertDetails('${alert.id}')" style="padding:14px;margin-bottom:8px;border-left:4px solid var(--clr-${severityClass});background:var(--color-bg-secondary);border-radius:6px;cursor:pointer;transition:all 0.2s;hover:transform: translateX(4px)">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
-            <div style="flex:1">
-              <p style="margin:0 0 4px 0;font-weight:500;font-size:13px">${alert.headline || alert.name || 'Alert'}</p>
-              <p style="margin:0;font-size:12px;color:var(--color-text-secondary)"><strong>${alert.actor || 'System'}</strong> → <strong>${alert.target || 'N/A'}</strong></p>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <i class="ti ${typeIcon}" style="color:var(--clr-${severityClass});font-size:14px"></i>
+                <p style="margin:0;font-weight:600;font-size:13px;color:var(--color-text-primary)">${alert.headline || alert.name || 'Alert'}</p>
+                <span class="badge ${severityClass}" style="margin-left:auto;flex-shrink:0">${priority}</span>
+              </div>
+              <p style="margin:0;font-size:12px;color:var(--color-text-secondary)"><strong>${alert.actor || 'System'}</strong> <i class="ti ti-arrow-right" style="font-size:10px"></i> <strong>${alert.target || 'N/A'}</strong></p>
+              ${alert.category ? `<p style="margin:4px 0 0 0;font-size:11px;color:var(--color-text-tertiary)">${alert.category}</p>` : ''}
             </div>
-            <div style="text-align:right;font-size:11px;color:var(--color-text-tertiary);white-space:nowrap">
+            <div style="text-align:right;font-size:11px;color:var(--color-text-tertiary);white-space:nowrap;flex-shrink:0">
               <div>${time}</div>
-              <span class="badge ${severityClass}" style="margin-top:4px">${alert.severity || 'MEDIUM'}</span>
+              <span class="badge ${severityClass}" style="margin-top:6px">${alert.severity || 'MEDIUM'}</span>
             </div>
           </div>
         </div>
