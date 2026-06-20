@@ -443,6 +443,103 @@ app.get('/api/health', (req, res) => {
   })
 })
 
+/**
+ * GET /api/tenantguard/health
+ * Diagnostic health check for TenantGuard (tests Graph API connection)
+ */
+app.get('/api/tenantguard/health', async (req, res) => {
+  const diagnostics = {
+    timestamp: new Date().toISOString(),
+    checks: {}
+  }
+
+  try {
+    // Check 1: Environment variables
+    diagnostics.checks.environment = {
+      AZURE_TENANT_ID: process.env.AZURE_TENANT_ID ? '✅ SET' : '❌ MISSING',
+      AZURE_CLIENT_ID: process.env.AZURE_CLIENT_ID ? '✅ SET' : '❌ MISSING',
+      AZURE_CLIENT_SECRET: process.env.AZURE_CLIENT_SECRET ? '✅ SET' : '❌ MISSING'
+    }
+
+    // Check 2: Graph Client
+    diagnostics.checks.graphClient = {
+      initialized: graphClient ? '✅ YES' : '❌ NO',
+      status: graphClient ? 'Ready' : 'Not initialized'
+    }
+
+    // Check 3: Graph API Connection
+    try {
+      if (!graphClient) {
+        diagnostics.checks.graphAPI = {
+          status: '❌ Client not initialized',
+          error: 'Graph API client is null'
+        }
+      } else {
+        const me = await graphClient.api('/me').get()
+        diagnostics.checks.graphAPI = {
+          status: '✅ Connected',
+          user: me.displayName || me.userPrincipalName,
+          id: me.id
+        }
+      }
+    } catch (error) {
+      diagnostics.checks.graphAPI = {
+        status: '❌ Failed',
+        error: error.message,
+        troubleshooting: [
+          'Check AZURE_CLIENT_SECRET is correct',
+          'Check app registration exists in Azure AD',
+          'Verify API permissions are granted',
+          'Check tenant ID is correct'
+        ]
+      }
+    }
+
+    // Check 4: SharePoint Access (root site)
+    try {
+      if (!graphClient) {
+        diagnostics.checks.sharepoint = {
+          status: '❌ Client not initialized'
+        }
+      } else {
+        const rootSite = await graphClient.api('/sites/root').get()
+        diagnostics.checks.sharepoint = {
+          status: '✅ Root site accessible',
+          name: rootSite.displayName,
+          id: rootSite.id,
+          url: rootSite.webUrl
+        }
+      }
+    } catch (error) {
+      diagnostics.checks.sharepoint = {
+        status: '❌ Failed',
+        error: error.message,
+        troubleshooting: [
+          'Check app has Sites.Read.All permission',
+          'Check app has AuditLog.Read.All permission',
+          'Verify SharePoint site exists',
+          'Check tenant connectivity'
+        ]
+      }
+    }
+
+    diagnostics.success =
+      diagnostics.checks.graphAPI.status?.includes('✅') &&
+      diagnostics.checks.sharepoint.status?.includes('✅')
+
+    const statusCode = diagnostics.success ? 200 : 500
+    res.status(statusCode).json(diagnostics)
+
+  } catch (error) {
+    res.status(500).json({
+      timestamp: new Date().toISOString(),
+      success: false,
+      error: error.message,
+      checks: diagnostics.checks
+    })
+  }
+})
+
 // ============================================================
 // Agent Validation - Validate service requests (rule-based AI)
 // ============================================================
