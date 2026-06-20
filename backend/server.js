@@ -8126,23 +8126,20 @@ app.post('/api/tenantguard/sync', async (req, res) => {
         const isRemoveFromRole = log.activityDisplayName?.includes('Remove member from role')
 
         if (isAddToRole || isRemoveFromRole) {
-          // Debug: Log all resources to see structure
-          console.log(`  📍 Resources: ${JSON.stringify(log.targetResources?.map(r => ({type: r.type, displayName: r.displayName, id: r.id})) || [])}`)
+          // Find the Role in targetResources (displayName is null, so check by type instead)
+          const targetRole = log.targetResources?.find(r => r.type === 'Role')
+          const memberBeingModified = log.targetResources?.find(r => r.type === 'User')
 
-          // Check if any privileged role is being modified
-          const targetRole = log.targetResources?.find(r => PRIVILEGED_ROLES.includes(r.displayName))
-
-          if (targetRole) {
-            const memberBeingAdded = log.targetResources?.find(r => r.type === 'User')
-            const memberEmail = memberBeingAdded?.displayName || memberBeingAdded?.userPrincipalName || 'Unknown'
-            const roleName = targetRole.displayName
+          if (targetRole && memberBeingModified) {
+            const memberEmail = memberBeingModified?.displayName || memberBeingModified?.userPrincipalName || 'Unknown'
+            const roleId = targetRole.id || 'Unknown'
 
             const alertId = `admin-${log.id}-${isAddToRole ? 'add' : 'remove'}`
             const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
 
             if (!existing) {
               const action = isAddToRole ? 'Added to' : 'Removed from'
-              const severity = 'CRITICAL'  // Always CRITICAL for privileged role changes
+              const severity = 'CRITICAL'  // Always CRITICAL for role changes
               const priority = 'P1'
               const riskScore = 100
               const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
@@ -8159,20 +8156,20 @@ app.post('/api/tenantguard/sync', async (req, res) => {
                 severity,
                 riskScore,
                 priority,
-                `🚨 P1: ${roleName} ${action}`,
-                `${action} ${roleName}: ${memberEmail} (by ${actor})`,
+                `🚨 P1: Role ${action}`,
+                `${action} role: ${memberEmail} (by ${actor})`,
                 JSON.stringify({
                   score: riskScore,
                   severity: severity,
                   source: 'Graph API - Directory Audit',
                   alertType: 'P1_PRIVILEGED_ROLE_CHANGE',
-                  role: roleName,
+                  roleId: roleId,
                   action: action,
                   member: memberEmail,
                   actor: actor
                 }),
                 JSON.stringify([
-                  `URGENT: Verify ${memberEmail} authorization for ${roleName}`,
+                  `URGENT: Verify ${memberEmail} role authorization`,
                   `Confirm approval from identity governance team`,
                   `Check MFA and strong authentication on this account`,
                   `Review recent activities of ${memberEmail}`,
@@ -8186,7 +8183,7 @@ app.post('/api/tenantguard/sync', async (req, res) => {
                   graphApiId: log.id,
                   real: true,
                   alertType: 'P1_PRIVILEGED_ROLE_CHANGE',
-                  role: roleName,
+                  roleId: roleId,
                   action: action,
                   member: memberEmail,
                   actor: actor
@@ -8196,7 +8193,7 @@ app.post('/api/tenantguard/sync', async (req, res) => {
               )
 
               alertsCreated++
-              console.log(`🚨 P1 ALERT CREATED: ${roleName} - ${action} ${memberEmail}`)
+              console.log(`🚨 P1 ALERT CREATED: Role ${action} - ${memberEmail}`)
             }
           }
         }
