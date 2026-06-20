@@ -7569,21 +7569,54 @@ async function runTenantGuardSync() {
           const riskScore = severity === 'CRITICAL' ? 85 : severity === 'HIGH' ? 65 : 45
           const priority = severity === 'CRITICAL' ? 'P1' : severity === 'HIGH' ? 'P2' : 'P3'
 
+          // Extract group and member information
+          let groupName = 'N/A', memberName = 'N/A', targetResource = 'N/A', enhancedDesc = `${log.result}: ${log.activityDisplayName}`
+          if (log.targetResources && log.targetResources.length > 0) {
+            const groupTarget = log.targetResources.find(r => r.type === 'Group')
+            const memberTarget = log.targetResources.find(r => r.type === 'User')
+
+            // Try to extract group name from various fields
+            if (groupTarget) {
+              groupName = groupTarget.displayName ||
+                         (groupTarget.modifiedProperties && groupTarget.modifiedProperties.find(p => p.displayName === 'displayName')?.newValue) ||
+                         groupTarget.userPrincipalName ||
+                         groupTarget.id || 'Unknown'
+            }
+
+            // Try to extract member name from various fields
+            if (memberTarget) {
+              memberName = memberTarget.displayName || memberTarget.userPrincipalName ||
+                          (memberTarget.modifiedProperties && memberTarget.modifiedProperties.find(p => p.displayName === 'displayName')?.newValue) ||
+                          'Unknown'
+            }
+
+            const primaryTarget = log.targetResources.find(r => r.type !== 'User') || log.targetResources[0]
+            targetResource = primaryTarget.displayName ||
+                           primaryTarget.userPrincipalName ||
+                           (primaryTarget.modifiedProperties && primaryTarget.modifiedProperties.find(p => p.displayName === 'displayName')?.newValue) ||
+                           primaryTarget.id || 'N/A'
+
+            if (groupName !== 'N/A' && memberName !== 'N/A' && log.activityDisplayName.toLowerCase().includes('member')) {
+              enhancedDesc = `${log.result}: Added ${memberName} to group ${groupName}`
+            }
+          }
+
           db.prepare(`
             INSERT INTO alerts (
               id, type, severity, score, priority, headline, description,
-              risk_assessment, recommendations, actor, action_timestamp,
-              raw_event, dismissed, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              risk_assessment, recommendations, actor, target, action_timestamp,
+              raw_event, dismissed, created_at, category
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
             alertId, 'AUDIT', severity, riskScore, priority,
             `Audit: ${log.activityDisplayName}`,
-            `${log.result}: ${log.activityDisplayName}`,
-            JSON.stringify({ score: riskScore, severity, source: 'Graph API' }),
+            enhancedDesc,
+            JSON.stringify({ score: riskScore, severity, source: 'Graph API', groupName, memberName }),
             JSON.stringify([`Review ${log.activityDisplayName}`, 'Verify authorization', 'Check for unauthorized access']),
             log.initiatedBy?.user?.userPrincipalName || 'System',
+            targetResource,
             log.activityDateTime,
-            JSON.stringify({ graphApiId: log.id, real: true, autoSync: true }),
+            JSON.stringify({ graphApiId: log.id, real: true, autoSync: true, groupName, memberName }),
             0,
             new Date().toISOString()
           )
@@ -7616,9 +7649,9 @@ async function runTenantGuardSync() {
           db.prepare(`
             INSERT INTO alerts (
               id, type, severity, score, priority, headline, description,
-              risk_assessment, recommendations, actor, action_timestamp,
-              raw_event, dismissed, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              risk_assessment, recommendations, actor, target, action_timestamp,
+              raw_event, dismissed, created_at, category
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
             alertId, 'RISK', severity, riskScore, 'P1',
             `Risk: ${risk.riskEventType}`,
@@ -7626,6 +7659,7 @@ async function runTenantGuardSync() {
             JSON.stringify({ score: riskScore, severity, source: 'Graph API' }),
             JSON.stringify(['Review account', 'Reset password', 'Enable MFA', 'Review sign-ins']),
             risk.userDisplayName || 'Unknown',
+            risk.userPrincipalName || risk.userDisplayName || 'Unknown',
             risk.detectedDateTime,
             JSON.stringify({ graphApiId: risk.id, real: true, autoSync: true }),
             0,
@@ -7772,6 +7806,7 @@ app.post('/api/tenantguard/sync', async (req, res) => {
 
     // Fetch audit logs
     console.log('📡 Fetching audit logs...')
+    let auditLogs = []  // Declare at higher scope for Phase 1a detection
     const auditLogsUrl = 'https://graph.microsoft.com/v1.0/auditLogs/directoryAudits?$top=100'
     const auditResponse = await fetch(auditLogsUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -7779,7 +7814,7 @@ app.post('/api/tenantguard/sync', async (req, res) => {
 
     if (auditResponse.ok) {
       const auditData = await auditResponse.json()
-      const auditLogs = auditData.value || []
+      auditLogs = auditData.value || []
       console.log(`📋 Found ${auditLogs.length} audit log entries`)
 
       // Parse and store alerts from audit logs
@@ -7802,13 +7837,41 @@ app.post('/api/tenantguard/sync', async (req, res) => {
           const riskScore = severity === 'CRITICAL' ? 85 : severity === 'HIGH' ? 65 : 45
           const priority = severity === 'CRITICAL' ? 'P1' : severity === 'HIGH' ? 'P2' : 'P3'
 
+          // Extract target resource - look for the main resource being modified (Group, not the member)
+          let targetResource = 'N/A'
+          let groupName = 'N/A'
+          let memberName = 'N/A'
+
+          if (log.targetResources && log.targetResources.length > 0) {
+            // For "Add member to group" operations, find the group and the member
+            const groupTarget = log.targetResources.find(r => r.type === 'Group')
+            const memberTarget = log.targetResources.find(r => r.type === 'User')
+
+            if (groupTarget) {
+              groupName = groupTarget.displayName || groupTarget.id || 'Unknown Group'
+            }
+            if (memberTarget) {
+              memberName = memberTarget.displayName || memberTarget.userPrincipalName || 'Unknown Member'
+            }
+
+            // Use the non-user target (usually the group being modified)
+            const primaryTarget = log.targetResources.find(r => r.type !== 'User') || log.targetResources[0]
+            targetResource = primaryTarget.displayName || primaryTarget.userPrincipalName || primaryTarget.id || 'N/A'
+          }
+
+          // Enhance description with group name if available
+          let enhancedDescription = `${log.result}: ${log.activityDisplayName}`
+          if (groupName !== 'N/A' && memberName !== 'N/A' && log.activityDisplayName.toLowerCase().includes('member')) {
+            enhancedDescription = `${log.result}: Added ${memberName} to group ${groupName}`
+          }
+
           // Insert into database
           db.prepare(`
             INSERT INTO alerts (
               id, type, severity, score, priority, headline, description,
-              risk_assessment, recommendations, actor, action_timestamp,
-              raw_event, dismissed, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              risk_assessment, recommendations, actor, target, action_timestamp,
+              raw_event, dismissed, created_at, category
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
             alertId,
             'AUDIT',
@@ -7816,11 +7879,13 @@ app.post('/api/tenantguard/sync', async (req, res) => {
             riskScore,
             priority,
             `Audit: ${log.activityDisplayName}`,
-            `${log.result}: ${log.activityDisplayName}`,
+            enhancedDescription,
             JSON.stringify({
               score: riskScore,
               severity: severity,
-              source: 'Graph API - Audit Logs'
+              source: 'Graph API - Audit Logs',
+              groupName: groupName,
+              memberName: memberName
             }),
             JSON.stringify([
               `Review the ${log.activityDisplayName} activity`,
@@ -7828,8 +7893,9 @@ app.post('/api/tenantguard/sync', async (req, res) => {
               'Check for unauthorized access attempts'
             ]),
             log.initiatedBy?.user?.userPrincipalName || 'System',
+            targetResource,
             log.activityDateTime,
-            JSON.stringify({ graphApiId: log.id, real: true }),
+            JSON.stringify({ graphApiId: log.id, real: true, targetId: targetResource, groupName, memberName }),
             0,
             new Date().toISOString()
           )
@@ -7867,12 +7933,15 @@ app.post('/api/tenantguard/sync', async (req, res) => {
           const severity = risk.riskLevel === 'high' ? 'CRITICAL' : risk.riskLevel === 'medium' ? 'HIGH' : 'MEDIUM'
           const riskScore = risk.riskLevel === 'high' ? 90 : risk.riskLevel === 'medium' ? 70 : 50
 
+          // Extract target (user or resource affected)
+          const targetResource = risk.userPrincipalName || risk.userDisplayName || 'Unknown'
+
           db.prepare(`
             INSERT INTO alerts (
               id, type, severity, score, priority, headline, description,
-              risk_assessment, recommendations, actor, action_timestamp,
-              raw_event, dismissed, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              risk_assessment, recommendations, actor, target, action_timestamp,
+              raw_event, dismissed, created_at, category
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
             alertId,
             'RISK',
@@ -7894,8 +7963,9 @@ app.post('/api/tenantguard/sync', async (req, res) => {
               'Review recent sign-in activities'
             ]),
             risk.userDisplayName || 'Unknown',
+            targetResource,
             risk.detectedDateTime,
-            JSON.stringify({ graphApiId: risk.id, real: true }),
+            JSON.stringify({ graphApiId: risk.id, real: true, targetId: targetResource }),
             0,
             new Date().toISOString()
           )
@@ -7908,6 +7978,2518 @@ app.post('/api/tenantguard/sync', async (req, res) => {
       }
     } else {
       console.log(`⚠️ Risk detections fetch failed: ${riskResponse.status}`)
+    }
+
+    // ============================================================
+    // PHASE 1A: P1 ALERT - Global Admin Changes + P2 ALERT - New Device Logins
+    // ============================================================
+
+    // P1: Detect Privileged Role Changes (11 critical roles)
+    console.log('🔍 Checking for privileged role changes...')
+    const PRIVILEGED_ROLES = [
+      'Global Administrator',
+      'Privileged Role Administrator',
+      'Security Administrator',
+      'Conditional Access Administrator',
+      'Authentication Administrator',
+      'Exchange Administrator',
+      'SharePoint Administrator',
+      'Intune Administrator',
+      'Cloud Application Administrator',
+      'Application Administrator',
+      'Hybrid Identity Administrator'
+    ]
+
+    for (const log of auditLogs) {
+      try {
+        const isAddToRole = log.activityDisplayName?.includes('Add member to role')
+        const isRemoveFromRole = log.activityDisplayName?.includes('Remove member from role')
+
+        if (isAddToRole || isRemoveFromRole) {
+          // Check if any privileged role is being modified
+          const targetRole = log.targetResources?.find(r => PRIVILEGED_ROLES.includes(r.displayName))
+
+          if (targetRole) {
+            const memberBeingAdded = log.targetResources?.find(r => r.type === 'User')
+            const memberEmail = memberBeingAdded?.displayName || memberBeingAdded?.userPrincipalName || 'Unknown'
+            const roleName = targetRole.displayName
+
+            const alertId = `admin-${log.id}-${isAddToRole ? 'add' : 'remove'}`
+            const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+            if (!existing) {
+              const action = isAddToRole ? 'Added to' : 'Removed from'
+              const severity = 'CRITICAL'  // Always CRITICAL for privileged role changes
+              const priority = 'P1'
+              const riskScore = 100
+              const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+
+              db.prepare(`
+                INSERT INTO alerts (
+                  id, type, severity, score, priority, headline, description,
+                  risk_assessment, recommendations, actor, target, action_timestamp,
+                  raw_event, dismissed, created_at, category
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `).run(
+                alertId,
+                'ADMIN_CHANGE',
+                severity,
+                riskScore,
+                priority,
+                `🚨 P1: ${roleName} ${action}`,
+                `${action} ${roleName}: ${memberEmail} (by ${actor})`,
+                JSON.stringify({
+                  score: riskScore,
+                  severity: severity,
+                  source: 'Graph API - Directory Audit',
+                  alertType: 'P1_PRIVILEGED_ROLE_CHANGE',
+                  role: roleName,
+                  action: action,
+                  member: memberEmail,
+                  actor: actor
+                }),
+                JSON.stringify([
+                  `URGENT: Verify ${memberEmail} authorization for ${roleName}`,
+                  `Confirm approval from identity governance team`,
+                  `Check MFA and strong authentication on this account`,
+                  `Review recent activities of ${memberEmail}`,
+                  `Monitor for suspicious actions using this role`,
+                  isAddToRole ? `Remove access immediately if unauthorized` : `Verify role removal completion`
+                ]),
+                actor,
+                memberEmail,
+                log.activityDateTime,
+                JSON.stringify({
+                  graphApiId: log.id,
+                  real: true,
+                  alertType: 'P1_PRIVILEGED_ROLE_CHANGE',
+                  role: roleName,
+                  action: action,
+                  member: memberEmail,
+                  actor: actor
+                }),
+                0,
+                new Date().toISOString()
+              )
+
+              alertsCreated++
+              console.log(`🚨 P1 ALERT CREATED: ${roleName} - ${action} ${memberEmail}`)
+            }
+          }
+        }
+      } catch (adminError) {
+        console.error(`Error detecting privileged role changes: ${adminError.message}`)
+      }
+    }
+
+    // P2: Detect Administrative Role Changes (11 administrative roles)
+    console.log('🔔 Checking for administrative role changes...')
+    const ADMINISTRATIVE_ROLES = [
+      'User Administrator',
+      'Groups Administrator',
+      'Helpdesk Administrator',
+      'Password Administrator',
+      'Directory Writers',
+      'Directory Synchronization Accounts',
+      'License Administrator',
+      'Compliance Administrator',
+      'Compliance Data Administrator',
+      'eDiscovery Administrator',
+      'Records Management Administrator'
+    ]
+
+    for (const log of auditLogs) {
+      try {
+        const isAddToRole = log.activityDisplayName?.includes('Add member to role')
+        const isRemoveFromRole = log.activityDisplayName?.includes('Remove member from role')
+
+        if (isAddToRole || isRemoveFromRole) {
+          // Check if any administrative role is being modified
+          const targetRole = log.targetResources?.find(r => ADMINISTRATIVE_ROLES.includes(r.displayName))
+
+          if (targetRole) {
+            const memberBeingAdded = log.targetResources?.find(r => r.type === 'User')
+            const memberEmail = memberBeingAdded?.displayName || memberBeingAdded?.userPrincipalName || 'Unknown'
+            const roleName = targetRole.displayName
+
+            const alertId = `admin-p2-${log.id}-${isAddToRole ? 'add' : 'remove'}`
+            const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+            if (!existing) {
+              const action = isAddToRole ? 'Added to' : 'Removed from'
+              const severity = 'HIGH'  // HIGH for P2
+              const priority = 'P2'
+              const riskScore = 70
+              const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+
+              db.prepare(`
+                INSERT INTO alerts (
+                  id, type, severity, score, priority, headline, description,
+                  risk_assessment, recommendations, actor, target, action_timestamp,
+                  raw_event, dismissed, created_at, category
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `).run(
+                alertId,
+                'ADMIN_CHANGE',
+                severity,
+                riskScore,
+                priority,
+                `🔔 P2: ${roleName} ${action}`,
+                `${action} ${roleName}: ${memberEmail} (by ${actor})`,
+                JSON.stringify({
+                  score: riskScore,
+                  severity: severity,
+                  source: 'Graph API - Directory Audit',
+                  alertType: 'P2_ADMIN_ROLE_CHANGE',
+                  role: roleName,
+                  action: action,
+                  member: memberEmail,
+                  actor: actor
+                }),
+                JSON.stringify([
+                  `Review ${memberEmail} authorization for ${roleName}`,
+                  `Verify role assignment follows approval process`,
+                  `Check account security posture`,
+                  `Monitor ${memberEmail} activities using this role`,
+                  `Review ${roleName} scope and permissions`
+                ]),
+                actor,
+                memberEmail,
+                log.activityDateTime,
+                JSON.stringify({
+                  graphApiId: log.id,
+                  real: true,
+                  alertType: 'P2_ADMIN_ROLE_CHANGE',
+                  role: roleName,
+                  action: action,
+                  member: memberEmail,
+                  actor: actor
+                }),
+                0,
+                new Date().toISOString()
+              )
+
+              alertsCreated++
+              console.log(`📌 P2 ALERT CREATED: ${roleName} - ${action} ${memberEmail}`)
+            }
+          }
+        }
+      } catch (adminRoleError) {
+        console.error(`Error detecting administrative role changes: ${adminRoleError.message}`)
+      }
+    }
+
+    // ============================================================
+    // PHASE 1B: P1 ALERTS - Conditional Access, Security Defaults, MFA, DLP
+    // ============================================================
+
+    // P1: Detect MFA Disabled for Admin Users
+    console.log('🔐 Checking for MFA policy changes...')
+    for (const log of auditLogs) {
+      try {
+        const isMFADisabled = log.activityDisplayName?.includes('Delete authentication method') ||
+                             log.activityDisplayName?.includes('Update authentication method') ||
+                             log.activityDisplayName?.includes('Authentication Methods Policy Updated')
+
+        if (isMFADisabled) {
+          // Check if it's for a privileged user
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const PRIVILEGED_USERS = ['Global Administrator', 'Security Administrator', 'Privileged Role Administrator']
+
+          // Note: In production, verify actor is privileged user
+          const alertId = `mfa-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'POLICY_CHANGE',
+              severity,
+              riskScore,
+              priority,
+              '⚠️ P1: MFA Disabled or Removed',
+              `MFA authentication method disabled: ${log.activityDisplayName} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Directory Audit',
+                alertType: 'P1_MFA_DISABLED',
+                operation: log.activityDisplayName,
+                actor: actor
+              }),
+              JSON.stringify([
+                `URGENT: Verify MFA removal is authorized`,
+                `Check if this affects privileged accounts`,
+                `Re-enable MFA for all admin accounts immediately`,
+                `Review authentication policy changes`,
+                `Audit recent sign-ins for unauthorized access`
+              ]),
+              actor,
+              'Authentication Methods',
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_MFA_DISABLED' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`⚠️ P1 ALERT CREATED: MFA Disabled - ${actor}`)
+          }
+        }
+      } catch (mfaError) {
+        console.error(`Error detecting MFA changes: ${mfaError.message}`)
+      }
+    }
+
+    // P1: Detect Conditional Access Policy Disabled
+    console.log('🔓 Checking Conditional Access policies...')
+    try {
+      const caUrl = 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies'
+      const caResponse = await fetch(caUrl, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (caResponse.ok) {
+        const caData = await caResponse.json()
+        const caPolicies = caData.value || []
+
+        // Check for disabled policies
+        for (const policy of caPolicies) {
+          if (policy.state === 'disabled') {
+            const alertId = `ca-disabled-${policy.id}`
+            const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+            if (!existing) {
+              const severity = 'CRITICAL'
+              const priority = 'P1'
+              const riskScore = 100
+
+              db.prepare(`
+                INSERT INTO alerts (
+                  id, type, severity, score, priority, headline, description,
+                  risk_assessment, recommendations, actor, target, action_timestamp,
+                  raw_event, dismissed, created_at, category
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `).run(
+                alertId,
+                'POLICY_CHANGE',
+                severity,
+                riskScore,
+                priority,
+                '🔓 P1: Conditional Access Policy Disabled',
+                `Conditional Access policy disabled: ${policy.displayName}`,
+                JSON.stringify({
+                  score: riskScore,
+                  severity: severity,
+                  source: 'Graph API - Conditional Access',
+                  alertType: 'P1_CA_DISABLED',
+                  policy: policy.displayName,
+                  conditions: policy.conditions?.signInRiskLevels?.length || 0
+                }),
+                JSON.stringify([
+                  `URGENT: Re-enable CA policy immediately`,
+                  `Verify business reason for policy disablement`,
+                  `Check who disabled this policy`,
+                  `Review all user sign-ins since policy was disabled`,
+                  `Consider temporary MFA enforcement as mitigation`
+                ]),
+                'System',
+                policy.displayName,
+                new Date().toISOString(),
+                JSON.stringify({ graphApiId: policy.id, real: true, alertType: 'P1_CA_DISABLED' }),
+                0,
+                new Date().toISOString()
+              )
+
+              alertsCreated++
+              console.log(`🔓 P1 ALERT CREATED: CA Policy Disabled - ${policy.displayName}`)
+            }
+          }
+        }
+      }
+    } catch (caError) {
+      console.error(`Error checking CA policies: ${caError.message}`)
+    }
+
+    // P1: Detect Security Defaults Disabled
+    console.log('🛡️ Checking Security Defaults enforcement...')
+    try {
+      const sdUrl = 'https://graph.microsoft.com/v1.0/policies/identitySecurityDefaultsEnforcementPolicy'
+      const sdResponse = await fetch(sdUrl, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (sdResponse.ok) {
+        const sdData = await sdResponse.json()
+
+        // Check if Security Defaults is disabled
+        if (sdData.isEnabled === false) {
+          const alertId = 'security-defaults-disabled'
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'POLICY_CHANGE',
+              severity,
+              riskScore,
+              priority,
+              '🛡️ P1: Security Defaults Disabled',
+              'Microsoft identity security defaults are disabled',
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Security Policies',
+                alertType: 'P1_SECURITY_DEFAULTS_DISABLED',
+                status: 'DISABLED'
+              }),
+              JSON.stringify([
+                `CRITICAL: Re-enable Security Defaults immediately`,
+                `Verify business justification for disablement`,
+                `Implement alternative MFA enforcement`,
+                `Monitor for unauthorized access patterns`,
+                `Review all admin activities since disablement`
+              ]),
+              'System',
+              'Tenant Security Defaults',
+              new Date().toISOString(),
+              JSON.stringify({ real: true, alertType: 'P1_SECURITY_DEFAULTS_DISABLED' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🛡️ P1 ALERT CREATED: Security Defaults Disabled`)
+          }
+        }
+      }
+    } catch (sdError) {
+      console.error(`Error checking Security Defaults: ${sdError.message}`)
+    }
+
+    // P1: Detect DLP Policy Disabled or External Forwarding
+    console.log('📧 Checking for DLP and forwarding rule changes...')
+    for (const log of auditLogs) {
+      try {
+        const isDLPDisabled = log.activityDisplayName?.includes('DLP Policy Deleted') ||
+                             log.activityDisplayName?.includes('DLP Policy Disabled')
+
+        const isExternalForwarding = log.activityDisplayName?.includes('New-InboxRule') ||
+                                    log.activityDisplayName?.includes('Set-Mailbox') ||
+                                    log.activityDisplayName?.includes('Set-InboxRule')
+
+        if (isDLPDisabled) {
+          const alertId = `dlp-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+            const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'POLICY_CHANGE',
+              severity,
+              riskScore,
+              priority,
+              '⚠️ P1: DLP Policy Disabled',
+              `DLP protection disabled: ${log.activityDisplayName} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Audit Logs',
+                alertType: 'P1_DLP_DISABLED',
+                operation: log.activityDisplayName,
+                actor: actor
+              }),
+              JSON.stringify([
+                `URGENT: Verify DLP policy removal is authorized`,
+                `Re-enable DLP protection immediately`,
+                `Check for data exfiltration since disablement`,
+                `Review sensitivity labels and retention policies`,
+                `Audit mailbox rules for suspicious forwarding`
+              ]),
+              actor,
+              'DLP Policies',
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_DLP_DISABLED' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`⚠️ P1 ALERT CREATED: DLP Disabled - ${actor}`)
+          }
+        }
+
+        if (isExternalForwarding) {
+          // Check if it's a forwarding rule (would need to parse raw event for details)
+          const alertId = `forwarding-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+            const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'POLICY_CHANGE',
+              severity,
+              riskScore,
+              priority,
+              '📧 P1: External Forwarding Rule Created',
+              `Forwarding rule created or modified: ${log.activityDisplayName} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Audit Logs',
+                alertType: 'P1_EXTERNAL_FORWARDING',
+                operation: log.activityDisplayName,
+                actor: actor
+              }),
+              JSON.stringify([
+                `URGENT: Verify forwarding rule is authorized`,
+                `Check forwarding destination domain`,
+                `Review mailbox rules for suspicious patterns`,
+                `Check for data exfiltration`,
+                `Disable unauthorized forwarding rules immediately`
+              ]),
+              actor,
+              'Mail Forwarding',
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_EXTERNAL_FORWARDING' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`📧 P1 ALERT CREATED: External Forwarding - ${actor}`)
+          }
+        }
+      } catch (dlpError) {
+        console.error(`Error detecting DLP/forwarding changes: ${dlpError.message}`)
+      }
+    }
+
+    // ============================================================
+    // PHASE 1C: COLLECTOR 3 - Purview / Exchange Audit
+    // ============================================================
+
+    // P2: Detect SharePoint Site Collection Admin Changes
+    console.log('🏢 Checking for Site Collection Admin changes...')
+    for (const log of auditLogs) {
+      try {
+        const isSiteAdminAdded = log.activityDisplayName?.includes('Site Collection Admin Added') ||
+                                log.activityDisplayName?.includes('Admin Added') ||
+                                (log.activityDisplayName?.includes('SharePoint') && log.activityDisplayName?.includes('Admin'))
+
+        if (isSiteAdminAdded) {
+          const alertId = `sitecollection-admin-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'HIGH'
+            const priority = 'P2'
+            const riskScore = 70
+            const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+            const target = log.targetResources?.[0]?.displayName || 'Unknown Site'
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'SITE_CHANGE',
+              severity,
+              riskScore,
+              priority,
+              '🏢 P2: Site Collection Admin Added',
+              `Site Collection admin added to: ${target} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - SharePoint Audit',
+                alertType: 'P2_SITE_ADMIN_ADDED',
+                site: target,
+                actor: actor
+              }),
+              JSON.stringify([
+                `Verify site collection admin authorization`,
+                `Review admin permissions on this site`,
+                `Check for sensitive document access`,
+                `Monitor site sharing settings`,
+                `Verify identity of new admin`
+              ]),
+              actor,
+              target,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_SITE_ADMIN_ADDED' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🏢 P2 ALERT CREATED: Site Admin Added - ${target}`)
+          }
+        }
+      } catch (siteError) {
+        console.error(`Error detecting site collection changes: ${siteError.message}`)
+      }
+    }
+
+    // P2: Detect External Sharing Changes
+    console.log('🔗 Checking for external sharing changes...')
+    for (const log of auditLogs) {
+      try {
+        const isExternalSharing = log.activityDisplayName?.includes('Anonymous Link Created') ||
+                                 log.activityDisplayName?.includes('External User Invited') ||
+                                 log.activityDisplayName?.includes('Sharing Policy Changed') ||
+                                 log.activityDisplayName?.includes('Added external user') ||
+                                 log.activityDisplayName?.includes('Shared')
+
+        if (isExternalSharing) {
+          const alertId = `external-share-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'HIGH'
+            const priority = 'P2'
+            const riskScore = 70
+            const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+            const resource = log.targetResources?.[0]?.displayName || 'Resource'
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'SHARING_CHANGE',
+              severity,
+              riskScore,
+              priority,
+              '🔗 P2: External Sharing Changed',
+              `External sharing modified: ${log.activityDisplayName} for ${resource} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Audit Logs',
+                alertType: 'P2_EXTERNAL_SHARING',
+                operation: log.activityDisplayName,
+                resource: resource,
+                actor: actor
+              }),
+              JSON.stringify([
+                `Verify external sharing is authorized`,
+                `Review external user permissions`,
+                `Check what data was shared`,
+                `Monitor external access patterns`,
+                `Disable sharing if unauthorized`
+              ]),
+              actor,
+              resource,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_EXTERNAL_SHARING' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔗 P2 ALERT CREATED: External Sharing - ${resource}`)
+          }
+        }
+      } catch (sharingError) {
+        console.error(`Error detecting sharing changes: ${sharingError.message}`)
+      }
+    }
+
+    // ============================================================
+    // PHASE 1C: COLLECTOR 4 - Intune Device Management
+    // ============================================================
+
+    // P2: Detect Intune Compliance Policy Changes
+    console.log('📱 Checking for Intune compliance policy changes...')
+    for (const log of auditLogs) {
+      try {
+        const isComplianceChange = log.activityDisplayName?.includes('Compliance') ||
+                                  log.activityDisplayName?.includes('Device') ||
+                                  log.activityDisplayName?.includes('Policy')
+
+        if (isComplianceChange && (
+            log.activityDisplayName?.includes('Create') ||
+            log.activityDisplayName?.includes('Update') ||
+            log.activityDisplayName?.includes('Delete') ||
+            log.activityDisplayName?.includes('Modify')
+        )) {
+          const alertId = `intune-compliance-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'HIGH'
+            const priority = 'P2'
+            const riskScore = 70
+            const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+            const policy = log.targetResources?.[0]?.displayName || 'Device Policy'
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'INTUNE_CHANGE',
+              severity,
+              riskScore,
+              priority,
+              '📋 P2: Device Compliance Policy Changed',
+              `Device compliance policy modified: ${log.activityDisplayName} for ${policy} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Intune Audit',
+                alertType: 'P2_INTUNE_COMPLIANCE',
+                policy: policy,
+                operation: log.activityDisplayName,
+                actor: actor
+              }),
+              JSON.stringify([
+                `Verify compliance policy change authorization`,
+                `Review impacted devices`,
+                `Check if change meets security standards`,
+                `Monitor device compliance status`,
+                `Document business justification`
+              ]),
+              actor,
+              policy,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_INTUNE_COMPLIANCE' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`📋 P2 ALERT CREATED: Intune Policy Changed - ${policy}`)
+          }
+        }
+      } catch (intuneError) {
+        console.error(`Error detecting Intune changes: ${intuneError.message}`)
+      }
+    }
+
+    // P2: Detect Device Configuration Changes
+    console.log('🔧 Checking for device configuration changes...')
+    for (const log of auditLogs) {
+      try {
+        const isConfigChange = log.activityDisplayName?.includes('Configuration') ||
+                              log.activityDisplayName?.includes('Settings') ||
+                              (log.activityDisplayName?.includes('Device') &&
+                               (log.activityDisplayName?.includes('Configuration') ||
+                                log.activityDisplayName?.includes('Profile')))
+
+        if (isConfigChange && (
+            log.activityDisplayName?.includes('Create') ||
+            log.activityDisplayName?.includes('Update') ||
+            log.activityDisplayName?.includes('Delete')
+        )) {
+          const alertId = `device-config-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'HIGH'
+            const priority = 'P2'
+            const riskScore = 70
+            const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+            const config = log.targetResources?.[0]?.displayName || 'Device Configuration'
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'INTUNE_CHANGE',
+              severity,
+              riskScore,
+              priority,
+              '🔧 P2: Device Configuration Modified',
+              `Device configuration changed: ${log.activityDisplayName} for ${config} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Device Management',
+                alertType: 'P2_DEVICE_CONFIG',
+                configuration: config,
+                operation: log.activityDisplayName,
+                actor: actor
+              }),
+              JSON.stringify([
+                `Verify configuration change authorization`,
+                `Review scope of affected devices`,
+                `Check security implications of change`,
+                `Monitor device enrollment status`,
+                `Validate configuration compliance`
+              ]),
+              actor,
+              config,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_DEVICE_CONFIG' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔧 P2 ALERT CREATED: Device Config Changed - ${config}`)
+          }
+        }
+      } catch (configError) {
+        console.error(`Error detecting device configuration changes: ${configError.message}`)
+      }
+    }
+
+    // ============================================================
+    // PHASE 2: Application & Authentication Security Alerts
+    // ============================================================
+
+    // P2/P1: Detect Brute Force Attacks and Anomalous Sign-ins
+    console.log('🔐 Checking for brute force and anomalous sign-ins...')
+    try {
+      const signInUrl24h = 'https://graph.microsoft.com/v1.0/auditLogs/signIns?$top=200&$filter=createdDateTime ge ' +
+                           new Date(Date.now() - 24*60*60*1000).toISOString()
+      const signInResponse24h = await fetch(signInUrl24h, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (signInResponse24h.ok) {
+        const signInData = await signInResponse24h.json()
+        const signIns = signInData.value || []
+
+        // Track failed login attempts by user
+        const failedAttempts = {}
+        const successfulAfterFailures = {}
+
+        for (const signIn of signIns) {
+          const user = signIn.userPrincipalName || signIn.userDisplayName || 'Unknown'
+          const status = signIn.status?.errorCode === 0 ? 'success' : 'failure'
+          const timestamp = new Date(signIn.createdDateTime)
+
+          if (!failedAttempts[user]) failedAttempts[user] = []
+          if (!successfulAfterFailures[user]) successfulAfterFailures[user] = []
+
+          if (status === 'failure') {
+            failedAttempts[user].push({ timestamp, errorCode: signIn.status?.errorCode })
+          }
+
+          // Check for successful login after multiple failures
+          if (status === 'success' && failedAttempts[user]?.length >= 3) {
+            const recentFailures = failedAttempts[user].filter(f =>
+              timestamp.getTime() - f.timestamp.getTime() < 30*60*1000 // Within 30 min
+            )
+            if (recentFailures.length >= 3) {
+              successfulAfterFailures[user].push({ timestamp, location: signIn.location })
+            }
+          }
+
+          // P2: Multiple Failed Login Attempts (3+ in 30 min)
+          if (failedAttempts[user]?.length >= 3) {
+            const recentFails = failedAttempts[user].filter(f =>
+              timestamp.getTime() - f.timestamp.getTime() < 30*60*1000
+            )
+            if (recentFails.length >= 3) {
+              const alertId = `brute-force-${user}-${timestamp.getTime()}`
+              const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+              if (!existing) {
+                const severity = 'HIGH'
+                const priority = 'P2'
+                const riskScore = 75
+
+                db.prepare(`
+                  INSERT INTO alerts (
+                    id, type, severity, score, priority, headline, description,
+                    risk_assessment, recommendations, actor, target, action_timestamp,
+                    raw_event, dismissed, created_at, category
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `).run(
+                  alertId,
+                  'AUTH_ANOMALY',
+                  severity,
+                  riskScore,
+                  priority,
+                  '🔓 P2: Multiple Failed Login Attempts',
+                  `${recentFails.length} failed login attempts for ${user} within 30 minutes`,
+                  JSON.stringify({
+                    score: riskScore,
+                    severity: severity,
+                    alertType: 'P2_BRUTE_FORCE',
+                    failedAttempts: recentFails.length,
+                    user: user
+                  }),
+                  JSON.stringify([
+                    `Investigate failed login attempts for ${user}`,
+                    `Check if account is compromised`,
+                    `Review login locations and devices`,
+                    `Consider temporarily blocking account`,
+                    `Force password reset if unauthorized`
+                  ]),
+                  user,
+                  'Multiple Locations',
+                  timestamp.toISOString(),
+                  JSON.stringify({ real: true, alertType: 'P2_BRUTE_FORCE', attempts: recentFails.length }),
+                  0,
+                  new Date().toISOString()
+                )
+
+                alertsCreated++
+                console.log(`🔓 P2 ALERT CREATED: Brute Force - ${user} (${recentFails.length} attempts)`)
+              }
+            }
+          }
+        }
+
+        // P1: Successful Login After Brute Force (indicates compromise)
+        for (const [user, successes] of Object.entries(successfulAfterFailures)) {
+          if (successes.length > 0) {
+            for (const success of successes) {
+              const alertId = `breach-after-brute-${user}-${success.timestamp.getTime()}`
+              const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+              if (!existing) {
+                const severity = 'CRITICAL'
+                const priority = 'P1'
+                const riskScore = 100
+
+                db.prepare(`
+                  INSERT INTO alerts (
+                    id, type, severity, score, priority, headline, description,
+                    risk_assessment, recommendations, actor, target, action_timestamp,
+                    raw_event, dismissed, created_at, category
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `).run(
+                  alertId,
+                  'AUTH_BREACH',
+                  severity,
+                  riskScore,
+                  priority,
+                  '🚨 P1: Successful Login After Brute Force',
+                  `Successful login from ${user} after multiple failed attempts - account may be compromised`,
+                  JSON.stringify({
+                    score: riskScore,
+                    severity: severity,
+                    alertType: 'P1_BREACH_AFTER_BRUTE',
+                    user: user,
+                    location: success.location
+                  }),
+                  JSON.stringify([
+                    `URGENT: Assume account ${user} is compromised`,
+                    `Reset password immediately`,
+                    `Review all activities from this account`,
+                    `Check for forwarding rules and modifications`,
+                    `Revoke all active sessions`
+                  ]),
+                  user,
+                  success.location?.displayName || 'Unknown',
+                  success.timestamp.toISOString(),
+                  JSON.stringify({ real: true, alertType: 'P1_BREACH_AFTER_BRUTE' }),
+                  0,
+                  new Date().toISOString()
+                )
+
+                alertsCreated++
+                console.log(`🚨 P1 ALERT CREATED: Breach After Brute Force - ${user}`)
+              }
+            }
+          }
+        }
+      }
+    } catch (signInError) {
+      console.error(`Error detecting brute force: ${signInError.message}`)
+    }
+
+    // P2: Detect Suspicious Login Patterns
+    console.log('🌍 Checking for suspicious login patterns...')
+    try {
+      const riskUrl = 'https://graph.microsoft.com/v1.0/identityProtection/riskDetections?$top=100&$filter=riskLevel eq \'high\''
+      const riskResponse = await fetch(riskUrl, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (riskResponse.ok) {
+        const riskData = await riskResponse.json()
+        const risks = riskData.value || []
+
+        for (const risk of risks) {
+          const alertId = `risk-detect-${risk.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            let headline = '🌍 P2: Suspicious Login Detected'
+            let severity = 'HIGH'
+            let priority = 'P2'
+            let riskScore = 75
+
+            // P1 for impossible travel and TOR
+            if (risk.riskEventType?.includes('impossible') || risk.riskEventType?.includes('Tor')) {
+              headline = '🚨 P1: Impossible Travel / TOR Network Login'
+              severity = 'CRITICAL'
+              priority = 'P1'
+              riskScore = 100
+            }
+
+            // P2 for new country and legacy protocols
+            if (risk.riskEventType?.includes('Country') || risk.riskEventType?.includes('Legacy')) {
+              severity = 'HIGH'
+              priority = 'P2'
+              riskScore = 75
+            }
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'AUTH_ANOMALY',
+              severity,
+              riskScore,
+              priority,
+              headline,
+              `Suspicious login pattern detected: ${risk.riskEventType}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                alertType: 'P2_SUSPICIOUS_LOGIN',
+                riskEventType: risk.riskEventType,
+                user: risk.userDisplayName
+              }),
+              JSON.stringify([
+                `Investigate login from ${risk.riskEventType}`,
+                `Verify user authorization`,
+                priority === 'P1' ? `Block account immediately` : `Review account activity`,
+                `Check for data exfiltration`,
+                `Consider requiring MFA re-verification`
+              ]),
+              risk.userDisplayName || 'Unknown',
+              risk.riskEventType,
+              risk.detectedDateTime,
+              JSON.stringify({ real: true, alertType: 'P2_SUSPICIOUS_LOGIN', riskType: risk.riskEventType }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`${priority === 'P1' ? '🚨' : '🌍'} ${priority} ALERT CREATED: ${risk.riskEventType}`)
+          }
+        }
+      }
+    } catch (riskError) {
+      console.error(`Error detecting suspicious logins: ${riskError.message}`)
+    }
+
+    // P2: Detect Application Credential Changes
+    console.log('🔑 Checking for application credential changes...')
+    for (const log of auditLogs) {
+      try {
+        const isSecretCreated = log.activityDisplayName?.includes('Add password') ||
+                               log.activityDisplayName?.includes('Add secret') ||
+                               log.activityDisplayName?.includes('Update secret')
+
+        const isCertAdded = log.activityDisplayName?.includes('Add certificate') ||
+                           log.activityDisplayName?.includes('Update certificate')
+
+        const isSecretExpiring = log.activityDisplayName?.includes('Secret') &&
+                                log.activityDisplayName?.includes('Expir')
+
+        const isAppOwnershipChanged = log.activityDisplayName?.includes('Update owner') &&
+                                     log.activityDisplayName?.includes('application')
+
+        const isNewAppRegistration = log.activityDisplayName?.includes('Add application') ||
+                                    log.activityDisplayName?.includes('Register application')
+
+        if (isSecretCreated || isCertAdded || isSecretExpiring || isAppOwnershipChanged || isNewAppRegistration) {
+          const alertId = `app-cred-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+            const app = log.targetResources?.[0]?.displayName || 'Application'
+            let headline = '🔑 P2: Application Credential Changed'
+            let description = log.activityDisplayName
+
+            if (isNewAppRegistration) {
+              headline = '🔑 P2: New App Registration Created'
+              description = `New application registered: ${app}`
+            } else if (isAppOwnershipChanged) {
+              headline = '⚠️ P2: Application Ownership Changed'
+              description = `Application owner changed for: ${app}`
+            } else if (isSecretExpiring) {
+              headline = '⏰ P2: Application Secret Nearing Expiration'
+              description = `Application secret expiring soon: ${app}`
+            }
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'APP_CHANGE',
+              'HIGH',
+              75,
+              'P2',
+              headline,
+              description,
+              JSON.stringify({
+                score: 75,
+                severity: 'HIGH',
+                alertType: 'P2_APP_CREDENTIAL',
+                operation: log.activityDisplayName,
+                application: app,
+                actor: actor
+              }),
+              JSON.stringify([
+                `Verify ${log.activityDisplayName} is authorized`,
+                `Review application permissions`,
+                `Check for suspicious activity using this credential`,
+                `Audit application sign-in logs`,
+                `Update application if unauthorized`
+              ]),
+              actor,
+              app,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_APP_CREDENTIAL' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔑 P2 ALERT CREATED: ${headline} - ${app}`)
+          }
+        }
+      } catch (appError) {
+        console.error(`Error detecting app credential changes: ${appError.message}`)
+      }
+    }
+
+    // P2: Detect New Device Sign-ins
+    console.log('📱 Checking for new device sign-ins...')
+    const signInUrl = 'https://graph.microsoft.com/v1.0/auditLogs/signIns?$top=50&$filter=createdDateTime ge ' +
+                      new Date(Date.now() - 24*60*60*1000).toISOString()
+    const signInResponse = await fetch(signInUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+
+    if (signInResponse.ok) {
+      const signInData = await signInResponse.json()
+      const signIns = signInData.value || []
+      console.log(`📝 Found ${signIns.length} sign-in records (last 24h)`)
+
+      // Track known devices (in production, this would be stored)
+      const knownDeviceIds = new Set()
+
+      for (const signIn of signIns) {
+        try {
+          // Skip if no device info
+          if (!signIn.deviceDetail?.deviceId) continue
+
+          const deviceId = signIn.deviceDetail.deviceId
+          const user = signIn.userPrincipalName || signIn.userDisplayName || 'Unknown'
+          const deviceName = signIn.deviceDetail.displayName || 'Unknown Device'
+          const signInTime = signIn.createdDateTime
+
+          // For MVP: flag any sign-in with a new/unknown device
+          // In production, compare against known devices list
+          const alertId = `device-${signIn.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing && !knownDeviceIds.has(deviceId)) {
+            // Create NEW_DEVICE alert (P2)
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'SIGN_IN',
+              'HIGH',
+              70,
+              'P2',
+              '🔔 New Device Sign-in',
+              `User ${user} signed in from new device: ${deviceName}`,
+              JSON.stringify({
+                score: 70,
+                severity: 'HIGH',
+                source: 'Graph API - Sign-in Logs',
+                alertType: 'P2_NEW_DEVICE',
+                deviceId: deviceId,
+                deviceName: deviceName,
+                user: user
+              }),
+              JSON.stringify([
+                `Verify if ${user} authorized this sign-in`,
+                `Check device location and type`,
+                `Review user's recent activity`,
+                `Consider requiring additional verification for future logins from this device`,
+                `Monitor for suspicious activity from this device`
+              ]),
+              user,
+              deviceName,
+              signInTime,
+              JSON.stringify({ graphApiId: signIn.id, real: true, alertType: 'P2_NEW_DEVICE', deviceId: deviceId }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`📱 P2 ALERT CREATED: New device ${deviceName} for ${user}`)
+
+            // Mark as known for this sync
+            knownDeviceIds.add(deviceId)
+          }
+        } catch (signInError) {
+          console.error(`Error processing sign-in: ${signInError.message}`)
+        }
+      }
+    } else {
+      console.log(`⚠️ Sign-in logs fetch failed: ${signInResponse.status}`)
+    }
+
+    // ============================================================
+    // PHASE 3: Device Management, Teams, & Data Protection
+    // ============================================================
+
+    // INTUNE - P1: Device Compliance Policy Removed
+    console.log('📱 Checking for device compliance policy changes...')
+    for (const log of auditLogs) {
+      try {
+        const isPolicyRemoved = log.activityDisplayName?.includes('Delete compliance policy') ||
+                               log.activityDisplayName?.includes('Delete device compliance policy')
+
+        if (isPolicyRemoved) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const policy = log.targetResources?.[0]?.displayName || 'Unknown Policy'
+          const alertId = `intune-compliance-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'DEVICE_POLICY',
+              severity,
+              riskScore,
+              priority,
+              '🔴 P1: Device Compliance Policy Removed',
+              `Intune device compliance policy deleted: ${policy} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Intune Audit',
+                alertType: 'P1_COMPLIANCE_POLICY_REMOVED',
+                policy: policy
+              }),
+              JSON.stringify([
+                `URGENT: Recreate device compliance policy immediately`,
+                `Verify policy removal is authorized`,
+                `Reassess device compliance for all enrolled devices`,
+                `Review what devices are now out of compliance`,
+                `Identify and remediate non-compliant devices`
+              ]),
+              actor,
+              policy,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_COMPLIANCE_POLICY_REMOVED', policy: policy }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔴 P1 ALERT CREATED: Device Compliance Policy Removed - ${policy}`)
+          }
+        }
+      } catch (complianceError) {
+        console.error(`Error detecting compliance policy changes: ${complianceError.message}`)
+      }
+    }
+
+    // INTUNE - P1: Device Configuration Policy Removed
+    for (const log of auditLogs) {
+      try {
+        const isPolicyRemoved = log.activityDisplayName?.includes('Delete device configuration policy') ||
+                               log.activityDisplayName?.includes('Delete configuration policy')
+
+        if (isPolicyRemoved) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const policy = log.targetResources?.[0]?.displayName || 'Unknown Policy'
+          const alertId = `intune-config-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'DEVICE_POLICY',
+              severity,
+              riskScore,
+              priority,
+              '🔴 P1: Device Configuration Policy Removed',
+              `Intune device configuration policy deleted: ${policy} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Intune Audit',
+                alertType: 'P1_CONFIG_POLICY_REMOVED',
+                policy: policy
+              }),
+              JSON.stringify([
+                `URGENT: Recreate device configuration policy immediately`,
+                `Verify policy removal is authorized`,
+                `Check which devices are affected`,
+                `Redeploy device configuration to all managed devices`,
+                `Review security settings that were enforced by this policy`
+              ]),
+              actor,
+              policy,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_CONFIG_POLICY_REMOVED', policy: policy }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔴 P1 ALERT CREATED: Device Configuration Policy Removed - ${policy}`)
+          }
+        }
+      } catch (configPolicyError) {
+        console.error(`Error detecting config policy changes: ${configPolicyError.message}`)
+      }
+    }
+
+    // INTUNE - P1: Defender Disabled
+    for (const log of auditLogs) {
+      try {
+        const isDefenderDisabled = log.activityDisplayName?.includes('Defender') &&
+                                  (log.activityDisplayName?.includes('Disable') ||
+                                   log.activityDisplayName?.includes('Delete') ||
+                                   log.activityDisplayName?.includes('Remove')) &&
+                                  log.activityDisplayName?.includes('policy')
+
+        if (isDefenderDisabled) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const alertId = `defender-disabled-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'DEVICE_SECURITY',
+              severity,
+              riskScore,
+              priority,
+              '🔴 P1: Defender Disabled',
+              `Microsoft Defender protection policy disabled by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Intune Audit',
+                alertType: 'P1_DEFENDER_DISABLED'
+              }),
+              JSON.stringify([
+                `URGENT: Re-enable Defender protection immediately`,
+                `Verify Defender disabling is authorized`,
+                `Scan all managed devices for malware/threats`,
+                `Review devices that lost protection coverage`,
+                `Update threat intelligence and perform full scan`
+              ]),
+              actor,
+              'Microsoft Defender',
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_DEFENDER_DISABLED' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔴 P1 ALERT CREATED: Defender Disabled`)
+          }
+        }
+      } catch (defenderError) {
+        console.error(`Error detecting Defender changes: ${defenderError.message}`)
+      }
+    }
+
+    // INTUNE - P1: BitLocker Disabled
+    for (const log of auditLogs) {
+      try {
+        const isBitLockerDisabled = log.activityDisplayName?.includes('BitLocker') &&
+                                   (log.activityDisplayName?.includes('Disable') ||
+                                    log.activityDisplayName?.includes('Remove'))
+
+        if (isBitLockerDisabled) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const alertId = `bitlocker-disabled-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'DEVICE_SECURITY',
+              severity,
+              riskScore,
+              priority,
+              '🔴 P1: BitLocker Disabled',
+              `BitLocker disk encryption disabled by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Intune Audit',
+                alertType: 'P1_BITLOCKER_DISABLED'
+              }),
+              JSON.stringify([
+                `URGENT: Re-enable BitLocker on all devices immediately`,
+                `Verify BitLocker disabling is authorized`,
+                `Identify all devices with disabled BitLocker`,
+                `Review which sensitive data may be at risk`,
+                `Apply encryption policy to all devices`
+              ]),
+              actor,
+              'BitLocker Encryption',
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_BITLOCKER_DISABLED' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔴 P1 ALERT CREATED: BitLocker Disabled`)
+          }
+        }
+      } catch (bitlockerError) {
+        console.error(`Error detecting BitLocker changes: ${bitlockerError.message}`)
+      }
+    }
+
+    // INTUNE - P2: Device Becomes Non-Compliant
+    for (const log of auditLogs) {
+      try {
+        const isNonCompliant = log.activityDisplayName?.includes('non-compliant') ||
+                              log.activityDisplayName?.includes('Not compliant') ||
+                              log.activityDisplayName?.includes('compliance state change')
+
+        if (isNonCompliant) {
+          const device = log.targetResources?.[0]?.displayName || 'Unknown Device'
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const alertId = `device-noncompliant-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'HIGH'
+            const priority = 'P2'
+            const riskScore = 75
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'DEVICE_COMPLIANCE',
+              severity,
+              riskScore,
+              priority,
+              '🔔 P2: Device Non-Compliant',
+              `Device ${device} is no longer compliant with policy`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Intune',
+                alertType: 'P2_DEVICE_NONCOMPLIANT',
+                device: device
+              }),
+              JSON.stringify([
+                `Review why device ${device} became non-compliant`,
+                `Check device's security settings`,
+                `Identify missing security updates or configurations`,
+                `Apply remediation policies to device`,
+                `Monitor device for suspicious activity`
+              ]),
+              device,
+              device,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_DEVICE_NONCOMPLIANT', device: device }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔔 P2 ALERT CREATED: Device Non-Compliant - ${device}`)
+          }
+        }
+      } catch (noncompliantError) {
+        console.error(`Error detecting non-compliant devices: ${noncompliantError.message}`)
+      }
+    }
+
+    // INTUNE - P2: Jailbroken/Rooted Device Detected
+    for (const log of auditLogs) {
+      try {
+        const isJailbroken = log.activityDisplayName?.includes('jailbreak') ||
+                            log.activityDisplayName?.includes('rooted') ||
+                            log.activityDisplayName?.includes('jailbroken') ||
+                            log.activityDisplayName?.includes('root') &&
+                            log.activityDisplayName?.includes('detect')
+
+        if (isJailbroken) {
+          const device = log.targetResources?.[0]?.displayName || 'Unknown Device'
+          const alertId = `jailbreak-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'HIGH'
+            const priority = 'P2'
+            const riskScore = 75
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'DEVICE_SECURITY',
+              severity,
+              riskScore,
+              priority,
+              '🔔 P2: Jailbroken/Rooted Device Detected',
+              `Device ${device} has been jailbroken/rooted`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Intune',
+                alertType: 'P2_JAILBREAK_DETECTED',
+                device: device
+              }),
+              JSON.stringify([
+                `URGENT: Quarantine device ${device} immediately`,
+                `Revoke device access to corporate resources`,
+                `Investigate how device was jailbroken`,
+                `Review corporate data accessed on device`,
+                `Require device to be reset to compliant state`
+              ]),
+              'Intune Detection',
+              device,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_JAILBREAK_DETECTED', device: device }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔔 P2 ALERT CREATED: Jailbroken Device - ${device}`)
+          }
+        }
+      } catch (jailbreakError) {
+        console.error(`Error detecting jailbroken devices: ${jailbreakError.message}`)
+      }
+    }
+
+    // INTUNE - P2: Device Not Reporting for 30 Days
+    for (const log of auditLogs) {
+      try {
+        const isNotReporting = log.activityDisplayName?.includes('not reporting') ||
+                              log.activityDisplayName?.includes('no longer reporting') ||
+                              log.activityDisplayName?.includes('inactive') &&
+                              log.activityDisplayName?.includes('device')
+
+        if (isNotReporting) {
+          const device = log.targetResources?.[0]?.displayName || 'Unknown Device'
+          const alertId = `device-notreporting-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'HIGH'
+            const priority = 'P2'
+            const riskScore = 70
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'DEVICE_MONITORING',
+              severity,
+              riskScore,
+              priority,
+              '🔔 P2: Device Not Reporting for 30 Days',
+              `Device ${device} has not reported in 30+ days`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Intune',
+                alertType: 'P2_DEVICE_INACTIVE',
+                device: device,
+                inactiveFor: '30 days'
+              }),
+              JSON.stringify([
+                `Investigate why ${device} is not reporting`,
+                `Check device connectivity and network status`,
+                `Verify Intune agent is running on device`,
+                `Review device's compliance state`,
+                `Consider removing device from management if no longer in use`
+              ]),
+              'Intune Monitoring',
+              device,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_DEVICE_INACTIVE', device: device }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔔 P2 ALERT CREATED: Device Not Reporting - ${device}`)
+          }
+        }
+      } catch (inactiveError) {
+        console.error(`Error detecting inactive devices: ${inactiveError.message}`)
+      }
+    }
+
+    // TEAMS - P1: External Federation Enabled
+    for (const log of auditLogs) {
+      try {
+        const isExternalFederation = log.activityDisplayName?.includes('External access') &&
+                                    log.activityDisplayName?.includes('Enable') ||
+                                    log.activityDisplayName?.includes('Federation') &&
+                                    log.activityDisplayName?.includes('Enable')
+
+        if (isExternalFederation) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const alertId = `teams-federation-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'TEAMS_POLICY',
+              severity,
+              riskScore,
+              priority,
+              '🔴 P1: External Federation Enabled',
+              `Teams external federation enabled by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Teams Audit',
+                alertType: 'P1_TEAMS_FEDERATION',
+                actor: actor
+              }),
+              JSON.stringify([
+                `Review external federation business justification`,
+                `Verify this change is authorized`,
+                `Configure federation partner allowlist`,
+                `Enable external access monitoring`,
+                `Restrict federation to trusted organizations only`
+              ]),
+              actor,
+              'Teams Federation',
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_TEAMS_FEDERATION' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔴 P1 ALERT CREATED: Teams External Federation Enabled`)
+          }
+        }
+      } catch (federationError) {
+        console.error(`Error detecting federation changes: ${federationError.message}`)
+      }
+    }
+
+    // TEAMS - P1: Guest Access Enabled
+    for (const log of auditLogs) {
+      try {
+        const isGuestAccess = log.activityDisplayName?.includes('Guest') &&
+                             log.activityDisplayName?.includes('Enable') ||
+                             log.activityDisplayName?.includes('guest access') &&
+                             log.activityDisplayName?.includes('enabled')
+
+        if (isGuestAccess) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const alertId = `teams-guest-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'TEAMS_POLICY',
+              severity,
+              riskScore,
+              priority,
+              '🔴 P1: Guest Access Enabled',
+              `Teams guest access enabled tenant-wide by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Teams Audit',
+                alertType: 'P1_TEAMS_GUEST_ACCESS',
+                actor: actor
+              }),
+              JSON.stringify([
+                `Review guest access business requirement`,
+                `Verify authorization for tenant-wide enablement`,
+                `Set guest access expiration policies`,
+                `Enable guest access auditing and monitoring`,
+                `Restrict guest permissions and capabilities`
+              ]),
+              actor,
+              'Teams Guest Access',
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_TEAMS_GUEST_ACCESS' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔴 P1 ALERT CREATED: Teams Guest Access Enabled`)
+          }
+        }
+      } catch (guestError) {
+        console.error(`Error detecting guest access changes: ${guestError.message}`)
+      }
+    }
+
+    // TEAMS - P1: Teams Retention Policy Removed
+    for (const log of auditLogs) {
+      try {
+        const isRetentionRemoved = log.activityDisplayName?.includes('Delete') &&
+                                  log.activityDisplayName?.includes('retention policy') ||
+                                  log.activityDisplayName?.includes('Teams') &&
+                                  log.activityDisplayName?.includes('Retention policy') &&
+                                  log.activityDisplayName?.includes('Delete')
+
+        if (isRetentionRemoved) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const policy = log.targetResources?.[0]?.displayName || 'Unknown Policy'
+          const alertId = `teams-retention-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'TEAMS_POLICY',
+              severity,
+              riskScore,
+              priority,
+              '🔴 P1: Teams Retention Policy Removed',
+              `Teams message retention policy deleted: ${policy} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Teams Audit',
+                alertType: 'P1_TEAMS_RETENTION_REMOVED',
+                policy: policy,
+                actor: actor
+              }),
+              JSON.stringify([
+                `URGENT: Recreate Teams retention policy immediately`,
+                `Verify policy deletion is authorized`,
+                `Review compliance and eDiscovery implications`,
+                `Reapply retention rules to all affected teams`,
+                `Audit Teams channels for data loss`
+              ]),
+              actor,
+              policy,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_TEAMS_RETENTION_REMOVED', policy: policy }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔴 P1 ALERT CREATED: Teams Retention Policy Removed - ${policy}`)
+          }
+        }
+      } catch (retentionError) {
+        console.error(`Error detecting retention policy changes: ${retentionError.message}`)
+      }
+    }
+
+    // TEAMS - P2: New Teams App Approved
+    for (const log of auditLogs) {
+      try {
+        const isAppApproved = log.activityDisplayName?.includes('Teams app') &&
+                             log.activityDisplayName?.includes('approved') ||
+                             log.activityDisplayName?.includes('New Teams app') &&
+                             log.activityDisplayName?.includes('Approved')
+
+        if (isAppApproved) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const app = log.targetResources?.[0]?.displayName || 'Unknown App'
+          const alertId = `teams-app-approved-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'HIGH'
+            const priority = 'P2'
+            const riskScore = 70
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'TEAMS_APP',
+              severity,
+              riskScore,
+              priority,
+              '🔔 P2: New Teams App Approved',
+              `New Teams app approved: ${app} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Teams Audit',
+                alertType: 'P2_TEAMS_APP_APPROVED',
+                app: app,
+                actor: actor
+              }),
+              JSON.stringify([
+                `Review ${app} application permissions and capabilities`,
+                `Verify app meets security and compliance requirements`,
+                `Check app's data access and storage practices`,
+                `Monitor app usage and user feedback`,
+                `Prepare rollback plan if issues are discovered`
+              ]),
+              actor,
+              app,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_TEAMS_APP_APPROVED', app: app }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔔 P2 ALERT CREATED: Teams App Approved - ${app}`)
+          }
+        }
+      } catch (appError) {
+        console.error(`Error detecting app approvals: ${appError.message}`)
+      }
+    }
+
+    // TEAMS - P2: Teams Policy Modified
+    for (const log of auditLogs) {
+      try {
+        const isTeamsPolicyModified = log.activityDisplayName?.includes('Teams') &&
+                                     log.activityDisplayName?.includes('policy') &&
+                                     (log.activityDisplayName?.includes('Update') ||
+                                      log.activityDisplayName?.includes('Modify') ||
+                                      log.activityDisplayName?.includes('Changed'))
+
+        if (isTeamsPolicyModified) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const policy = log.targetResources?.[0]?.displayName || 'Teams Policy'
+          const alertId = `teams-policy-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'HIGH'
+            const priority = 'P2'
+            const riskScore = 70
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'TEAMS_POLICY',
+              severity,
+              riskScore,
+              priority,
+              '🔔 P2: Teams Policy Modified',
+              `Teams policy modified: ${policy} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Teams Audit',
+                alertType: 'P2_TEAMS_POLICY_MODIFIED',
+                policy: policy,
+                actor: actor
+              }),
+              JSON.stringify([
+                `Review changes made to ${policy}`,
+                `Verify changes are authorized`,
+                `Assess impact on users and teams`,
+                `Document change request and approval`,
+                `Monitor for issues resulting from policy change`
+              ]),
+              actor,
+              policy,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_TEAMS_POLICY_MODIFIED', policy: policy }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔔 P2 ALERT CREATED: Teams Policy Modified - ${policy}`)
+          }
+        }
+      } catch (policyError) {
+        console.error(`Error detecting policy modifications: ${policyError.message}`)
+      }
+    }
+
+    // SHAREPOINT - P1: Anonymous Sharing Enabled Tenant-wide
+    for (const log of auditLogs) {
+      try {
+        const isAnonSharing = log.activityDisplayName?.includes('Anonymous') &&
+                             log.activityDisplayName?.includes('Sharing') &&
+                             log.activityDisplayName?.includes('Enable') ||
+                             log.activityDisplayName?.includes('Tenant default sharing policy') &&
+                             log.activityDisplayName?.includes('anonymous')
+
+        if (isAnonSharing) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const alertId = `sp-anon-sharing-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'SHARING_POLICY',
+              severity,
+              riskScore,
+              priority,
+              '🔴 P1: Anonymous Sharing Enabled Tenant-wide',
+              `SharePoint anonymous sharing enabled tenant-wide by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - SharePoint Audit',
+                alertType: 'P1_ANON_SHARING_ENABLED',
+                actor: actor
+              }),
+              JSON.stringify([
+                `URGENT: Review anonymous sharing business requirement`,
+                `Verify change is authorized and necessary`,
+                `Restrict anonymous sharing to specific sites`,
+                `Enable sharing invitations with authentication`,
+                `Monitor anonymous link usage and data exposure`
+              ]),
+              actor,
+              'SharePoint Sharing Policy',
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_ANON_SHARING_ENABLED' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔴 P1 ALERT CREATED: Anonymous Sharing Enabled`)
+          }
+        }
+      } catch (anonError) {
+        console.error(`Error detecting anonymous sharing: ${anonError.message}`)
+      }
+    }
+
+    // SHAREPOINT - P1: Sharing Policy Relaxed
+    for (const log of auditLogs) {
+      try {
+        const isPolicyRelaxed = log.activityDisplayName?.includes('sharing policy') &&
+                               (log.activityDisplayName?.includes('Relaxed') ||
+                                log.activityDisplayName?.includes('More permissive') ||
+                                log.activityDisplayName?.includes('enabled')) ||
+                               log.activityDisplayName?.includes('external sharing') &&
+                               log.activityDisplayName?.includes('relaxed')
+
+        if (isPolicyRelaxed) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const alertId = `sp-policy-relaxed-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'SHARING_POLICY',
+              severity,
+              riskScore,
+              priority,
+              '🔴 P1: Sharing Policy Relaxed',
+              `SharePoint sharing policy relaxed (more permissive) by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - SharePoint Audit',
+                alertType: 'P1_SHARING_RELAXED',
+                actor: actor
+              }),
+              JSON.stringify([
+                `Review what was relaxed in sharing policy`,
+                `Verify this change is authorized`,
+                `Assess data exposure risk increase`,
+                `Revert to more restrictive policy if not approved`,
+                `Audit recent sharing activities for data leaks`
+              ]),
+              actor,
+              'SharePoint Sharing Policy',
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_SHARING_RELAXED' }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔴 P1 ALERT CREATED: Sharing Policy Relaxed`)
+          }
+        }
+      } catch (relaxError) {
+        console.error(`Error detecting policy relaxation: ${relaxError.message}`)
+      }
+    }
+
+    // SHAREPOINT - P1: External User Invited
+    for (const log of auditLogs) {
+      try {
+        const isExternalInvite = log.activityDisplayName?.includes('Add external users') ||
+                                log.activityDisplayName?.includes('external user') &&
+                                log.activityDisplayName?.includes('added') ||
+                                log.activityDisplayName?.includes('Invite external')
+
+        if (isExternalInvite) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const externalUser = log.targetResources?.[0]?.displayName || 'Unknown User'
+          const alertId = `sp-external-invite-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'EXTERNAL_ACCESS',
+              severity,
+              riskScore,
+              priority,
+              '🔴 P1: External User Invited',
+              `External user invited: ${externalUser} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - SharePoint Audit',
+                alertType: 'P1_EXTERNAL_USER_INVITE',
+                externalUser: externalUser,
+                actor: actor
+              }),
+              JSON.stringify([
+                `Verify ${externalUser} invitation is authorized`,
+                `Check what content this user can access`,
+                `Review external user's organization`,
+                `Monitor external user's activity`,
+                `Revoke access if user is no longer needed`
+              ]),
+              actor,
+              externalUser,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_EXTERNAL_USER_INVITE', externalUser: externalUser }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔴 P1 ALERT CREATED: External User Invited - ${externalUser}`)
+          }
+        }
+      } catch (externalError) {
+        console.error(`Error detecting external user invites: ${externalError.message}`)
+      }
+    }
+
+    // SHAREPOINT - P1: Large Volume File Download
+    for (const log of auditLogs) {
+      try {
+        const isLargeDownload = log.activityDisplayName?.includes('Downloaded') &&
+                               (log.activityDisplayName?.includes('large') ||
+                                log.activityDisplayName?.includes('bulk') ||
+                                log.activityDisplayName?.includes('multiple')) ||
+                               log.activityDisplayName?.includes('mass download') ||
+                               log.activityDisplayName?.includes('Bulk download')
+
+        if (isLargeDownload) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const fileCount = log.targetResources?.length || 'multiple'
+          const alertId = `sp-bulk-download-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'DATA_EXFILTRATION',
+              severity,
+              riskScore,
+              priority,
+              '🔴 P1: Large Volume File Download',
+              `Bulk file download detected from ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - SharePoint Audit',
+                alertType: 'P1_BULK_DOWNLOAD',
+                fileCount: fileCount,
+                actor: actor
+              }),
+              JSON.stringify([
+                `URGENT: Investigate bulk download by ${actor}`,
+                `Verify if this is authorized activity`,
+                `Check what sensitive data was downloaded`,
+                `Review user's recent activities`,
+                `Consider revoking user access if unauthorized`
+              ]),
+              actor,
+              'SharePoint Files',
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_BULK_DOWNLOAD', fileCount: fileCount }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔴 P1 ALERT CREATED: Bulk File Download - ${fileCount} files`)
+          }
+        }
+      } catch (downloadError) {
+        console.error(`Error detecting bulk downloads: ${downloadError.message}`)
+      }
+    }
+
+    // SHAREPOINT - P1: Sensitive File Shared Externally
+    for (const log of auditLogs) {
+      try {
+        const isSensitiveShare = log.activityDisplayName?.includes('shared') &&
+                                (log.activityDisplayName?.includes('externally') ||
+                                 log.activityDisplayName?.includes('external')) ||
+                                log.activityDisplayName?.includes('sensitive') &&
+                                log.activityDisplayName?.includes('Shared')
+
+        if (isSensitiveShare) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const file = log.targetResources?.[0]?.displayName || 'Sensitive File'
+          const alertId = `sp-sensitive-share-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'CRITICAL'
+            const priority = 'P1'
+            const riskScore = 100
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'DATA_EXFILTRATION',
+              severity,
+              riskScore,
+              priority,
+              '🔴 P1: Sensitive File Shared Externally',
+              `Sensitive file shared externally: ${file} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - SharePoint Audit',
+                alertType: 'P1_SENSITIVE_EXTERNAL_SHARE',
+                file: file,
+                actor: actor
+              }),
+              JSON.stringify([
+                `URGENT: Investigate external share of ${file}`,
+                `Verify share is authorized`,
+                `Identify external recipient`,
+                `Revoke access if unauthorized`,
+                `Review what sensitive data was exposed`
+              ]),
+              actor,
+              file,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P1_SENSITIVE_EXTERNAL_SHARE', file: file }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔴 P1 ALERT CREATED: Sensitive File Shared - ${file}`)
+          }
+        }
+      } catch (sensitiveError) {
+        console.error(`Error detecting sensitive shares: ${sensitiveError.message}`)
+      }
+    }
+
+    // SHAREPOINT - P2: Site Collection Admin Added
+    for (const log of auditLogs) {
+      try {
+        const isAdminAdded = log.activityDisplayName?.includes('Add admin') ||
+                            log.activityDisplayName?.includes('Site collection admin') &&
+                            log.activityDisplayName?.includes('Add')
+
+        if (isAdminAdded) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const newAdmin = log.targetResources?.[0]?.displayName || 'Unknown User'
+          const alertId = `sp-admin-added-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'HIGH'
+            const priority = 'P2'
+            const riskScore = 70
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'ACCESS_CHANGE',
+              severity,
+              riskScore,
+              priority,
+              '🔔 P2: Site Collection Admin Added',
+              `Site collection admin added: ${newAdmin} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - SharePoint Audit',
+                alertType: 'P2_SITE_ADMIN_ADDED',
+                newAdmin: newAdmin,
+                actor: actor
+              }),
+              JSON.stringify([
+                `Review ${newAdmin} admin authorization`,
+                `Verify admin role is needed`,
+                `Check admin's recent activities`,
+                `Ensure admin follows least privilege principle`,
+                `Monitor admin for suspicious access patterns`
+              ]),
+              actor,
+              newAdmin,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_SITE_ADMIN_ADDED', admin: newAdmin }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔔 P2 ALERT CREATED: Site Admin Added - ${newAdmin}`)
+          }
+        }
+      } catch (adminError) {
+        console.error(`Error detecting site admin changes: ${adminError.message}`)
+      }
+    }
+
+    // SHAREPOINT - P2: Site Ownership Changed
+    for (const log of auditLogs) {
+      try {
+        const isOwnershipChanged = log.activityDisplayName?.includes('ownership') &&
+                                  log.activityDisplayName?.includes('changed') ||
+                                  log.activityDisplayName?.includes('changed site owner')
+
+        if (isOwnershipChanged) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const newOwner = log.targetResources?.[0]?.displayName || 'Unknown Owner'
+          const alertId = `sp-owner-changed-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'HIGH'
+            const priority = 'P2'
+            const riskScore = 75
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'ACCESS_CHANGE',
+              severity,
+              riskScore,
+              priority,
+              '🔔 P2: Site Ownership Changed',
+              `Site ownership changed to: ${newOwner} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - SharePoint Audit',
+                alertType: 'P2_SITE_OWNERSHIP_CHANGED',
+                newOwner: newOwner,
+                actor: actor
+              }),
+              JSON.stringify([
+                `Verify ownership change is authorized`,
+                `Review ${newOwner}'s qualifications for ownership`,
+                `Check previous owner's access is revoked`,
+                `Monitor site activity under new ownership`,
+                `Verify new owner maintains site compliance`
+              ]),
+              actor,
+              newOwner,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_SITE_OWNERSHIP_CHANGED', newOwner: newOwner }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔔 P2 ALERT CREATED: Site Ownership Changed - ${newOwner}`)
+          }
+        }
+      } catch (ownerError) {
+        console.error(`Error detecting ownership changes: ${ownerError.message}`)
+      }
+    }
+
+    // SHAREPOINT - P2: SharePoint Policy Modified
+    for (const log of auditLogs) {
+      try {
+        const isPolicyModified = log.activityDisplayName?.includes('SharePoint') &&
+                                log.activityDisplayName?.includes('policy') &&
+                                (log.activityDisplayName?.includes('Update') ||
+                                 log.activityDisplayName?.includes('Modify') ||
+                                 log.activityDisplayName?.includes('Changed'))
+
+        if (isPolicyModified) {
+          const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+          const policy = log.targetResources?.[0]?.displayName || 'SharePoint Policy'
+          const alertId = `sp-policy-modified-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const severity = 'HIGH'
+            const priority = 'P2'
+            const riskScore = 70
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'SHARING_POLICY',
+              severity,
+              riskScore,
+              priority,
+              '🔔 P2: SharePoint Policy Modified',
+              `SharePoint policy modified: ${policy} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - SharePoint Audit',
+                alertType: 'P2_SP_POLICY_MODIFIED',
+                policy: policy,
+                actor: actor
+              }),
+              JSON.stringify([
+                `Review changes to ${policy}`,
+                `Verify modifications are authorized`,
+                `Assess impact on data sharing and access`,
+                `Document change request and approval`,
+                `Monitor for issues from policy changes`
+              ]),
+              actor,
+              policy,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'P2_SP_POLICY_MODIFIED', policy: policy }),
+              0,
+              new Date().toISOString()
+            )
+
+            alertsCreated++
+            console.log(`🔔 P2 ALERT CREATED: SharePoint Policy Modified - ${policy}`)
+          }
+        }
+      } catch (spPolicyError) {
+        console.error(`Error detecting SharePoint policy changes: ${spPolicyError.message}`)
+      }
     }
 
     const duration = Date.now() - startTime
@@ -8025,15 +10607,24 @@ app.post('/api/tenantguard/store-to-sharepoint', async (req, res) => {
 
 /**
  * GET /api/tenantguard/dashboard
- * Get dashboard summary with all metrics
+ * Get dashboard summary with all metrics (from database)
  */
 app.get('/api/tenantguard/dashboard', async (req, res) => {
   try {
     const db = getDatabase()
 
-    const alertSummary = await getAlertSummary()
-    const alerts = await getAlerts('all', 50)
-    const correlations = await getCorrelations('all')
+    // Get alerts directly from database (not SharePoint)
+    const alerts = db.prepare('SELECT * FROM alerts ORDER BY created_at DESC LIMIT 100').all() || []
+    const correlations = db.prepare('SELECT * FROM alert_correlations ORDER BY created_at DESC LIMIT 50').all() || []
+
+    // Calculate summary
+    const alertSummary = {
+      critical: alerts.filter(a => a.severity === 'CRITICAL').length,
+      high: alerts.filter(a => a.severity === 'HIGH').length,
+      medium: alerts.filter(a => a.severity === 'MEDIUM').length,
+      info: alerts.filter(a => a.severity === 'INFO').length,
+      total: alerts.length
+    }
 
     res.json({
       success: true,
@@ -8052,7 +10643,8 @@ app.get('/api/tenantguard/dashboard', async (req, res) => {
     console.error('❌ Error fetching dashboard:', error.message)
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message,
+      timestamp: new Date().toISOString()
     })
   }
 })

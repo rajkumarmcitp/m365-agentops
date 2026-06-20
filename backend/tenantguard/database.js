@@ -29,25 +29,51 @@ class DatabaseWrapper {
     // Handle INSERT INTO alerts
     if (sql.includes('INSERT INTO alerts')) {
       this.store.alerts = this.store.alerts || {}
-      // Match order from INSERT statement: id, type, severity, score, priority, headline, description, risk_assessment, recommendations, actor, action_timestamp, raw_event, dismissed, created_at
-      const [id, type, severity, score, priority, headline, description, riskAssessment, recommendations, actor, timestamp, rawEvent, dismissed, createdAt] = params
-      this.store.alerts[id] = {
-        id,
-        type,
-        severity,
-        score,
-        priority: priority || 'P3',
-        headline,
-        description,
-        risk_assessment: riskAssessment,
-        recommendations,
-        actor,
-        action_timestamp: timestamp,
-        raw_event: rawEvent,
-        dismissed: dismissed || 0,
-        created_at: createdAt || new Date().toISOString()
+      // INSERT order: id(0), type(1), severity(2), score(3), priority(4), headline(5), description(6),
+      // risk_assessment(7), recommendations(8), actor(9), target(10), action_timestamp(11), raw_event(12), dismissed(13), created_at(14), category(15)
+
+      // Auto-assign meaningful categories based on alert type if not provided
+      const categoryMap = {
+        'ROLE_CHANGE': 'Identity Management',
+        'ADMIN_CHANGE': 'Identity Management',
+        'POLICY_CHANGE': 'Security Policy',
+        'AUTH_ANOMALY': 'Authentication',
+        'DEVICE_POLICY': 'Device Management',
+        'DEVICE_COMPLIANCE': 'Device Management',
+        'DEVICE_SECURITY': 'Device Management',
+        'DEVICE_MONITORING': 'Device Management',
+        'TEAMS_POLICY': 'Collaboration',
+        'TEAMS_APP': 'Collaboration',
+        'SHARING_POLICY': 'Data Protection',
+        'EXTERNAL_ACCESS': 'Data Protection',
+        'DATA_EXFILTRATION': 'Data Protection',
+        'ACCESS_CHANGE': 'Access Control',
+        'SIGN_IN': 'Authentication',
+        'RISK': 'Risk Detection',
+        'AUDIT': 'Directory Audit'
       }
-      console.log(`✓ Stored alert: ${headline}`)
+
+      const assignedCategory = params[15] || categoryMap[params[1]] || 'Unknown'
+
+      this.store.alerts[params[0]] = {
+        id: params[0],
+        type: params[1],
+        severity: params[2],
+        score: params[3],
+        priority: params[4] || 'P3',
+        headline: params[5],
+        description: params[6],
+        risk_assessment: params[7],
+        recommendations: params[8],
+        actor: params[9],
+        target: params[10],
+        action_timestamp: params[11],
+        raw_event: params[12],
+        dismissed: params[13] || 0,
+        created_at: params[14] || new Date().toISOString(),
+        category: assignedCategory
+      }
+      console.log(`✓ Stored alert: ${params[5]} [${assignedCategory}]`)
       return { lastID: 1, changes: 1 }
     }
 
