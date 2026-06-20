@@ -7818,6 +7818,34 @@ async function getGraphToken() {
 }
 
 // ============================================================
+// TenantGuard Role ID Mapping (Azure AD Well-Known Roles)
+// ============================================================
+const ROLE_ID_MAP = {
+  '62e90394-69f5-4237-9190-012177145e10': 'Global Administrator',
+  'e8611ab8-c189-46e8-94e1-60213ab1f814': 'Privileged Role Administrator',
+  '194ae4cb-b126-40b2-bd5b-6091b380977d': 'Security Administrator',
+  'c430b6c5-a049-4478-ad6f-666f2b482c68': 'Conditional Access Administrator',
+  'c34f6894-6e0d-4cc9-807f-e032d234f519': 'Authentication Administrator',
+  '29232cdf-9323-42fd-ade2-1d097af620db': 'Exchange Administrator',
+  '75941009-915a-4869-aaed-91dfc1ee7e0e': 'SharePoint Administrator',
+  '3a2c62db-5318-420d-8798-34bf056d7c51': 'Intune Administrator',
+  'be2f45a1-457d-42af-a067-6ec1fa63bc45': 'Cloud Application Administrator',
+  '9b895d92-2cd3-44c7-9bc9-6e8d178d8077': 'Application Administrator',
+  'd24aad77-30aa-4254-b89c-174cfe08b498': 'Hybrid Identity Administrator',
+  'fe930be7-5e62-47db-91af-98bcf5649f8a': 'User Administrator',
+  '74ef975b-6605-40af-a5d2-b9539d51fda7': 'Groups Administrator',
+  'cc4e7d2f-19ea-4119-bdf3-cdee266e2925': 'Helpdesk Administrator',
+  '966707d0-3269-4727-9be2-8c3a10f19b9d': 'Password Administrator',
+  '9360feb5-f407-4561-8dde-8d376eedfc51': 'Directory Writers',
+  'd29b2373-6352-4755-998d-e78c105f9dde': 'Directory Synchronization Accounts',
+  '4d6ac14f-3453-41d0-bef9-a3e0c569773a': 'License Administrator',
+  '17315797-102d-40b4-93e0-f2687c688766': 'Compliance Administrator',
+  'e6d1a23a-da11-4be4-9570-6c4a35f3961b': 'Compliance Data Administrator',
+  '0964bb5e-9bac-4cbd-8d82-98e41ec5d76e': 'eDiscovery Administrator',
+  '45a6f1f3-62cb-465b-bba1-bcf564e2bf09': 'Records Management Administrator'
+}
+
+// ============================================================
 // TenantGuard Approved Activities Configuration
 // ============================================================
 // Only these activities will create AUDIT type alerts
@@ -8133,6 +8161,7 @@ app.post('/api/tenantguard/sync', async (req, res) => {
           if (targetRole && memberBeingModified) {
             const memberEmail = memberBeingModified?.displayName || memberBeingModified?.userPrincipalName || 'Unknown'
             const roleId = targetRole.id || 'Unknown'
+            const roleName = ROLE_ID_MAP[roleId] || 'Unknown Role'
 
             const alertId = `admin-${log.id}-${isAddToRole ? 'add' : 'remove'}`
             const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
@@ -8156,24 +8185,25 @@ app.post('/api/tenantguard/sync', async (req, res) => {
                 severity,
                 riskScore,
                 priority,
-                `🚨 P1: Role ${action}`,
-                `${action} role: ${memberEmail} (by ${actor})`,
+                `🚨 P1: ${roleName} ${action}`,
+                `${action} ${roleName}: ${memberEmail} (by ${actor})`,
                 JSON.stringify({
                   score: riskScore,
                   severity: severity,
                   source: 'Graph API - Directory Audit',
                   alertType: 'P1_PRIVILEGED_ROLE_CHANGE',
+                  roleName: roleName,
                   roleId: roleId,
                   action: action,
                   member: memberEmail,
                   actor: actor
                 }),
                 JSON.stringify([
-                  `URGENT: Verify ${memberEmail} role authorization`,
+                  `URGENT: Verify ${memberEmail} authorization for ${roleName}`,
                   `Confirm approval from identity governance team`,
                   `Check MFA and strong authentication on this account`,
                   `Review recent activities of ${memberEmail}`,
-                  `Monitor for suspicious actions using this role`,
+                  `Monitor for suspicious actions using ${roleName}`,
                   isAddToRole ? `Remove access immediately if unauthorized` : `Verify role removal completion`
                 ]),
                 actor,
@@ -8183,6 +8213,7 @@ app.post('/api/tenantguard/sync', async (req, res) => {
                   graphApiId: log.id,
                   real: true,
                   alertType: 'P1_PRIVILEGED_ROLE_CHANGE',
+                  roleName: roleName,
                   roleId: roleId,
                   action: action,
                   member: memberEmail,
@@ -8193,7 +8224,7 @@ app.post('/api/tenantguard/sync', async (req, res) => {
               )
 
               alertsCreated++
-              console.log(`🚨 P1 ALERT CREATED: Role ${action} - ${memberEmail}`)
+              console.log(`🚨 P1 ALERT CREATED: ${roleName} ${action} - ${memberEmail}`)
             }
           }
         }
