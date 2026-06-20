@@ -7864,10 +7864,12 @@ app.post('/api/tenantguard/sync', async (req, res) => {
         try {
           const alertId = `audit-${log.id}`
 
-          // Skip group membership events (not required in current scope)
+          // Skip group-related events (not required in current scope)
           if (log.activityDisplayName?.includes('Add member to group') ||
-              log.activityDisplayName?.includes('Remove member from group')) {
-            console.log(`⊘ Skipping group membership event: ${log.activityDisplayName}`)
+              log.activityDisplayName?.includes('Remove member from group') ||
+              log.activityDisplayName?.includes('Add owner to group') ||
+              log.activityDisplayName?.includes('Remove owner from group')) {
+            console.log(`⊘ Skipping group-related event: ${log.activityDisplayName}`)
             continue
           }
 
