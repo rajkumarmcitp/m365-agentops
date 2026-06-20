@@ -7700,22 +7700,14 @@ app.get('/api/tenantguard/test-endpoint', (req, res) => {
 app.post('/api/tenantguard/cleanup/group-alerts', (req, res) => {
   try {
     const db = getDatabase()
-    const alerts = db.all('SELECT * FROM alerts')
-
-    const groupAlertIds = alerts
-      .filter(a =>
-        a.description?.includes('Add member to group') ||
-        a.description?.includes('Remove member from group') ||
-        a.headline?.includes('Add member to group') ||
-        a.headline?.includes('Remove member from group')
-      )
-      .map(a => a.id)
-
-    // Delete group alerts from in-memory store
     const store = db.store
+    const alerts = Object.values(store.alerts || {})
+
     let deletedCount = 0
-    for (const alertId of groupAlertIds) {
-      if (store.alerts[alertId]) {
+    for (const alertId in store.alerts) {
+      const alert = store.alerts[alertId]
+      if (alert.headline?.includes('group') ||
+          alert.description?.includes('group')) {
         delete store.alerts[alertId]
         deletedCount++
       }
@@ -7726,7 +7718,7 @@ app.post('/api/tenantguard/cleanup/group-alerts', (req, res) => {
     res.json({
       success: true,
       message: `Removed ${deletedCount} group-related alerts`,
-      deletedAlerts: groupAlertIds,
+      deletedCount: deletedCount,
       timestamp: new Date().toISOString()
     })
   } catch (error) {
@@ -7825,6 +7817,81 @@ async function getGraphToken() {
   }
 }
 
+// ============================================================
+// TenantGuard Approved Activities Configuration
+// ============================================================
+// Only these activities will create AUDIT type alerts
+const APPROVED_AUDIT_ACTIVITIES = [
+  // Phase 1a: Role Management
+  'Add member to role',
+  'Remove member from role',
+
+  // Phase 1b: Security Policies
+  'Delete authentication method',
+  'Update authentication method',
+  'Authentication Methods Policy Updated',
+  'DLP Policy Deleted',
+  'DLP Policy Disabled',
+  'New-InboxRule',
+  'Set-InboxRule',
+  'Set-Mailbox',
+
+  // Phase 1c: SharePoint & Data
+  'Site Collection Admin Added',
+  'Admin Added',
+  'Anonymous Link Created',
+  'External User Invited',
+  'Added external user',
+  'Shared',
+
+  // Phase 1c: Intune & Device
+  'Delete compliance policy',
+  'Delete device compliance policy',
+  'Delete configuration policy',
+  'Delete device configuration policy',
+  'Defender',
+  'BitLocker',
+  'non-compliant',
+  'Not compliant',
+  'compliance state change',
+  'jailbreak',
+  'rooted',
+  'jailbroken',
+  'not reporting',
+  'no longer reporting',
+
+  // Phase 2: Teams
+  'External access',
+  'Federation',
+  'Guest access',
+  'Guest',
+  'retention policy',
+  'Teams',
+
+  // Phase 2: SharePoint & Sharing
+  'Anonymous Sharing',
+  'Sharing Policy',
+  'External Sharing',
+  'changed site owner',
+
+  // Phase 2: Application Credentials
+  'Add password',
+  'Add secret',
+  'Update secret',
+  'Add certificate',
+  'Update certificate',
+  'Update owner',
+  'Add application',
+  'Register application'
+]
+
+function isApprovedAuditActivity(activityDisplayName) {
+  if (!activityDisplayName) return false
+  return APPROVED_AUDIT_ACTIVITIES.some(approved =>
+    activityDisplayName.includes(approved)
+  )
+}
+
 /**
  * POST /api/tenantguard/sync
  * Trigger a full sync from Graph API using direct HTTP calls
@@ -7864,12 +7931,9 @@ app.post('/api/tenantguard/sync', async (req, res) => {
         try {
           const alertId = `audit-${log.id}`
 
-          // Skip group-related events (not required in current scope)
-          if (log.activityDisplayName?.includes('Add member to group') ||
-              log.activityDisplayName?.includes('Remove member from group') ||
-              log.activityDisplayName?.includes('Add owner to group') ||
-              log.activityDisplayName?.includes('Remove owner from group')) {
-            console.log(`⊘ Skipping group-related event: ${log.activityDisplayName}`)
+          // Skip non-approved activities
+          if (!isApprovedAuditActivity(log.activityDisplayName)) {
+            console.log(`⊘ Skipping non-approved activity: ${log.activityDisplayName}`)
             continue
           }
 
