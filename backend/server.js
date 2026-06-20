@@ -8126,6 +8126,12 @@ app.post('/api/tenantguard/sync', async (req, res) => {
         const isRemoveFromRole = log.activityDisplayName?.includes('Remove member from role')
 
         if (isAddToRole || isRemoveFromRole) {
+          // Debug: Log all roles being checked
+          const allRoles = log.targetResources?.filter(r => r.type === 'Role' || !r.type || r.type === 'Group').map(r => r.displayName) || []
+          if (allRoles.length > 0) {
+            console.log(`  📍 Role audit found: ${allRoles.join(', ')}`)
+          }
+
           // Check if any privileged role is being modified
           const targetRole = log.targetResources?.find(r => PRIVILEGED_ROLES.includes(r.displayName))
 
