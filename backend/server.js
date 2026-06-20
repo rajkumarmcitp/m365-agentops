@@ -8162,6 +8162,9 @@ app.post('/api/tenantguard/sync', async (req, res) => {
             const memberEmail = memberBeingModified?.displayName || memberBeingModified?.userPrincipalName || 'Unknown'
             const roleId = targetRole.id || 'Unknown'
             const roleName = ROLE_ID_MAP[roleId] || 'Unknown Role'
+            if (roleName === 'Unknown Role') {
+              console.log(`  ⚠️ Unknown role ID: ${roleId} - Add to ROLE_ID_MAP to get specific role name`)
+            }
 
             const alertId = `admin-${log.id}-${isAddToRole ? 'add' : 'remove'}`
             const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
