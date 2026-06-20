@@ -7104,7 +7104,10 @@ app.post('/api/tenantguard/validate-sharepoint', async (req, res) => {
     console.log(`🔍 Normalized SharePoint site: ${site}`)
 
     try {
-      const siteData = await graphClient.api(`/sites/${site}`).get()
+      // Build correct API path - don't double-prefix /sites/
+      const apiPath = site.startsWith('/sites/') ? site : `/sites/${site}`
+      console.log(`📡 API call: /sites${apiPath}`)
+      const siteData = await graphClient.api(apiPath).get()
       console.log(`✅ SharePoint site validated: ${siteData.displayName}`)
       res.json({
         success: true,
@@ -7258,7 +7261,10 @@ app.post('/api/tenantguard/initialize', async (req, res) => {
     // Get the site
     let siteId
     try {
-      const siteData = await graphClient.api(`/sites/${site}`).get()
+      // Build correct API path - don't double-prefix /sites/
+      const apiPath = site.startsWith('/sites/') ? site : `/sites/${site}`
+      console.log(`📡 API call: ${apiPath}`)
+      const siteData = await graphClient.api(apiPath).get()
       siteId = siteData.id
     } catch (error) {
       console.error(`❌ Could not access SharePoint site (${site}):`, error.message)
