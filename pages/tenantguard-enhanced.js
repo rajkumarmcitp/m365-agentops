@@ -452,5 +452,8 @@ function getSeverityColor(severity) {
 
 function updateTimestamp() {
   const now = new Date()
-  document.getElementById('lastSync').textContent = now.toLocaleTimeString()
+  const syncElement = document.getElementById('lastSync')
+  if (syncElement) {
+    syncElement.textContent = now.toLocaleTimeString()
+  }
 }
