@@ -142,6 +142,57 @@ function renderSettings(el) {
       </div>
     </div>
 
+    <!-- TenantGuard SharePoint Configuration -->
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-alert-triangle"></i> TenantGuard — Security Alerts Configuration</div>
+      <div style="background:#fff3e0;border-left:4px solid #ff9800;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#e65100">
+        <i class="ti ti-info-circle"></i>
+        <strong>Configuration:</strong> Specify the SharePoint site where security alerts, correlations, and investigations will be stored. This is required for TenantGuard to function.
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label class="form-label">SharePoint Site URL</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" class="form-input" id="settings-tenantguard-site" placeholder="e.g., root or /sites/Security" style="flex:1">
+          <button class="btn" id="settings-tenantguard-test" style="white-space:nowrap"><i class="ti ti-check"></i> Test</button>
+        </div>
+        <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px">
+          Enter "root" for tenant root site, or "/sites/SiteName" for a specific site. Lists will be created here: TenantGuard-Alerts, TenantGuard-Correlations, TenantGuard-Investigations
+        </div>
+      </div>
+      <div id="settings-tenantguard-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none">
+        Status will appear here
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary" id="settings-tenantguard-init" style="white-space:nowrap"><i class="ti ti-database"></i> Initialize TenantGuard Lists</button>
+        <div style="font-size:10px;color:var(--color-text-tertiary)">Creates SharePoint lists and all required fields for security alerts</div>
+      </div>
+      <div id="settings-tenantguard-init-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none;margin-top:8px">
+        Initialization status will appear here
+      </div>
+
+      <div style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+        <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">📋 Configuration Reference</div>
+        <div style="font-size:9px;color:var(--color-text-secondary);line-height:1.6">
+          <strong>Lists Created:</strong><br>
+          • TenantGuard-Alerts — Individual security events<br>
+          • TenantGuard-Correlations — Grouped alert relationships<br>
+          • TenantGuard-Investigations — Security incident investigations<br><br>
+          <strong>After Initialization:</strong><br>
+          • Site ID and List IDs will be displayed below<br>
+          • Copy these values to your <code style="background:#f5f5f5;padding:2px 4px;border-radius:2px">.env</code> file<br>
+          • Restart backend to activate SharePoint storage
+        </div>
+      </div>
+
+      <div id="settings-tenantguard-config" style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);display:none">
+        <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">✅ Configuration Ready - Add to .env:</div>
+        <div style="background:#f5f5f5;padding:8px;border-radius:4px;font-family:monospace;font-size:9px;color:#333;white-space:pre-wrap;word-break:break-all" id="settings-tenantguard-env-output"></div>
+        <button class="btn btn-sm" id="settings-tenantguard-copy" style="margin-top:8px;font-size:9px"><i class="ti ti-copy"></i> Copy to Clipboard</button>
+      </div>
+    </div>
+
     <!-- Self Service Portal SharePoint Configuration -->
     <div class="card mb-3">
       <div class="card-title mb-3"><i class="ti ti-layout-kanban"></i> Self Service Portal — SharePoint Configuration</div>
@@ -410,6 +461,129 @@ function renderSettings(el) {
     } finally {
       msgcenterInitBtn.disabled = false
       msgcenterInitBtn.innerHTML = '<i class="ti ti-database"></i> Initialize Lists'
+    }
+  })
+
+  // ---- TenantGuard SharePoint Configuration ----
+  const tenantguardInput = el.querySelector('#settings-tenantguard-site')
+  const tenantguardTestBtn = el.querySelector('#settings-tenantguard-test')
+  const tenantguardStatus = el.querySelector('#settings-tenantguard-status')
+  const tenantguardInitBtn = el.querySelector('#settings-tenantguard-init')
+  const tenantguardInitStatus = el.querySelector('#settings-tenantguard-init-status')
+  const tenantguardConfig = el.querySelector('#settings-tenantguard-config')
+  const tenantguardEnvOutput = el.querySelector('#settings-tenantguard-env-output')
+  const tenantguardCopyBtn = el.querySelector('#settings-tenantguard-copy')
+
+  tenantguardInput.value = s.tenantguardSiteUrl || 'root'
+
+  tenantguardTestBtn.addEventListener('click', async () => {
+    const siteUrl = tenantguardInput.value.trim() || 'root'
+    tenantguardTestBtn.disabled = true
+    tenantguardTestBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Testing...'
+    tenantguardStatus.style.display = 'block'
+    tenantguardStatus.textContent = 'Testing connection...'
+
+    try {
+      const response = await fetch(`${api}/tenantguard/validate-sharepoint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteUrl })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        tenantguardStatus.style.background = '#e8f5e9'
+        tenantguardStatus.style.color = '#2e7d32'
+        tenantguardStatus.textContent = `✓ Connected! Site: ${result.siteName || siteUrl}`
+        state.settings.tenantguardSiteUrl = siteUrl
+        state.settings.tenantguardSiteId = result.siteId
+        saveState()
+        showToast('TenantGuard SharePoint site configured successfully', 'success')
+      } else {
+        tenantguardStatus.style.background = '#ffebee'
+        tenantguardStatus.style.color = '#c62828'
+        tenantguardStatus.textContent = `✗ Error: ${result.error || 'Could not connect to site'}`
+        showToast('SharePoint connection failed', 'error')
+      }
+    } catch (error) {
+      tenantguardStatus.style.background = '#ffebee'
+      tenantguardStatus.style.color = '#c62828'
+      tenantguardStatus.textContent = `✗ Error: ${error.message}`
+      showToast('SharePoint connection error', 'error')
+    } finally {
+      tenantguardTestBtn.disabled = false
+      tenantguardTestBtn.innerHTML = '<i class="ti ti-check"></i> Test'
+    }
+  })
+
+  // Initialize TenantGuard Lists
+  tenantguardInitBtn.addEventListener('click', async () => {
+    const siteUrl = tenantguardInput.value.trim() || 'root'
+    tenantguardInitBtn.disabled = true
+    tenantguardInitBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Initializing...'
+    tenantguardInitStatus.style.display = 'block'
+    tenantguardInitStatus.textContent = 'Creating TenantGuard lists and fields...'
+
+    try {
+      const response = await fetch(`${api}/tenantguard/initialize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteUrl })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        tenantguardInitStatus.style.background = '#e8f5e9'
+        tenantguardInitStatus.style.color = '#2e7d32'
+
+        // Build detailed status message with column info
+        let statusMsg = `✓ ${result.message}`
+        if (result.columns) {
+          const alertsCols = result.columns['TenantGuard-Alerts']
+          const corrCols = result.columns['TenantGuard-Correlations']
+          const invCols = result.columns['TenantGuard-Investigations']
+
+          const totalCreated = (alertsCols?.created?.length || 0) + (corrCols?.created?.length || 0) + (invCols?.created?.length || 0)
+          const totalSkipped = (alertsCols?.skipped?.length || 0) + (corrCols?.skipped?.length || 0) + (invCols?.skipped?.length || 0)
+
+          statusMsg += `\n📋 Columns: ${totalCreated} created, ${totalSkipped} already exist`
+          statusMsg += `\n  • Alerts: ${alertsCols?.created?.length || 0} fields`
+          statusMsg += `\n  • Correlations: ${corrCols?.created?.length || 0} fields`
+          statusMsg += `\n  • Investigations: ${invCols?.created?.length || 0} fields`
+        }
+        tenantguardInitStatus.textContent = statusMsg
+
+        // Display configuration for .env file
+        if (result.siteId && result.alertsListId && result.correlationsListId && result.investigationsListId) {
+          tenantguardConfig.style.display = 'block'
+          tenantguardEnvOutput.textContent = `SHAREPOINT_SITE_ID=${result.siteId}
+SHAREPOINT_TENANTGUARD_ALERTS_LIST_ID=${result.alertsListId}
+SHAREPOINT_TENANTGUARD_CORRELATIONS_LIST_ID=${result.correlationsListId}
+SHAREPOINT_TENANTGUARD_INVESTIGATIONS_LIST_ID=${result.investigationsListId}`
+
+          tenantguardCopyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(tenantguardEnvOutput.textContent)
+            showToast('Configuration copied to clipboard', 'success')
+          })
+        }
+
+        showToast('TenantGuard lists and columns created successfully', 'success')
+      } else {
+        tenantguardInitStatus.style.background = '#ffebee'
+        tenantguardInitStatus.style.color = '#c62828'
+        tenantguardInitStatus.textContent = `✗ Error: ${result.error || 'Could not initialize lists'}`
+        showToast('List initialization failed', 'error')
+      }
+    } catch (error) {
+      tenantguardInitStatus.style.background = '#ffebee'
+      tenantguardInitStatus.style.color = '#c62828'
+      tenantguardInitStatus.textContent = `✗ Error: ${error.message}`
+      showToast('List initialization error', 'error')
+    } finally {
+      tenantguardInitBtn.disabled = false
+      tenantguardInitBtn.innerHTML = '<i class="ti ti-database"></i> Initialize TenantGuard Lists'
     }
   })
 

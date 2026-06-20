@@ -35,11 +35,191 @@ import {
   loadSelfServiceConfig, saveSelfServiceConfig,
   loadChangeIntelligenceConfig, saveChangeIntelligenceConfig
 } from './services/config-service.js'
+import {
+  initSharePointClient,
+  addAlert, getAlerts, getAlertById, updateAlert, getAlertSummary,
+  addCorrelation, getCorrelations,
+  addInvestigation, getInvestigation, updateInvestigation
+} from './lib/sharepoint-client.js'
 
 dotenv.config()
 
+import { randomUUID } from 'crypto'
+
 const app = express()
 const PORT = process.env.PORT || 3000
+
+// ============================================================
+// Demo Data Generator
+// ============================================================
+function generateDemoAlerts(db) {
+  const DEMO_ALERTS = [
+    {
+      headline: 'CRITICAL: Global Admin Role Added to External User',
+      description: 'A user with external identity was granted Global Administrator privileges. This is a high-risk security event.',
+      actor: 'admin@nasstech.com',
+      severity: 'CRITICAL',
+      score: 95,
+      type: 'ADMIN',
+      riskAssessment: {
+        score: 95,
+        severity: 'CRITICAL',
+        levels: { privilege: 'VERY HIGH', security: 'VERY HIGH', data: 'VERY HIGH', frequency: 'LOW' },
+        impacts: ['Unrestricted tenant access', 'Complete privilege escalation', 'All data exposure risk']
+      },
+      recommendations: [
+        'Immediately revoke Global Administrator role from external user',
+        'Review all recent actions by this account for unauthorized activity',
+        'Audit all Azure AD role assignments for external users',
+        'Implement Conditional Access policy to block external admin access',
+        'Run security incident response protocol'
+      ]
+    },
+    {
+      headline: 'CRITICAL: Mailbox Forwarding Rule to External Domain',
+      description: 'A mailbox forwarding rule was created redirecting all emails to an external domain (attacker-domain.com).',
+      actor: 'security-team@nasstech.com',
+      severity: 'CRITICAL',
+      score: 92,
+      type: 'EXCHANGE',
+      riskAssessment: {
+        score: 92,
+        severity: 'CRITICAL',
+        levels: { privilege: 'HIGH', security: 'VERY HIGH', data: 'VERY HIGH', frequency: 'LOW' },
+        impacts: ['Email data exfiltration', 'Unauthorized external access', 'Compliance violation']
+      },
+      recommendations: [
+        'Immediately delete the suspicious forwarding rule',
+        'Review mailbox owner for account compromise',
+        'Check mailbox audit logs for unauthorized access',
+        'Notify all users about email forwarding security',
+        'Deploy DLP policy to prevent external email forwarding'
+      ]
+    },
+    {
+      headline: 'HIGH: Suspicious Sign-in from Impossible Travel',
+      description: 'User msmith@nasstech.com signed in from two different countries within 2 hours. Possible account compromise.',
+      actor: 'Azure AD Identity Protection',
+      severity: 'HIGH',
+      score: 78,
+      type: 'SECURITY',
+      riskAssessment: {
+        score: 78,
+        severity: 'HIGH',
+        levels: { privilege: 'MEDIUM', security: 'HIGH', data: 'HIGH', frequency: 'MEDIUM' },
+        impacts: ['Potential account compromise', 'Suspicious access pattern']
+      },
+      recommendations: [
+        'Contact user to verify legitimate sign-in',
+        'Reset user password if account is compromised',
+        'Review recent user activities and downloads',
+        'Enable MFA if not already active',
+        'Monitor account for additional suspicious activities'
+      ]
+    },
+    {
+      headline: 'HIGH: Policy Update Without Approval',
+      description: 'Conditional Access policy was modified without going through change management approval process.',
+      actor: 'john.doe@nasstech.com',
+      severity: 'HIGH',
+      score: 75,
+      type: 'ADMIN',
+      riskAssessment: {
+        score: 75,
+        severity: 'HIGH',
+        levels: { privilege: 'HIGH', security: 'HIGH', data: 'MEDIUM', frequency: 'LOW' },
+        impacts: ['Unapproved configuration change', 'Potential security gap']
+      },
+      recommendations: [
+        'Review the policy changes immediately',
+        'Verify if changes are compliant with security standards',
+        'Implement change approval workflow for CA policies',
+        'Roll back if changes violate security policies',
+        'Audit all policy changes in the past 30 days'
+      ]
+    },
+    {
+      headline: 'HIGH: Multiple Failed Sign-in Attempts',
+      description: 'User jsmith@nasstech.com had 47 failed sign-in attempts in the last hour from different IP addresses.',
+      actor: 'Azure AD Identity Protection',
+      severity: 'HIGH',
+      score: 82,
+      type: 'SECURITY',
+      riskAssessment: {
+        score: 82,
+        severity: 'HIGH',
+        levels: { privilege: 'MEDIUM', security: 'HIGH', data: 'MEDIUM', frequency: 'HIGH' },
+        impacts: ['Brute force attack detected', 'Account lockout imminent']
+      },
+      recommendations: [
+        'Temporarily lock the user account',
+        'Reset user password immediately',
+        'Enable MFA for the user',
+        'Review and block suspicious IP addresses',
+        'Enable sign-in risk-based Conditional Access'
+      ]
+    },
+    {
+      headline: 'MEDIUM: Guest User Added to Sensitive Group',
+      description: 'A guest user was added to the "Finance Approvers" security group with elevated permissions.',
+      actor: 'identity-team@nasstech.com',
+      severity: 'MEDIUM',
+      score: 62,
+      type: 'ADMIN',
+      riskAssessment: {
+        score: 62,
+        severity: 'MEDIUM',
+        levels: { privilege: 'MEDIUM', security: 'MEDIUM', data: 'MEDIUM', frequency: 'LOW' },
+        impacts: ['Unauthorized access to sensitive resources']
+      },
+      recommendations: [
+        'Review guest user credentials and sponsorship',
+        'Verify guest access is required for their role',
+        'Remove guest from group if access is not needed',
+        'Implement regular review of guest user permissions',
+        'Use access reviews for guest account management'
+      ]
+    }
+  ]
+
+  console.log('📊 Generating demo alerts...')
+  let count = 0
+  const now = new Date()
+
+  for (const alert of DEMO_ALERTS) {
+    try {
+      const id = randomUUID()
+      const timestamp = new Date(now.getTime() - Math.random() * 3600000).toISOString()
+
+      const stmt = db.prepare(`
+        INSERT INTO alerts
+        (id, type, severity, score, headline, description,
+         risk_assessment, recommendations, actor, action_timestamp, raw_event)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+
+      stmt.run(
+        id,
+        alert.type,
+        alert.severity,
+        alert.score,
+        alert.headline,
+        alert.description,
+        JSON.stringify(alert.riskAssessment),
+        JSON.stringify(alert.recommendations),
+        alert.actor,
+        timestamp,
+        JSON.stringify({ demo: true })
+      )
+
+      count++
+    } catch (error) {
+      console.error(`❌ Failed to insert alert: ${error.message}`)
+    }
+  }
+
+  console.log(`✅ Generated ${count} demo alerts`)
+}
 
 // ============================================================
 // Middleware
@@ -105,6 +285,9 @@ if (isValidCredentials) {
 
     graphClient = Client.initWithMiddleware({ authProvider })
     console.log('✓ Azure credentials configured - using real Graph API')
+
+    // Initialize SharePoint client with Graph client
+    initSharePointClient(graphClient)
   } catch (error) {
     console.warn('⚠️ Graph Client initialization failed:', error.message)
     console.warn('⚠️ Will use simulated data for endpoints')
@@ -149,12 +332,75 @@ const ROLE_GROUPS = {
 // ============================================================
 let investigationService = null
 
+/**
+ * Migrate demo alerts from in-memory to SharePoint
+ */
+async function migrateAlertsToSharePoint(db) {
+  try {
+    // Get all alerts from in-memory database
+    const alerts = db.prepare('SELECT * FROM alerts WHERE dismissed = 0').all()
+
+    if (!alerts || alerts.length === 0) {
+      console.log('ℹ️ No alerts to migrate')
+      return
+    }
+
+    console.log(`📤 Migrating ${alerts.length} alerts to SharePoint...`)
+
+    let migrated = 0
+    for (const alert of alerts) {
+      try {
+        // Parse JSON fields
+        const riskAssessment = JSON.parse(alert.risk_assessment || '{}')
+        const recommendations = JSON.parse(alert.recommendations || '[]')
+
+        // Prepare alert object for SharePoint
+        const spAlert = {
+          id: alert.id,
+          headline: alert.headline,
+          description: alert.description,
+          severity: alert.severity,
+          score: alert.score,
+          type: alert.type,
+          actor: alert.actor,
+          riskAssessment: riskAssessment,
+          recommendations: recommendations,
+          dismissed: alert.dismissed || false
+        }
+
+        // Save to SharePoint
+        await addAlert(spAlert)
+        migrated++
+      } catch (alertError) {
+        console.log(`   ⚠️ Failed to migrate alert ${alert.id}: ${alertError.message}`)
+      }
+    }
+
+    console.log(`✅ Migrated ${migrated}/${alerts.length} alerts to SharePoint`)
+  } catch (error) {
+    console.log(`⚠️ Alert migration failed: ${error.message}`)
+    console.log('   ℹ️ Backend will continue using in-memory alerts')
+  }
+}
+
 async function initializeTenantGuard() {
   try {
     console.log('🔧 Initializing TenantGuard...')
     await initDatabase()
     const db = getDatabase()
     createInvestigationTables(db)
+
+    // Generate demo alerts if none exist
+    const summary = db.prepare("SELECT COUNT(*) as count FROM alerts WHERE dismissed = 0").get()
+    if (!summary || summary.count === 0) {
+      console.log('📊 No alerts found - generating demo alerts...')
+      generateDemoAlerts(db)
+    }
+
+    // Migrate alerts to SharePoint if available
+    if (graphClient) {
+      await migrateAlertsToSharePoint(db)
+    }
 
     // Load Claude API key from settings
     const claudeApiKey = SettingsService.getClaudeApiKey()
@@ -3528,37 +3774,65 @@ app.get('/api/audit-logs/consents', async (req, res) => {
  * GET /api/tenantguard/alerts
  * Returns all active alerts
  */
-app.get('/api/tenantguard/alerts', (req, res) => {
+app.get('/api/tenantguard/alerts', async (req, res) => {
   try {
     const severity = req.query.severity || 'all'
+    const priority = req.query.priority || 'all'
     const limit = parseInt(req.query.limit) || 50
-    const db = getDatabase()
 
-    let query = `
-      SELECT * FROM alerts
-      WHERE dismissed = 0
-    `
+    // Try SharePoint first, fall back to in-memory
+    try {
+      const filters = { dismissed: false }
+      if (severity !== 'all') filters.severity = severity
+      if (priority !== 'all') filters.priority = priority
 
-    if (severity !== 'all') {
-      query += ` AND severity = '${severity}'`
+      const alerts = await getAlerts(filters)
+
+      // Apply limit
+      const limited = alerts.slice(0, limit)
+
+      console.log(`✅ Retrieved ${limited.length} alerts from SharePoint`)
+      return res.json({
+        success: true,
+        data: limited,
+        count: limited.length,
+        filters: { severity, priority }
+      })
+    } catch (spError) {
+      console.log('⚠️ SharePoint unavailable, using in-memory:', spError.message)
+
+      // Fall back to in-memory database
+      const db = getDatabase()
+      let query = `
+        SELECT * FROM alerts
+        WHERE dismissed = 0
+      `
+
+      if (severity !== 'all') {
+        query += ` AND severity = '${severity}'`
+      }
+
+      if (priority !== 'all') {
+        query += ` AND priority = '${priority}'`
+      }
+
+      query += ' ORDER BY score DESC, action_timestamp DESC LIMIT ' + limit
+
+      const alerts = db.prepare(query).all()
+
+      // Parse JSON fields
+      const parsed = alerts.map(alert => ({
+        ...alert,
+        riskAssessment: JSON.parse(alert.risk_assessment || '{}'),
+        recommendations: JSON.parse(alert.recommendations || '[]')
+      }))
+
+      return res.json({
+        success: true,
+        data: parsed,
+        count: parsed.length
+      })
     }
-
-    query += ' ORDER BY score DESC, action_timestamp DESC LIMIT ' + limit
-
-    const alerts = db.prepare(query).all()
-
-    // Parse JSON fields
-    const parsed = alerts.map(alert => ({
-      ...alert,
-      riskAssessment: JSON.parse(alert.risk_assessment || '{}'),
-      recommendations: JSON.parse(alert.recommendations || '[]')
-    }))
-
-    res.json({
-      success: true,
-      data: parsed,
-      count: parsed.length
-    })
   } catch (error) {
     console.error('Error fetching alerts:', error)
     res.status(500).json({ success: false, error: error.message })
@@ -3569,20 +3843,26 @@ app.get('/api/tenantguard/alerts', (req, res) => {
  * GET /api/tenantguard/alerts/summary
  * Returns alert counts by severity
  */
-app.get('/api/tenantguard/alerts/summary', (req, res) => {
+app.get('/api/tenantguard/alerts/summary', async (req, res) => {
   try {
-    const db = getDatabase()
-
-    const summary = {
-      critical: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'CRITICAL' AND dismissed = 0").get().count,
-      high: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'HIGH' AND dismissed = 0").get().count,
-      medium: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'MEDIUM' AND dismissed = 0").get().count,
-      info: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'INFO' AND dismissed = 0").get().count,
+    // Try SharePoint first, fall back to in-memory if not available
+    try {
+      const summary = await getAlertSummary()
+      console.log('✅ Alerts summary from SharePoint')
+      return res.json({ success: true, data: summary })
+    } catch (spError) {
+      console.log('⚠️ SharePoint unavailable, using in-memory:', spError.message)
+      // Fall back to in-memory database
+      const db = getDatabase()
+      const summary = {
+        critical: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'CRITICAL' AND dismissed = 0").get().count,
+        high: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'HIGH' AND dismissed = 0").get().count,
+        medium: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'MEDIUM' AND dismissed = 0").get().count,
+        info: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'INFO' AND dismissed = 0").get().count,
+      }
+      summary.total = summary.critical + summary.high + summary.medium + summary.info
+      return res.json({ success: true, data: summary })
     }
-
-    summary.total = summary.critical + summary.high + summary.medium + summary.info
-
-    res.json({ success: true, data: summary })
   } catch (error) {
     console.error('Error fetching summary:', error)
     res.status(500).json({ success: false, error: error.message })
@@ -5209,9 +5489,10 @@ app.post('/api/tenantguard/investigations/:id/report', async (req, res) => {
  */
 app.get('/api/tenantguard/correlations', (req, res) => {
   try {
-    const db = getDatabase()
     const severity = req.query.severity || 'all'
+    const db = getDatabase()
 
+    // Read correlations from in-memory database (generated locally by correlation engine)
     let query = 'SELECT * FROM alert_correlations WHERE dismissed = 0'
     if (severity !== 'all') {
       query += ` AND risk_level = '${severity}'`
@@ -5220,12 +5501,14 @@ app.get('/api/tenantguard/correlations', (req, res) => {
 
     const correlations = db.prepare(query).all()
 
+    console.log(`✅ Retrieved ${correlations.length} correlations from in-memory database`)
     res.json({
       success: true,
-      data: correlations,
-      count: correlations.length
+      data: correlations || [],
+      count: (correlations || []).length
     })
   } catch (error) {
+    console.error('Error fetching correlations:', error)
     res.status(500).json({ success: false, error: error.message })
   }
 })
@@ -6656,6 +6939,236 @@ app.get('/api/search/groups', async (req, res) => {
       data: []
     })
   }
+})
+
+// ============================================================
+// TenantGuard Configuration Endpoints
+// ============================================================
+
+// Validate TenantGuard SharePoint connection
+app.post('/api/tenantguard/validate-sharepoint', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const { siteUrl } = req.body
+    const site = siteUrl?.trim() || 'root'
+
+    try {
+      const siteData = await graphClient.api(`/sites/${site}`).get()
+      res.json({
+        success: true,
+        siteId: siteData.id,
+        siteName: siteData.displayName || site,
+        message: `Connected to SharePoint site: ${siteData.displayName || site}`
+      })
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        error: `Could not access SharePoint site (${site}): ${error.message}`
+      })
+    }
+  } catch (error) {
+    console.error('Error validating TenantGuard SharePoint:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Initialize TenantGuard lists and fields
+app.post('/api/tenantguard/initialize', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const { siteUrl } = req.body
+    const site = siteUrl?.trim() || 'root'
+
+    // Get the site
+    let siteId
+    try {
+      const siteData = await graphClient.api(`/sites/${site}`).get()
+      siteId = siteData.id
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: `Could not access SharePoint site (${site}): ${error.message}`
+      })
+    }
+
+    console.log(`🚀 Initializing TenantGuard lists on site: ${site} (${siteId})`)
+
+    const listConfigs = [
+      { name: 'TenantGuard-Alerts', displayName: 'TenantGuard Alerts', type: 'alerts' },
+      { name: 'TenantGuard-Correlations', displayName: 'TenantGuard Correlations', type: 'correlations' },
+      { name: 'TenantGuard-Investigations', displayName: 'TenantGuard Investigations', type: 'investigations' }
+    ]
+
+    const createdLists = {}
+    const columnResults = {}
+
+    for (const listConfig of listConfigs) {
+      try {
+        // Check if list already exists
+        let lists = await graphClient.api(`/sites/${siteId}/lists`).get()
+        let existingList = lists.value?.find(l => l.displayName === listConfig.displayName)
+
+        if (!existingList) {
+          // Create the list
+          const newList = await graphClient.api(`/sites/${siteId}/lists`).post({
+            displayName: listConfig.displayName,
+            list: { template: 'genericList' }
+          })
+          createdLists[listConfig.name] = newList.id
+          console.log(`✓ Created list: ${listConfig.displayName}`)
+        } else {
+          createdLists[listConfig.name] = existingList.id
+          console.log(`✓ List already exists: ${listConfig.displayName}`)
+        }
+
+        // Add custom columns to the list
+        const listId = createdLists[listConfig.name]
+        const columns = await createListColumns(siteId, listId, listConfig.type)
+        columnResults[listConfig.name] = columns
+
+      } catch (error) {
+        console.error(`Error initializing ${listConfig.displayName}:`, error.message)
+        return res.status(500).json({
+          success: false,
+          error: `Failed to initialize ${listConfig.displayName}: ${error.message}`
+        })
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'TenantGuard lists and columns created successfully',
+      siteId: siteId,
+      siteUrl: site,
+      alertsListId: createdLists['TenantGuard-Alerts'],
+      correlationsListId: createdLists['TenantGuard-Correlations'],
+      investigationsListId: createdLists['TenantGuard-Investigations'],
+      columns: columnResults,
+      envConfig: `SHAREPOINT_SITE_ID=${siteId}\nSHAREPOINT_TENANTGUARD_ALERTS_LIST_ID=${createdLists['TenantGuard-Alerts']}\nSHAREPOINT_TENANTGUARD_CORRELATIONS_LIST_ID=${createdLists['TenantGuard-Correlations']}\nSHAREPOINT_TENANTGUARD_INVESTIGATIONS_LIST_ID=${createdLists['TenantGuard-Investigations']}`
+    })
+  } catch (error) {
+    console.error('Error initializing TenantGuard lists:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * Helper function to create custom columns for a list
+ */
+async function createListColumns(siteId, listId, listType) {
+  try {
+    const { getColumnsForList, buildColumnPayload } = await import('./tenantguard/sharepoint-columns.js')
+    const columnDefs = getColumnsForList(listType)
+    const results = { created: [], skipped: [], failed: [] }
+
+    for (const columnDef of columnDefs) {
+      try {
+        // Skip Title column (already exists)
+        if (columnDef.name === 'Title') continue
+
+        // Check if column already exists
+        try {
+          await graphClient.api(`/sites/${siteId}/lists/${listId}/columns/${columnDef.name}`).get()
+          results.skipped.push(columnDef.name)
+          console.log(`  ⊘ Column already exists: ${columnDef.name}`)
+          continue
+        } catch (e) {
+          // Column doesn't exist, create it
+        }
+
+        // Build and create column
+        const payload = buildColumnPayload(columnDef)
+
+        // Debug: log the payload being sent
+        console.log(`  📝 Creating column: ${columnDef.name} (type: ${columnDef.type})`)
+
+        const response = await graphClient.api(`/sites/${siteId}/lists/${listId}/columns`).post(payload)
+        results.created.push(columnDef.name)
+        console.log(`  ✓ Created column: ${columnDef.name}`)
+
+      } catch (error) {
+        results.failed.push({ column: columnDef.name, error: error.message })
+        console.error(`  ✗ Failed to create column ${columnDef.name}:`, error.message)
+
+        // Log detailed error information
+        if (error.responseText) {
+          console.error(`    Details: ${error.responseText}`)
+        }
+        if (error.statusCode) {
+          console.error(`    Status: ${error.statusCode}`)
+        }
+        if (error.body) {
+          console.error(`    Body: ${JSON.stringify(error.body)}`)
+        }
+      }
+    }
+
+    console.log(`📋 Columns for ${listType}: ${results.created.length} created, ${results.skipped.length} skipped, ${results.failed.length} failed`)
+    return results
+
+  } catch (error) {
+    console.error('Error creating columns:', error.message)
+    throw error
+  }
+}
+
+// ============================================================
+// TenantGuard Graph API Sync Routes
+// ============================================================
+
+/**
+ * POST /api/tenantguard/sync
+ * Trigger a full sync from Graph API
+ */
+app.post('/api/tenantguard/sync', async (req, res) => {
+  try {
+    const { fullSync } = await import('./tenantguard/sync-engine.js')
+    const result = await fullSync()
+    res.json(result)
+  } catch (error) {
+    console.error('Sync error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/tenantguard/sync/incremental
+ * Trigger an incremental sync
+ */
+app.post('/api/tenantguard/sync/incremental', async (req, res) => {
+  try {
+    const { incrementalSync } = await import('./tenantguard/sync-engine.js')
+    const lastSyncTime = req.body.lastSyncTime || new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const result = await incrementalSync(new Date(lastSyncTime))
+    res.json(result)
+  } catch (error) {
+    console.error('Incremental sync error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/tenantguard/sync/status
+ * Get current sync status
+ */
+let isSyncing = false
+app.get('/api/tenantguard/sync/status', (req, res) => {
+  res.json({
+    syncing: isSyncing,
+    timestamp: new Date().toISOString()
+  })
 })
 
 // ============================================================

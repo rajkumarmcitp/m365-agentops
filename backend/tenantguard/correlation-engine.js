@@ -262,6 +262,14 @@ export class CorrelationEngine {
     const exfilPattern = this.detectDataExfiltration(alerts)
     if (exfilPattern) correlations.push(exfilPattern)
 
+    // Pattern: Mass User Creation
+    const massUserPattern = this.detectMassUserCreation(alerts)
+    if (massUserPattern) correlations.push(massUserPattern)
+
+    // Pattern: Bulk Permission Grant
+    const bulkPermPattern = this.detectBulkPermissionGrant(alerts)
+    if (bulkPermPattern) correlations.push(bulkPermPattern)
+
     return correlations
   }
 
@@ -389,6 +397,127 @@ export class CorrelationEngine {
           attack_pattern: 'data_exfiltration',
           exfil_indicators: exfilIndicators.length
         })
+      }
+    }
+
+    return null
+  }
+
+  /**
+   * Attack Pattern: Mass User Creation
+   * Look for: Multiple user accounts created by same actor in short time
+   * Indicators of: account takeover, lateral movement preparation
+   */
+  detectMassUserCreation(alerts) {
+    const userCreationAlerts = alerts.filter(a => {
+      const headline = (a.headline || '').toLowerCase()
+      const desc = (a.description || '').toLowerCase()
+      return (headline.includes('user') && (headline.includes('created') || headline.includes('added'))) ||
+             (desc.includes('created') && desc.includes('user'))
+    })
+
+    if (userCreationAlerts.length < 5) return null
+
+    // Group by actor
+    const byActor = {}
+    userCreationAlerts.forEach(alert => {
+      const actor = alert.actor || 'System'
+      if (!byActor[actor]) byActor[actor] = []
+      byActor[actor].push(alert)
+    })
+
+    // Check each actor
+    for (const [actor, actorAlerts] of Object.entries(byActor)) {
+      if (actorAlerts.length >= 5) {
+        const sorted = actorAlerts.sort((a, b) =>
+          new Date(b.action_timestamp) - new Date(a.action_timestamp)
+        )
+
+        const timeSpan = new Date(sorted[sorted.length - 1].action_timestamp) -
+                         new Date(sorted[0].action_timestamp)
+
+        // Within 1 hour
+        if (timeSpan < 3600000) {
+          return {
+            id: uuid(),
+            correlation_type: 'PATTERN',
+            alert_ids: sorted.map(a => a.id).join(','),
+            actor: actor,
+            target: null,
+            start_timestamp: sorted[sorted.length - 1].action_timestamp,
+            end_timestamp: sorted[0].action_timestamp,
+            alert_count: sorted.length,
+            correlation_score: 94,
+            pattern_type: 'MASS_USER_CREATION',
+            risk_level: 'CRITICAL',
+            description: `Suspicious mass user creation: ${actor} created ${sorted.length} accounts in ${Math.round(timeSpan / 60000)} minutes`,
+            metadata: JSON.stringify({
+              attack_pattern: 'mass_user_creation',
+              accounts_created: sorted.length,
+              actor: actor,
+              time_window_minutes: Math.round(timeSpan / 60000)
+            })
+          }
+        }
+      }
+    }
+
+    return null
+  }
+
+  /**
+   * Attack Pattern: Bulk Permission Grant
+   * Look for: Multiple permission/group/role grants in short time
+   * Indicators of: access expansion, resource compromise, insider threat
+   */
+  detectBulkPermissionGrant(alerts) {
+    const permissionAlerts = alerts.filter(a => {
+      const headline = (a.headline || '').toLowerCase()
+      return headline.includes('group') || headline.includes('permission') ||
+             headline.includes('role') || headline.includes('access')
+    })
+
+    if (permissionAlerts.length < 4) return null
+
+    // Check if multiple resources affected
+    const targets = new Set()
+    permissionAlerts.forEach(alert => {
+      const headline = (alert.headline || '').toLowerCase()
+      if (headline.includes('global')) targets.add('GLOBAL_ACCESS')
+      if (headline.includes('admin')) targets.add('ADMIN_ACCESS')
+      if (headline.includes('group')) targets.add('GROUP_ACCESS')
+      if (headline.includes('mailbox')) targets.add('MAILBOX_ACCESS')
+    })
+
+    if (targets.size >= 2) {
+      const sorted = permissionAlerts.sort((a, b) =>
+        new Date(b.action_timestamp) - new Date(a.action_timestamp)
+      )
+
+      const timeSpan = new Date(sorted[sorted.length - 1].action_timestamp) -
+                       new Date(sorted[0].action_timestamp)
+
+      if (timeSpan < 3600000) {
+        return {
+          id: uuid(),
+          correlation_type: 'PATTERN',
+          alert_ids: sorted.map(a => a.id).join(','),
+          actor: sorted[0]?.actor,
+          target: Array.from(targets).join(', '),
+          start_timestamp: sorted[sorted.length - 1].action_timestamp,
+          end_timestamp: sorted[0].action_timestamp,
+          alert_count: sorted.length,
+          correlation_score: 91,
+          pattern_type: 'BULK_PERMISSION_GRANT',
+          risk_level: 'CRITICAL',
+          description: `Bulk permission grant detected: ${sorted.length} permissions granted to multiple resources in ${Math.round(timeSpan / 60000)} minutes`,
+          metadata: JSON.stringify({
+            attack_pattern: 'bulk_permission_grant',
+            permissions_granted: sorted.length,
+            resource_types: Array.from(targets),
+            time_window_minutes: Math.round(timeSpan / 60000)
+          })
+        }
       }
     }
 
