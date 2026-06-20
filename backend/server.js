@@ -5469,28 +5469,6 @@ app.get('/api/identity/posture', async (req, res) => {
   }
 })
 
-/**
- * POST /api/tenantguard/alerts/:id/dismiss
- * Dismiss an alert
- */
-app.post('/api/tenantguard/alerts/:id/dismiss', (req, res) => {
-  try {
-    const db = getDatabase()
-    const { reason } = req.body
-
-    db.prepare(`
-      UPDATE alerts
-      SET dismissed = 1, dismissed_at = CURRENT_TIMESTAMP, dismissed_by = ?
-      WHERE id = ?
-    `).run(reason || 'User dismissed', req.params.id)
-
-    res.json({ success: true, message: 'Alert dismissed' })
-  } catch (error) {
-    console.error('Error dismissing alert:', error)
-    res.status(500).json({ success: false, error: error.message })
-  }
-})
-
 // ============================================================
 /**
  * GET /api/tenantguard/settings
@@ -7906,15 +7884,15 @@ const APPROVED_AUDIT_ACTIVITIES = [
   'External Sharing',
   'changed site owner',
 
-  // Phase 2: Application Credentials
-  'Add password',
-  'Add secret',
-  'Update secret',
-  'Add certificate',
-  'Update certificate',
-  'Update owner',
-  'Add application',
-  'Register application'
+  // Phase 2: Application Credentials - HANDLED BY DEDICATED APP_CHANGE DETECTION
+  // 'Add password',  // Skip - use APP_CHANGE detection instead
+  // 'Add secret',  // Skip - use APP_CHANGE detection instead
+  // 'Update secret',  // Skip - use APP_CHANGE detection instead
+  // 'Add certificate',  // Skip - use APP_CHANGE detection instead
+  // 'Update certificate',  // Skip - use APP_CHANGE detection instead
+  // 'Update owner',  // Skip - use APP_CHANGE detection instead (for apps)
+  // 'Add application',  // Skip - use APP_CHANGE detection instead
+  // 'Register application'  // Skip - use APP_CHANGE detection instead
 ]
 
 function isApprovedAuditActivity(activityDisplayName) {
@@ -8338,7 +8316,108 @@ app.post('/api/tenantguard/sync', async (req, res) => {
     }
 
     // ============================================================
-    // PHASE 1B: P1 ALERTS - Conditional Access, Security Defaults, MFA, DLP
+    // PHASE 1A-B: Application & Service Principal Changes
+    // ============================================================
+    console.log('🔑 Checking for application and service principal changes...')
+    const appChangePatterns = [
+      'Add password',
+      'Update secret',
+      'Add secret',
+      'Add certificate',
+      'Update certificate',
+      'Add application',
+      'Register application',
+      'Delete application',
+      'Update application'
+    ]
+
+    for (const log of auditLogs) {
+      try {
+        const isAppChange = appChangePatterns.some(pattern =>
+          log.activityDisplayName?.includes(pattern)
+        )
+
+        if (isAppChange) {
+          const alertId = `app-${log.id}`
+          const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
+
+          if (!existing) {
+            const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+
+            // Determine severity based on action type
+            let severity = 'HIGH'
+            let priority = 'P2'
+            let riskScore = 75
+
+            if (log.activityDisplayName?.includes('Delete application')) {
+              severity = 'CRITICAL'
+              priority = 'P1'
+              riskScore = 100
+            } else if (log.activityDisplayName?.includes('Add secret') ||
+                      log.activityDisplayName?.includes('Add password') ||
+                      log.activityDisplayName?.includes('Add certificate')) {
+              severity = 'HIGH'
+              priority = 'P2'
+              riskScore = 75
+            }
+
+            // Extract app/service principal name from targetResources
+            let appName = 'Unknown Application'
+            if (log.targetResources && log.targetResources.length > 0) {
+              const appResource = log.targetResources[0]
+              appName = appResource.displayName || appResource.userPrincipalName || 'Unknown Application'
+            }
+
+            db.prepare(`
+              INSERT INTO alerts (
+                id, type, severity, score, priority, headline, description,
+                risk_assessment, recommendations, actor, target, action_timestamp,
+                raw_event, dismissed, created_at, category
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              alertId,
+              'APP_CHANGE',
+              severity,
+              riskScore,
+              priority,
+              `${priority === 'P1' ? '🔴' : '🟠'} ${priority}: ${log.activityDisplayName}`,
+              `Application credential modified: ${log.activityDisplayName} on ${appName} by ${actor}`,
+              JSON.stringify({
+                score: riskScore,
+                severity: severity,
+                source: 'Graph API - Directory Audit',
+                alertType: 'APPLICATION_CREDENTIAL_CHANGE',
+                application: appName,
+                action: log.activityDisplayName,
+                actor: actor
+              }),
+              JSON.stringify([
+                `Verify ${log.activityDisplayName} is authorized and expected`,
+                `Review application registration details`,
+                `Check if service principal owner is legitimate`,
+                `Monitor API calls and access from this application`,
+                priority === 'P1' ? `Investigate deleted application immediately` : 'Audit application credential changes'
+              ]),
+              actor,
+              appName,
+              log.activityDateTime,
+              JSON.stringify({ graphApiId: log.id, real: true, alertType: 'APPLICATION_CREDENTIAL_CHANGE' }),
+              0,
+              new Date().toISOString(),
+              'Identity Management'
+            )
+
+            alertsCreated++
+            console.log(`🔑 APP_CHANGE ALERT: ${log.activityDisplayName} on ${appName}`)
+          }
+        }
+      } catch (appChangeError) {
+        console.error(`Error detecting application changes: ${appChangeError.message}`)
+      }
+    }
+
+    // ============================================================
+    // PHASE 1C: P1 ALERTS - Conditional Access, Security Defaults, MFA, DLP
     // ============================================================
 
     // P1: Detect MFA Disabled for Admin Users
@@ -10771,11 +10850,11 @@ app.get('/api/tenantguard/dashboard', async (req, res) => {
   try {
     const db = getDatabase()
 
-    // Get alerts directly from database (not SharePoint)
-    const alerts = db.prepare('SELECT * FROM alerts ORDER BY created_at DESC LIMIT 100').all() || []
+    // Get alerts directly from database - filter out dismissed alerts
+    const alerts = db.prepare('SELECT * FROM alerts WHERE dismissed = 0 ORDER BY created_at DESC LIMIT 100').all() || []
     const correlations = db.prepare('SELECT * FROM alert_correlations ORDER BY created_at DESC LIMIT 50').all() || []
 
-    // Calculate summary
+    // Calculate summary (only non-dismissed alerts)
     const alertSummary = {
       critical: alerts.filter(a => a.severity === 'CRITICAL').length,
       high: alerts.filter(a => a.severity === 'HIGH').length,
@@ -10833,6 +10912,215 @@ const server = app.listen(PORT, () => {
 
   // Start Message Center sync job (every hour)
   startMessageCenterSyncJob()
+})
+
+// ============================================================
+// Alert Management Endpoints
+// ============================================================
+
+/**
+ * POST /api/tenantguard/alerts/:id/dismiss
+ * Dismiss an alert (hide from dashboard)
+ */
+app.post('/api/tenantguard/alerts/:id/dismiss', (req, res) => {
+  try {
+    const { id } = req.params
+    const db = getDatabase()
+    const store = db.store
+
+    if (store.alerts && store.alerts[id]) {
+      store.alerts[id].dismissed = 1
+      console.log(`🗑️ Alert dismissed: ${id}`)
+      res.json({
+        success: true,
+        message: 'Alert dismissed',
+        alertId: id,
+        timestamp: new Date().toISOString()
+      })
+    } else {
+      res.status(404).json({
+        success: false,
+        error: 'Alert not found',
+        alertId: id
+      })
+    }
+  } catch (error) {
+    console.error('Error dismissing alert:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/alerts/:id/mark-reviewed
+ * Mark an alert as reviewed (stays visible with badge)
+ */
+app.post('/api/tenantguard/alerts/:id/mark-reviewed', (req, res) => {
+  try {
+    const { id } = req.params
+    const db = getDatabase()
+    const store = db.store
+
+    if (store.alerts && store.alerts[id]) {
+      store.alerts[id].reviewed = 1
+      store.alerts[id].reviewed_at = new Date().toISOString()
+      console.log(`✅ Alert marked reviewed: ${id}`)
+      res.json({
+        success: true,
+        message: 'Alert marked as reviewed',
+        alertId: id,
+        timestamp: new Date().toISOString()
+      })
+    } else {
+      res.status(404).json({
+        success: false,
+        error: 'Alert not found',
+        alertId: id
+      })
+    }
+  } catch (error) {
+    console.error('Error marking alert as reviewed:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/alerts/:id/unmark-reviewed
+ * Remove reviewed status from an alert
+ */
+app.post('/api/tenantguard/alerts/:id/unmark-reviewed', (req, res) => {
+  try {
+    const { id } = req.params
+    const db = getDatabase()
+    const store = db.store
+
+    if (store.alerts && store.alerts[id]) {
+      store.alerts[id].reviewed = 0
+      delete store.alerts[id].reviewed_at
+      console.log(`❌ Alert unreviewed: ${id}`)
+      res.json({
+        success: true,
+        message: 'Reviewed status removed',
+        alertId: id,
+        timestamp: new Date().toISOString()
+      })
+    } else {
+      res.status(404).json({
+        success: false,
+        error: 'Alert not found',
+        alertId: id
+      })
+    }
+  } catch (error) {
+    console.error('Error unmarking alert as reviewed:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/alerts/:id/restore
+ * Restore a dismissed alert
+ */
+app.post('/api/tenantguard/alerts/:id/restore', (req, res) => {
+  try {
+    const { id } = req.params
+    const db = getDatabase()
+    const store = db.store
+
+    if (store.alerts && store.alerts[id]) {
+      store.alerts[id].dismissed = 0
+      console.log(`↩️ Alert restored: ${id}`)
+      res.json({
+        success: true,
+        message: 'Alert restored',
+        alertId: id,
+        timestamp: new Date().toISOString()
+      })
+    } else {
+      res.status(404).json({
+        success: false,
+        error: 'Alert not found',
+        alertId: id
+      })
+    }
+  } catch (error) {
+    console.error('Error restoring alert:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/alerts/dismissed
+ * Get all dismissed alerts
+ */
+app.get('/api/tenantguard/alerts/dismissed', (req, res) => {
+  try {
+    const db = getDatabase()
+    const store = db.store
+
+    const dismissedAlerts = Object.values(store.alerts || {})
+      .filter(a => a.dismissed === 1)
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 100)
+
+    res.json({
+      success: true,
+      count: dismissedAlerts.length,
+      alerts: dismissedAlerts,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Error fetching dismissed alerts:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/cleanup/unwanted-alerts
+ * Remove unwanted AUDIT alerts (group operations, etc.)
+ */
+app.post('/api/tenantguard/cleanup/unwanted-alerts', (req, res) => {
+  try {
+    const db = getDatabase()
+    const store = db.store
+
+    const unwantedPatterns = [
+      'Add member to group',
+      'Remove member from group',
+      'Add owner to group',
+      'Remove owner from group',
+      'Update group',
+      'Add group',
+      'GroupLifecyclePolicies'
+    ]
+
+    let removed = 0
+    if (store.alerts) {
+      Object.keys(store.alerts).forEach(alertId => {
+        const alert = store.alerts[alertId]
+        if (alert.type === 'AUDIT') {
+          const activityName = alert.headline?.replace('Audit: ', '') || ''
+          const isUnwanted = unwantedPatterns.some(pattern =>
+            activityName.includes(pattern)
+          )
+          if (isUnwanted) {
+            delete store.alerts[alertId]
+            removed++
+          }
+        }
+      })
+    }
+
+    console.log(`🧹 Cleaned up ${removed} unwanted AUDIT alerts`)
+    res.json({
+      success: true,
+      message: `Removed ${removed} unwanted alerts`,
+      removed: removed,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Error cleaning up unwanted alerts:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
 })
 
 // ============================================================

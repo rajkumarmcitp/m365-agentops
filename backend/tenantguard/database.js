@@ -40,6 +40,7 @@ class DatabaseWrapper {
       const categoryMap = {
         'ROLE_CHANGE': 'Identity Management',
         'ADMIN_CHANGE': 'Identity Management',
+        'APP_CHANGE': 'Identity Management',
         'POLICY_CHANGE': 'Security Policy',
         'AUTH_ANOMALY': 'Authentication',
         'DEVICE_POLICY': 'Device Management',

@@ -265,21 +265,28 @@ function renderAlerts() {
       const typeIcon = alert.type === 'ROLE_CHANGE' ? 'ti-user-check' : alert.type === 'POLICY_CHANGE' ? 'ti-lock' : alert.type === 'AUTH_ANOMALY' ? 'ti-alert' : 'ti-alert-circle'
       const time = new Date(alert.timestamp || alert.action_timestamp).toLocaleTimeString()
       const priority = alert.priority || 'P3'
+      const reviewedBadge = alert.reviewed ? '<span class="badge success" style="margin-left:6px;font-size:10px"><i class="ti ti-check"></i> Reviewed</span>' : ''
       html += `
-        <div class="alert-item" onclick="window.showAlertDetails('${alert.id}')" style="padding:14px;margin-bottom:8px;border-left:4px solid var(--clr-${severityClass});background:var(--color-bg-secondary);border-radius:6px;cursor:pointer;transition:all 0.2s;hover:transform: translateX(4px)">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                <i class="ti ${typeIcon}" style="color:var(--clr-${severityClass});font-size:14px"></i>
-                <p style="margin:0;font-weight:600;font-size:13px;color:var(--color-text-primary)">${alert.headline || alert.name || 'Alert'}</p>
-                <span class="badge ${severityClass}" style="margin-left:auto;flex-shrink:0">${priority}</span>
-              </div>
-              <p style="margin:0;font-size:12px;color:var(--color-text-secondary)"><strong>${alert.actor || 'System'}</strong> <i class="ti ti-arrow-right" style="font-size:10px"></i> <strong>${alert.target || 'N/A'}</strong></p>
-              ${alert.category ? `<p style="margin:4px 0 0 0;font-size:11px;color:var(--color-text-tertiary)">${alert.category}</p>` : ''}
+        <div class="alert-item" style="padding:12px;margin-bottom:8px;border-left:4px solid var(--clr-${severityClass});background:var(--color-bg-secondary);border-radius:6px;transition:all 0.2s">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+              <i class="ti ${typeIcon}" style="color:var(--clr-${severityClass});font-size:13px;flex-shrink:0"></i>
+              <p style="margin:0;font-weight:600;font-size:12px;color:var(--color-text-primary);cursor:pointer" onclick="window.showAlertDetails('${alert.id}')">${alert.headline || alert.name || 'Alert'}</p>
             </div>
-            <div style="text-align:right;font-size:11px;color:var(--color-text-tertiary);white-space:nowrap;flex-shrink:0">
-              <div>${time}</div>
-              <span class="badge ${severityClass}" style="margin-top:6px">${alert.severity || 'MEDIUM'}</span>
+            <span class="badge ${severityClass}" style="font-size:10px;flex-shrink:0">${priority}</span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <div style="flex:1;min-width:0">
+              <p style="margin:0;font-size:11px;color:var(--color-text-secondary)"><strong>${alert.actor || 'System'}</strong></p>
+              <p style="margin:2px 0 0 0;font-size:10px;color:var(--color-text-tertiary)">
+                ${alert.category || 'N/A'} • ${time}
+              </p>
+            </div>
+
+            <div style="display:flex;gap:3px;flex-shrink:0">
+              ${alert.reviewed ? `<button onclick="window.unmarkReviewed('${alert.id}')" title="Unmark reviewed" style="padding:3px 5px;font-size:10px;background:var(--clr-success);color:white;border:none;border-radius:2px;cursor:pointer"><i class="ti ti-x" style="font-size:11px"></i></button>` : `<button onclick="window.markReviewed('${alert.id}')" title="Mark as reviewed" style="padding:3px 5px;font-size:10px;background:var(--clr-info);color:white;border:none;border-radius:2px;cursor:pointer"><i class="ti ti-check" style="font-size:11px"></i></button>`}
+              <button onclick="window.dismissAlert('${alert.id}')" title="Dismiss" style="padding:3px 5px;font-size:10px;background:var(--clr-secondary);color:white;border:none;border-radius:2px;cursor:pointer"><i class="ti ti-trash" style="font-size:11px"></i></button>
             </div>
           </div>
         </div>
@@ -332,6 +339,69 @@ function setupEventListeners() {
     await refreshData()
     showToast('Sync complete!', 'success')
   })
+
+  window.dismissAlert = async (alertId) => {
+    try {
+      const isLocalDev = window.location.hostname === 'localhost'
+      const baseUrl = isLocalDev ? 'http://localhost:3000' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
+
+      const response = await fetch(`${baseUrl}/api/tenantguard/alerts/${alertId}/dismiss`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        showToast('Alert dismissed', 'success')
+        await refreshData()
+      }
+    } catch (error) {
+      console.error('Error dismissing alert:', error)
+      showToast('Failed to dismiss alert', 'error')
+    }
+  }
+
+  window.markReviewed = async (alertId) => {
+    try {
+      const isLocalDev = window.location.hostname === 'localhost'
+      const baseUrl = isLocalDev ? 'http://localhost:3000' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
+
+      const response = await fetch(`${baseUrl}/api/tenantguard/alerts/${alertId}/mark-reviewed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        showToast('Alert marked as reviewed', 'success')
+        await refreshData()
+      }
+    } catch (error) {
+      console.error('Error marking alert as reviewed:', error)
+      showToast('Failed to mark alert as reviewed', 'error')
+    }
+  }
+
+  window.unmarkReviewed = async (alertId) => {
+    try {
+      const isLocalDev = window.location.hostname === 'localhost'
+      const baseUrl = isLocalDev ? 'http://localhost:3000' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
+
+      const response = await fetch(`${baseUrl}/api/tenantguard/alerts/${alertId}/unmark-reviewed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        showToast('Reviewed status removed', 'success')
+        await refreshData()
+      }
+    } catch (error) {
+      console.error('Error unmarking alert as reviewed:', error)
+      showToast('Failed to update alert', 'error')
+    }
+  }
 
   window.showAlertDetails = (alertId) => {
     const alert = allAlerts.find(a => a.id === alertId)
@@ -420,7 +490,11 @@ function setupEventListeners() {
           ` : ''}
         </div>
 
-        <div style="padding:12px 16px;border-top:1px solid var(--color-border-secondary);text-align:right">
+        <div style="padding:12px 16px;border-top:1px solid var(--color-border-secondary);display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="display:flex;gap:6px">
+            ${alert.reviewed ? `<button onclick="window.unmarkReviewed('${alert.id}'); this.closest('[data-modal]').remove()" class="btn btn-sm" style="background:#e8f5e9;color:#1b5e20;border:1px solid #4caf50;font-weight:600;cursor:pointer"><i class="ti ti-x"></i> Unmark Reviewed</button>` : `<button onclick="window.markReviewed('${alert.id}'); this.closest('[data-modal]').remove()" class="btn btn-sm" style="background:#e3f2fd;color:#0d47a1;border:1px solid #2196f3;font-weight:600;cursor:pointer"><i class="ti ti-check"></i> Mark Reviewed</button>`}
+            <button onclick="window.dismissAlert('${alert.id}'); this.closest('[data-modal]').remove()" class="btn btn-sm" style="background:#f5f5f5;color:#d32f2f;border:1px solid #f44336;font-weight:600;cursor:pointer"><i class="ti ti-trash"></i> Dismiss</button>
+          </div>
           <button onclick="this.closest('[data-modal]').remove()" class="btn btn-sm btn-primary">Close</button>
         </div>
       </div>
