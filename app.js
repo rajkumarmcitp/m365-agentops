@@ -7,6 +7,7 @@ import { initDashboard } from './pages/dashboard.js'
 import { initRequests } from './pages/requests.js'
 import { initSecurity } from './pages/security.js'
 import { initTenantGuard } from './pages/tenantguard.js'
+import { initTenantGuardEnhanced } from './pages/tenantguard-enhanced.js'
 import { initUserInvestigation } from './pages/user-investigation.js'
 import { initZeroTrust } from './pages/zerotrust.js'
 import { initM365Config } from './pages/m365config.js'
@@ -158,6 +159,7 @@ const PAGE_INIT = {
   requests: initRequests,
   security: initSecurity,
   tenantguard: initTenantGuard,
+  'tenantguard-enhanced': initTenantGuardEnhanced,
   'user-investigation': initUserInvestigation,
   zerotrust: initZeroTrust,
   m365config: initM365Config,
@@ -440,7 +442,7 @@ function renderShell() {
 
 function renderAllPages() {
   const pages = [
-    'dashboard','requests','security','tenantguard','user-investigation','zerotrust','privaccts','m365config',
+    'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','privaccts','m365config',
     'msgcenter','tasks','applications','intune','licenses','agents','approvals','portal','myreqs','myaccount','chat',
     'graphapi','sso','audit','settings'
   ]

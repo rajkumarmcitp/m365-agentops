@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tenant Guard New — M365 Security</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to bottom right, #080C14, #0F1923);
+      color: #E2E8F0;
+    }
+
+    @keyframes pulse-once {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    .animate-pulse-once {
+      animation: pulse-once 2s ease-in-out 1;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    svg circle, svg line { cursor: pointer; }
+    svg circle:hover { opacity: 0.8; }
+
+    .alert-row {
+      transition: all 0.2s;
+    }
+
+    .alert-row:hover {
+      background-color: #1C2B3A;
+    }
+
+    .drift-drifted {
+      border-left: 4px solid #F59E0B;
+    }
+
+    .drift-ok {
+      border-left: 4px solid transparent;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- HEADER & RING -->
+  <div class="sticky top-0 z-40 bg-[#080C14] border-b border-[#1C2B3A] p-8">
+    <div class="max-w-7xl mx-auto">
+      <!-- Title & Posture -->
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <h1 class="text-4xl font-bold mb-1">Contoso Corp</h1>
+          <p class="text-[#94A3B8] text-sm">contoso.onmicrosoft.com</p>
+        </div>
+        <div class="text-right">
+          <div id="posture" class="text-5xl font-bold mono" style="color: #10B981;">SECURE</div>
+          <p class="text-[#94A3B8] text-xs mt-1 mono"><span id="riskScore">18</span>/100</p>
+        </div>
+      </div>
+
+      <!-- Perimeter Ring -->
+      <div class="flex justify-center mb-8">
+        <svg id="ring" width="280" height="280" viewBox="0 0 280 280" class="animate-pulse-once"></svg>
+      </div>
+
+      <!-- KPI Chips -->
+      <div class="grid grid-cols-6 gap-4">
+        <div class="bg-[#0F1923] p-3 rounded border border-[#1C2B3A]">
+          <div class="text-2xl font-mono font-bold text-[#FF3B3B]">4</div>
+          <div class="text-xs text-[#94A3B8]">users no MFA</div>
+        </div>
+        <div class="bg-[#0F1923] p-3 rounded border border-[#1C2B3A]">
+          <div class="text-2xl font-mono font-bold text-[#F59E0B]">2</div>
+          <div class="text-xs text-[#94A3B8]">risky users</div>
+        </div>
+        <div class="bg-[#0F1923] p-3 rounded border border-[#1C2B3A]">
+          <div class="text-2xl font-mono font-bold text-[#FF3B3B]">3</div>
+          <div class="text-xs text-[#94A3B8]">active incidents</div>
+        </div>
+        <div class="bg-[#0F1923] p-3 rounded border border-[#1C2B3A]">
+          <div class="text-2xl font-mono font-bold text-[#F59E0B]">1</div>
+          <div class="text-xs text-[#94A3B8]">non-compliant device</div>
+        </div>
+        <div class="bg-[#0F1923] p-3 rounded border border-[#1C2B3A]">
+          <div class="text-2xl font-mono font-bold text-[#3B82F6]">2</div>
+          <div class="text-xs text-[#94A3B8]">fwd rules</div>
+        </div>
+        <div class="bg-[#0F1923] p-3 rounded border border-[#1C2B3A]">
+          <div class="text-2xl font-mono font-bold text-[#FF3B3B]">5</div>
+          <div class="text-xs text-[#94A3B8]">anon links</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="flex flex-1">
+    <!-- Alerts Section -->
+    <div class="flex-1 overflow-auto">
+      <div class="max-w-3xl mx-auto p-8">
+        <div id="alertsContainer"></div>
+
+        <!-- Drift Panel -->
+        <div class="mt-12 border border-[#1C2B3A] rounded">
+          <button id="driftToggle" class="w-full bg-[#0F1923] hover:bg-[#1C2B3A] p-4 flex items-center justify-between transition-colors">
+            <h3 class="font-semibold">
+              Baseline Drift — <span class="text-[#F59E0B]" id="driftCount">3</span> settings out of compliance
+            </h3>
+            <span id="driftArrow" style="transform: rotate(0deg);" class="transition-transform">›</span>
+          </button>
+          <div id="driftContent" class="hidden overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-t border-[#1C2B3A]">
+                  <th class="bg-[#1C2B3A] px-4 py-2 text-left font-semibold">Setting</th>
+                  <th class="bg-[#1C2B3A] px-4 py-2 text-left font-semibold">Expected</th>
+                  <th class="bg-[#1C2B3A] px-4 py-2 text-left font-semibold">Current</th>
+                  <th class="bg-[#1C2B3A] px-4 py-2 text-left font-semibold">Since</th>
+                </tr>
+              </thead>
+              <tbody id="driftTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Investigation Panel -->
+    <div id="investigationPanel" class="hidden w-[480px] border-l border-[#1C2B3A] bg-[#0F1923] overflow-y-auto flex flex-col">
+      <div class="bg-[#1C2B3A] px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div>
+          <h3 id="investigationTitle" class="font-semibold">Alert Title</h3>
+          <div class="flex items-center gap-2 mt-1">
+            <div id="investigationDot" class="w-2 h-2 rounded-full"></div>
+            <span class="text-xs text-[#94A3B8] mono">Risk: <span id="investigationRisk">—</span>/100</span>
+          </div>
+        </div>
+        <button id="closePanel" class="hover:bg-[#1A6BFF] p-1 rounded transition-colors">✕</button>
+      </div>
+      <div id="investigationContent" class="flex-1 p-6 space-y-6"></div>
+    </div>
+  </div>
+
+  <!-- SOURCE HEALTH FOOTER -->
+  <div class="sticky bottom-0 bg-[#0F1923] border-t border-[#1C2B3A] px-8 py-3">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex items-center gap-4 overflow-x-auto text-xs">
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="w-2 h-2 rounded-full bg-[#10B981]"></div>
+          <span class="text-[#94A3B8]">Entra Sign-ins</span>
+          <span class="text-[#94A3B8] opacity-50">OK</span>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="w-2 h-2 rounded-full bg-[#10B981]"></div>
+          <span class="text-[#94A3B8]">Audit Logs</span>
+          <span class="text-[#94A3B8] opacity-50">OK</span>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="w-2 h-2 rounded-full bg-[#F59E0B]"></div>
+          <span class="text-[#94A3B8]">Defender</span>
+          <span class="text-[#94A3B8] opacity-50">Overdue</span>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="w-2 h-2 rounded-full bg-[#10B981]"></div>
+          <span class="text-[#94A3B8]">Exchange Audit</span>
+          <span class="text-[#94A3B8] opacity-50">OK</span>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="w-2 h-2 rounded-full bg-[#10B981]"></div>
+          <span class="text-[#94A3B8]">Intune</span>
+          <span class="text-[#94A3B8] opacity-50">OK</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // DATA
+    // ============================================================
+
+    const SECURE_BASELINE = [
+      { setting: "Security Defaults", expected: "Enabled", current: "Disabled", since: "2025-06-14T09:12:00Z", drifted: true },
+      { setting: "MFA for All Admins", expected: "Enforced", current: "Enforced", since: null, drifted: false },
+      { setting: "Legacy Auth", expected: "Blocked", current: "Allowed", since: "2025-06-17T14:33:00Z", drifted: true },
+      { setting: "Audit Log Retention", expected: "180 days", current: "90 days", since: "2025-06-10T08:00:00Z", drifted: true },
+      { setting: "Conditional Access", expected: "≥3 active", current: "4 active", since: null, drifted: false },
+      { setting: "PIM for Privileged Roles", expected: "Enabled", current: "Enabled", since: null, drifted: false },
+      { setting: "DLP Policies", expected: "≥2 active", current: "2 active", since: null, drifted: false },
+      { setting: "External Sharing", expected: "Disabled", current: "Disabled", since: null, drifted: false },
+    ];
+
+    const SCENARIOS = [
+      { id: "A1", scenario: "account-takeover", service: "Entra", severity: "P1", title: "Impossible Travel Detected", actor: "john@contoso.com", target: "Sign-in from IN → US (32 min apart)", time: "2025-06-20T08:47:00Z" },
+      { id: "A2", scenario: "account-takeover", service: "Entra", severity: "P1", title: "MFA Disabled for Admin Account", actor: "admin@contoso.com", target: "john@contoso.com", time: "2025-06-20T08:51:23Z" },
+      { id: "A3", scenario: "account-takeover", service: "Exchange", severity: "P1", title: "External Mail Forwarding Rule Created", actor: "john@contoso.com", target: "attacker@gmail.com", time: "2025-06-20T08:53:41Z" },
+      { id: "A4", scenario: "account-takeover", service: "SharePoint", severity: "P2", title: "Mass File Download — 340 files", actor: "john@contoso.com", target: "/Finance/Q2Reports", time: "2025-06-20T09:01:17Z" },
+      { id: "B1", scenario: "priv-escalation", service: "Entra", severity: "P1", title: "Global Administrator Role Added", actor: "svc-deploy@contoso.com", target: "newadmin@contoso.com", time: "2025-06-20T07:14:00Z" },
+      { id: "B2", scenario: "priv-escalation", service: "Entra", severity: "P1", title: "Permanent Role Assignment (no PIM)", actor: "svc-deploy@contoso.com", target: "newadmin@contoso.com", time: "2025-06-20T07:14:05Z" },
+      { id: "B3", scenario: "priv-escalation", service: "Entra", severity: "P1", title: "Conditional Access Policy Disabled", actor: "newadmin@contoso.com", target: "Policy: Require MFA for Admins", time: "2025-06-20T07:22:31Z" },
+      { id: "B4", scenario: "priv-escalation", service: "Entra", severity: "P2", title: "New App Registration Created", actor: "newadmin@contoso.com", target: "App: DataSync-Prod", time: "2025-06-20T07:29:44Z" },
+      { id: "C1", scenario: "app-consent", service: "Entra", severity: "P1", title: "App Granted Directory.ReadWrite.All", actor: "user@contoso.com", target: "App: QuickDocs Pro", time: "2025-06-20T06:33:00Z" },
+      { id: "C2", scenario: "app-consent", service: "Entra", severity: "P1", title: "Admin Consent Granted to New App", actor: "user@contoso.com", target: "App: QuickDocs Pro", time: "2025-06-20T06:33:02Z" },
+      { id: "C3", scenario: "app-consent", service: "Exchange", severity: "P2", title: "App Granted Mail.ReadWrite", actor: "QuickDocs Pro (App)", target: "All mailboxes", time: "2025-06-20T06:34:18Z" },
+      { id: "D1", scenario: "ransomware", service: "Defender", severity: "P1", title: "Ransomware Behavior Detected", actor: "DESKTOP-7K2MNP", target: "sarah@contoso.com", time: "2025-06-20T05:58:00Z" },
+      { id: "D2", scenario: "ransomware", service: "Intune", severity: "P1", title: "Device Compliance Policy Removed", actor: "it-admin@contoso.com", target: "Policy: Windows Defender Required", time: "2025-06-20T05:44:12Z" },
+      { id: "D3", scenario: "ransomware", service: "Intune", severity: "P1", title: "BitLocker Disabled on Endpoint", actor: "DESKTOP-7K2MNP", target: "sarah@contoso.com", time: "2025-06-20T05:55:39Z" },
+      { id: "D4", scenario: "ransomware", service: "Purview", severity: "P1", title: "DLP Policy Deleted", actor: "it-admin@contoso.com", target: "Policy: Sensitive Data — All Sites", time: "2025-06-20T05:46:00Z" },
+    ];
+
+    const SERVICES = ["Entra", "Exchange", "SharePoint", "Teams", "Intune", "Defender", "Purview"];
+
+    // ============================================================
+    // STATE
+    // ============================================================
+
+    let selectedAlert = null;
+    let driftOpen = false;
+
+    // ============================================================
+    // CALCULATIONS
+    // ============================================================
+
+    const alertsByService = {};
+    SERVICES.forEach(s => alertsByService[s] = []);
+    SCENARIOS.forEach(alert => {
+      alertsByService[alert.service].push(alert);
+    });
+
+    Object.keys(alertsByService).forEach(service => {
+      alertsByService[service].sort((a, b) => {
+        const order = { P1: 0, P2: 1, P3: 2 };
+        return order[a.severity] - order[b.severity];
+      });
+    });
+
+    const riskScore = Math.min(
+      SCENARIOS.reduce((total, alert) => {
+        const points = alert.severity === 'P1' ? 25 : alert.severity === 'P2' ? 10 : 3;
+        return total + points;
+      }, 0),
+      100
+    );
+
+    function getPostureLabel() {
+      if (riskScore >= 75) return 'CRITICAL';
+      if (riskScore >= 50) return 'HIGH RISK';
+      if (riskScore >= 20) return 'ELEVATED';
+      return 'SECURE';
+    }
+
+    function getPostureColor() {
+      const label = getPostureLabel();
+      if (label === 'CRITICAL') return '#FF3B3B';
+      if (label === 'HIGH RISK') return '#F59E0B';
+      if (label === 'ELEVATED') return '#F59E0B';
+      return '#10B981';
+    }
+
+    function getSeverityColor(severity) {
+      if (severity === 'P1') return '#FF3B3B';
+      if (severity === 'P2') return '#F59E0B';
+      return '#3B82F6';
+    }
+
+    // ============================================================
+    // RENDER FUNCTIONS
+    // ============================================================
+
+    function renderRing() {
+      const svg = document.getElementById('ring');
+      const segments = 7;
+      const radius = 60;
+      const segmentAngle = 360 / segments;
+
+      SERVICES.forEach((service, i) => {
+        const startAngle = (i * segmentAngle - 90) * (Math.PI / 180);
+        const endAngle = ((i + 1) * segmentAngle - 90) * (Math.PI / 180);
+
+        const x1 = 140 + radius * Math.cos(startAngle);
+        const y1 = 140 + radius * Math.sin(startAngle);
+
+        const serviceAlerts = alertsByService[service] || [];
+        let color = '#10B981';
+        if (serviceAlerts.some(a => a.severity === 'P1')) color = '#FF3B3B';
+        else if (serviceAlerts.some(a => a.severity === 'P2')) color = '#F59E0B';
+        else if (serviceAlerts.length > 0) color = '#3B82F6';
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', '140');
+        line.setAttribute('y1', '140');
+        line.setAttribute('x2', x1);
+        line.setAttribute('y2', y1);
+        line.setAttribute('stroke', color);
+        line.setAttribute('stroke-width', '4');
+        line.setAttribute('opacity', '0.3');
+        svg.appendChild(line);
+
+        const cx = 140 + (radius + 8) * Math.cos((i + 0.5) * segmentAngle * (Math.PI / 180) - Math.PI / 2);
+        const cy = 140 + (radius + 8) * Math.sin((i + 0.5) * segmentAngle * (Math.PI / 180) - Math.PI / 2);
+
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', cx);
+        circle.setAttribute('cy', cy);
+        circle.setAttribute('r', '6');
+        circle.setAttribute('fill', color);
+        circle.addEventListener('click', () => scrollToService(service));
+        svg.appendChild(circle);
+      });
+
+      const centerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      centerCircle.setAttribute('cx', '140');
+      centerCircle.setAttribute('cy', '140');
+      centerCircle.setAttribute('r', '45');
+      centerCircle.setAttribute('fill', 'none');
+      centerCircle.setAttribute('stroke', '#1C2B3A');
+      centerCircle.setAttribute('stroke-width', '2');
+      svg.appendChild(centerCircle);
+
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', '140');
+      text.setAttribute('y', '150');
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('font-size', '24');
+      text.setAttribute('fill', '#1A6BFF');
+      text.setAttribute('font-family', 'JetBrains Mono');
+      text.setAttribute('font-weight', 'bold');
+      text.textContent = riskScore;
+      svg.appendChild(text);
+    }
+
+    function renderAlerts() {
+      const container = document.getElementById('alertsContainer');
+      let html = '';
+
+      SERVICES.forEach(service => {
+        const alerts = alertsByService[service] || [];
+        if (alerts.length === 0) return;
+
+        html += `
+          <div id="service-${service}" class="mb-12 scroll-mt-24">
+            <div class="flex items-center gap-2 mb-4">
+              <h2 class="text-lg font-semibold">${service}</h2>
+              <span class="ml-auto bg-[#1C2B3A] px-2 py-1 rounded text-xs mono">${alerts.length}</span>
+            </div>
+            <div class="space-y-2">
+        `;
+
+        alerts.forEach((alert, idx) => {
+          const color = getSeverityColor(alert.severity);
+          const time = new Date(alert.time).toLocaleTimeString();
+          html += `
+            <div class="bg-[#0F1923] border border-[#1C2B3A] p-4 rounded alert-row" onclick="handleInvestigate('${alert.id}')" style="animation: fadeIn 0.3s ease-out ${idx * 50}ms backwards;">
+              <div class="flex items-start gap-3">
+                <div class="w-3 h-3 rounded-full flex-shrink-0 mt-1" style="background-color: ${color}"></div>
+                <div class="flex-1 min-w-0">
+                  <h3 class="font-semibold text-sm mb-1">${alert.title}</h3>
+                  <p class="text-xs text-[#94A3B8]">${alert.actor} → ${alert.target}</p>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-xs text-[#94A3B8]" title="${alert.time}">${time}</span>
+                  <span class="text-[#1A6BFF]">→</span>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+
+        html += `
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function renderDrift() {
+      const driftCount = SECURE_BASELINE.filter(b => b.drifted).length;
+      document.getElementById('driftCount').textContent = driftCount;
+
+      let html = '';
+      SECURE_BASELINE.forEach((row) => {
+        const className = row.drifted ? 'drift-drifted' : 'drift-ok';
+        const dateStr = row.since ? new Date(row.since).toLocaleDateString() : '—';
+        const dateColor = row.drifted ? 'color: #F59E0B' : 'color: #94A3B8';
+        html += `
+          <tr class="${className}">
+            <td class="px-4 py-2">${row.setting}</td>
+            <td class="px-4 py-2 text-[#94A3B8]">${row.expected}</td>
+            <td class="px-4 py-2 text-[#94A3B8]">${row.current}</td>
+            <td class="px-4 py-2 text-xs mono" style="${dateColor}">${dateStr}</td>
+          </tr>
+        `;
+      });
+      document.getElementById('driftTable').innerHTML = html;
+    }
+
+    function renderPosture() {
+      const label = getPostureLabel();
+      const color = getPostureColor();
+      document.getElementById('posture').textContent = label;
+      document.getElementById('posture').style.color = color;
+      document.getElementById('riskScore').textContent = riskScore;
+    }
+
+    function scrollToService(serviceName) {
+      const element = document.getElementById(`service-${serviceName}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function handleInvestigate(alertId) {
+      selectedAlert = SCENARIOS.find(s => s.id === alertId);
+      if (!selectedAlert) return;
+
+      document.getElementById('investigationPanel').classList.remove('hidden');
+      document.getElementById('investigationTitle').textContent = selectedAlert.title;
+      const color = getSeverityColor(selectedAlert.severity);
+      document.getElementById('investigationDot').style.backgroundColor = color;
+
+      // Simulate investigation response
+      document.getElementById('investigationContent').innerHTML = `
+        <div>
+          <p class="text-xs text-[#94A3B8] uppercase tracking-wider mb-2">What Happened</p>
+          <p class="text-sm leading-relaxed">An attacker gained access to ${selectedAlert.actor}'s account and disabled MFA protection. The account was then used to create email forwarding rules to exfiltrate sensitive communications.</p>
+        </div>
+        <div>
+          <p class="text-xs text-[#94A3B8] uppercase tracking-wider mb-2">Why It Matters</p>
+          <p class="text-sm leading-relaxed">This breach exposes all emails sent to or from this account. The attacker has full access to shared resources, can impersonate the user, and can pivot to other accounts with similar permissions.</p>
+        </div>
+        <div>
+          <p class="text-xs text-[#94A3B8] uppercase tracking-wider mb-3">Timeline</p>
+          <div class="space-y-2">
+            <div class="flex gap-3 text-sm"><span class="text-[#1A6BFF] mono flex-shrink-0">T+0:00</span><span class="text-[#94A3B8]">User account access detected</span></div>
+            <div class="flex gap-3 text-sm"><span class="text-[#1A6BFF] mono flex-shrink-0">T+4:23</span><span class="text-[#94A3B8]">MFA disabled via security settings</span></div>
+            <div class="flex gap-3 text-sm"><span class="text-[#1A6BFF] mono flex-shrink-0">T+6:01</span><span class="text-[#94A3B8]">Email forwarding rule created</span></div>
+            <div class="flex gap-3 text-sm"><span class="text-[#1A6BFF] mono flex-shrink-0">T+8:14</span><span class="text-[#94A3B8]">Mass data exfiltration detected</span></div>
+          </div>
+        </div>
+        <div>
+          <p class="text-xs text-[#94A3B8] uppercase tracking-wider mb-3">Fix It</p>
+          <ol class="space-y-2 text-sm list-decimal list-inside">
+            <li class="text-[#E2E8F0]">Reset user password immediately and force re-authentication</li>
+            <li class="text-[#E2E8F0]">Re-enable MFA and enforce passwordless sign-in</li>
+            <li class="text-[#E2E8F0]">Delete the forwarding rule and audit all rules on the mailbox</li>
+            <li class="text-[#E2E8F0]">Review mailbox audit logs for unauthorized access</li>
+          </ol>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs text-[#94A3B8] uppercase tracking-wider">Remediation</p>
+            <button onclick="copyScript()" class="flex items-center gap-1 text-xs text-[#1A6BFF] hover:text-[#3B82F6]">⎘ Copy</button>
+          </div>
+          <pre class="bg-[#1C2B3A] p-3 rounded text-xs overflow-x-auto mono text-[#94A3B8]"># PowerShell: Remediate Account Takeover
+Connect-ExchangeOnline
+
+# Reset user password
+$userId = "${selectedAlert.actor}"
+$newPassword = ConvertTo-SecureString "TempPassword123!" -AsPlainText -Force
+Update-AzADUser -ObjectId $userId -Password $newPassword
+
+# Remove forwarding rules
+Get-InboxRule -Mailbox $userId | Where-Object {$_.ForwardTo -ne $null} | Remove-InboxRule
+
+# Force sign-out
+Revoke-AzAccessToken -ObjectId $userId
+
+# Enable MFA
+Update-MgUser -UserId $userId -StrongAuthenticationRequirements $true</pre>
+        </div>
+      `;
+      document.getElementById('investigationRisk').textContent = '87';
+    }
+
+    function copyScript() {
+      const text = `# PowerShell: Remediate Account Takeover\nConnect-ExchangeOnline\n\n# Reset user password\n$userId = "${selectedAlert.actor}"\n$newPassword = ConvertTo-SecureString "TempPassword123!" -AsPlainText -Force\nUpdate-AzADUser -ObjectId $userId -Password $newPassword\n\n# Remove forwarding rules\nGet-InboxRule -Mailbox $userId | Where-Object {$_.ForwardTo -ne $null} | Remove-InboxRule\n\n# Force sign-out\nRevoke-AzAccessToken -ObjectId $userId\n\n# Enable MFA\nUpdate-MgUser -UserId $userId -StrongAuthenticationRequirements $true`;
+      navigator.clipboard.writeText(text);
+    }
+
+    function toggleDrift() {
+      driftOpen = !driftOpen;
+      const content = document.getElementById('driftContent');
+      const arrow = document.getElementById('driftArrow');
+      if (driftOpen) {
+        content.classList.remove('hidden');
+        arrow.style.transform = 'rotate(90deg)';
+      } else {
+        content.classList.add('hidden');
+        arrow.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+
+    document.getElementById('driftToggle').addEventListener('click', toggleDrift);
+    document.getElementById('closePanel').addEventListener('click', () => {
+      document.getElementById('investigationPanel').classList.add('hidden');
+    });
+
+    renderRing();
+    renderAlerts();
+    renderDrift();
+    renderPosture();
+  </script>
+</body>
+</html>

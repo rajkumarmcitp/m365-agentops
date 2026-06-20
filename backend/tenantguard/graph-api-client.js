@@ -3,10 +3,6 @@
  * Fetches security events, audit logs, and risk detections
  */
 
-import { Client } from '@microsoft/microsoft-graph-client'
-import { ClientSecretCredential } from '@azure/identity'
-import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials'
-
 const GRAPH_ENDPOINT = 'https://graph.microsoft.com/v1.0'
 const AUDIT_LOG_RETENTION_DAYS = parseInt(process.env.GRAPH_AUDIT_LOG_DAYS || '7')
 const REQUEST_TIMEOUT = 30000 // 30 seconds
@@ -19,6 +15,10 @@ let graphClient = null
  */
 export async function initGraphClient() {
   try {
+    const { Client } = await import('@microsoft/microsoft-graph-client/index.js')
+    const { ClientSecretCredential } = await import('@azure/identity/index.js')
+    const { TokenCredentialAuthenticationProvider } = await import('@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js')
+
     const credential = new ClientSecretCredential(
       process.env.AZURE_TENANT_ID,
       process.env.AZURE_CLIENT_ID,

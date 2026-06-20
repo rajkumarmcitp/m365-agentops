@@ -14,10 +14,10 @@
 
 # Configuration
 $TenantUrl = "https://nasstech.sharepoint.com"
-$SiteUrl = "/sites/M365-AgentOps"
+$SiteUrl = "/sites/M365-AgentOps-Prod"
 $FullSiteUrl = "$TenantUrl$SiteUrl"
-$SiteId = "b60085d7-b9c8-41a3-8789-bab376d0c84f"
-$SiteName = "M365-AgentOps"
+$SiteId = "fc7d9f38-d3f9-45c9-9b74-50883fe25ece"
+$SiteName = "M365-AgentOps-Prod"
 
 Write-Host "Target Site: $FullSiteUrl" -ForegroundColor $InfoColor
 Write-Host "Site ID: $SiteId" -ForegroundColor $InfoColor

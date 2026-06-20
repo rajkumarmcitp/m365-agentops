@@ -29,7 +29,8 @@ class DatabaseWrapper {
     // Handle INSERT INTO alerts
     if (sql.includes('INSERT INTO alerts')) {
       this.store.alerts = this.store.alerts || {}
-      const [id, type, severity, score, headline, description, riskAssessment, recommendations, actor, timestamp, rawEvent, priority] = params
+      // Match order from INSERT statement: id, type, severity, score, priority, headline, description, risk_assessment, recommendations, actor, action_timestamp, raw_event, dismissed, created_at
+      const [id, type, severity, score, priority, headline, description, riskAssessment, recommendations, actor, timestamp, rawEvent, dismissed, createdAt] = params
       this.store.alerts[id] = {
         id,
         type,
@@ -43,8 +44,8 @@ class DatabaseWrapper {
         actor,
         action_timestamp: timestamp,
         raw_event: rawEvent,
-        dismissed: 0,
-        created_at: new Date().toISOString()
+        dismissed: dismissed || 0,
+        created_at: createdAt || new Date().toISOString()
       }
       console.log(`✓ Stored alert: ${headline}`)
       return { lastID: 1, changes: 1 }

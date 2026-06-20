@@ -3,10 +3,6 @@
  * Persists TenantGuard alerts, correlations, and investigations to SharePoint Lists
  */
 
-import { Client } from '@microsoft/microsoft-graph-client'
-import { ClientSecretCredential } from '@azure/identity'
-import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials'
-
 let graphClient = null
 const SHAREPOINT_SITE_ID = process.env.SHAREPOINT_SITE_ID || 'b60085d7-b9c8-41a3-8789-bab376d0c84f'
 const ALERTS_LIST_ID = process.env.SHAREPOINT_ALERTS_LIST_ID
@@ -18,6 +14,10 @@ const INVESTIGATIONS_LIST_ID = process.env.SHAREPOINT_INVESTIGATIONS_LIST_ID
  */
 export async function initSharePointWriter() {
   try {
+    const { Client } = await import('@microsoft/microsoft-graph-client/index.js')
+    const { ClientSecretCredential } = await import('@azure/identity/index.js')
+    const { TokenCredentialAuthenticationProvider } = await import('@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js')
+
     const credential = new ClientSecretCredential(
       process.env.AZURE_TENANT_ID,
       process.env.AZURE_CLIENT_ID,

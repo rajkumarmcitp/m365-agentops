@@ -388,46 +388,62 @@ export const TENANTGUARD_INVESTIGATIONS_COLUMNS = [
  * Uses minimal required properties for Graph API v1.0 compatibility
  */
 export function buildColumnPayload(column) {
-  const columnDef = {}
+  const payload = {
+    name: column.name,
+    description: column.description || '',
+    indexed: false,
+    hidden: false,
+    required: false
+  }
 
-  // Build the proper column definition based on type - minimal format
+  // Build the proper column definition based on type - Graph API format
   switch (column.type) {
     case 'text':
-      columnDef.text = {
-        maxLength: 255
+      payload.text = {
+        maxLength: 255,
+        allowMultipleLines: false
       }
       break
     case 'multilineText':
-      columnDef.text = {
+      payload.text = {
         allowMultipleLines: true,
-        maxLength: 10000
+        maxLength: 10000,
+        appendChangesToExistingText: false,
+        linesForEditing: 0
       }
       break
     case 'number':
-      columnDef.number = {}
+      payload.number = {
+        decimalPlaces: 0,
+        minimum: null,
+        maximum: null
+      }
       break
     case 'dateTime':
-      columnDef.dateTime = {}
+      payload.dateTime = {
+        format: 'dateTime',
+        displayAs: 'default'
+      }
       break
     case 'boolean':
-      columnDef.boolean = {}
+      payload.boolean = {}
       break
     case 'choice':
-      columnDef.choice = {
-        choices: column.choices || []
+      payload.choice = {
+        choices: (column.choices || []).map(c => ({ label: c })),
+        allowMultipleSelection: false,
+        displayAs: 'dropDownMenu'
       }
       break
     default:
       // Default to text
-      columnDef.text = {
-        maxLength: 255
+      payload.text = {
+        maxLength: 255,
+        allowMultipleLines: false
       }
   }
 
-  return {
-    name: column.name,
-    columnDefinition: columnDef
-  }
+  return payload
 }
 
 /**

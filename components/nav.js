@@ -5,7 +5,8 @@ const NAV_ITEMS = {
     { id: 'dashboard',  label: 'Dashboard',            icon: 'ti-layout-dashboard' },
     { id: 'requests',   label: 'Requests',             icon: 'ti-inbox',              badge: '7',  badgeCls: 'blue' },
     { id: 'security',   label: 'Security',             icon: 'ti-shield-exclamation', badge: '3',  badgeCls: 'red' },
-    { id: 'tenantguard',label: 'TenantGuard',          icon: 'ti-alert-triangle',     badge: 'Alert' },
+    { id: 'tenantguard',label: 'TenantGuard (Classic)',          icon: 'ti-alert-triangle',     badge: 'Alert' },
+    { id: 'tenantguard-enhanced',label: 'Tenant Guard New',icon: 'ti-alert-triangle',badge: 'Real Data' },
     { id: 'user-investigation',label: 'User Investigation',icon: 'ti-shield-check' },
     { id: 'zerotrust',  label: 'Zero Trust',           icon: 'ti-lock-check',         badge: '2',  badgeCls: 'amber' },
     { id: 'privaccts',  label: 'Privileged Accounts',  icon: 'ti-crown',              badge: '2',  badgeCls: 'red' },
@@ -31,6 +32,8 @@ const NAV_ITEMS = {
     { id: 'settings', label: 'Admin Settings',   icon: 'ti-adjustments-horizontal' },
   ],
   super: [
+    { id: 'tenantguard',label: 'TenantGuard (Classic)',          icon: 'ti-alert-triangle',     badge: 'Alert' },
+    { id: 'tenantguard-enhanced',label: 'Tenant Guard New',icon: 'ti-alert-triangle',badge: 'Real Data' },
     { id: 'graphapi', label: 'Graph API',       icon: 'ti-api',      badge: 'Live', badgeCls: 'green' },
     { id: 'sso',      label: 'SSO / Entra ID',  icon: 'ti-key' },
   ],
