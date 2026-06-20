@@ -7822,6 +7822,13 @@ app.post('/api/tenantguard/sync', async (req, res) => {
         try {
           const alertId = `audit-${log.id}`
 
+          // Skip group membership events (not required in current scope)
+          if (log.activityDisplayName?.includes('Add member to group') ||
+              log.activityDisplayName?.includes('Remove member from group')) {
+            console.log(`⊘ Skipping group membership event: ${log.activityDisplayName}`)
+            continue
+          }
+
           // Check if alert already exists
           const existing = db.prepare('SELECT id FROM alerts WHERE id = ?').get(alertId)
           if (existing) {
