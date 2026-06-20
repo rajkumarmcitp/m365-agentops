@@ -7060,9 +7060,9 @@ app.post('/api/tenantguard/validate-sharepoint', async (req, res) => {
       if (site.startsWith('http')) {
         try {
           const url = new URL(site)
-          const pathname = url.pathname.toLowerCase()
-          // Extract /sites/sitename format
-          const match = pathname.match(/\/sites\/([^/]+)/)
+          const pathname = url.pathname
+          // Extract /sites/sitename format (preserve original case)
+          const match = pathname.match(/\/sites\/([^/]+)/i)
           if (match) {
             site = `/sites/${match[1]}`
           } else {
@@ -7080,11 +7080,10 @@ app.post('/api/tenantguard/validate-sharepoint', async (req, res) => {
         }
       } else {
         // Handle path or site name formats
-        site = site.toLowerCase()
-
         // Clean up - remove duplicate slashes and spaces
         site = site.replace(/\/{2,}/g, '/').trim()
 
+        // Preserve original case - Graph API is case-sensitive for site identifiers
         // If it already has /sites/ prefix, keep it
         if (site.startsWith('/sites/')) {
           // Already in correct format
@@ -7215,9 +7214,9 @@ app.post('/api/tenantguard/initialize', async (req, res) => {
       if (site.startsWith('http')) {
         try {
           const url = new URL(site)
-          const pathname = url.pathname.toLowerCase()
-          // Extract /sites/sitename format
-          const match = pathname.match(/\/sites\/([^/]+)/)
+          const pathname = url.pathname
+          // Extract /sites/sitename format (preserve original case)
+          const match = pathname.match(/\/sites\/([^/]+)/i)
           if (match) {
             site = `/sites/${match[1]}`
           } else {
@@ -7235,11 +7234,10 @@ app.post('/api/tenantguard/initialize', async (req, res) => {
         }
       } else {
         // Handle path or site name formats
-        site = site.toLowerCase()
-
         // Clean up - remove duplicate slashes and spaces
         site = site.replace(/\/{2,}/g, '/').trim()
 
+        // Preserve original case - Graph API is case-sensitive for site identifiers
         // If it already has /sites/ prefix, keep it
         if (site.startsWith('/sites/')) {
           // Already in correct format
