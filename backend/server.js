@@ -7821,6 +7821,10 @@ async function getGraphToken() {
 // TenantGuard Role ID Mapping (Azure AD Well-Known Roles)
 // ============================================================
 const ROLE_ID_MAP = {
+  // Tenant-specific role IDs (from your organization)
+  '759a2e72-72b8-4416-8833-ff157d53a206': 'Global Administrator',
+
+  // Microsoft's well-known role IDs
   '62e90394-69f5-4237-9190-012177145e10': 'Global Administrator',
   'e8611ab8-c189-46e8-94e1-60213ab1f814': 'Privileged Role Administrator',
   '194ae4cb-b126-40b2-bd5b-6091b380977d': 'Security Administrator',
