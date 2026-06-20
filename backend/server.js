@@ -6952,21 +6952,51 @@ app.post('/api/tenantguard/validate-sharepoint', async (req, res) => {
       return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
     }
 
-    const { siteUrl } = req.body
-    const site = siteUrl?.trim() || 'root'
+    let { siteUrl } = req.body
+    let site = siteUrl?.trim() || 'root'
+
+    // Handle different URL formats
+    if (site !== 'root') {
+      // If it's a full URL, extract the path
+      if (site.startsWith('http')) {
+        try {
+          const url = new URL(site)
+          const pathname = url.pathname
+          // Extract /sites/sitename format
+          const match = pathname.match(/\/sites\/([^/]+)/)
+          if (match) {
+            site = `/sites/${match[1]}`
+          } else {
+            // Try just the site identifier
+            site = pathname.split('/').filter(p => p).pop() || 'root'
+          }
+        } catch (e) {
+          // If URL parsing fails, try using it as-is
+        }
+      } else if (!site.startsWith('/sites/')) {
+        // If it's just a site name, prepend /sites/
+        site = `/sites/${site}`
+      }
+    }
+
+    console.log(`🔍 Validating SharePoint site: ${site}`)
 
     try {
       const siteData = await graphClient.api(`/sites/${site}`).get()
+      console.log(`✅ SharePoint site validated: ${siteData.displayName}`)
       res.json({
         success: true,
         siteId: siteData.id,
         siteName: siteData.displayName || site,
+        siteUrl: site,
         message: `Connected to SharePoint site: ${siteData.displayName || site}`
       })
     } catch (error) {
+      console.error(`❌ SharePoint validation failed for ${site}:`, error.message)
       res.status(400).json({
         success: false,
-        error: `Could not access SharePoint site (${site}): ${error.message}`
+        error: `Could not access SharePoint site (${site}): ${error.message}`,
+        hint: 'Please check the site URL format. Examples: "root", "/sites/M365-AgentOps", or "https://tenant.sharepoint.com/sites/M365-AgentOps"'
       })
     }
   } catch (error) {
@@ -6982,8 +7012,32 @@ app.post('/api/tenantguard/initialize', async (req, res) => {
       return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
     }
 
-    const { siteUrl } = req.body
-    const site = siteUrl?.trim() || 'root'
+    let { siteUrl } = req.body
+    let site = siteUrl?.trim() || 'root'
+
+    // Handle different URL formats
+    if (site !== 'root') {
+      // If it's a full URL, extract the path
+      if (site.startsWith('http')) {
+        try {
+          const url = new URL(site)
+          const pathname = url.pathname
+          // Extract /sites/sitename format
+          const match = pathname.match(/\/sites\/([^/]+)/)
+          if (match) {
+            site = `/sites/${match[1]}`
+          } else {
+            // Try just the site identifier
+            site = pathname.split('/').filter(p => p).pop() || 'root'
+          }
+        } catch (e) {
+          // If URL parsing fails, try using it as-is
+        }
+      } else if (!site.startsWith('/sites/')) {
+        // If it's just a site name, prepend /sites/
+        site = `/sites/${site}`
+      }
+    }
 
     // Get the site
     let siteId
@@ -6991,9 +7045,11 @@ app.post('/api/tenantguard/initialize', async (req, res) => {
       const siteData = await graphClient.api(`/sites/${site}`).get()
       siteId = siteData.id
     } catch (error) {
+      console.error(`❌ Could not access SharePoint site (${site}):`, error.message)
       return res.status(400).json({
         success: false,
-        error: `Could not access SharePoint site (${site}): ${error.message}`
+        error: `Could not access SharePoint site (${site}): ${error.message}`,
+        hint: 'Please check the site URL format. Examples: "root", "/sites/M365-AgentOps", or "https://tenant.sharepoint.com/sites/M365-AgentOps"'
       })
     }
 
