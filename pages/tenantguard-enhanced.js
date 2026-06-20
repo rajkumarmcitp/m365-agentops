@@ -244,21 +244,20 @@ function renderAlerts() {
     return
   }
 
-  const alertsByService = {}
-  SERVICES.forEach(s => alertsByService[s] = [])
+  const alertsByCategory = {}
   allAlerts.forEach(alert => {
-    const service = alert.service || alert.category || 'Entra'
-    if (!alertsByService[service]) alertsByService[service] = []
-    alertsByService[service].push(alert)
+    const category = alert.category || 'Other'
+    if (!alertsByCategory[category]) alertsByCategory[category] = []
+    alertsByCategory[category].push(alert)
   })
 
   let html = ''
-  SERVICES.forEach(service => {
-    const alerts = alertsByService[service] || []
+  Object.keys(alertsByCategory).sort().forEach(category => {
+    const alerts = alertsByCategory[category] || []
     if (alerts.length === 0) return
 
     html += `<div style="margin-bottom:16px">`
-    html += `<div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">${service} <span style="font-weight:400">(${alerts.length})</span></div>`
+    html += `<div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">${category} <span style="font-weight:400">(${alerts.length})</span></div>`
 
     alerts.forEach(alert => {
       const severityClass = alert.severity === 'CRITICAL' ? 'danger' : 'warning'

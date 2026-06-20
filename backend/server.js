@@ -8035,6 +8035,11 @@ app.post('/api/tenantguard/sync', async (req, res) => {
 
     // P1: Detect Privileged Role Changes (11 critical roles)
     console.log('🔍 Checking for privileged role changes...')
+
+    // Debug: Log all unique activities in audit logs
+    const uniqueActivities = [...new Set(auditLogs.map(l => l.activityDisplayName))]
+    console.log(`📋 Unique activities in audit logs: ${uniqueActivities.slice(0, 15).join(', ')}${uniqueActivities.length > 15 ? '...' : ''}`)
+
     const PRIVILEGED_ROLES = [
       'Global Administrator',
       'Privileged Role Administrator',
