@@ -246,6 +246,14 @@ function renderAlerts() {
 
   const alertsByCategory = {}
   allAlerts.forEach(alert => {
+    // Skip group membership events
+    if (alert.headline?.includes('Add member to group') ||
+        alert.headline?.includes('Remove member to group') ||
+        alert.headline?.includes('Add owner to group') ||
+        alert.headline?.includes('Remove owner to group')) {
+      return
+    }
+
     const category = alert.category || 'Other'
     if (!alertsByCategory[category]) alertsByCategory[category] = []
     alertsByCategory[category].push(alert)
