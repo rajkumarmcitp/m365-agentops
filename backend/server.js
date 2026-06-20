@@ -7854,9 +7854,9 @@ const ROLE_ID_MAP = {
 // ============================================================
 // Only these activities will create AUDIT type alerts
 const APPROVED_AUDIT_ACTIVITIES = [
-  // Phase 1a: Role Management
-  'Add member to role',
-  'Remove member from role',
+  // Phase 1a: Role Management - HANDLED BY SPECIFIC DETECTION (ADMIN_CHANGE)
+  // 'Add member to role',  // Skip - use ADMIN_CHANGE detection instead
+  // 'Remove member from role',  // Skip - use ADMIN_CHANGE detection instead
 
   // Phase 1b: Security Policies
   'Delete authentication method',
