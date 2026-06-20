@@ -7103,9 +7103,17 @@ app.post('/api/tenantguard/validate-sharepoint', async (req, res) => {
     console.log(`🔍 Normalized SharePoint site: ${site}`)
 
     try {
-      // Build correct API path - don't double-prefix /sites/
-      const apiPath = site.startsWith('/sites/') ? site : `/sites/${site}`
-      console.log(`📡 API call: /sites${apiPath}`)
+      // Build correct API path
+      let apiPath
+      if (site === 'root') {
+        apiPath = '/sites/root'
+      } else if (site.startsWith('/sites/')) {
+        // Non-root sites need hostname prefix for Graph API
+        apiPath = `/sites/nasstech.sharepoint.com:${site}`
+      } else {
+        apiPath = `/sites/nasstech.sharepoint.com:/sites/${site}`
+      }
+      console.log(`📡 API call: ${apiPath}`)
       const siteData = await graphClient.api(apiPath).get()
       console.log(`✅ SharePoint site validated: ${siteData.displayName}`)
       res.json({
@@ -7259,8 +7267,16 @@ app.post('/api/tenantguard/initialize', async (req, res) => {
     // Get the site
     let siteId
     try {
-      // Build correct API path - don't double-prefix /sites/
-      const apiPath = site.startsWith('/sites/') ? site : `/sites/${site}`
+      // Build correct API path
+      let apiPath
+      if (site === 'root') {
+        apiPath = '/sites/root'
+      } else if (site.startsWith('/sites/')) {
+        // Non-root sites need hostname prefix for Graph API
+        apiPath = `/sites/nasstech.sharepoint.com:${site}`
+      } else {
+        apiPath = `/sites/nasstech.sharepoint.com:/sites/${site}`
+      }
       console.log(`📡 API call: ${apiPath}`)
       const siteData = await graphClient.api(apiPath).get()
       siteId = siteData.id
