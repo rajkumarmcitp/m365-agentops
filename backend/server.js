@@ -7030,6 +7030,73 @@ app.post('/api/tenantguard/validate-sharepoint', async (req, res) => {
   }
 })
 
+/**
+ * GET /api/tenantguard/sharepoint-sites
+ * List available SharePoint sites (for debugging)
+ */
+app.get('/api/tenantguard/sharepoint-sites', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    console.log('📋 Fetching available SharePoint sites...')
+
+    try {
+      // Get all sites in the tenant
+      const sitesResult = await graphClient.api('/sites?search=*').get()
+      const sites = sitesResult.value || []
+
+      const siteList = sites.map(site => ({
+        id: site.id,
+        name: site.name,
+        displayName: site.displayName,
+        webUrl: site.webUrl,
+        graphApiFormat: `/sites/${site.name}`
+      }))
+
+      console.log(`✅ Found ${siteList.length} site(s)`)
+
+      res.json({
+        success: true,
+        count: siteList.length,
+        sites: siteList,
+        hint: 'Use the "graphApiFormat" value in TenantGuard Admin Settings'
+      })
+    } catch (error) {
+      console.error('Error fetching sites:', error.message)
+
+      // Fallback: Try to get just the root site
+      try {
+        const rootSite = await graphClient.api('/sites/root').get()
+        res.json({
+          success: true,
+          sites: [
+            {
+              id: rootSite.id,
+              name: 'root',
+              displayName: rootSite.displayName || 'Root Site',
+              webUrl: rootSite.webUrl,
+              graphApiFormat: 'root'
+            }
+          ],
+          message: 'Could not search all sites, showing root site only',
+          hint: 'Run PowerShell script: get-sharepoint-sites.ps1 to see all sites'
+        })
+      } catch (fallbackError) {
+        res.status(500).json({
+          success: false,
+          error: `Could not retrieve sites: ${error.message}`,
+          hint: 'Run PowerShell script: get-sharepoint-sites.ps1 to list available sites'
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Error in sharepoint-sites endpoint:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 // Initialize TenantGuard lists and fields
 app.post('/api/tenantguard/initialize', async (req, res) => {
   try {
