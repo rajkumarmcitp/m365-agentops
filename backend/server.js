@@ -6955,31 +6955,56 @@ app.post('/api/tenantguard/validate-sharepoint', async (req, res) => {
     let { siteUrl } = req.body
     let site = siteUrl?.trim() || 'root'
 
-    // Handle different URL formats
+    // Normalize and parse URL
     if (site !== 'root') {
+      console.log(`📍 Original input: ${site}`)
+
       // If it's a full URL, extract the path
       if (site.startsWith('http')) {
         try {
           const url = new URL(site)
-          const pathname = url.pathname
+          const pathname = url.pathname.toLowerCase()
           // Extract /sites/sitename format
           const match = pathname.match(/\/sites\/([^/]+)/)
           if (match) {
             site = `/sites/${match[1]}`
           } else {
-            // Try just the site identifier
-            site = pathname.split('/').filter(p => p).pop() || 'root'
+            // Fallback: get last path segment
+            const segments = pathname.split('/').filter(p => p)
+            site = segments.length > 0 ? `/sites/${segments[segments.length - 1]}` : 'root'
           }
         } catch (e) {
-          // If URL parsing fails, try using it as-is
+          console.error(`URL parsing error: ${e.message}`)
+          return res.status(400).json({
+            success: false,
+            error: `Invalid URL format: ${e.message}`,
+            hint: 'Please use one of these formats: "root", "M365-AgentOps-Prod", "/sites/M365-AgentOps-Prod", or "https://tenant.sharepoint.com/sites/M365-AgentOps-Prod"'
+          })
         }
-      } else if (!site.startsWith('/sites/')) {
-        // If it's just a site name, prepend /sites/
-        site = `/sites/${site}`
+      } else {
+        // Handle path or site name formats
+        site = site.toLowerCase()
+
+        // Clean up - remove duplicate slashes and spaces
+        site = site.replace(/\/{2,}/g, '/').trim()
+
+        // If it already has /sites/ prefix, keep it
+        if (site.startsWith('/sites/')) {
+          // Already in correct format
+        } else if (site.startsWith('sites/')) {
+          // Add leading slash
+          site = `/${site}`
+        } else {
+          // Just a site name, add /sites/ prefix
+          site = `/sites/${site}`
+        }
       }
     }
 
-    console.log(`🔍 Validating SharePoint site: ${site}`)
+    // Final validation - ensure no double slashes
+    site = site.replace(/\/{2,}/g, '/')
+
+    console.log(`🔍 Normalized SharePoint site: ${site}`)
 
     try {
       const siteData = await graphClient.api(`/sites/${site}`).get()
@@ -7015,29 +7040,56 @@ app.post('/api/tenantguard/initialize', async (req, res) => {
     let { siteUrl } = req.body
     let site = siteUrl?.trim() || 'root'
 
-    // Handle different URL formats
+    // Normalize and parse URL
     if (site !== 'root') {
+      console.log(`📍 Original input: ${site}`)
+
       // If it's a full URL, extract the path
       if (site.startsWith('http')) {
         try {
           const url = new URL(site)
-          const pathname = url.pathname
+          const pathname = url.pathname.toLowerCase()
           // Extract /sites/sitename format
           const match = pathname.match(/\/sites\/([^/]+)/)
           if (match) {
             site = `/sites/${match[1]}`
           } else {
-            // Try just the site identifier
-            site = pathname.split('/').filter(p => p).pop() || 'root'
+            // Fallback: get last path segment
+            const segments = pathname.split('/').filter(p => p)
+            site = segments.length > 0 ? `/sites/${segments[segments.length - 1]}` : 'root'
           }
         } catch (e) {
-          // If URL parsing fails, try using it as-is
+          console.error(`URL parsing error: ${e.message}`)
+          return res.status(400).json({
+            success: false,
+            error: `Invalid URL format: ${e.message}`,
+            hint: 'Please use one of these formats: "root", "M365-AgentOps-Prod", "/sites/M365-AgentOps-Prod", or "https://tenant.sharepoint.com/sites/M365-AgentOps-Prod"'
+          })
         }
-      } else if (!site.startsWith('/sites/')) {
-        // If it's just a site name, prepend /sites/
-        site = `/sites/${site}`
+      } else {
+        // Handle path or site name formats
+        site = site.toLowerCase()
+
+        // Clean up - remove duplicate slashes and spaces
+        site = site.replace(/\/{2,}/g, '/').trim()
+
+        // If it already has /sites/ prefix, keep it
+        if (site.startsWith('/sites/')) {
+          // Already in correct format
+        } else if (site.startsWith('sites/')) {
+          // Add leading slash
+          site = `/${site}`
+        } else {
+          // Just a site name, add /sites/ prefix
+          site = `/sites/${site}`
+        }
       }
     }
+
+    // Final validation - ensure no double slashes
+    site = site.replace(/\/{2,}/g, '/')
+
+    console.log(`🔍 Normalized SharePoint site: ${site}`)
 
     // Get the site
     let siteId
@@ -7049,7 +7101,7 @@ app.post('/api/tenantguard/initialize', async (req, res) => {
       return res.status(400).json({
         success: false,
         error: `Could not access SharePoint site (${site}): ${error.message}`,
-        hint: 'Please check the site URL format. Examples: "root", "/sites/M365-AgentOps", or "https://tenant.sharepoint.com/sites/M365-AgentOps"'
+        hint: 'Please use one of these formats: "root", "M365-AgentOps-Prod", "/sites/M365-AgentOps-Prod", or "https://tenant.sharepoint.com/sites/M365-AgentOps-Prod"'
       })
     }
 
