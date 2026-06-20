@@ -7695,34 +7695,34 @@ app.get('/api/tenantguard/test-endpoint', (req, res) => {
 
 /**
  * POST /api/tenantguard/cleanup/group-alerts
- * Remove all group-related alerts from database
+ * Remove all non-approved AUDIT alerts from database
  */
 app.post('/api/tenantguard/cleanup/group-alerts', (req, res) => {
   try {
     const db = getDatabase()
     const store = db.store
-    const alerts = Object.values(store.alerts || {})
 
     let deletedCount = 0
     for (const alertId in store.alerts) {
       const alert = store.alerts[alertId]
-      if (alert.headline?.includes('group') ||
-          alert.description?.includes('group')) {
+
+      // Only delete AUDIT type alerts that are NOT approved
+      if (alert.type === 'AUDIT' && !isApprovedAuditActivity(alert.headline)) {
         delete store.alerts[alertId]
         deletedCount++
       }
     }
 
-    console.log(`🗑️ Cleaned up ${deletedCount} group-related alerts`)
+    console.log(`🗑️ Cleaned up ${deletedCount} non-approved AUDIT alerts`)
 
     res.json({
       success: true,
-      message: `Removed ${deletedCount} group-related alerts`,
+      message: `Removed ${deletedCount} non-approved AUDIT alerts`,
       deletedCount: deletedCount,
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('Error cleaning up group alerts:', error.message)
+    console.error('Error cleaning up alerts:', error.message)
     res.status(500).json({ success: false, error: error.message })
   }
 })
