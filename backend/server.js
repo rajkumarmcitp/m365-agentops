@@ -15,6 +15,7 @@ import {
 import { initDatabase, getDatabase } from './tenantguard/database.js'
 import { startAuditCollectionJob } from './tenantguard/jobs.js'
 import { startCorrelationJobs } from './tenantguard/correlation-jobs.js'
+import { storeAlertToSharePoint, storeCorrelationToSharePoint } from './tenantguard/sharepoint-sync.js'
 import { InvestigationService } from './tenantguard/investigation-service.js'
 import { createInvestigationTables } from './tenantguard/investigation-schema.js'
 import { SettingsService } from './tenantguard/settings-service.js'
@@ -10814,22 +10815,70 @@ app.post('/api/tenantguard/store-to-sharepoint', async (req, res) => {
     const db = getDatabase()
 
     // Get alerts and correlations from database
-    const alerts = db.prepare('SELECT * FROM alerts LIMIT 100').all()
-    const correlations = db.prepare('SELECT * FROM alert_correlations LIMIT 50').all()
+    const alerts = (db.prepare('SELECT * FROM alerts WHERE dismissed = 0 ORDER BY created_at DESC LIMIT 100').all() || [])
+    const correlations = (db.prepare('SELECT * FROM alert_correlations ORDER BY created_at DESC LIMIT 50').all() || [])
 
-    console.log(`📦 Storing ${alerts.length} alerts and ${correlations.length} correlations...`)
+    console.log(`📦 Storing ${alerts.length} alerts and ${correlations.length} correlations to SharePoint...`)
 
-    // If SharePoint is available, use it; otherwise just return success
-    // (production will have SharePoint configured)
-    const result = {
-      success: true,
-      alertsProcessed: alerts.length,
-      correlationsProcessed: correlations.length,
-      timestamp: new Date().toISOString(),
-      message: 'TenantGuard data prepared for SharePoint storage'
+    let alertsStored = 0
+    let correlationsStored = 0
+    const alertsListId = process.env.SHAREPOINT_ALERTS_LIST_ID
+    const correlationsListId = process.env.SHAREPOINT_CORRELATIONS_LIST_ID
+
+    // Only attempt SharePoint storage if list IDs are configured
+    if (alertsListId && correlationsListId) {
+      try {
+        const token = await getGraphToken()
+        if (token) {
+          const credential = new ClientSecretCredential(
+            process.env.AZURE_TENANT_ID,
+            process.env.AZURE_CLIENT_ID,
+            process.env.AZURE_CLIENT_SECRET
+          )
+          const graphClient = Client.initWithMiddleware({ authProvider: { getAccessToken: async () => token } })
+
+          // Store alerts to SharePoint
+          for (const alert of alerts) {
+            try {
+              await storeAlertToSharePoint(graphClient, alert, alertsListId)
+              alertsStored++
+            } catch (alertError) {
+              console.warn(`⚠️ Failed to store alert ${alert.id}:`, alertError.message)
+            }
+          }
+
+          // Store correlations to SharePoint
+          for (const correlation of correlations) {
+            try {
+              await storeCorrelationToSharePoint(graphClient, correlation, correlationsListId)
+              correlationsStored++
+            } catch (corrError) {
+              console.warn(`⚠️ Failed to store correlation:`, corrError.message)
+            }
+          }
+
+          console.log(`✅ SharePoint storage complete: ${alertsStored} alerts, ${correlationsStored} correlations`)
+        } else {
+          console.warn('⚠️ Could not get Graph token for SharePoint storage')
+        }
+      } catch (spError) {
+        console.warn('⚠️ SharePoint storage attempted but encountered issues:', spError.message)
+      }
+    } else {
+      console.warn('⚠️ SharePoint list IDs not configured in environment')
     }
 
-    console.log(`✅ SharePoint store complete:`, result)
+    const result = {
+      success: true,
+      alertsStored: alertsStored,
+      alertsTotal: alerts.length,
+      correlationsStored: correlationsStored,
+      correlationsTotal: correlations.length,
+      timestamp: new Date().toISOString(),
+      message: `Stored ${alertsStored} alerts and ${correlationsStored} correlations to SharePoint`
+    }
+
+    console.log(`✅ Store operation summary:`, result)
 
     res.json(result)
   } catch (error) {
