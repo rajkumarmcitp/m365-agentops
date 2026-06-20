@@ -25,6 +25,10 @@ class DatabaseWrapper {
     this.store = store
   }
 
+  getStore() {
+    return this.store
+  }
+
   run(sql, params = []) {
     // Handle INSERT INTO alerts
     if (sql.includes('INSERT INTO alerts')) {

@@ -7694,6 +7694,48 @@ app.get('/api/tenantguard/test-endpoint', (req, res) => {
 })
 
 /**
+ * POST /api/tenantguard/cleanup/group-alerts
+ * Remove all group-related alerts from database
+ */
+app.post('/api/tenantguard/cleanup/group-alerts', (req, res) => {
+  try {
+    const db = getDatabase()
+    const alerts = db.all('SELECT * FROM alerts')
+
+    const groupAlertIds = alerts
+      .filter(a =>
+        a.description?.includes('Add member to group') ||
+        a.description?.includes('Remove member from group') ||
+        a.headline?.includes('Add member to group') ||
+        a.headline?.includes('Remove member from group')
+      )
+      .map(a => a.id)
+
+    // Delete group alerts from in-memory store
+    const store = db.store
+    let deletedCount = 0
+    for (const alertId of groupAlertIds) {
+      if (store.alerts[alertId]) {
+        delete store.alerts[alertId]
+        deletedCount++
+      }
+    }
+
+    console.log(`🗑️ Cleaned up ${deletedCount} group-related alerts`)
+
+    res.json({
+      success: true,
+      message: `Removed ${deletedCount} group-related alerts`,
+      deletedAlerts: groupAlertIds,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Error cleaning up group alerts:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
  * GET /api/tenantguard/fetch-real-alerts
  * Fetch real alerts directly from Graph API
  */
