@@ -92,12 +92,12 @@ function renderDashboardSkeleton(el) {
           </div>
           <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-users" style="font-size:20px;color:#4caf50"></i></div>
-            <div class="kpi-value success" id="dash-kpi-users" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-value success" id="dash-kpi-users" style="font-size:28px;font-weight:700;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">Total Users</div>
           </div>
           <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-shield-check" style="font-size:20px;color:#ff9800"></i></div>
-            <div class="kpi-value warning" id="dash-kpi-score" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-value warning" id="dash-kpi-score" style="font-size:28px;font-weight:700;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">Security Score</div>
           </div>
         </div>
