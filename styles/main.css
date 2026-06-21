@@ -266,10 +266,10 @@ ul { list-style: none; }
 }
 
 .kpi-value {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.1;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   color: var(--color-text-primary);
 }
 .kpi-value.success { color: var(--clr-success-text); }
