@@ -83,21 +83,21 @@ function renderDashboardSkeleton(el) {
 
       <!-- Section 1: Foundational (3) -->
       <div style="margin-bottom:20px">
-        <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.5px">Foundational</div>
+        <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:1px">Foundational</div>
         <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-device-laptop" style="font-size:20px;color:#0066cc"></i></div>
-            <div class="kpi-value info" id="dash-kpi-devices" style="font-size:28px;font-weight:700;margin-bottom:4px">—</div>
+            <div class="kpi-value info" id="dash-kpi-devices" style="font-size:32px;font-weight:700;margin-bottom:8px;color:#0066cc">—</div>
             <div class="kpi-label" style="font-size:11px">Managed Devices</div>
           </div>
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-users" style="font-size:20px;color:#4caf50"></i></div>
-            <div class="kpi-value success" id="dash-kpi-users" style="font-size:28px;font-weight:700;margin-bottom:4px">—</div>
+            <div class="kpi-value success" id="dash-kpi-users" style="font-size:32px;font-weight:700;margin-bottom:8px">—</div>
             <div class="kpi-label" style="font-size:11px">Total Users</div>
           </div>
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-shield-check" style="font-size:20px;color:#ff9800"></i></div>
-            <div class="kpi-value warning" id="dash-kpi-score" style="font-size:28px;font-weight:700;margin-bottom:4px">—</div>
+            <div class="kpi-value warning" id="dash-kpi-score" style="font-size:32px;font-weight:700;margin-bottom:8px">—</div>
             <div class="kpi-label" style="font-size:11px">Security Score</div>
           </div>
         </div>
@@ -105,27 +105,27 @@ function renderDashboardSkeleton(el) {
 
       <!-- Section 2: Alerts & Risks (4) -->
       <div style="margin-bottom:20px">
-        <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.5px">Alerts & Risks</div>
+        <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:1px">Alerts & Risks</div>
         <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-alert-triangle" style="font-size:20px;color:#f44336"></i></div>
             <div class="kpi-value danger" id="dash-kpi-incidents" style="font-size:28px;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">Security Incidents</div>
             <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-incidents-trend">—</div>
           </div>
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-flame" style="font-size:20px;color:#ff6b6b"></i></div>
             <div class="kpi-value danger" id="dash-kpi-high-risk-users" style="font-size:28px;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">High-Risk Users</div>
             <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-high-risk-trend">—</div>
           </div>
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-alert-circle" style="font-size:20px;color:#f44336"></i></div>
             <div class="kpi-value danger" id="dash-kpi-tenantguard-p1" style="font-size:28px;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">TenantGuard P1 Alerts</div>
             <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-tenantguard-trend">Critical</div>
           </div>
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-crown" style="font-size:20px;color:#ff9800"></i></div>
             <div class="kpi-value warning" id="dash-kpi-priv-at-risk" style="font-size:28px;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">Privileged At-Risk</div>
@@ -136,27 +136,27 @@ function renderDashboardSkeleton(el) {
 
       <!-- Section 3: Compliance (4) -->
       <div style="margin-bottom:20px">
-        <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.5px">Compliance & Governance</div>
+        <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:1px">Compliance & Governance</div>
         <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-device-laptop" style="font-size:20px;color:#4caf50"></i></div>
             <div class="kpi-value success" id="dash-kpi-device-compliance" style="font-size:28px;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">Device Compliance %</div>
             <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-device-count">—</div>
           </div>
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-settings-2" style="font-size:20px;color:#0066cc"></i></div>
             <div class="kpi-value info" id="dash-kpi-cis-compliance" style="font-size:28px;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">CIS Controls %</div>
             <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-cis-items">—</div>
           </div>
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-license" style="font-size:20px;color:#4caf50"></i></div>
             <div class="kpi-value success" id="dash-kpi-license-utilization" style="font-size:28px;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">License Utilization %</div>
             <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-license-risk">—</div>
           </div>
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-key" style="font-size:20px;color:#9c27b0"></i></div>
             <div class="kpi-value" id="dash-kpi-mfa-adoption" style="font-size:28px;margin-bottom:4px;color:#4caf50">—</div>
             <div class="kpi-label" style="font-size:11px">MFA Adoption %</div>
@@ -167,27 +167,27 @@ function renderDashboardSkeleton(el) {
 
       <!-- Section 4: Threats & Governance (4) -->
       <div style="margin-bottom:20px">
-        <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.5px">Threats & Operations</div>
+        <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:1px">Threats & Operations</div>
         <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-lock-check" style="font-size:20px;color:#0066cc"></i></div>
             <div class="kpi-value info" id="dash-kpi-zero-trust-pass" style="font-size:28px;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">Zero Trust Pass Rate</div>
             <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-zt-pillars">—</div>
           </div>
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-certificate" style="font-size:20px;color:#ff9800"></i></div>
             <div class="kpi-value warning" id="dash-kpi-secrets-expiring" style="font-size:28px;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">Secrets Expiring Soon</div>
             <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-secrets-timeframe">Next 90 days</div>
           </div>
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-check-list" style="font-size:20px;color:#ff9800"></i></div>
             <div class="kpi-value warning" id="dash-kpi-pending-approvals" style="font-size:28px;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">Pending Approvals</div>
             <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-approval-oldest">—</div>
           </div>
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-message-circle" style="font-size:20px;color:#4caf50"></i></div>
             <div class="kpi-value success" id="dash-kpi-message-center" style="font-size:28px;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">Message Center Items</div>
@@ -198,9 +198,9 @@ function renderDashboardSkeleton(el) {
 
       <!-- Section 5: Operational (1) -->
       <div style="margin-bottom:0">
-        <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.5px">Service Health</div>
+        <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:1px">Service Health</div>
         <div class="dash-kpi-grid" style="display:grid;grid-template-columns:1fr;gap:12px">
-          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-heartbeat" style="font-size:20px;color:#4caf50"></i></div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:8px" id="dash-kpi-service-health">
               <div style="padding:8px;background:var(--color-background-primary);border-radius:6px">
