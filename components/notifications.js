@@ -61,6 +61,14 @@ function showNotificationToast(notification) {
   const toastContainer = document.getElementById('toast-container')
   if (!toastContainer) return
 
+  // Skip portal-related notifications if portal is disabled
+  const portalEnabled = state.settings?.portalEnabled !== false
+  const portalNotificationTypes = ['approval', 'deadline']
+  if (!portalEnabled && portalNotificationTypes.includes(notification.type)) {
+    console.log(`⏭️ Skipping ${notification.type} notification - Self-Service Portal is disabled`)
+    return
+  }
+
   const icon = getNotificationIcon(notification.type)
   const color = getNotificationColor(notification.type)
 
