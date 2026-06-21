@@ -5,6 +5,12 @@ let allAlerts = []
 let allCorrelations = []
 let selectedAlert = null
 let driftOpen = false
+let activeFilters = {
+  type: 'all',
+  severity: 'all',
+  priority: 'all',
+  category: 'all'
+}
 
 const SECURE_BASELINE = [
   { setting: "Security Defaults", expected: "Enabled", current: "Disabled", since: "2025-06-14T09:12:00Z", drifted: true },
@@ -126,6 +132,56 @@ export async function initTenantGuardEnhanced() {
           <span class="card-title"><i class="ti ti-alert-triangle"></i> Recent Alerts</span>
           <button id="syncButton" class="btn btn-sm btn-primary" style="gap:6px"><i class="ti ti-reload"></i>Sync Now</button>
         </div>
+
+        <!-- Filter Section -->
+        <div style="padding:12px;background:var(--color-bg-secondary);border-radius:6px;margin-bottom:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Type</label>
+            <select id="filterType" onchange="window.applyFilters()" style="width:100%;padding:6px;border:1px solid var(--color-border-secondary);border-radius:4px;background:var(--color-bg-primary);color:var(--color-text-primary);font-size:12px">
+              <option value="all">All Types</option>
+              <option value="ADMIN_CHANGE">Admin Changes</option>
+              <option value="APP_CHANGE">App Changes</option>
+              <option value="POLICY_CHANGE">Policy Changes</option>
+              <option value="AUDIT">Audit Events</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Severity</label>
+            <select id="filterSeverity" onchange="window.applyFilters()" style="width:100%;padding:6px;border:1px solid var(--color-border-secondary);border-radius:4px;background:var(--color-bg-primary);color:var(--color-text-primary);font-size:12px">
+              <option value="all">All Severities</option>
+              <option value="CRITICAL">Critical</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Priority</label>
+            <select id="filterPriority" onchange="window.applyFilters()" style="width:100%;padding:6px;border:1px solid var(--color-border-secondary);border-radius:4px;background:var(--color-bg-primary);color:var(--color-text-primary);font-size:12px">
+              <option value="all">All Priorities</option>
+              <option value="P1">P1 - Critical</option>
+              <option value="P2">P2 - High</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Category</label>
+            <select id="filterCategory" onchange="window.applyFilters()" style="width:100%;padding:6px;border:1px solid var(--color-border-secondary);border-radius:4px;background:var(--color-bg-primary);color:var(--color-text-primary);font-size:12px">
+              <option value="all">All Categories</option>
+              <option value="Identity Management">Identity Management</option>
+              <option value="Security Policy">Security Policy</option>
+              <option value="Directory Audit">Directory Audit</option>
+              <option value="Authentication">Authentication</option>
+              <option value="Access Control">Access Control</option>
+            </select>
+          </div>
+
+          <div style="display:flex;align-items:flex-end">
+            <button onclick="window.resetFilters()" style="width:100%;padding:6px;background:var(--color-border-secondary);border:none;border-radius:4px;color:var(--color-text-primary);font-size:12px;cursor:pointer;font-weight:600">Reset Filters</button>
+          </div>
+        </div>
+
         <div id="alertsContainer">
           <div style="padding:40px;text-align:center;color:var(--color-text-secondary)"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Loading alerts...</div>
         </div>
@@ -241,69 +297,83 @@ function renderAlerts() {
   const container = document.getElementById('alertsContainer')
 
   // Filter to P1 and P2 alerts only (enhanced view)
-  const enhancedAlerts = allAlerts.filter(a => a.priority === 'P1' || a.priority === 'P2')
+  let enhancedAlerts = allAlerts.filter(a => a.priority === 'P1' || a.priority === 'P2')
+
+  // Apply user filters
+  if (activeFilters.type !== 'all') {
+    enhancedAlerts = enhancedAlerts.filter(a => a.type === activeFilters.type)
+  }
+  if (activeFilters.severity !== 'all') {
+    enhancedAlerts = enhancedAlerts.filter(a => a.severity === activeFilters.severity)
+  }
+  if (activeFilters.priority !== 'all') {
+    enhancedAlerts = enhancedAlerts.filter(a => a.priority === activeFilters.priority)
+  }
+  if (activeFilters.category !== 'all') {
+    enhancedAlerts = enhancedAlerts.filter(a => a.category === activeFilters.category)
+  }
 
   if (enhancedAlerts.length === 0) {
     container.innerHTML = `
       <div style="padding:40px;text-align:center;color:var(--color-text-secondary)">
-        <p style="margin:0;font-size:14px"><i class="ti ti-shield-check"></i> All systems secure</p>
-        <p style="margin:8px 0 0 0;font-size:12px">No critical or high-priority alerts</p>
+        <p style="margin:0;font-size:14px"><i class="ti ti-shield-check"></i> No alerts match filters</p>
+        <p style="margin:8px 0 0 0;font-size:12px">Try adjusting your filter criteria</p>
       </div>
     `
     return
   }
 
-  const alertsByCategory = {}
-  enhancedAlerts.forEach(alert => {
-    const category = alert.category || 'Other'
-    if (!alertsByCategory[category]) alertsByCategory[category] = []
-    alertsByCategory[category].push(alert)
+  let html = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <thead>
+          <tr style="background:var(--color-bg-secondary);border-bottom:2px solid var(--color-border-secondary)">
+            <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Alert</th>
+            <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Type</th>
+            <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Severity</th>
+            <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Priority</th>
+            <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Category</th>
+            <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Actor</th>
+            <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Target</th>
+            <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Time</th>
+            <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-secondary)">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+  `
+
+  enhancedAlerts.forEach((alert, idx) => {
+    const severityClass = alert.severity === 'CRITICAL' ? 'danger' : alert.severity === 'HIGH' ? 'warning' : 'info'
+    const time = new Date(alert.timestamp || alert.action_timestamp).toLocaleString()
+    const actorShort = (alert.actor || 'System').length > 20 ? (alert.actor || 'System').substring(0, 20) + '...' : (alert.actor || 'System')
+    const targetShort = (alert.target || 'N/A').length > 20 ? (alert.target || 'N/A').substring(0, 20) + '...' : (alert.target || 'N/A')
+    const rowBg = idx % 2 === 0 ? 'transparent' : 'var(--color-bg-secondary)'
+    const priorityBadge = alert.priority === 'P1' ? '<span class="badge danger" style="font-size:10px">P1</span>' : '<span class="badge warning" style="font-size:10px">P2</span>'
+    const reviewedBadge = alert.reviewed ? ' <span class="badge success" style="font-size:9px;margin-left:2px">✓</span>' : ''
+
+    html += `
+      <tr style="background:${rowBg};border-bottom:1px solid var(--color-border-secondary);transition:background 0.2s">
+        <td style="padding:10px;color:var(--color-text-primary);font-weight:500;cursor:pointer;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${alert.headline || alert.name || 'Alert'}" onclick="window.showAlertDetails('${alert.id}')">${alert.headline || alert.name || 'Alert'}${reviewedBadge}</td>
+        <td style="padding:10px;color:var(--color-text-secondary)"><span style="background:var(--color-bg-secondary);padding:3px 6px;border-radius:3px;font-size:11px">${alert.type || 'Unknown'}</span></td>
+        <td style="padding:10px"><span class="badge ${severityClass}" style="font-size:11px">${alert.severity || 'MEDIUM'}</span></td>
+        <td style="padding:10px;font-weight:600">${priorityBadge}</td>
+        <td style="padding:10px;color:var(--color-text-secondary)">${alert.category || 'N/A'}</td>
+        <td style="padding:10px;color:var(--color-text-secondary);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${alert.actor || 'System'}">${actorShort}</td>
+        <td style="padding:10px;color:var(--color-text-secondary);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${alert.target || 'N/A'}">${targetShort}</td>
+        <td style="padding:10px;color:var(--color-text-secondary);font-size:11px">${time}</td>
+        <td style="padding:10px;text-align:center;display:flex;gap:4px;justify-content:center">
+          ${alert.reviewed ? `<button onclick="window.unmarkReviewed('${alert.id}')" title="Unmark reviewed" style="padding:4px 6px;font-size:10px;background:var(--clr-success);color:white;border:none;border-radius:3px;cursor:pointer"><i class="ti ti-x"></i></button>` : `<button onclick="window.markReviewed('${alert.id}')" title="Mark as reviewed" style="padding:4px 6px;font-size:10px;background:var(--clr-info);color:white;border:none;border-radius:3px;cursor:pointer"><i class="ti ti-check"></i></button>`}
+          <button onclick="window.dismissAlert('${alert.id}')" title="Dismiss" style="padding:4px 6px;font-size:10px;background:var(--clr-secondary);color:white;border:none;border-radius:3px;cursor:pointer"><i class="ti ti-trash"></i></button>
+        </td>
+      </tr>
+    `
   })
 
-  let html = ''
-  Object.keys(alertsByCategory).sort().forEach(category => {
-    const alerts = alertsByCategory[category] || []
-    if (alerts.length === 0) return
-
-    html += `<div style="margin-bottom:16px">`
-    html += `<div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">${category} <span style="font-weight:400">(${alerts.length})</span></div>`
-
-    alerts.forEach(alert => {
-      const severityClass = alert.severity === 'CRITICAL' ? 'danger' : 'warning'
-      const severityIcon = alert.severity === 'CRITICAL' ? 'ti-alert-circle' : 'ti-alert-triangle'
-      const typeIcon = alert.type === 'ROLE_CHANGE' ? 'ti-user-check' : alert.type === 'POLICY_CHANGE' ? 'ti-lock' : alert.type === 'AUTH_ANOMALY' ? 'ti-alert' : 'ti-alert-circle'
-      const time = new Date(alert.timestamp || alert.action_timestamp).toLocaleTimeString()
-      const priority = alert.priority || 'P3'
-      const reviewedBadge = alert.reviewed ? '<span class="badge success" style="margin-left:6px;font-size:10px"><i class="ti ti-check"></i> Reviewed</span>' : ''
-      html += `
-        <div class="alert-item" style="padding:12px;margin-bottom:8px;border-left:4px solid var(--clr-${severityClass});background:var(--color-bg-secondary);border-radius:6px;transition:all 0.2s">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
-            <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
-              <i class="ti ${typeIcon}" style="color:var(--clr-${severityClass});font-size:13px;flex-shrink:0"></i>
-              <p style="margin:0;font-weight:600;font-size:12px;color:var(--color-text-primary);cursor:pointer" onclick="window.showAlertDetails('${alert.id}')">${alert.headline || alert.name || 'Alert'}</p>
-            </div>
-            <span class="badge ${severityClass}" style="font-size:10px;flex-shrink:0">${priority}</span>
-          </div>
-
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-            <div style="flex:1;min-width:0">
-              <p style="margin:0;font-size:11px;color:var(--color-text-secondary)"><strong>${alert.actor || 'System'}</strong></p>
-              <p style="margin:2px 0 0 0;font-size:10px;color:var(--color-text-tertiary)">
-                ${alert.category || 'N/A'} • ${time}
-              </p>
-            </div>
-
-            <div style="display:flex;gap:3px;flex-shrink:0">
-              ${alert.reviewed ? `<button onclick="window.unmarkReviewed('${alert.id}')" title="Unmark reviewed" style="padding:3px 5px;font-size:10px;background:var(--clr-success);color:white;border:none;border-radius:2px;cursor:pointer"><i class="ti ti-x" style="font-size:11px"></i></button>` : `<button onclick="window.markReviewed('${alert.id}')" title="Mark as reviewed" style="padding:3px 5px;font-size:10px;background:var(--clr-info);color:white;border:none;border-radius:2px;cursor:pointer"><i class="ti ti-check" style="font-size:11px"></i></button>`}
-              <button onclick="window.dismissAlert('${alert.id}')" title="Dismiss" style="padding:3px 5px;font-size:10px;background:var(--clr-secondary);color:white;border:none;border-radius:2px;cursor:pointer"><i class="ti ti-trash" style="font-size:11px"></i></button>
-            </div>
-          </div>
-        </div>
-      `
-    })
-
-    html += `</div>`
-  })
+  html += `
+        </tbody>
+      </table>
+    </div>
+  `
 
   container.innerHTML = html
 }
@@ -540,4 +610,21 @@ function updateTimestamp() {
   if (syncElement) {
     syncElement.textContent = now.toLocaleTimeString()
   }
+}
+
+window.applyFilters = function() {
+  activeFilters.type = document.getElementById('filterType')?.value || 'all'
+  activeFilters.severity = document.getElementById('filterSeverity')?.value || 'all'
+  activeFilters.priority = document.getElementById('filterPriority')?.value || 'all'
+  activeFilters.category = document.getElementById('filterCategory')?.value || 'all'
+  renderAlerts()
+}
+
+window.resetFilters = function() {
+  activeFilters = { type: 'all', severity: 'all', priority: 'all', category: 'all' }
+  document.getElementById('filterType').value = 'all'
+  document.getElementById('filterSeverity').value = 'all'
+  document.getElementById('filterPriority').value = 'all'
+  document.getElementById('filterCategory').value = 'all'
+  renderAlerts()
 }
