@@ -1765,6 +1765,20 @@ tr:hover td { background: var(--color-background-secondary); }
   }
 }
 
+/* Security page KPI row — single horizontal line */
+.sec-top5 {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.sec-top5 .kpi-tile {
+  flex: 0 0 auto;
+  min-width: 180px;
+}
+
 /* Landscape mode optimization */
 @media (max-width: 768px) and (orientation: landscape) {
   #sidebar {

@@ -288,8 +288,8 @@ function render(el) {
 // Top-5 always-visible strip
 // ============================================================
 function topFiveKpi() {
-  const ss = realSecureScore || SECURE_SCORE
-  const pct = ss.percentOf100
+  const ss = realSecureScore || SECURE_SCORE || { current: 0, max: 100, percentOf100: 0, delta7d: 0 }
+  const pct = ss.percentOf100 || 0
   const ssColor = pct >= 80 ? 'success' : pct >= 60 ? 'warning' : 'danger'
   const incidents = Array.isArray(realIncidents) ? realIncidents : []
   const critical = incidents.filter(i => i.severity === 'critical' && i.status !== 'resolved').length
