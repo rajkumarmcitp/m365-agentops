@@ -10807,23 +10807,26 @@ app.get('/api/tenantguard/sync/status', (req, res) => {
 
 /**
  * POST /api/tenantguard/store-to-sharepoint
- * Store TenantGuard alerts and correlations to SharePoint
+ * Store TenantGuard Enhanced alerts (P1/P2 only) to SharePoint
  */
 app.post('/api/tenantguard/store-to-sharepoint', async (req, res) => {
   try {
-    console.log('📤 Storing TenantGuard data to SharePoint...')
+    console.log('📤 Storing TenantGuard Enhanced data to SharePoint...')
     const db = getDatabase()
 
-    // Get alerts and correlations from database
-    const alerts = (db.prepare('SELECT * FROM alerts WHERE dismissed = 0 ORDER BY created_at DESC LIMIT 100').all() || [])
+    // Get ONLY P1 and P2 alerts (critical and high priority)
+    const allAlerts = (db.prepare('SELECT * FROM alerts WHERE dismissed = 0 ORDER BY created_at DESC LIMIT 200').all() || [])
+    const alerts = allAlerts.filter(a => a.priority === 'P1' || a.priority === 'P2')
+
     const correlations = (db.prepare('SELECT * FROM alert_correlations ORDER BY created_at DESC LIMIT 50').all() || [])
 
-    console.log(`📦 Storing ${alerts.length} alerts and ${correlations.length} correlations to SharePoint...`)
+    console.log(`📦 Storing ${alerts.length} P1/P2 alerts and ${correlations.length} correlations to Enhanced lists...`)
 
     let alertsStored = 0
     let correlationsStored = 0
-    const alertsListId = process.env.SHAREPOINT_ALERTS_LIST_ID
-    const correlationsListId = process.env.SHAREPOINT_CORRELATIONS_LIST_ID
+    // Use enhanced lists for P1/P2 focused storage
+    const alertsListId = process.env.SHAREPOINT_ENHANCED_ALERTS_LIST_ID || process.env.SHAREPOINT_ALERTS_LIST_ID
+    const correlationsListId = process.env.SHAREPOINT_ENHANCED_CORRELATIONS_LIST_ID || process.env.SHAREPOINT_CORRELATIONS_LIST_ID
 
     // Only attempt SharePoint storage if list IDs are configured
     if (alertsListId && correlationsListId) {
