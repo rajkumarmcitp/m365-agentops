@@ -308,17 +308,17 @@ function topFiveKpi() {
       </div>
     </div>
     <div class="kpi-tile">
-      <div class="kpi-value ${critical > 0 ? 'danger' : 'success'}">${critical > 0 ? critical : '✓'}</div>
+      <div class="kpi-value ${critical > 0 ? 'danger' : 'success'}" style="font-size:32px;font-weight:700;margin-bottom:8px">${critical > 0 ? critical : '✓'}</div>
       <div class="kpi-label">Critical Incidents</div>
       <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${incidents.filter(i => i.status !== 'resolved').length} open total</div>
     </div>
     <div class="kpi-tile">
-      <div class="kpi-value ${realIdentityPosture.highRiskUsers > 0 ? 'danger' : 'success'}">${realIdentityPosture.highRiskUsers}</div>
+      <div class="kpi-value ${realIdentityPosture.highRiskUsers > 0 ? 'danger' : 'success'}" style="font-size:32px;font-weight:700;margin-bottom:8px">${realIdentityPosture.highRiskUsers}</div>
       <div class="kpi-label">High-Risk Users</div>
       <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${realIdentityPosture.riskySignIns30d} risky sign-ins (30d)</div>
     </div>
     <div class="kpi-tile">
-      <div class="kpi-value success">0</div>
+      <div class="kpi-value success" style="font-size:32px;font-weight:700;margin-bottom:8px">0</div>
       <div class="kpi-label">Vulnerable Devices</div>
       <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">0 non-compliant</div>
     </div>
