@@ -32,8 +32,6 @@ const NAV_ITEMS = {
     { id: 'settings', label: 'Admin Settings',   icon: 'ti-adjustments-horizontal' },
   ],
   super: [
-    { id: 'tenantguard',label: 'TenantGuard (Classic)',          icon: 'ti-alert-triangle',     badge: 'Alert' },
-    { id: 'tenantguard-enhanced',label: 'Tenant Guard New',icon: 'ti-alert-triangle',badge: 'Real Data' },
     { id: 'graphapi', label: 'Graph API',       icon: 'ti-api',      badge: 'Live', badgeCls: 'green' },
     { id: 'sso',      label: 'SSO / Entra ID',  icon: 'ti-key' },
   ],
