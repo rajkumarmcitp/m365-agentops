@@ -187,13 +187,19 @@ async function refreshData() {
 
     console.log('📊 Data loaded:', { alerts: allAlerts.length, correlations: allCorrelations.length })
 
-    // Update KPIs
-    document.getElementById('kpi-critical').textContent = summary.critical || 0
-    document.getElementById('kpi-high').textContent = summary.high || 0
-    document.getElementById('kpi-medium').textContent = summary.medium || 0
+    // Filter to P1/P2 alerts for enhanced dashboard
+    const p1p2Alerts = allAlerts.filter(a => a.priority === 'P1' || a.priority === 'P2')
+    const criticalCount = p1p2Alerts.filter(a => a.severity === 'CRITICAL').length
+    const highCount = p1p2Alerts.filter(a => a.severity === 'HIGH').length
+    const mediumCount = p1p2Alerts.filter(a => a.severity === 'MEDIUM').length
+
+    // Update KPIs (P1/P2 only)
+    document.getElementById('kpi-critical').textContent = criticalCount
+    document.getElementById('kpi-high').textContent = highCount
+    document.getElementById('kpi-medium').textContent = mediumCount
     document.getElementById('kpi-corr').textContent = allCorrelations.length
     document.getElementById('kpi-risk').textContent = calculateRiskScore()
-    document.getElementById('kpi-total').textContent = summary.total || 0
+    document.getElementById('kpi-total').textContent = p1p2Alerts.length
 
     // Render alerts
     renderAlerts()
@@ -234,18 +240,21 @@ async function storeToSharePoint(baseUrl) {
 function renderAlerts() {
   const container = document.getElementById('alertsContainer')
 
-  if (allAlerts.length === 0) {
+  // Filter to P1 and P2 alerts only (enhanced view)
+  const enhancedAlerts = allAlerts.filter(a => a.priority === 'P1' || a.priority === 'P2')
+
+  if (enhancedAlerts.length === 0) {
     container.innerHTML = `
       <div style="padding:40px;text-align:center;color:var(--color-text-secondary)">
         <p style="margin:0;font-size:14px"><i class="ti ti-shield-check"></i> All systems secure</p>
-        <p style="margin:8px 0 0 0;font-size:12px">No active threats detected</p>
+        <p style="margin:8px 0 0 0;font-size:12px">No critical or high-priority alerts</p>
       </div>
     `
     return
   }
 
   const alertsByCategory = {}
-  allAlerts.forEach(alert => {
+  enhancedAlerts.forEach(alert => {
     const category = alert.category || 'Other'
     if (!alertsByCategory[category]) alertsByCategory[category] = []
     alertsByCategory[category].push(alert)
@@ -508,8 +517,10 @@ function setupEventListeners() {
 }
 
 function calculateRiskScore() {
+  // Calculate risk score from P1/P2 alerts only
+  const p1p2Alerts = allAlerts.filter(a => a.priority === 'P1' || a.priority === 'P2')
   return Math.min(
-    allAlerts.reduce((total, alert) => {
+    p1p2Alerts.reduce((total, alert) => {
       const points = alert.severity === 'CRITICAL' ? 25 : alert.severity === 'HIGH' ? 10 : 3
       return total + points
     }, 0),
