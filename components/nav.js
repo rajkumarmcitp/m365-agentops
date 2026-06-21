@@ -82,9 +82,10 @@ export function renderNav() {
     }
   }
 
-  // Self-service
+  // Self-service (only show if portal is enabled)
+  const portalEnabled = state.settings?.portalEnabled !== false
   const ssItems = buildItems(NAV_ITEMS.selfservice)
-  if (ssItems) {
+  if (ssItems && portalEnabled) {
     html += `<div class="nav-divider"></div><div class="nav-section"><div class="nav-section-label">Self-Service</div>${ssItems}</div>`
   }
 
