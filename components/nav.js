@@ -30,6 +30,8 @@ const NAV_ITEMS = {
   config: [
     { id: 'audit',    label: 'Audit Log',       icon: 'ti-database' },
     { id: 'settings', label: 'Admin Settings',   icon: 'ti-adjustments-horizontal' },
+    { id: 'tenantguard',label: 'TenantGuard (Classic)',          icon: 'ti-alert-triangle',     badge: 'Alert' },
+    { id: 'tenantguard-enhanced',label: 'Tenant Guard New',icon: 'ti-alert-triangle',badge: 'Real Data' },
   ],
   super: [
     { id: 'tenantguard',label: 'TenantGuard (Classic)',          icon: 'ti-alert-triangle',     badge: 'Alert' },
