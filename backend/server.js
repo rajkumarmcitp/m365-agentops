@@ -7992,6 +7992,22 @@ const ROLE_ID_MAP = {
   '45a6f1f3-62cb-465b-bba1-bcf564e2bf09': 'Records Management Administrator'
 }
 
+// P1 (CRITICAL) Admin Roles - Highest privilege, unrestricted access
+const CRITICAL_ADMIN_ROLES = new Set([
+  '759a2e72-72b8-4416-8833-ff157d53a206', // Tenant-specific Global Admin
+  '62e90394-69f5-4237-9190-012177145e10', // Global Administrator
+  '194ae4cb-b126-40b2-bd5b-6091b380977d', // Security Administrator
+  'c430b6c5-a049-4478-ad6f-666f2b482c68', // Conditional Access Administrator
+  '29232cdf-9323-42fd-ade2-1d097af620db'  // Exchange Administrator
+])
+
+// P2 (HIGH) Admin Roles - Limited scope but still significant privilege
+const HIGH_PRIORITY_ADMIN_ROLES = new Set([
+  'e8611ab8-c189-46e8-94e1-60213ab1f814', // Privileged Role Administrator
+  '75941009-915a-4869-aaed-91dfc1ee7e0e', // SharePoint Administrator
+  'be2f45a1-457d-42af-a067-6ec1fa63bc45'  // Cloud Application Administrator
+])
+
 // ============================================================
 // TenantGuard Approved Activities Configuration
 // ============================================================
@@ -8318,10 +8334,29 @@ app.post('/api/tenantguard/sync', async (req, res) => {
 
             if (!existing) {
               const action = isAddToRole ? 'Added to' : 'Removed from'
-              const severity = 'CRITICAL'  // Always CRITICAL for role changes
-              const priority = 'P1'
-              const riskScore = 100
               const actor = log.initiatedBy?.user?.userPrincipalName || 'System'
+
+              // Determine priority and severity based on role type
+              let priority, severity, riskScore, alertType
+              if (CRITICAL_ADMIN_ROLES.has(roleId)) {
+                // P1: Critical roles (Global Admin, Security Admin, Conditional Access, Exchange)
+                priority = 'P1'
+                severity = 'CRITICAL'
+                riskScore = 100
+                alertType = 'P1_CRITICAL_ROLE_CHANGE'
+              } else if (HIGH_PRIORITY_ADMIN_ROLES.has(roleId)) {
+                // P2: High priority roles (PIM Admin, SharePoint Admin, Cloud App Admin)
+                priority = 'P2'
+                severity = 'HIGH'
+                riskScore = 85
+                alertType = 'P2_HIGH_PRIORITY_ROLE_CHANGE'
+              } else {
+                // Default: Other admin roles (User Admin, Groups Admin, etc.)
+                priority = 'P2'
+                severity = 'HIGH'
+                riskScore = 70
+                alertType = 'P2_ADMIN_ROLE_CHANGE'
+              }
 
               db.prepare(`
                 INSERT INTO alerts (
@@ -8335,26 +8370,27 @@ app.post('/api/tenantguard/sync', async (req, res) => {
                 severity,
                 riskScore,
                 priority,
-                `🚨 P1: ${roleName} ${action}`,
+                `🚨 ${priority}: ${roleName} ${action}`,
                 `${action} ${roleName}: ${memberEmail} (by ${actor})`,
                 JSON.stringify({
                   score: riskScore,
                   severity: severity,
                   source: 'Graph API - Directory Audit',
-                  alertType: 'P1_PRIVILEGED_ROLE_CHANGE',
+                  alertType: alertType,
                   roleName: roleName,
                   roleId: roleId,
                   action: action,
                   member: memberEmail,
-                  actor: actor
+                  actor: actor,
+                  priority: priority
                 }),
                 JSON.stringify([
-                  `URGENT: Verify ${memberEmail} authorization for ${roleName}`,
+                  `Verify ${memberEmail} authorization for ${roleName}`,
                   `Confirm approval from identity governance team`,
                   `Check MFA and strong authentication on this account`,
                   `Review recent activities of ${memberEmail}`,
                   `Monitor for suspicious actions using ${roleName}`,
-                  isAddToRole ? `Remove access immediately if unauthorized` : `Verify role removal completion`
+                  isAddToRole ? `Take immediate action if unauthorized` : `Verify role removal completion`
                 ]),
                 actor,
                 memberEmail,
@@ -8362,19 +8398,22 @@ app.post('/api/tenantguard/sync', async (req, res) => {
                 JSON.stringify({
                   graphApiId: log.id,
                   real: true,
-                  alertType: 'P1_PRIVILEGED_ROLE_CHANGE',
+                  alertType: alertType,
                   roleName: roleName,
                   roleId: roleId,
                   action: action,
                   member: memberEmail,
-                  actor: actor
+                  actor: actor,
+                  priority: priority,
+                  severity: severity
                 }),
                 0,
                 new Date().toISOString()
               )
 
               alertsCreated++
-              console.log(`🚨 P1 ALERT CREATED: ${roleName} ${action} - ${memberEmail}`)
+              const icon = priority === 'P1' ? '🔴' : '🟠'
+              console.log(`${icon} ${priority} ALERT CREATED: ${roleName} ${action} - ${memberEmail}`)
             }
           }
         }
