@@ -184,6 +184,14 @@ export async function go(pageId) {
     return
   }
 
+  // Prevent navigation to portal-related pages when portal is disabled
+  const portalRelatedPages = ['requests', 'approvals', 'portal', 'myaccount', 'myreqs', 'chat']
+  const portalEnabled = state.settings?.portalEnabled !== false
+  if (!portalEnabled && portalRelatedPages.includes(pageId)) {
+    showToast('Self-Service Portal is currently disabled by administrators.', 'warning')
+    return
+  }
+
   state.currentPage = pageId
 
   // Show/hide pages
