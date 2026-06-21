@@ -77,8 +77,8 @@ function renderDashboardSkeleton(el) {
       </div>
     </div>
 
-    <!-- 📊 Enhanced KPI Dashboard (16-18 Metrics) -->
-    <div style="margin-bottom:24px">
+    <!-- 📊 Enhanced KPI Dashboard (16-18 Metrics) - HIDDEN, using card layout instead -->
+    <div style="margin-bottom:24px;display:none">
       <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-bottom:16px"><i class="ti ti-chart-dots"></i> Tenant Health Overview</div>
 
       <!-- Section 1: Foundational (3) -->
