@@ -1,5 +1,6 @@
 import { SERVICE_GROUPS, SERVICE_CATALOG } from '../data/portal-services.js'
 import { api } from '../lib/api-client.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 // Helper to get service display name
 function getServiceDisplayName(serviceId) {

@@ -1,6 +1,7 @@
 import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { go } from '../app.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 const AGENTS = [
   { id: 'approval', name: 'Approval Agent', desc: 'Automates access request routing, approval workflows, and SLA tracking.', icon: 'ti-check-list', bg: '#E6F1FB', color: '#0C447C', status: 'active', statusLabel: 'Active', statLabel: '7 pending', statIcon: 'ti-inbox' },
@@ -18,6 +19,14 @@ export function initAgents() {
   if (isDemoAccount()) {
     renderDemoAgents(el)
   } else {
+    // Show skeleton immediately
+    el.innerHTML = `
+      <div>
+        ${skeletonLoader.renderPageHeader('AI Agents', 'Automated intelligence agents managing your M365 tenant', true)}
+        ${skeletonLoader.renderCardGridSkeleton(3, 6)}
+      </div>
+    `
+    // Then load agents
     renderBlankAgents(el)
   }
 }

@@ -1,5 +1,6 @@
 import { callAPI } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 let realLicenses = []
 let licenseSummary = { total: 0, consumed: 0, available: 0, utilizationPct: 0 }
@@ -27,7 +28,14 @@ export async function initLicenses() {
     return
   }
 
-  el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading comprehensive license data...</p></div>`
+  // Show skeleton immediately
+  el.innerHTML = `
+    <div>
+      ${skeletonLoader.renderPageHeader('Licenses', 'License inventory, assignments, and compliance', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(4)}
+      ${skeletonLoader.renderTabsWithContentSkeleton(6, true)}
+    </div>
+  `
 
   // Fetch all license data in parallel
   try {

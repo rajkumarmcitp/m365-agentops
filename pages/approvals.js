@@ -6,6 +6,7 @@
 import { state, go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { callAPI } from '../lib/api-client.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 let viewMode = 'queue'  // 'queue' | 'detail'
 let selectedRequestId = null
@@ -33,20 +34,12 @@ async function render(el) {
 // APPROVAL QUEUE VIEW
 // ============================================================
 async function renderApprovalQueue(el) {
+  // Show skeleton immediately
   el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <div class="page-title"><i class="ti ti-clipboard-check"></i> Approval Queue</div>
-        <div class="page-subtitle">Review and approve self-service requests</div>
-      </div>
-      <div class="page-actions">
-        <button class="btn" id="queue-refresh"><i class="ti ti-refresh"></i> Refresh</button>
-      </div>
-    </div>
-
-    <div style="padding:20px;text-align:center">
-      <div class="spinner"></div>
-      <p>Loading requests...</p>
+    <div>
+      ${skeletonLoader.renderPageHeader('Approval Queue', 'Review and approve self-service requests', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(4)}
+      ${skeletonLoader.renderTableSkeleton(7, 8)}
     </div>
   `
 

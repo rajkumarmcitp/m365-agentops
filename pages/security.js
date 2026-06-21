@@ -2,6 +2,7 @@ import { go, state } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getSecurityScore, getIncidents, getDevices, getIdentityPosture } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 import {
   IDENTITY,
   INCIDENTS as DEMO_INCIDENTS,
@@ -60,6 +61,9 @@ export async function initSecurity() {
     renderDemoSecurityPage(el)
     return
   }
+
+  // Show skeleton immediately
+  renderSecuritySkeleton(el)
 
   try {
     console.log('📡 Fetching real security data from backend...')
@@ -162,6 +166,23 @@ export async function initSecurity() {
   }
 
   render(el)
+}
+
+function renderSecuritySkeleton(el) {
+  el.innerHTML = `
+    <div class="page-header" style="opacity:0.6">
+      <div>
+        <div class="page-title" style="background:#e0e0e0;width:300px;height:28px;border-radius:4px;margin-bottom:8px"></div>
+        <div class="page-subtitle" style="background:#f0f0f0;width:400px;height:16px;border-radius:4px"></div>
+      </div>
+      <div class="page-actions" style="display:flex;gap:8px">
+        <div style="background:#f0f0f0;width:80px;height:32px;border-radius:4px"></div>
+        <div style="background:#e0e0e0;width:100px;height:32px;border-radius:4px"></div>
+      </div>
+    </div>
+    ${skeletonLoader.renderMetricsRowSkeleton(5)}
+    ${skeletonLoader.renderTabsWithContentSkeleton(8, true)}
+  `
 }
 
 function render(el) {

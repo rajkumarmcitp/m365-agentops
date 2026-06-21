@@ -1,5 +1,6 @@
 import { getAlertSummary, getAlerts, getCorrelations, getPatterns } from '../lib/tenantguard-client.js'
 import { showToast } from '../components/toast.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 let allAlerts = []
 let allCorrelations = []
@@ -25,6 +26,32 @@ export async function initTenantGuardEnhanced() {
   const el = document.getElementById('page-tenantguard-enhanced')
   if (!el) return
 
+  // Show skeleton immediately
+  renderTenantGuardSkeleton(el)
+
+  // Load data in background
+  try {
+    await refreshData()
+    // Once data is loaded, render actual content
+    renderTenantGuardContent(el)
+  } catch (error) {
+    console.error('Error loading data:', error)
+    showToast('Failed to load alerts', 'error')
+  }
+}
+
+function renderTenantGuardSkeleton(el) {
+  el.innerHTML = `
+    <div>
+      ${skeletonLoader.renderPageHeader('Tenant Guard', 'Real-time security threat detection', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(6)}
+      ${skeletonLoader.renderCardGridSkeleton(2, 2)}
+      ${skeletonLoader.renderTableSkeleton(6, 8)}
+    </div>
+  `
+}
+
+function renderTenantGuardContent(el) {
   el.innerHTML = `
     <div>
       <!-- Page Header -->
@@ -213,14 +240,6 @@ export async function initTenantGuardEnhanced() {
       </div>
     </div>
   `
-
-  // Load data
-  try {
-    await refreshData()
-  } catch (error) {
-    console.error('Error loading data:', error)
-    showToast('Failed to load alerts', 'error')
-  }
 
   // Setup event listeners
   setupEventListeners()

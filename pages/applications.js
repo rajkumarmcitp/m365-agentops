@@ -3,6 +3,7 @@ import { showToast } from '../components/toast.js'
 import { getApplications, getServicePrincipals, api } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { APPS_SUMMARY, APPS_RECOMMENDATIONS, APPS_COPILOT_KB } from '../data/apps-data.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 let activeSection = 'executive'
 let appFilter = { type: 'all', status: 'all', search: '' }
@@ -47,7 +48,14 @@ export async function initApplications() {
     return
   }
 
-  el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading real M365 application data...</p></div>`
+  // Show skeleton immediately
+  el.innerHTML = `
+    <div>
+      ${skeletonLoader.renderPageHeader('Entra Applications', 'App registrations, enterprise apps, and permissions', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(5)}
+      ${skeletonLoader.renderTabsWithContentSkeleton(8, true)}
+    </div>
+  `
 
   console.log('📡 Fetching real application data from backend...')
 

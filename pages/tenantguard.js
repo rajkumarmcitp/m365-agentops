@@ -1,6 +1,7 @@
 import { getAlertSummary, getAlerts, dismissAlert, getCorrelations, getPatterns, startInvestigation, getInvestigation, chatInvestigation, generateInvestigationReport } from '../lib/tenantguard-client.js'
 import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 let activeSection = 'alerts'
 let activeFilter = 'all'

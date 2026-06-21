@@ -1,4 +1,5 @@
 import { state } from '../app.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 const SUGGESTIONS = {
   user: ['What can I request?', 'How to create a Team?', 'Request SharePoint access', 'Request Copilot license'],

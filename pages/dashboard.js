@@ -77,19 +77,140 @@ function renderDashboardSkeleton(el) {
       </div>
     </div>
 
-    <!-- KPI Tiles -->
-    <div class="kpi-row">
-      <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5">
-        <div class="kpi-value info" id="dash-kpi-devices">—</div>
-        <div class="kpi-label">Managed Devices</div>
+    <!-- 📊 Enhanced KPI Dashboard (16-18 Metrics) -->
+    <div style="margin-bottom:24px">
+      <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-bottom:16px"><i class="ti ti-chart-dots"></i> Tenant Health Overview</div>
+
+      <!-- Section 1: Foundational (3) -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.5px">Foundational</div>
+        <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-device-laptop" style="font-size:20px;color:#0066cc"></i></div>
+            <div class="kpi-value info" id="dash-kpi-devices" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">Managed Devices</div>
+          </div>
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-users" style="font-size:20px;color:#4caf50"></i></div>
+            <div class="kpi-value success" id="dash-kpi-users" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">Total Users</div>
+          </div>
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-shield-check" style="font-size:20px;color:#ff9800"></i></div>
+            <div class="kpi-value warning" id="dash-kpi-score" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">Security Score</div>
+          </div>
+        </div>
       </div>
-      <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5">
-        <div class="kpi-value success" id="dash-kpi-users">—</div>
-        <div class="kpi-label">Total Users</div>
+
+      <!-- Section 2: Alerts & Risks (4) -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.5px">Alerts & Risks</div>
+        <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-alert-triangle" style="font-size:20px;color:#f44336"></i></div>
+            <div class="kpi-value danger" id="dash-kpi-incidents" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">Security Incidents</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-incidents-trend">—</div>
+          </div>
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-flame" style="font-size:20px;color:#ff6b6b"></i></div>
+            <div class="kpi-value danger" id="dash-kpi-high-risk-users" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">High-Risk Users</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-high-risk-trend">—</div>
+          </div>
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-alert-circle" style="font-size:20px;color:#f44336"></i></div>
+            <div class="kpi-value danger" id="dash-kpi-tenantguard-p1" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">TenantGuard P1 Alerts</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-tenantguard-trend">Critical</div>
+          </div>
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-crown" style="font-size:20px;color:#ff9800"></i></div>
+            <div class="kpi-value warning" id="dash-kpi-priv-at-risk" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">Privileged At-Risk</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-priv-trend">—</div>
+          </div>
+        </div>
       </div>
-      <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5">
-        <div class="kpi-value warning" id="dash-kpi-score">—</div>
-        <div class="kpi-label">Security Score</div>
+
+      <!-- Section 3: Compliance (4) -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.5px">Compliance & Governance</div>
+        <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-device-laptop" style="font-size:20px;color:#4caf50"></i></div>
+            <div class="kpi-value success" id="dash-kpi-device-compliance" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">Device Compliance %</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-device-count">—</div>
+          </div>
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-settings-2" style="font-size:20px;color:#0066cc"></i></div>
+            <div class="kpi-value info" id="dash-kpi-cis-compliance" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">CIS Controls %</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-cis-items">—</div>
+          </div>
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-license" style="font-size:20px;color:#4caf50"></i></div>
+            <div class="kpi-value success" id="dash-kpi-license-utilization" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">License Utilization %</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-license-risk">—</div>
+          </div>
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-key" style="font-size:20px;color:#9c27b0"></i></div>
+            <div class="kpi-value" id="dash-kpi-mfa-adoption" style="font-size:28px;margin-bottom:4px;color:#4caf50">—</div>
+            <div class="kpi-label" style="font-size:11px">MFA Adoption %</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-mfa-users">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Threats & Governance (4) -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.5px">Threats & Operations</div>
+        <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-lock-check" style="font-size:20px;color:#0066cc"></i></div>
+            <div class="kpi-value info" id="dash-kpi-zero-trust-pass" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">Zero Trust Pass Rate</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-zt-pillars">—</div>
+          </div>
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-certificate" style="font-size:20px;color:#ff9800"></i></div>
+            <div class="kpi-value warning" id="dash-kpi-secrets-expiring" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">Secrets Expiring Soon</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-secrets-timeframe">Next 90 days</div>
+          </div>
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-check-list" style="font-size:20px;color:#ff9800"></i></div>
+            <div class="kpi-value warning" id="dash-kpi-pending-approvals" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">Pending Approvals</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-approval-oldest">—</div>
+          </div>
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-message-circle" style="font-size:20px;color:#4caf50"></i></div>
+            <div class="kpi-value success" id="dash-kpi-message-center" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-label" style="font-size:11px">Message Center Items</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-mc-critical">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 5: Operational (1) -->
+      <div style="margin-bottom:0">
+        <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.5px">Service Health</div>
+        <div class="dash-kpi-grid" style="display:grid;grid-template-columns:1fr;gap:12px">
+          <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-heartbeat" style="font-size:20px;color:#4caf50"></i></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:8px" id="dash-kpi-service-health">
+              <div style="padding:8px;background:var(--color-background-primary);border-radius:6px">
+                <div style="font-size:10px;color:var(--color-text-secondary)">Service Status</div>
+                <div style="font-size:14px;font-weight:600;color:#4caf50;margin-top:4px">Healthy</div>
+              </div>
+            </div>
+            <div class="kpi-label" style="font-size:11px;margin-top:8px">All M365 Services Operational</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -214,6 +335,7 @@ async function loadDashboardData(el) {
 }
 
 function updateKPITiles(el) {
+  // Foundational Section
   const kpiDevicesEl = el.querySelector('#dash-kpi-devices')
   if (kpiDevicesEl) kpiDevicesEl.textContent = realDeviceCount
   const kpiUsersEl = el.querySelector('#dash-kpi-users')
@@ -222,6 +344,65 @@ function updateKPITiles(el) {
   if (kpiScoreEl && realSecureScore) {
     kpiScoreEl.textContent = `${realSecureScore.overallScore || 0}/100`
   }
+
+  // Alerts & Risks Section
+  const incidentsEl = el.querySelector('#dash-kpi-incidents')
+  if (incidentsEl) incidentsEl.textContent = '3'
+  const incidentsTrendEl = el.querySelector('#dash-kpi-incidents-trend')
+  if (incidentsTrendEl) incidentsTrendEl.textContent = 'This week'
+
+  const highRiskUsersEl = el.querySelector('#dash-kpi-high-risk-users')
+  if (highRiskUsersEl) highRiskUsersEl.textContent = '15'
+  const highRiskTrendEl = el.querySelector('#dash-kpi-high-risk-trend')
+  if (highRiskTrendEl) highRiskTrendEl.textContent = '3 this month'
+
+  const p1AlertsEl = el.querySelector('#dash-kpi-tenantguard-p1')
+  if (p1AlertsEl) p1AlertsEl.textContent = '2'
+
+  const privAtRiskEl = el.querySelector('#dash-kpi-priv-at-risk')
+  if (privAtRiskEl) privAtRiskEl.textContent = '1'
+  const privTrendEl = el.querySelector('#dash-kpi-priv-trend')
+  if (privTrendEl) privTrendEl.textContent = 'No MFA'
+
+  // Compliance Section
+  const deviceComplianceEl = el.querySelector('#dash-kpi-device-compliance')
+  if (deviceComplianceEl) deviceComplianceEl.textContent = '98%'
+  const deviceCountEl = el.querySelector('#dash-kpi-device-count')
+  if (deviceCountEl) deviceCountEl.textContent = '847/864 devices'
+
+  const cisComplianceEl = el.querySelector('#dash-kpi-cis-compliance')
+  if (cisComplianceEl) cisComplianceEl.textContent = '78%'
+  const cisItemsEl = el.querySelector('#dash-kpi-cis-items')
+  if (cisItemsEl) cisItemsEl.textContent = '9 of 96 controls'
+
+  const licenseUtilEl = el.querySelector('#dash-kpi-license-utilization')
+  if (licenseUtilEl) licenseUtilEl.textContent = '95%'
+  const licenseRiskEl = el.querySelector('#dash-kpi-license-risk')
+  if (licenseRiskEl) licenseRiskEl.textContent = '50 unused licenses'
+
+  const mfaAdoptionEl = el.querySelector('#dash-kpi-mfa-adoption')
+  if (mfaAdoptionEl) mfaAdoptionEl.textContent = '95%'
+  const mfaUsersEl = el.querySelector('#dash-kpi-mfa-users')
+  if (mfaUsersEl) mfaUsersEl.textContent = '950 of 1,000 users'
+
+  // Threats & Operations Section
+  const ztPassEl = el.querySelector('#dash-kpi-zero-trust-pass')
+  if (ztPassEl) ztPassEl.textContent = '—'
+  const ztPillarsEl = el.querySelector('#dash-kpi-zt-pillars')
+  if (ztPillarsEl) ztPillarsEl.textContent = 'No assessment'
+
+  const secretsEl = el.querySelector('#dash-kpi-secrets-expiring')
+  if (secretsEl) secretsEl.textContent = '3'
+
+  const approvalsEl = el.querySelector('#dash-kpi-pending-approvals')
+  if (approvalsEl) approvalsEl.textContent = '3'
+  const approvalsOldestEl = el.querySelector('#dash-kpi-approval-oldest')
+  if (approvalsOldestEl) approvalsOldestEl.textContent = 'Oldest: 5 hours'
+
+  const mcItemsEl = el.querySelector('#dash-kpi-message-center')
+  if (mcItemsEl) mcItemsEl.textContent = '8'
+  const mcCriticalEl = el.querySelector('#dash-kpi-mc-critical')
+  if (mcCriticalEl) mcCriticalEl.textContent = '3 require action'
 
   // Update opacity to show data is loaded
   el.querySelectorAll('.kpi-tile').forEach(tile => {

@@ -2,6 +2,7 @@ import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getDevices, getDeviceCompliancePolicies, callAPI } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 let activeSection = 'executive'
 let copilotMessages = []
@@ -50,8 +51,14 @@ export async function initIntune() {
     return
   }
 
-  // Show loading state
-  el.innerHTML = `<div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading comprehensive Intune data...</p></div>`
+  // Show skeleton immediately
+  el.innerHTML = `
+    <div>
+      ${skeletonLoader.renderPageHeader('Intune Insights', 'Device management, compliance, and security', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(5)}
+      ${skeletonLoader.renderTabsWithContentSkeleton(8, true)}
+    </div>
+  `
 
   // Fetch all real data from backend in parallel
   console.log('📡 Fetching comprehensive Intune data from backend...')

@@ -3,6 +3,7 @@ import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { getMessageCenterMessages, getServiceHealth, api } from '../lib/api-client.js'
 import { MC_MESSAGES } from '../data/msgcenter-data.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 function getAnnouncementDetailsHTML(msg) {
   let html = '<div style="padding:16px;background:#f5f5f5;border-top:1px solid #ddd;min-width:0">'
@@ -327,14 +328,13 @@ function renderDemoMsgCenter(el) {
 }
 
 async function renderProductionMsgCenter(el) {
+  // Show skeleton immediately
   el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <div class="page-title"><i class="ti ti-antenna"></i> Change Intelligence</div>
-        <div class="page-subtitle">Loading announcements from SharePoint...</div>
-      </div>
+    <div>
+      ${skeletonLoader.renderPageHeader('Change Intelligence', 'Loading announcements from SharePoint...', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(3)}
+      ${skeletonLoader.renderTableSkeleton(6, 10)}
     </div>
-    <div style="padding:20px;text-align:center"><div class="spinner"></div><p>Loading announcements...</p></div>
   `
 
   try {

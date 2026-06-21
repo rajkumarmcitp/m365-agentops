@@ -6,6 +6,7 @@
 import { getUserList, getUserInvestigation } from '../lib/user-investigation-client.js'
 import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 export function initUserInvestigation() {
   const el = document.getElementById('page-user-investigation')
@@ -16,6 +17,17 @@ export function initUserInvestigation() {
     return
   }
 
+  // Show skeleton immediately
+  el.innerHTML = `
+    <div>
+      ${skeletonLoader.renderPageHeader('User Investigation', 'Comprehensive user activity analysis and risk assessment', false)}
+      ${skeletonLoader.renderMetricsRowSkeleton(4)}
+      ${skeletonLoader.renderCardGridSkeleton(1, 2)}
+      ${skeletonLoader.renderTableSkeleton(7, 6)}
+    </div>
+  `
+
+  // Load data and render
   renderUserInvestigation(el)
 }
 

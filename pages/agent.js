@@ -6,6 +6,7 @@
 import { state } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { callAPI } from '../lib/api-client.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 let viewMode = 'queue'  // 'queue' | 'processing' | 'completed'
 let selectedRequestId = null
@@ -32,20 +33,12 @@ async function render(el) {
 // AGENT QUEUE - Approved Requests Ready to Process
 // ============================================================
 async function renderQueue(el) {
+  // Show skeleton immediately
   el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <div class="page-title"><i class="ti ti-robot"></i> Agent Processing Queue</div>
-        <div class="page-subtitle">Approved requests ready for provisioning</div>
-      </div>
-      <div class="page-actions">
-        <button class="btn" id="queue-refresh"><i class="ti ti-refresh"></i> Refresh</button>
-      </div>
-    </div>
-
-    <div style="padding:20px;text-align:center">
-      <div class="spinner"></div>
-      <p>Loading approved requests...</p>
+    <div>
+      ${skeletonLoader.renderPageHeader('Agent Processing Queue', 'Approved requests ready for provisioning', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(4)}
+      ${skeletonLoader.renderTableSkeleton(7, 8)}
     </div>
   `
 

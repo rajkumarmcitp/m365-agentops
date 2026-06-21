@@ -3,6 +3,7 @@ import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { getCISControls } from '../lib/api-client.js'
 import { CFG_TOPICS } from '../data/cis-controls.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 let cfgView = 'main'
 let activeTopic = null
@@ -270,14 +271,13 @@ function renderDemoTopic(el, topic) {
 }
 
 async function renderProductionMain(el) {
+  // Show skeleton immediately
   el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <div class="page-title"><i class="ti ti-settings-2"></i> M365 Config — CIS Benchmark</div>
-        <div class="page-subtitle">Loading configuration compliance from Graph API...</div>
-      </div>
+    <div>
+      ${skeletonLoader.renderPageHeader('M365 Config — CIS Benchmark', 'Loading configuration compliance from Graph API...', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(4)}
+      ${skeletonLoader.renderCardGridSkeleton(3, 9)}
     </div>
-    <div style="padding:20px;text-align:center"><div class="spinner"></div><p>Scanning your tenant configuration...</p></div>
   `
 
   try {

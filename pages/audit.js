@@ -1,7 +1,22 @@
+import { skeletonLoader } from '../lib/skeleton-loader.js'
+
 export function initAudit() {
   const el = document.getElementById('page-audit')
   if (!el) return
 
+  // Show skeleton immediately
+  el.innerHTML = `
+    <div>
+      ${skeletonLoader.renderPageHeader('Audit Log', 'Administrative and security event audit trail', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(3)}
+      ${skeletonLoader.renderTableSkeleton(5, 10)}
+    </div>
+  `
+
+  renderAuditContent(el)
+}
+
+function renderAuditContent(el) {
   const events = [
     { time: 'Today 08:47', event: 'Config Agent scan completed', user: 'M365 Config Agent', category: 'Compliance', severity: 'info', sevCls: 'info' },
     { time: 'Today 08:15', event: 'High-risk sign-in detected', user: 'kevin.osei@contoso.com', category: 'Security', severity: 'high', sevCls: 'danger' },
@@ -51,4 +66,5 @@ export function initAudit() {
       </table>
     </div>
   `
+}
 }

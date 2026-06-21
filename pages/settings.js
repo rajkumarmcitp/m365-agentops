@@ -1,6 +1,7 @@
 import { state, saveState, resetSettings } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { createToggle } from '../components/toggle.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 import { SERVICE_GROUPS, EXCHANGE_SUB } from '../data/portal-services.js'
 import { getClaudeStatus, setClaudeApiKey, removeClaudeApiKey } from '../lib/tenantguard-settings-client.js'
 import { api } from '../lib/api-client.js'

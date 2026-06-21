@@ -1,6 +1,7 @@
 import { state } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { api } from '../lib/api-client.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 import {
   SERVICE_GROUPS, EXCHANGE_SUB, SERVICE_CATALOG, WORKFLOW_STEPS
 } from '../data/portal-services.js'

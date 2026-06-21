@@ -2,6 +2,7 @@ import { showToast } from '../components/toast.js'
 import { getPrivilegedAccounts } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { PA_GROUPS } from '../data/pa-data.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 let logEntries = []
 let realPrivilegedAccounts = []
@@ -16,6 +17,9 @@ export async function initPrivAccts() {
     renderDemoPrivAccts(el)
     return
   }
+
+  // Show skeleton immediately
+  renderPrivAcctsSkeleton(el)
 
   try {
     console.log('📡 Fetching real privileged accounts from Azure AD...')
@@ -35,6 +39,20 @@ export async function initPrivAccts() {
     accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0, servicePrincipals: 0 }
   }
 
+  renderPrivAcctsContent(el)
+}
+
+function renderPrivAcctsSkeleton(el) {
+  el.innerHTML = `
+    <div>
+      ${skeletonLoader.renderPageHeader('Privileged Accounts', 'Manage and monitor privileged identities', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(4)}
+      ${skeletonLoader.renderTableSkeleton(7, 8)}
+    </div>
+  `
+}
+
+function renderPrivAcctsContent(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>

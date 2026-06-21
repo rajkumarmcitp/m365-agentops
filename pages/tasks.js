@@ -1,6 +1,7 @@
 import { state } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getMessageCenterMessages, getServiceHealth, api } from '../lib/api-client.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 function getStatusColor(status) {
   const colors = {
@@ -18,6 +19,15 @@ function getStatusColor(status) {
 export async function initTasks() {
   const el = document.getElementById('page-tasks')
   if (!el) return
+
+  // Show skeleton immediately
+  el.innerHTML = `
+    <div>
+      ${skeletonLoader.renderPageHeader('Change Announcement Tasks', 'Track and manage change announcement implementation tasks', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(4)}
+      ${skeletonLoader.renderTableSkeleton(8, 8)}
+    </div>
+  `
 
   await renderTasks(el)
 }

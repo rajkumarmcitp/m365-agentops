@@ -1,6 +1,7 @@
 import { showToast } from '../components/toast.js'
 import { callAPI } from '../lib/api-client.js'
 import { ZT_PILLARS } from '../data/zt-pillars.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 export function initZeroTrust() {
   const el = document.getElementById('page-zerotrust')
@@ -34,20 +35,10 @@ async function loadZeroTrustData(el) {
 
 function renderZeroTrustSkeleton(el) {
   el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
-        <div class="page-subtitle">Loading assessment data...</div>
-      </div>
-      <div class="page-actions">
-        <button class="btn" id="zt-rescan" disabled><i class="ti ti-refresh"></i> Re-scan</button>
-        <button class="btn btn-primary" disabled><i class="ti ti-download"></i> Export</button>
-      </div>
-    </div>
-
-    <div style="padding:40px;text-align:center">
-      <div class="spinner"></div>
-      <p style="margin-top:16px;color:var(--color-text-secondary)">Assessing Zero Trust compliance controls...</p>
+    <div>
+      ${skeletonLoader.renderPageHeader('Zero Trust Compliance', 'Loading assessment data...', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(4)}
+      ${skeletonLoader.renderCardGridSkeleton(1, 4)}
     </div>
   `
 }

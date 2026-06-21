@@ -1,5 +1,6 @@
 import { state } from '../app.js'
 import { showToast } from '../components/toast.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 export function initSso() {
   const el = document.getElementById('page-sso')

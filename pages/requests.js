@@ -7,6 +7,7 @@ import { showToast } from '../components/toast.js'
 import { api, callAPI } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { state } from '../app.js'
+import { skeletonLoader } from '../lib/skeleton-loader.js'
 import {
   notifyRequestApproved,
   notifyRequestRejected
@@ -156,16 +157,10 @@ function applyFilters(el) {
 
 function renderSkeleton(el) {
   el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <div class="page-title"><i class="ti ti-inbox"></i> Service Requests</div>
-        <div class="page-subtitle">Manage and approve all self-service requests</div>
-      </div>
-    </div>
-
-    <div style="padding:40px;text-align:center">
-      <div class="spinner" style="margin-bottom:16px"></div>
-      <p>Loading requests...</p>
+    <div>
+      ${skeletonLoader.renderPageHeader('Service Requests', 'Manage and approve all self-service requests', true)}
+      ${skeletonLoader.renderMetricsRowSkeleton(4)}
+      ${skeletonLoader.renderTableSkeleton(7, 8)}
     </div>
   `
 }
