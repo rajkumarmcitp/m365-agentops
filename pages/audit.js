@@ -67,4 +67,3 @@ function renderAuditContent(el) {
     </div>
   `
 }
-}
