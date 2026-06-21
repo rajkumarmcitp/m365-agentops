@@ -48,6 +48,7 @@ import { randomUUID } from 'crypto'
 
 const app = express()
 const PORT = process.env.PORT || 3000
+const SHAREPOINT_SITE_ID = process.env.SHAREPOINT_SITE_ID || 'nasstech.sharepoint.com,3f6b857f-3e5d-4c24-b085-21dcd5224220,ad0ee341-52a0-40e9-927d-540a45bc0523'
 
 // ============================================================
 // Demo Data Generator
@@ -10843,7 +10844,7 @@ app.post('/api/tenantguard/store-to-sharepoint', async (req, res) => {
           // Store alerts to SharePoint
           for (const alert of alerts) {
             try {
-              await storeAlertToSharePoint(graphClient, alert, alertsListId)
+              await storeAlertToSharePoint(graphClient, alert, alertsListId, SHAREPOINT_SITE_ID)
               alertsStored++
             } catch (alertError) {
               console.warn(`⚠️ Failed to store alert ${alert.id}:`, alertError.message)
@@ -10853,7 +10854,7 @@ app.post('/api/tenantguard/store-to-sharepoint', async (req, res) => {
           // Store correlations to SharePoint
           for (const correlation of correlations) {
             try {
-              await storeCorrelationToSharePoint(graphClient, correlation, correlationsListId)
+              await storeCorrelationToSharePoint(graphClient, correlation, correlationsListId, SHAREPOINT_SITE_ID)
               correlationsStored++
             } catch (corrError) {
               console.warn(`⚠️ Failed to store correlation:`, corrError.message)

@@ -3,16 +3,15 @@
  * Stores alerts, correlations, and configuration drift to SharePoint Lists
  */
 
-// Extract site ID from the comma-separated format: hostname,siteId,webId
-const SHAREPOINT_SITE_ID_RAW = process.env.SHAREPOINT_SITE_ID || 'b60085d7-b9c8-41a3-8789-bab376d0c84f'
-const SHAREPOINT_SITE_ID = SHAREPOINT_SITE_ID_RAW.includes(',') ? SHAREPOINT_SITE_ID_RAW : SHAREPOINT_SITE_ID_RAW
+// Get site ID - use the full format as-is (hostname,siteId,webId)
+const SHAREPOINT_SITE_ID = process.env.SHAREPOINT_SITE_ID || 'b60085d7-b9c8-41a3-8789-bab376d0c84f'
 
 /**
  * Store alert to SharePoint
  */
-export async function storeAlertToSharePoint(graphClient, alert, listId) {
-  if (!graphClient || !listId) {
-    console.warn('⚠️ SharePoint not configured for alerts')
+export async function storeAlertToSharePoint(graphClient, alert, listId, siteId) {
+  if (!graphClient || !listId || !siteId) {
+    console.warn('⚠️ SharePoint not configured - missing graphClient, listId, or siteId')
     return null
   }
 
@@ -27,7 +26,7 @@ export async function storeAlertToSharePoint(graphClient, alert, listId) {
         Priority: alert.priority || 'P3',
         RiskScore: alert.score || 0,
         Category: alert.category || 'Unknown',
-        Description: (alert.description || '').substring(0, 500),  // Limit text length
+        Description: (alert.description || '').substring(0, 500),
         Actor: (alert.actor || 'System').substring(0, 255),
         Target: (alert.target || 'N/A').substring(0, 255),
         ActionTimestamp: alert.action_timestamp || alert.timestamp || new Date().toISOString(),
@@ -38,7 +37,7 @@ export async function storeAlertToSharePoint(graphClient, alert, listId) {
     }
 
     const response = await graphClient
-      .api(`/sites/${SHAREPOINT_SITE_ID}/lists/${listId}/items`)
+      .api(`/sites/${siteId}/lists/${listId}/items`)
       .post(item)
 
     console.log(`✅ Alert stored in SharePoint: ${alert.id}`)
@@ -52,9 +51,9 @@ export async function storeAlertToSharePoint(graphClient, alert, listId) {
 /**
  * Store correlation to SharePoint
  */
-export async function storeCorrelationToSharePoint(graphClient, correlation, listId) {
-  if (!graphClient || !listId) {
-    console.warn('⚠️ SharePoint not configured for correlations')
+export async function storeCorrelationToSharePoint(graphClient, correlation, listId, siteId) {
+  if (!graphClient || !listId || !siteId) {
+    console.warn('⚠️ SharePoint not configured - missing graphClient, listId, or siteId')
     return null
   }
 
@@ -77,7 +76,7 @@ export async function storeCorrelationToSharePoint(graphClient, correlation, lis
     }
 
     const response = await graphClient
-      .api(`/sites/${SHAREPOINT_SITE_ID}/lists/${listId}/items`)
+      .api(`/sites/${siteId}/lists/${listId}/items`)
       .post(item)
 
     console.log(`✅ Correlation stored in SharePoint`)
