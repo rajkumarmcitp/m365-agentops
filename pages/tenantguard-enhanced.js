@@ -352,7 +352,7 @@ function renderAlerts() {
 
     html += `
       <tr style="background:${rowBg};border-bottom:1px solid var(--color-border-secondary);transition:background 0.2s">
-        <td style="padding:10px;color:var(--color-text-primary);font-weight:500;cursor:pointer;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${alert.headline || alert.name || 'Alert'}" onclick="window.showAlertDetails('${alert.id}')">${alert.headline || alert.name || 'Alert'}${reviewedBadge}</td>
+        <td style="padding:10px;color:var(--color-text-primary);font-weight:500;cursor:pointer;word-break:break-word;min-width:300px" title="${alert.headline || alert.name || 'Alert'}" onclick="window.showAlertDetails('${alert.id}')">${alert.headline || alert.name || 'Alert'}${reviewedBadge}</td>
         <td style="padding:10px"><span class="badge ${severityClass}" style="font-size:11px">${alert.severity || 'MEDIUM'}</span></td>
         <td style="padding:10px;font-weight:600">${priorityBadge}</td>
         <td style="padding:10px;color:var(--color-text-secondary)">${alert.category || 'N/A'}</td>
