@@ -329,7 +329,6 @@ function renderAlerts() {
         <thead>
           <tr style="background:var(--color-bg-secondary);border-bottom:2px solid var(--color-border-secondary)">
             <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Alert</th>
-            <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Type</th>
             <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Severity</th>
             <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Priority</th>
             <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Category</th>
@@ -353,8 +352,7 @@ function renderAlerts() {
 
     html += `
       <tr style="background:${rowBg};border-bottom:1px solid var(--color-border-secondary);transition:background 0.2s">
-        <td style="padding:10px;color:var(--color-text-primary);font-weight:500;cursor:pointer;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${alert.headline || alert.name || 'Alert'}" onclick="window.showAlertDetails('${alert.id}')">${alert.headline || alert.name || 'Alert'}${reviewedBadge}</td>
-        <td style="padding:10px;color:var(--color-text-secondary)"><span style="background:var(--color-bg-secondary);padding:3px 6px;border-radius:3px;font-size:11px">${alert.type || 'Unknown'}</span></td>
+        <td style="padding:10px;color:var(--color-text-primary);font-weight:500;cursor:pointer;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${alert.headline || alert.name || 'Alert'}" onclick="window.showAlertDetails('${alert.id}')">${alert.headline || alert.name || 'Alert'}${reviewedBadge}</td>
         <td style="padding:10px"><span class="badge ${severityClass}" style="font-size:11px">${alert.severity || 'MEDIUM'}</span></td>
         <td style="padding:10px;font-weight:600">${priorityBadge}</td>
         <td style="padding:10px;color:var(--color-text-secondary)">${alert.category || 'N/A'}</td>
