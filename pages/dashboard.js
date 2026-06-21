@@ -109,7 +109,7 @@ function renderDashboardSkeleton(el) {
         <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
           <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-alert-triangle" style="font-size:20px;color:#f44336"></i></div>
-            <div class="kpi-value danger" id="dash-kpi-incidents" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-value danger" id="dash-kpi-incidents" style="font-size:32px;font-weight:700;margin-bottom:8px">—</div>
             <div class="kpi-label" style="font-size:11px">Security Incidents</div>
             <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-incidents-trend">—</div>
           </div>
@@ -158,7 +158,7 @@ function renderDashboardSkeleton(el) {
           </div>
           <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-key" style="font-size:20px;color:#9c27b0"></i></div>
-            <div class="kpi-value" id="dash-kpi-mfa-adoption" style="font-size:28px;margin-bottom:4px;color:#4caf50">—</div>
+            <div class="kpi-value" id="dash-kpi-mfa-adoption" style="font-size:32px;font-weight:700;margin-bottom:8px;color:#4caf50">—</div>
             <div class="kpi-label" style="font-size:11px">MFA Adoption %</div>
             <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px" id="dash-kpi-mfa-users">—</div>
           </div>
