@@ -87,7 +87,7 @@ function renderDashboardSkeleton(el) {
         <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
           <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><i class="ti ti-device-laptop" style="font-size:20px;color:#0066cc"></i></div>
-            <div class="kpi-value info" id="dash-kpi-devices" style="font-size:28px;margin-bottom:4px">—</div>
+            <div class="kpi-value info" id="dash-kpi-devices" style="font-size:28px;font-weight:700;margin-bottom:4px">—</div>
             <div class="kpi-label" style="font-size:11px">Managed Devices</div>
           </div>
           <div class="kpi-tile" style="background:var(--color-background-secondary);opacity:0.5;padding:16px;border-radius:8px">
