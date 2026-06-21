@@ -395,7 +395,7 @@ function renderSection() {
 // EXECUTIVE DASHBOARD
 // ============================================================
 function renderExecutive() {
-  const ss = realSecureScore || SECURE_SCORE
+  const ss = realSecureScore || SECURE_SCORE || { current: 0, max: 100, percentOf100: 0, categories: [], trend7d: [], trend30d: [] }
   const incidents = Array.isArray(realIncidents) ? realIncidents : []
   return `
     <!-- Secondary KPI row - Real data only -->
@@ -468,7 +468,7 @@ function renderExecutive() {
         <div class="sec-svc-grid">
           ${[
             { name: 'Identity',    icon: 'ti-user-check',        score: realIdentityPosture.identitySecureScore || 72, color: '#0C447C', bg:'#E6F1FB', issues: realIdentityPosture.highRiskUsers },
-            { name: 'Secure Score',icon: 'ti-shield-check',      score: Math.round(ss.percentOf100), color: '#854F0B', bg:'#FAEEDA', issues: 0 },
+            { name: 'Secure Score',icon: 'ti-shield-check',      score: Math.round(ss.percentOf100 || 0), color: '#854F0B', bg:'#FAEEDA', issues: 0 },
             { name: 'Email',       icon: 'ti-mail',              score: 71, color: '#854F0B', bg:'#FAEEDA', issues: 0, coming: true },
             { name: 'Endpoint',    icon: 'ti-device-laptop',     score: 58, color: '#3B6D11', bg:'#EAF3DE', issues: 0, coming: true },
             { name: 'Teams',       icon: 'ti-brand-teams',       score: 74, color: '#3C3489', bg:'#EEEDFE', issues: 0, coming: true },
