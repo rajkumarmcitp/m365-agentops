@@ -460,35 +460,32 @@ function renderExecutive() {
         `).join('')}
       </div>
 
-      <!-- Service security grid -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><i class="ti ti-layout-grid"></i> Service Security Posture</span>
-        </div>
-        <div class="sec-svc-grid">
-          ${[
-            { name: 'Identity',    icon: 'ti-user-check',        score: realIdentityPosture.identitySecureScore || 72, color: '#0C447C', bg:'#E6F1FB', issues: realIdentityPosture.highRiskUsers },
-            { name: 'Secure Score',icon: 'ti-shield-check',      score: Math.round(ss.percentOf100 || 0), color: '#854F0B', bg:'#FAEEDA', issues: 0 },
-            { name: 'Email',       icon: 'ti-mail',              score: 71, color: '#854F0B', bg:'#FAEEDA', issues: 0, coming: true },
-            { name: 'Endpoint',    icon: 'ti-device-laptop',     score: 58, color: '#3B6D11', bg:'#EAF3DE', issues: 0, coming: true },
-            { name: 'Teams',       icon: 'ti-brand-teams',       score: 74, color: '#3C3489', bg:'#EEEDFE', issues: 0, coming: true },
-            { name: 'SharePoint',  icon: 'ti-brand-sharepoint',  score: 66, color: '#3B6D11', bg:'#EAF3DE', issues: 0, coming: true },
-            { name: 'Data',        icon: 'ti-database',          score: 61, color: '#3C3489', bg:'#EEEDFE', issues: 0, coming: true },
-            { name: 'Incidents',   icon: 'ti-alert-triangle',    score: incidents.filter(i => i.status !== 'resolved').length === 0 ? 100 : 50, color: incidents.filter(i => i.status !== 'resolved').length === 0 ? '#3B6D11' : '#A32D2D', bg: incidents.filter(i => i.status !== 'resolved').length === 0 ? '#EAF3DE' : '#FDEBEB', issues: incidents.filter(i => i.status !== 'resolved').length },
-          ].map(s => {
-            const cls = s.score >= 80 ? 'success' : s.score >= 65 ? 'warning' : 'danger'
-            return `<div class="sec-svc-tile" data-goto="${s.name.toLowerCase().replace(' ','').replace('.','')}" style="cursor:pointer;${s.coming ? 'opacity:0.7' : ''}">
-              ${scoreGauge(s.score, 100, 40)}
-              <div style="flex:1;min-width:0">
-                <div style="display:flex;align-items:center;gap:6px">
-                  <div style="width:22px;height:22px;border-radius:5px;background:${s.bg};color:${s.color};display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0"><i class="ti ${s.icon}"></i></div>
-                  <span style="font-size:11px;font-weight:600">${s.name}</span>
-                </div>
-                ${s.coming ? `<div style="font-size:9px;color:var(--clr-info-text);margin-top:2px">Real data soon</div>` : s.issues > 0 ? `<div style="font-size:9px;color:var(--clr-warning-text);margin-top:2px">${s.issues} issue${s.issues > 1 ? 's' : ''}</div>` : `<div style="font-size:9px;color:var(--clr-success-text);margin-top:2px">No issues</div>`}
+      <!-- Service security cards - Entra Apps style -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:16px">
+        ${[
+          { name: 'Identity',    icon: 'ti-user-check',        score: realIdentityPosture.identitySecureScore || 72, color: '#0C447C', issues: realIdentityPosture.highRiskUsers, issueText: 'high-risk users' },
+          { name: 'Secure Score',icon: 'ti-shield-check',      score: Math.round(ss.percentOf100 || 0), color: '#854F0B', issues: 0, issueText: '' },
+          { name: 'Email',       icon: 'ti-mail',              score: 71, color: '#854F0B', issues: 0, issueText: '', coming: true },
+          { name: 'Endpoint',    icon: 'ti-device-laptop',     score: 58, color: '#3B6D11', issues: 0, issueText: '', coming: true },
+          { name: 'Teams',       icon: 'ti-brand-teams',       score: 74, color: '#3C3489', issues: 0, issueText: '', coming: true },
+          { name: 'SharePoint',  icon: 'ti-brand-sharepoint',  score: 66, color: '#3B6D11', issues: 0, issueText: '', coming: true },
+          { name: 'Data',        icon: 'ti-database',          score: 61, color: '#3C3489', issues: 0, issueText: '', coming: true },
+          { name: 'Incidents',   icon: 'ti-alert-triangle',    score: incidents.filter(i => i.status !== 'resolved').length === 0 ? 100 : 50, color: incidents.filter(i => i.status !== 'resolved').length === 0 ? '#3B6D11' : '#A32D2D', issues: incidents.filter(i => i.status !== 'resolved').length, issueText: 'open incidents' },
+        ].map(s => `
+          <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;${s.coming ? 'opacity:0.7' : ''}">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                <i class="ti ${s.icon}" style="font-size:20px;color:${s.color}"></i>
+                <span class="card-title" style="margin:0;flex:1">${s.name}</span>
               </div>
-            </div>`
-          }).join('')}
-        </div>
+              <div style="font-size:32px;font-weight:700;color:${s.color};margin-bottom:4px">${s.score}%</div>
+              <div style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Score</div>
+            </div>
+            <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--color-border-secondary)">
+              ${s.coming ? `<div style="font-size:10px;color:var(--clr-info-text)">Real data soon</div>` : s.issues > 0 ? `<div style="font-size:10px;font-weight:600;color:${s.color}">${s.issues} ${s.issueText}</div>` : `<div style="font-size:10px;color:var(--clr-success-text);font-weight:600">✓ No issues</div>`}
+            </div>
+          </div>
+        `).join('')}
       </div>
     </div>
 
