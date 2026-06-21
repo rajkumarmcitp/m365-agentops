@@ -68,22 +68,28 @@ export function renderNav() {
       </div>
     `).join('')
 
-  // Admin section
-  const adminItems = buildItems(NAV_ITEMS.admin)
+  // Check if self-service portal is enabled
+  const portalEnabled = state.settings?.portalEnabled !== false
+
+  // Admin section (filter out Requests if portal is disabled)
+  let adminNavItems = NAV_ITEMS.admin
+  if (!portalEnabled) {
+    adminNavItems = adminNavItems.filter(item => item.id !== 'requests')
+  }
+  const adminItems = buildItems(adminNavItems)
   if (adminItems) {
     html += `<div class="nav-section"><div class="nav-section-label">Administration</div>${adminItems}</div>`
   }
 
-  // Approvals section (for admin and super only)
-  if (['admin', 'super'].includes(u.role) && access.includes('approvals')) {
+  // Approvals section (only show if portal is enabled)
+  if (portalEnabled && ['admin', 'super'].includes(u.role) && access.includes('approvals')) {
     const approvalsItem = NAV_ITEMS.manager.find(it => it.id === 'approvals')
     if (approvalsItem) {
       html += `<div class="nav-section"><div class="nav-section-label">Approvals</div>${buildItems([approvalsItem])}</div>`
     }
   }
 
-  // Self-service (only show if portal is enabled)
-  const portalEnabled = state.settings?.portalEnabled !== false
+  // Self-service section (only show if portal is enabled)
   const ssItems = buildItems(NAV_ITEMS.selfservice)
   if (ssItems && portalEnabled) {
     html += `<div class="nav-divider"></div><div class="nav-section"><div class="nav-section-label">Self-Service</div>${ssItems}</div>`
