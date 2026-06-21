@@ -3,7 +3,9 @@
  * Stores alerts, correlations, and configuration drift to SharePoint Lists
  */
 
-const SHAREPOINT_SITE_ID = process.env.SHAREPOINT_SITE_ID || 'b60085d7-b9c8-41a3-8789-bab376d0c84f'
+// Extract site ID from the comma-separated format: hostname,siteId,webId
+const SHAREPOINT_SITE_ID_RAW = process.env.SHAREPOINT_SITE_ID || 'b60085d7-b9c8-41a3-8789-bab376d0c84f'
+const SHAREPOINT_SITE_ID = SHAREPOINT_SITE_ID_RAW.includes(',') ? SHAREPOINT_SITE_ID_RAW : SHAREPOINT_SITE_ID_RAW
 
 /**
  * Store alert to SharePoint
@@ -15,22 +17,23 @@ export async function storeAlertToSharePoint(graphClient, alert, listId) {
   }
 
   try {
+    // Use proper SharePoint field formats
     const item = {
       fields: {
-        AlertID: alert.id,
         Title: alert.headline || alert.name || 'Alert',
+        AlertID: alert.id,
+        AlertType: alert.type || 'AUDIT',
         Severity: alert.severity || 'MEDIUM',
         Priority: alert.priority || 'P3',
-        RiskScore: alert.riskScore || alert.score || 0,
-        Category: alert.category || 'Security',
-        Description: alert.description || '',
-        Actor: alert.actor || 'System',
-        Target: alert.target || 'N/A',
-        Source: alert.source || 'Graph API',
-        ActionTimestamp: alert.timestamp || alert.action_timestamp || new Date().toISOString(),
-        AlertType: alert.type || 'AUDIT',
-        RawEvent: JSON.stringify(alert.raw_event || {}),
-        Dismissed: alert.dismissed || false,
+        RiskScore: alert.score || 0,
+        Category: alert.category || 'Unknown',
+        Description: (alert.description || '').substring(0, 500),  // Limit text length
+        Actor: (alert.actor || 'System').substring(0, 255),
+        Target: (alert.target || 'N/A').substring(0, 255),
+        ActionTimestamp: alert.action_timestamp || alert.timestamp || new Date().toISOString(),
+        Dismissed: alert.dismissed ? 'Yes' : 'No',
+        Reviewed: alert.reviewed ? 'Yes' : 'No',
+        RawEvent: JSON.stringify(alert.raw_event || {}).substring(0, 5000)
       }
     }
 
@@ -41,7 +44,7 @@ export async function storeAlertToSharePoint(graphClient, alert, listId) {
     console.log(`✅ Alert stored in SharePoint: ${alert.id}`)
     return response
   } catch (error) {
-    console.error(`❌ Failed to store alert in SharePoint: ${error.message}`)
+    console.error(`❌ Failed to store alert ${alert.id}: ${error.message}`)
     return null
   }
 }
@@ -56,20 +59,20 @@ export async function storeCorrelationToSharePoint(graphClient, correlation, lis
   }
 
   try {
+    // Use proper SharePoint field formats
     const item = {
       fields: {
-        Title: correlation.description || 'Correlation',
-        CorrelationType: correlation.pattern_type || correlation.correlation_type || 'UNKNOWN',
-        AlertIDs: correlation.alert_ids ? (Array.isArray(correlation.alert_ids) ? correlation.alert_ids.join(',') : correlation.alert_ids) : '',
+        Title: (correlation.description || 'Correlation').substring(0, 255),
+        CorrelationType: (correlation.pattern_type || correlation.correlation_type || 'UNKNOWN').substring(0, 255),
+        AlertIDs: correlation.alert_ids ? (Array.isArray(correlation.alert_ids) ? correlation.alert_ids.join(',') : String(correlation.alert_ids)).substring(0, 500) : '',
         AlertCount: correlation.alert_count || 0,
         CorrelationScore: correlation.correlation_score || 0,
         RiskLevel: correlation.risk_level || 'MEDIUM',
-        Description: correlation.description || '',
-        Actor: correlation.actor || 'System',
-        Target: correlation.target || 'N/A',
+        Description: (correlation.description || '').substring(0, 500),
+        Actor: (correlation.actor || 'System').substring(0, 255),
+        Target: (correlation.target || 'N/A').substring(0, 255),
         StartTimestamp: correlation.start_timestamp || new Date().toISOString(),
         EndTimestamp: correlation.end_timestamp || new Date().toISOString(),
-        Metadata: JSON.stringify(correlation.metadata || {}),
       }
     }
 
@@ -80,7 +83,7 @@ export async function storeCorrelationToSharePoint(graphClient, correlation, lis
     console.log(`✅ Correlation stored in SharePoint`)
     return response
   } catch (error) {
-    console.error(`❌ Failed to store correlation in SharePoint: ${error.message}`)
+    console.error(`❌ Failed to store correlation: ${error.message}`)
     return null
   }
 }
