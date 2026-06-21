@@ -170,18 +170,54 @@ export async function initSecurity() {
 
 function renderSecuritySkeleton(el) {
   el.innerHTML = `
-    <div class="page-header" style="opacity:0.6">
+    <style>
+      @keyframes skeleton-shimmer {
+        0% { background-position: -1000px 0; }
+        100% { background-position: 1000px 0; }
+      }
+      .skeleton-animate {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 1000px 100%;
+        animation: skeleton-shimmer 2s infinite;
+      }
+    </style>
+    <div class="page-header">
       <div>
-        <div class="page-title" style="background:#e0e0e0;width:300px;height:28px;border-radius:4px;margin-bottom:8px"></div>
-        <div class="page-subtitle" style="background:#f0f0f0;width:400px;height:16px;border-radius:4px"></div>
+        <div class="page-title skeleton-animate" style="width:350px;height:28px;border-radius:4px;margin-bottom:8px"></div>
+        <div class="page-subtitle skeleton-animate" style="width:450px;height:16px;border-radius:4px"></div>
       </div>
       <div class="page-actions" style="display:flex;gap:8px">
-        <div style="background:#f0f0f0;width:80px;height:32px;border-radius:4px"></div>
-        <div style="background:#e0e0e0;width:100px;height:32px;border-radius:4px"></div>
+        <div class="skeleton-animate" style="width:80px;height:32px;border-radius:4px"></div>
+        <div class="skeleton-animate" style="width:100px;height:32px;border-radius:4px"></div>
       </div>
     </div>
-    ${skeletonLoader.renderMetricsRowSkeleton(5)}
-    ${skeletonLoader.renderTabsWithContentSkeleton(8, true)}
+
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
+      ${Array(5).fill(0).map(() => `
+        <div class="kpi-tile" style="padding:16px;border-radius:8px;background:var(--color-background-secondary)">
+          <div class="skeleton-animate" style="width:50px;height:24px;border-radius:4px;margin-bottom:12px"></div>
+          <div class="skeleton-animate" style="width:60%;height:32px;border-radius:4px;margin-bottom:8px"></div>
+          <div class="skeleton-animate" style="width:70%;height:12px;border-radius:4px"></div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div style="border-bottom:0.5px solid var(--color-border-secondary);margin-bottom:16px;display:flex;gap:8px;padding-bottom:12px;overflow-x:auto">
+      ${Array(8).fill(0).map(() => `
+        <div class="skeleton-animate" style="width:120px;height:20px;border-radius:4px;flex-shrink:0"></div>
+      `).join('')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:16px">
+      ${Array(2).fill(0).map(() => `
+        <div class="card" style="padding:16px">
+          <div class="skeleton-animate" style="width:180px;height:20px;border-radius:4px;margin-bottom:16px"></div>
+          <div class="skeleton-animate" style="width:100%;height:12px;border-radius:4px;margin-bottom:8px"></div>
+          <div class="skeleton-animate" style="width:95%;height:12px;border-radius:4px;margin-bottom:8px"></div>
+          <div class="skeleton-animate" style="width:90%;height:12px;border-radius:4px"></div>
+        </div>
+      `).join('')}
+    </div>
   `
 }
 
