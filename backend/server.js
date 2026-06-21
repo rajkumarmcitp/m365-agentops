@@ -7423,6 +7423,169 @@ app.post('/api/tenantguard/initialize', async (req, res) => {
   }
 })
 
+// Initialize Enhanced TenantGuard Lists (P1/P2 priority alerts)
+app.post('/api/tenantguard/initialize-enhanced', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    let { siteUrl } = req.body
+    let site = siteUrl?.trim() || 'root'
+
+    // Normalize and parse URL (same as classic version)
+    if (site !== 'root') {
+      console.log(`📍 Original input: ${site}`)
+
+      if (site.startsWith('http')) {
+        try {
+          const url = new URL(site)
+          const pathname = url.pathname
+          const match = pathname.match(/\/sites\/([^/]+)/i)
+          if (match) {
+            site = `/sites/${match[1]}`
+          } else {
+            const segments = pathname.split('/').filter(p => p)
+            site = segments.length > 0 ? `/sites/${segments[segments.length - 1]}` : 'root'
+          }
+        } catch (e) {
+          console.error(`URL parsing error: ${e.message}`)
+          return res.status(400).json({
+            success: false,
+            error: `Invalid URL format: ${e.message}`,
+            hint: 'Please use one of these formats: "root", "M365-AgentOps-Prod", "/sites/M365-AgentOps-Prod", or "https://tenant.sharepoint.com/sites/M365-AgentOps-Prod"'
+          })
+        }
+      } else {
+        site = site.replace(/\/{2,}/g, '/').trim()
+        if (site.startsWith('/sites/')) {
+          // Already correct
+        } else if (site.startsWith('sites/')) {
+          site = `/${site}`
+        } else {
+          site = `/sites/${site}`
+        }
+      }
+    }
+
+    site = site.replace(/\/{2,}/g, '/')
+    console.log(`🔍 Normalized SharePoint site: ${site}`)
+
+    // Get the site
+    let siteId
+    try {
+      let apiPath
+      if (site === 'root') {
+        apiPath = '/sites/root'
+      } else if (site.startsWith('/sites/')) {
+        apiPath = `/sites/nasstech.sharepoint.com:${site}`
+      } else {
+        apiPath = `/sites/nasstech.sharepoint.com:/sites/${site}`
+      }
+      console.log(`📡 API call: ${apiPath}`)
+      const siteData = await graphClient.api(apiPath).get()
+      siteId = siteData.id
+    } catch (error) {
+      console.error(`❌ Could not access SharePoint site (${site}):`, error.message)
+      return res.status(400).json({
+        success: false,
+        error: `Could not access SharePoint site (${site}): ${error.message}`,
+        hint: 'Please use one of these formats: "root", "M365-AgentOps-Prod", "/sites/M365-AgentOps-Prod", or "https://tenant.sharepoint.com/sites/M365-AgentOps-Prod"'
+      })
+    }
+
+    console.log(`🚀 Initializing Enhanced TenantGuard lists on site: ${site} (${siteId})`)
+
+    const listConfigs = [
+      { name: 'TenantGuard-Enhanced-Alerts', displayName: 'TenantGuard Enhanced Alerts', type: 'alerts' },
+      { name: 'TenantGuard-Enhanced-Correlations', displayName: 'TenantGuard Enhanced Correlations', type: 'correlations' },
+      { name: 'TenantGuard-Enhanced-Investigations', displayName: 'TenantGuard Enhanced Investigations', type: 'investigations' }
+    ]
+
+    const createdLists = {}
+    const columnResults = {}
+
+    for (const listConfig of listConfigs) {
+      try {
+        let apiPath
+        if (site === 'root') {
+          apiPath = `/sites/root/lists`
+        } else if (site.startsWith('/sites/')) {
+          apiPath = `/sites/nasstech.sharepoint.com:${site}/lists`
+        } else {
+          apiPath = `/sites/nasstech.sharepoint.com:/sites/${site}/lists`
+        }
+
+        console.log(`📝 Creating list: ${listConfig.name}`)
+
+        const listData = {
+          displayName: listConfig.displayName,
+          list: {
+            template: 'genericList'
+          }
+        }
+
+        const newList = await graphClient.api(apiPath).post(listData)
+        createdLists[listConfig.name] = newList.id
+
+        console.log(`✓ List created: ${listConfig.name} (ID: ${newList.id})`)
+
+        // Create columns for the list
+        const columns = await createListColumns(apiPath, newList.id, listConfig.type)
+        columnResults[listConfig.name] = columns
+
+      } catch (error) {
+        if (error.message.includes('already exists')) {
+          console.log(`⚠️ List already exists: ${listConfig.name}, attempting to retrieve...`)
+          try {
+            let apiPath
+            if (site === 'root') {
+              apiPath = `/sites/root/lists`
+            } else if (site.startsWith('/sites/')) {
+              apiPath = `/sites/nasstech.sharepoint.com:${site}/lists`
+            } else {
+              apiPath = `/sites/nasstech.sharepoint.com:/sites/${site}/lists`
+            }
+
+            const lists = await graphClient.api(apiPath).get()
+            const existingList = lists.value.find(l => l.displayName === listConfig.displayName)
+            if (existingList) {
+              createdLists[listConfig.name] = existingList.id
+              const columns = await createListColumns(apiPath, existingList.id, listConfig.type)
+              columnResults[listConfig.name] = columns
+            } else {
+              throw new Error(`List ${listConfig.name} not found`)
+            }
+          } catch (retryError) {
+            console.error(`❌ Failed to handle existing list ${listConfig.name}:`, retryError.message)
+            columnResults[listConfig.name] = { error: retryError.message, created: [], skipped: [] }
+          }
+        } else {
+          console.error(`❌ Error creating list ${listConfig.name}:`, error.message)
+          columnResults[listConfig.name] = { error: error.message, created: [], skipped: [] }
+        }
+      }
+    }
+
+    console.log(`✅ Enhanced TenantGuard lists initialization complete`)
+
+    res.json({
+      success: true,
+      message: 'Enhanced TenantGuard lists and columns created successfully',
+      siteId: siteId,
+      siteUrl: site,
+      enhancedAlertsListId: createdLists['TenantGuard-Enhanced-Alerts'],
+      enhancedCorrelationsListId: createdLists['TenantGuard-Enhanced-Correlations'],
+      enhancedInvestigationsListId: createdLists['TenantGuard-Enhanced-Investigations'],
+      columns: columnResults,
+      envConfig: `SHAREPOINT_SITE_ID=${siteId}\nSHAREPOINT_ENHANCED_ALERTS_LIST_ID=${createdLists['TenantGuard-Enhanced-Alerts']}\nSHAREPOINT_ENHANCED_CORRELATIONS_LIST_ID=${createdLists['TenantGuard-Enhanced-Correlations']}\nSHAREPOINT_ENHANCED_INVESTIGATIONS_LIST_ID=${createdLists['TenantGuard-Enhanced-Investigations']}`
+    })
+  } catch (error) {
+    console.error('Error initializing Enhanced TenantGuard lists:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 /**
  * Helper function to create custom columns for a list
  */

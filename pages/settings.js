@@ -193,6 +193,59 @@ function renderSettings(el) {
       </div>
     </div>
 
+    <!-- Tenant Guard Enhanced SharePoint Configuration -->
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-alert-triangle"></i> Tenant Guard Enhanced — SharePoint Configuration</div>
+      <div style="background:#f3e5f5;border-left:4px solid #9c27b0;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#6a1b9a">
+        <i class="ti ti-info-circle"></i>
+        <strong>Configuration:</strong> Specify the SharePoint site where P1/P2 priority alerts, correlations, and investigations will be stored (Enhanced dashboard). This is required for real-time alert synchronization.
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label class="form-label">SharePoint Site URL</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" class="form-input" id="settings-tenantguard-enhanced-site" placeholder="e.g., root or /sites/Security" style="flex:1">
+          <button class="btn" id="settings-tenantguard-enhanced-test" style="white-space:nowrap"><i class="ti ti-check"></i> Test</button>
+        </div>
+        <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px">
+          Enter "root" for tenant root site, or "/sites/SiteName" for a specific site. Lists will be created here: TenantGuard-Enhanced-Alerts, TenantGuard-Enhanced-Correlations, TenantGuard-Enhanced-Investigations
+        </div>
+      </div>
+      <div id="settings-tenantguard-enhanced-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none">
+        Status will appear here
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary" id="settings-tenantguard-enhanced-init" style="white-space:nowrap"><i class="ti ti-database"></i> Initialize Enhanced Lists</button>
+        <div style="font-size:10px;color:var(--color-text-tertiary)">Creates P1/P2 priority alert lists with all required fields</div>
+      </div>
+      <div id="settings-tenantguard-enhanced-init-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none;margin-top:8px">
+        Initialization status will appear here
+      </div>
+
+      <div style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+        <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">📋 Configuration Reference</div>
+        <div style="font-size:9px;color:var(--color-text-secondary);line-height:1.6">
+          <strong>Lists Created:</strong><br>
+          • TenantGuard-Enhanced-Alerts — P1/P2 priority security events<br>
+          • TenantGuard-Enhanced-Correlations — Grouped alert patterns<br>
+          • TenantGuard-Enhanced-Investigations — Investigation logs<br><br>
+          <strong>Alert Priority Filter:</strong><br>
+          Only P1 (Critical) and P2 (High) priority alerts are stored<br><br>
+          <strong>After Initialization:</strong><br>
+          • Site ID and List IDs will be displayed below<br>
+          • Copy these values to your <code style="background:#f5f5f5;padding:2px 4px;border-radius:2px">.env</code> file<br>
+          • Restart backend to activate SharePoint storage
+        </div>
+      </div>
+
+      <div id="settings-tenantguard-enhanced-config" style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);display:none">
+        <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">✅ Configuration Ready - Add to .env:</div>
+        <div style="background:#f5f5f5;padding:8px;border-radius:4px;font-family:monospace;font-size:9px;color:#333;white-space:pre-wrap;word-break:break-all" id="settings-tenantguard-enhanced-env-output"></div>
+        <button class="btn btn-sm" id="settings-tenantguard-enhanced-copy" style="margin-top:8px;font-size:9px"><i class="ti ti-copy"></i> Copy to Clipboard</button>
+      </div>
+    </div>
+
     <!-- Self Service Portal SharePoint Configuration -->
     <div class="card mb-3">
       <div class="card-title mb-3"><i class="ti ti-layout-kanban"></i> Self Service Portal — SharePoint Configuration</div>
@@ -584,6 +637,129 @@ SHAREPOINT_TENANTGUARD_INVESTIGATIONS_LIST_ID=${result.investigationsListId}`
     } finally {
       tenantguardInitBtn.disabled = false
       tenantguardInitBtn.innerHTML = '<i class="ti ti-database"></i> Initialize TenantGuard Lists'
+    }
+  })
+
+  // ---- Tenant Guard Enhanced SharePoint Configuration ----
+  const enhancedInput = el.querySelector('#settings-tenantguard-enhanced-site')
+  const enhancedTestBtn = el.querySelector('#settings-tenantguard-enhanced-test')
+  const enhancedStatus = el.querySelector('#settings-tenantguard-enhanced-status')
+  const enhancedInitBtn = el.querySelector('#settings-tenantguard-enhanced-init')
+  const enhancedInitStatus = el.querySelector('#settings-tenantguard-enhanced-init-status')
+  const enhancedConfig = el.querySelector('#settings-tenantguard-enhanced-config')
+  const enhancedEnvOutput = el.querySelector('#settings-tenantguard-enhanced-env-output')
+  const enhancedCopyBtn = el.querySelector('#settings-tenantguard-enhanced-copy')
+
+  enhancedInput.value = s.tenantguardEnhancedSiteUrl || 'root'
+
+  enhancedTestBtn.addEventListener('click', async () => {
+    const siteUrl = enhancedInput.value.trim() || 'root'
+    enhancedTestBtn.disabled = true
+    enhancedTestBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Testing...'
+    enhancedStatus.style.display = 'block'
+    enhancedStatus.textContent = 'Testing connection...'
+
+    try {
+      const response = await fetch(`${api}/tenantguard/validate-sharepoint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteUrl })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        enhancedStatus.style.background = '#e8f5e9'
+        enhancedStatus.style.color = '#2e7d32'
+        enhancedStatus.textContent = `✓ Connected! Site: ${result.siteName || siteUrl}`
+        state.settings.tenantguardEnhancedSiteUrl = siteUrl
+        state.settings.tenantguardEnhancedSiteId = result.siteId
+        saveState()
+        showToast('Enhanced TenantGuard SharePoint site configured successfully', 'success')
+      } else {
+        enhancedStatus.style.background = '#ffebee'
+        enhancedStatus.style.color = '#c62828'
+        enhancedStatus.textContent = `✗ Error: ${result.error || 'Could not connect to site'}`
+        showToast('SharePoint connection failed', 'error')
+      }
+    } catch (error) {
+      enhancedStatus.style.background = '#ffebee'
+      enhancedStatus.style.color = '#c62828'
+      enhancedStatus.textContent = `✗ Error: ${error.message}`
+      showToast('SharePoint connection error', 'error')
+    } finally {
+      enhancedTestBtn.disabled = false
+      enhancedTestBtn.innerHTML = '<i class="ti ti-check"></i> Test'
+    }
+  })
+
+  // Initialize Enhanced TenantGuard Lists
+  enhancedInitBtn.addEventListener('click', async () => {
+    const siteUrl = enhancedInput.value.trim() || 'root'
+    enhancedInitBtn.disabled = true
+    enhancedInitBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Initializing...'
+    enhancedInitStatus.style.display = 'block'
+    enhancedInitStatus.textContent = 'Creating Enhanced TenantGuard lists and fields...'
+
+    try {
+      const response = await fetch(`${api}/tenantguard/initialize-enhanced`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteUrl })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        enhancedInitStatus.style.background = '#e8f5e9'
+        enhancedInitStatus.style.color = '#2e7d32'
+
+        // Build detailed status message with column info
+        let statusMsg = `✓ ${result.message}`
+        if (result.columns) {
+          const alertsCols = result.columns['TenantGuard-Enhanced-Alerts']
+          const corrCols = result.columns['TenantGuard-Enhanced-Correlations']
+          const invCols = result.columns['TenantGuard-Enhanced-Investigations']
+
+          const totalCreated = (alertsCols?.created?.length || 0) + (corrCols?.created?.length || 0) + (invCols?.created?.length || 0)
+          const totalSkipped = (alertsCols?.skipped?.length || 0) + (corrCols?.skipped?.length || 0) + (invCols?.skipped?.length || 0)
+
+          statusMsg += `\n📋 Columns: ${totalCreated} created, ${totalSkipped} already exist`
+          statusMsg += `\n  • Enhanced Alerts: ${alertsCols?.created?.length || 0} fields`
+          statusMsg += `\n  • Enhanced Correlations: ${corrCols?.created?.length || 0} fields`
+          statusMsg += `\n  • Enhanced Investigations: ${invCols?.created?.length || 0} fields`
+        }
+        enhancedInitStatus.textContent = statusMsg
+
+        // Display configuration for .env file
+        if (result.siteId && result.enhancedAlertsListId && result.enhancedCorrelationsListId && result.enhancedInvestigationsListId) {
+          enhancedConfig.style.display = 'block'
+          enhancedEnvOutput.textContent = `SHAREPOINT_SITE_ID=${result.siteId}
+SHAREPOINT_ENHANCED_ALERTS_LIST_ID=${result.enhancedAlertsListId}
+SHAREPOINT_ENHANCED_CORRELATIONS_LIST_ID=${result.enhancedCorrelationsListId}
+SHAREPOINT_ENHANCED_INVESTIGATIONS_LIST_ID=${result.enhancedInvestigationsListId}`
+
+          enhancedCopyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(enhancedEnvOutput.textContent)
+            showToast('Configuration copied to clipboard', 'success')
+          })
+        }
+
+        showToast('Enhanced TenantGuard lists and columns created successfully', 'success')
+      } else {
+        enhancedInitStatus.style.background = '#ffebee'
+        enhancedInitStatus.style.color = '#c62828'
+        enhancedInitStatus.textContent = `✗ Error: ${result.error || 'Could not initialize lists'}`
+        showToast('List initialization failed', 'error')
+      }
+    } catch (error) {
+      enhancedInitStatus.style.background = '#ffebee'
+      enhancedInitStatus.style.color = '#c62828'
+      enhancedInitStatus.textContent = `✗ Error: ${error.message}`
+      showToast('List initialization error', 'error')
+    } finally {
+      enhancedInitBtn.disabled = false
+      enhancedInitBtn.innerHTML = '<i class="ti ti-database"></i> Initialize Enhanced Lists'
     }
   })
 
