@@ -299,7 +299,7 @@ function topFiveKpi() {
       <div style="display:flex;align-items:center;gap:12px">
         ${scoreGauge(ss.current, ss.max, 52)}
         <div>
-          <div class="kpi-value ${ssColor}" style="font-size:28px;font-weight:700">${ss.current}<span style="font-size:12px;font-weight:500;color:var(--color-text-tertiary)">/${ss.max}</span></div>
+          <div class="kpi-value ${ssColor}" style="font-size:32px;font-weight:700;margin-bottom:8px">${ss.current}<span style="font-size:12px;font-weight:500;color:var(--color-text-tertiary)">/${ss.max}</span></div>
           <div class="kpi-label">Secure Score</div>
           <div style="font-size:10px;margin-top:3px;color:${ss.delta7d >= 0 ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'}">
             ${ss.delta7d >= 0 ? '+' : ''}${ss.delta7d} this week
