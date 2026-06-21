@@ -230,12 +230,12 @@ function render(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-shield-exclamation" style="font-size:20px"></i> Security Command Center</div>
+        <div class="page-title"><i class="ti ti-shield-exclamation"></i> Security Command Center</div>
         <div class="page-subtitle">Single-pane-of-glass across Identity, Email, Endpoint, Apps & Data · Last scan: Today 08:45</div>
       </div>
       <div class="page-actions">
-        <button class="btn" id="sec-refresh"><i class="ti ti-refresh" style="font-size:20px"></i> Refresh</button>
-        <button class="btn btn-primary" id="sec-report"><i class="ti ti-download" style="font-size:20px"></i> Export report</button>
+        <button class="btn" id="sec-refresh"><i class="ti ti-refresh"></i> Refresh</button>
+        <button class="btn btn-primary" id="sec-report"><i class="ti ti-download"></i> Export report</button>
       </div>
     </div>
 
@@ -248,7 +248,7 @@ function render(el) {
     <div class="tabs" id="sec-subnav">
       ${SEC_TABS.map(t => `
         <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
-          <i class="ti ${t.icon}" style="font-size:20px"></i><span>${t.label}</span>
+          <i class="ti ${t.icon}"></i><span>${t.label}</span>
           ${t.id === 'incidents' && critCount > 0 ? `<span class="sec-tab-badge red">${critCount}</span>` : ''}
           ${t.id === 'recommendations' ? `<span class="sec-tab-badge amber">${openRec}</span>` : ''}
           ${t.id === 'identity' && realIdentityPosture.highRiskUsers > 0 ? `<span class="sec-tab-badge red">${realIdentityPosture.highRiskUsers}</span>` : ''}
@@ -273,7 +273,7 @@ function render(el) {
     btn.innerHTML = `<span class="spinner dark"></span> Scanning...`
     btn.disabled = true
     setTimeout(() => {
-      btn.innerHTML = `<i class="ti ti-refresh" style="font-size:20px"></i> Refresh`
+      btn.innerHTML = `<i class="ti ti-refresh"></i> Refresh`
       btn.disabled = false
       showToast('Security posture refreshed — all 15 data sources updated.', 'success')
     }, 2200)
@@ -299,8 +299,8 @@ function topFiveKpi() {
       <div style="display:flex;align-items:center;gap:12px">
         ${scoreGauge(ss.current, ss.max, 52)}
         <div>
-          <div class="kpi-value ${ssColor}" style="font-size:32px;font-weight:700;margin-bottom:8px">${ss.current}<span style="font-size:12px;font-weight:500;color:var(--color-text-tertiary)">/${ss.max}</span></div>
-          <div class="kpi-label">Secure Score</div>
+          <div class="kpi-value ${ssColor}" style="font-size:28px;font-weight:700">${ss.current}<span style="font-size:12px;font-weight:500;color:var(--color-text-tertiary)">/${ss.max}</span></div>
+          <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Secure Score</div>
           <div style="font-size:10px;margin-top:3px;color:${ss.delta7d >= 0 ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'}">
             ${ss.delta7d >= 0 ? '+' : ''}${ss.delta7d} this week
           </div>
@@ -308,18 +308,18 @@ function topFiveKpi() {
       </div>
     </div>
     <div class="kpi-tile">
-      <div class="kpi-value ${critical > 0 ? 'danger' : 'success'}" style="font-size:32px;font-weight:700;margin-bottom:8px">${critical > 0 ? critical : '✓'}</div>
-      <div class="kpi-label">Critical Incidents</div>
+      <div class="kpi-value ${critical > 0 ? 'danger' : 'success'}" style="font-size:28px;font-weight:700">${critical > 0 ? critical : '✓'}</div>
+      <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Critical Incidents</div>
       <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${incidents.filter(i => i.status !== 'resolved').length} open total</div>
     </div>
     <div class="kpi-tile">
-      <div class="kpi-value ${realIdentityPosture.highRiskUsers > 0 ? 'danger' : 'success'}" style="font-size:32px;font-weight:700;margin-bottom:8px">${realIdentityPosture.highRiskUsers}</div>
-      <div class="kpi-label">High-Risk Users</div>
+      <div class="kpi-value ${realIdentityPosture.highRiskUsers > 0 ? 'danger' : 'success'}" style="font-size:28px;font-weight:700">${realIdentityPosture.highRiskUsers}</div>
+      <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">High-Risk Users</div>
       <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${realIdentityPosture.riskySignIns30d} risky sign-ins (30d)</div>
     </div>
     <div class="kpi-tile">
-      <div class="kpi-value success" style="font-size:32px;font-weight:700;margin-bottom:8px">0</div>
-      <div class="kpi-label">Vulnerable Devices</div>
+      <div class="kpi-value success" style="font-size:28px;font-weight:700">0</div>
+      <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Vulnerable Devices</div>
       <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">0 non-compliant</div>
     </div>
   `
@@ -363,9 +363,9 @@ function trendBars(data, height = 24) {
 
 // Status indicator
 function statusIcon(ok, label) {
-  if (ok === 'pass'    || ok === true)     return `<span style="color:var(--clr-success-text)"><i class="ti ti-circle-check" style="font-size:20px"></i> ${label}</span>`
-  if (ok === 'partial' || ok === 'warn')   return `<span style="color:var(--clr-warning-text)"><i class="ti ti-alert-triangle" style="font-size:20px"></i> ${label}</span>`
-  return `<span style="color:var(--clr-danger-text)"><i class="ti ti-circle-x" style="font-size:20px"></i> ${label}</span>`
+  if (ok === 'pass'    || ok === true)     return `<span style="color:var(--clr-success-text)"><i class="ti ti-circle-check"></i> ${label}</span>`
+  if (ok === 'partial' || ok === 'warn')   return `<span style="color:var(--clr-warning-text)"><i class="ti ti-alert-triangle"></i> ${label}</span>`
+  return `<span style="color:var(--clr-danger-text)"><i class="ti ti-circle-x"></i> ${label}</span>`
 }
 
 // ============================================================
@@ -401,24 +401,24 @@ function renderExecutive() {
     <!-- Secondary KPI row - Real data only -->
     <div class="kpi-row mb-3">
       <div class="kpi-tile">
-        <div class="kpi-value warning">${realIdentityPosture.identitySecureScore}</div>
-        <div class="kpi-label">Identity Score</div>
+        <div class="kpi-value warning" style="font-size:28px;font-weight:700">${realIdentityPosture.identitySecureScore}</div>
+        <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Identity Score</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value ${realIdentityPosture.mfaEnabled / realIdentityPosture.totalUsers >= 0.95 ? 'success' : 'warning'}">${Math.round(realIdentityPosture.mfaEnabled / realIdentityPosture.totalUsers * 100)}%</div>
-        <div class="kpi-label">MFA Adoption</div>
+        <div class="kpi-value ${realIdentityPosture.mfaEnabled / realIdentityPosture.totalUsers >= 0.95 ? 'success' : 'warning'}" style="font-size:28px;font-weight:700">${Math.round(realIdentityPosture.mfaEnabled / realIdentityPosture.totalUsers * 100)}%</div>
+        <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">MFA Adoption</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value info">${realIdentityPosture.riskySignIns30d}</div>
-        <div class="kpi-label">Risky Sign-ins (30d)</div>
+        <div class="kpi-value info" style="font-size:28px;font-weight:700">${realIdentityPosture.riskySignIns30d}</div>
+        <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Risky Sign-ins (30d)</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value info">${realIdentityPosture.caPoliciesEnabled}</div>
-        <div class="kpi-label">CA Policies Enabled</div>
+        <div class="kpi-value info" style="font-size:28px;font-weight:700">${realIdentityPosture.caPoliciesEnabled}</div>
+        <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">CA Policies Enabled</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value info">${realIdentityPosture.totalUsers}</div>
-        <div class="kpi-label">Total Users</div>
+        <div class="kpi-value info" style="font-size:28px;font-weight:700">${realIdentityPosture.totalUsers}</div>
+        <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Total Users</div>
       </div>
     </div>
 
@@ -426,7 +426,7 @@ function renderExecutive() {
       <!-- Score trend + category breakdown -->
       <div class="card">
         <div class="card-header">
-          <span class="card-title"><i class="ti ti-trending-up" style="font-size:20px"></i> Secure Score Trend</span>
+          <span class="card-title"><i class="ti ti-trending-up"></i> Secure Score Trend</span>
           <div style="display:flex;gap:4px">
             <button class="btn btn-xs ${trendRange === '7d' ? 'btn-primary' : ''}" data-trend="7d">7d</button>
             <button class="btn btn-xs ${trendRange === '30d' ? 'btn-primary' : ''}" data-trend="30d">30d</button>
@@ -450,7 +450,7 @@ function renderExecutive() {
         ${(Array.isArray(ss.categories) ? ss.categories : []).map(c => `
           <div class="score-bar-row" style="margin-bottom:6px">
             <span class="score-label" style="display:flex;align-items:center;gap:5px;min-width:120px">
-              <i class="ti ${c.icon}" style="color:${c.color};font-size:20px"></i>${c.name}
+              <i class="ti ${c.icon}" style="color:${c.color};font-size:12px"></i>${c.name}
             </span>
             <div class="score-bar" style="flex:1">
               <div class="score-bar-fill" style="width:${c.score}%;background:${c.color}"></div>
@@ -463,7 +463,7 @@ function renderExecutive() {
       <!-- Service security grid -->
       <div class="card">
         <div class="card-header">
-          <span class="card-title"><i class="ti ti-layout-grid" style="font-size:20px"></i> Service Security Posture</span>
+          <span class="card-title"><i class="ti ti-layout-grid"></i> Service Security Posture</span>
         </div>
         <div class="sec-svc-grid">
           ${[
@@ -496,7 +496,7 @@ function renderExecutive() {
     <div class="grid-2" style="gap:16px">
       <div class="card">
         <div class="card-header">
-          <span class="card-title"><i class="ti ti-alert-triangle" style="font-size:20px"></i> Active Incidents</span>
+          <span class="card-title"><i class="ti ti-alert-triangle"></i> Active Incidents</span>
           <button class="btn btn-xs btn-primary" id="exec-view-incidents">View all</button>
         </div>
         ${incidents.filter(i => i.status !== 'resolved').length > 0 ? `
@@ -511,7 +511,7 @@ function renderExecutive() {
           `).join('')}
         ` : `
           <div style="padding:16px;text-align:center;color:var(--clr-success-text)">
-            <i class="ti ti-circle-check" style="font-size:20px;display:block;margin-bottom:8px"></i>
+            <i class="ti ti-circle-check" style="font-size:24px;display:block;margin-bottom:8px"></i>
             <strong>No active incidents</strong><br/>
             <span style="font-size:11px">Your tenant is secure</span>
           </div>
@@ -520,7 +520,7 @@ function renderExecutive() {
 
       <div class="card">
         <div class="card-header">
-          <span class="card-title"><i class="ti ti-shield-check" style="font-size:20px"></i> Identity Security</span>
+          <span class="card-title"><i class="ti ti-shield-check"></i> Identity Security</span>
         </div>
         <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-bottom:12px">
           <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px;text-transform:uppercase;font-weight:600">Real-time Metrics</div>
@@ -542,7 +542,7 @@ function renderSecureScore() {
   return `
     <div class="grid-2 mb-3" style="gap:16px">
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-shield-check" style="font-size:20px"></i> Microsoft Secure Score</div>
+        <div class="card-title mb-3"><i class="ti ti-shield-check"></i> Microsoft Secure Score</div>
         <div style="display:flex;align-items:center;gap:24px;margin-bottom:20px">
           ${scoreGauge(ss.current, ss.max, 100)}
           <div>
@@ -580,13 +580,13 @@ function renderSecureScore() {
 
       <div class="card">
         <div class="card-header">
-          <span class="card-title"><i class="ti ti-chart-bar" style="font-size:20px"></i> Score by Category</span>
+          <span class="card-title"><i class="ti ti-chart-bar"></i> Score by Category</span>
         </div>
         ${(Array.isArray(ss.categories) ? ss.categories : []).map(c => `
           <div style="margin-bottom:14px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
               <span style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px">
-                <i class="ti ${c.icon}" style="color:${c.color};font-size:20px"></i>${c.name}
+                <i class="ti ${c.icon}" style="color:${c.color}"></i>${c.name}
               </span>
               <span style="font-size:12px;font-weight:700;color:${c.color}">${c.score}%</span>
             </div>
@@ -601,7 +601,7 @@ function renderSecureScore() {
 
     <div class="card">
       <div class="card-header">
-        <span class="card-title"><i class="ti ti-list-check" style="font-size:20px"></i> Improvement Actions</span>
+        <span class="card-title"><i class="ti ti-list-check"></i> Improvement Actions</span>
         <span class="badge info">${RECOMMENDATIONS.length} recommendations · ${RECOMMENDATIONS.reduce((s, r) => s + r.scoreGain, 0)} pts potential</span>
       </div>
       <table>
@@ -623,7 +623,7 @@ function renderSecureScore() {
               <td><span class="badge success">+${r.scoreGain}</span></td>
               <td><span class="badge neutral">${r.effort}</span></td>
               <td><span class="badge ${r.status === 'open' ? 'warning' : 'info'}">${r.status}</span></td>
-              <td><button class="btn btn-xs"><i class="ti ti-arrow-right" style="font-size:20px"></i></button></td>
+              <td><button class="btn btn-xs"><i class="ti ti-arrow-right"></i></button></td>
             </tr>
           `).join('')}
         </tbody>
@@ -640,7 +640,7 @@ function renderIdentity() {
   return `
     <div class="grid-2 mb-3" style="gap:16px">
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-user-check" style="font-size:20px"></i> Identity Posture</div>
+        <div class="card-title mb-3"><i class="ti ti-user-check"></i> Identity Posture</div>
         ${metricGrid([
           { label: 'Total Users',         val: id.totalUsers.toLocaleString(), cls: 'info' },
           { label: 'Privileged Accounts', val: id.privAccounts, cls: 'warning' },
@@ -652,7 +652,7 @@ function renderIdentity() {
       </div>
 
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-device-mobile" style="font-size:20px"></i> Authentication</div>
+        <div class="card-title mb-3"><i class="ti ti-device-mobile"></i> Authentication</div>
         ${metricGrid([
           { label: 'MFA Enabled',        val: id.mfaEnabled + ' / ' + id.totalUsers, cls: 'success' },
           { label: 'MFA Excluded',       val: id.mfaExcluded, cls: 'danger' },
@@ -672,9 +672,9 @@ function renderIdentity() {
 
     <div class="grid-2 mb-3" style="gap:16px">
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-eye" style="font-size:20px"></i> Risk Monitoring (30 days)</div>
+        <div class="card-title mb-3"><i class="ti ti-eye"></i> Risk Monitoring (30 days)</div>
         <div class="alert-banner ${id.highRiskUsers > 0 ? 'danger' : 'success'}" style="margin-bottom:12px">
-          <i class="ti ti-${id.highRiskUsers > 0 ? 'alert-triangle' : 'circle-check'}" style="font-size:20px"></i>
+          <i class="ti ti-${id.highRiskUsers > 0 ? 'alert-triangle' : 'circle-check'}"></i>
           ${id.highRiskUsers > 0 ? `${id.highRiskUsers} high-risk users require immediate attention.` : 'No high-risk users detected.'}
         </div>
         ${metricGrid([
@@ -684,11 +684,11 @@ function renderIdentity() {
           { label: 'Anonymous IP Sign-ins',    val: id.anonymousIP30d, cls: id.anonymousIP30d === 0 ? 'success' : 'warning' },
           { label: 'Password Spray Attacks',   val: id.passwordSpray30d, cls: 'success' },
         ])}
-        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api" style="font-size:20px"></i><code style="font-size:9px">GET /beta/riskyUsers · GET /beta/riskDetections</code></div>
+        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api"></i><code style="font-size:9px">GET /beta/riskyUsers · GET /beta/riskDetections</code></div>
       </div>
 
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-lock-access" style="font-size:20px"></i> Conditional Access</div>
+        <div class="card-title mb-3"><i class="ti ti-lock-access"></i> Conditional Access</div>
         ${metricGrid([
           { label: 'Policies Enabled',     val: id.caPoliciesEnabled, cls: 'success' },
           { label: 'Policies Disabled',    val: id.caPoliciesDisabled, cls: id.caPoliciesDisabled === 0 ? 'success' : 'warning' },
@@ -708,16 +708,16 @@ function renderEmail() {
   const e = EMAIL
   return `
     <div class="kpi-row mb-3">
-      <div class="kpi-tile"><div class="kpi-value danger">${e.phishingAttempts30d.toLocaleString()}</div><div class="kpi-label">Phishing Blocked (30d)</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning">${e.malwareDetected30d}</div><div class="kpi-label">Malware Detected</div></div>
-      <div class="kpi-tile"><div class="kpi-value danger">${e.becAttempts30d}</div><div class="kpi-label">BEC Attempts</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning">${e.spoofedDomainActivity30d}</div><div class="kpi-label">Spoofed Domain</div></div>
-      <div class="kpi-tile"><div class="kpi-value info">${e.quarantined30d.toLocaleString()}</div><div class="kpi-label">Quarantined</div></div>
+      <div class="kpi-tile"><div class="kpi-value danger" style="font-size:28px;font-weight:700">${e.phishingAttempts30d.toLocaleString()}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Phishing Blocked (30d)</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${e.malwareDetected30d}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Malware Detected</div></div>
+      <div class="kpi-tile"><div class="kpi-value danger" style="font-size:28px;font-weight:700">${e.becAttempts30d}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">BEC Attempts</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${e.spoofedDomainActivity30d}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Spoofed Domain</div></div>
+      <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${e.quarantined30d.toLocaleString()}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Quarantined</div></div>
     </div>
 
     <div class="grid-2 mb-3" style="gap:16px">
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-shield-check" style="font-size:20px"></i> Email Authentication Status</div>
+        <div class="card-title mb-3"><i class="ti ti-shield-check"></i> Email Authentication Status</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           ${[
             { label: 'SPF Record',          ok: e.spf === 'pass',        note: e.spf === 'pass' ? 'Configured — v=spf1 include:protection.outlook.com -all' : 'Missing or misconfigured' },
@@ -737,9 +737,9 @@ function renderEmail() {
       </div>
 
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-mail-forward" style="font-size:20px"></i> Mail Flow Security</div>
+        <div class="card-title mb-3"><i class="ti ti-mail-forward"></i> Mail Flow Security</div>
         <div class="alert-banner ${e.externalForwardingRules > 0 ? 'danger' : 'success'} mb-3">
-          <i class="ti ti-${e.externalForwardingRules > 0 ? 'alert-triangle' : 'circle-check'}" style="font-size:20px"></i>
+          <i class="ti ti-${e.externalForwardingRules > 0 ? 'alert-triangle' : 'circle-check'}"></i>
           ${e.externalForwardingRules > 0 ? `${e.externalForwardingRules} mailboxes have active external forwarding rules — potential data exfiltration risk.` : 'No external forwarding rules detected.'}
         </div>
         ${metricGrid([
@@ -765,16 +765,16 @@ function renderEndpoint() {
   const ep = ENDPOINT
   return `
     <div class="kpi-row mb-3">
-      <div class="kpi-tile"><div class="kpi-value info">${ep.totalManaged}</div><div class="kpi-label">Managed Devices</div></div>
-      <div class="kpi-tile"><div class="kpi-value ${ep.nonCompliant === 0 ? 'success' : 'warning'}">${ep.nonCompliant}</div><div class="kpi-label">Non-Compliant</div></div>
-      <div class="kpi-tile"><div class="kpi-value ${ep.vulnerable === 0 ? 'success' : 'danger'}">${ep.vulnerable}</div><div class="kpi-label">Vulnerable</div></div>
-      <div class="kpi-tile"><div class="kpi-value danger">${ep.ransomwareIndicators}</div><div class="kpi-label">Ransomware Indicators</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning">${ep.missingCriticalPatches}</div><div class="kpi-label">Missing Patches</div></div>
+      <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${ep.totalManaged}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Managed Devices</div></div>
+      <div class="kpi-tile"><div class="kpi-value ${ep.nonCompliant === 0 ? 'success' : 'warning'}" style="font-size:28px;font-weight:700">${ep.nonCompliant}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Non-Compliant</div></div>
+      <div class="kpi-tile"><div class="kpi-value ${ep.vulnerable === 0 ? 'success' : 'danger'}" style="font-size:28px;font-weight:700">${ep.vulnerable}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Vulnerable</div></div>
+      <div class="kpi-tile"><div class="kpi-value danger" style="font-size:28px;font-weight:700">${ep.ransomwareIndicators}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Ransomware Indicators</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${ep.missingCriticalPatches}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Missing Patches</div></div>
     </div>
 
     <div class="grid-2 mb-3" style="gap:16px">
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-shield-check" style="font-size:20px"></i> Protection Coverage</div>
+        <div class="card-title mb-3"><i class="ti ti-shield-check"></i> Protection Coverage</div>
         ${[
           { label: 'Defender AV',         pct: ep.avCoverage,       target: 100 },
           { label: 'BitLocker',            pct: ep.bitlockerCoverage, target: 100 },
@@ -790,13 +790,13 @@ function renderEndpoint() {
             <span class="score-pct" style="color:${item.pct < 99 ? 'var(--clr-warning-text)' : 'var(--clr-success-text)'}">${item.pct}%</span>
           </div>`
         }).join('')}
-        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api" style="font-size:20px"></i><code style="font-size:9px">GET /beta/deviceManagement/managedDevices?$select=isEncrypted,deviceName</code></div>
+        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api"></i><code style="font-size:9px">GET /beta/deviceManagement/managedDevices?$select=isEncrypted,deviceName</code></div>
       </div>
 
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-alert-triangle" style="font-size:20px"></i> Threat Analytics</div>
+        <div class="card-title mb-3"><i class="ti ti-alert-triangle"></i> Threat Analytics</div>
         <div class="alert-banner danger mb-3">
-          <i class="ti ti-virus" style="font-size:20px"></i>
+          <i class="ti ti-virus"></i>
           <strong>Ransomware indicators detected on MBX-LAPTOP-047.</strong> INC-2341 is active — isolate device immediately.
         </div>
         ${metricGrid([
@@ -818,26 +818,26 @@ function renderTeams() {
   const t = TEAMS_SEC
   return `
     <div class="kpi-row mb-3">
-      <div class="kpi-tile"><div class="kpi-value info">${t.totalTeams}</div><div class="kpi-label">Total Teams</div></div>
-      <div class="kpi-tile"><div class="kpi-value ${t.publicTeams > 5 ? 'warning' : 'success'}">${t.publicTeams}</div><div class="kpi-label">Public Teams</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning">${t.guestEnabledTeams}</div><div class="kpi-label">Guest Enabled</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning">${t.inactiveTeams90d}</div><div class="kpi-label">Inactive (90d+)</div></div>
-      <div class="kpi-tile"><div class="kpi-value success">${t.anonymousMeetingAccess ? '⚠️ On' : '✓ Off'}</div><div class="kpi-label">Anon Meeting</div></div>
+      <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${t.totalTeams}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Total Teams</div></div>
+      <div class="kpi-tile"><div class="kpi-value ${t.publicTeams > 5 ? 'warning' : 'success'}" style="font-size:28px;font-weight:700">${t.publicTeams}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Public Teams</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${t.guestEnabledTeams}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Guest Enabled</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${t.inactiveTeams90d}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Inactive (90d+)</div></div>
+      <div class="kpi-tile"><div class="kpi-value success" style="font-size:28px;font-weight:700">${t.anonymousMeetingAccess ? '⚠️ On' : '✓ Off'}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Anon Meeting</div></div>
     </div>
 
     <div class="grid-2" style="gap:16px">
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-settings" style="font-size:20px"></i> Teams Governance</div>
+        <div class="card-title mb-3"><i class="ti ti-settings"></i> Teams Governance</div>
         ${metricGrid([
           { label: 'Teams with External Sharing', val: t.teamsWithExternalSharing, cls: 'warning' },
           { label: 'Unowned Teams',                val: t.unownedTeams, cls: t.unownedTeams === 0 ? 'success' : 'warning' },
           { label: 'Guests Added (30d)',            val: t.guestsAdded30d, cls: 'info' },
           { label: 'External Domains Allowed',     val: t.externalDomainsAllowed, cls: 'warning' },
         ])}
-        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api" style="font-size:20px"></i><code style="font-size:9px">GET /v1.0/groups?$filter=resourceProvisioningOptions/Any(x:x eq 'Team')&$select=displayName,visibility</code></div>
+        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api"></i><code style="font-size:9px">GET /v1.0/groups?$filter=resourceProvisioningOptions/Any(x:x eq 'Team')&$select=displayName,visibility</code></div>
       </div>
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-shield" style="font-size:20px"></i> Recommendations</div>
+        <div class="card-title mb-3"><i class="ti ti-shield"></i> Recommendations</div>
         ${recBox([
           'Archive 23 inactive Teams (90d+) to reduce sprawl and exposure',
           'Assign owners to 5 unowned Teams',
@@ -857,15 +857,15 @@ function renderSharepoint() {
   const s = SHAREPOINT_SEC
   return `
     <div class="kpi-row mb-3">
-      <div class="kpi-tile"><div class="kpi-value info">${s.totalSites}</div><div class="kpi-label">Total Sites</div></div>
-      <div class="kpi-tile"><div class="kpi-value ${s.externallyShared > 10 ? 'warning' : 'success'}">${s.externallyShared}</div><div class="kpi-label">Externally Shared</div></div>
-      <div class="kpi-tile"><div class="kpi-value ${s.anonymousLinks > 0 ? 'danger' : 'success'}">${s.anonymousLinks}</div><div class="kpi-label">Anonymous Links</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning">${s.sensitiveFiles}</div><div class="kpi-label">Sensitive Files Flagged</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning">${s.oversharedSites}</div><div class="kpi-label">Overshared Sites</div></div>
+      <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${s.totalSites}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Total Sites</div></div>
+      <div class="kpi-tile"><div class="kpi-value ${s.externallyShared > 10 ? 'warning' : 'success'}" style="font-size:28px;font-weight:700">${s.externallyShared}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Externally Shared</div></div>
+      <div class="kpi-tile"><div class="kpi-value ${s.anonymousLinks > 0 ? 'danger' : 'success'}" style="font-size:28px;font-weight:700">${s.anonymousLinks}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Anonymous Links</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${s.sensitiveFiles}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Sensitive Files Flagged</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${s.oversharedSites}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Overshared Sites</div></div>
     </div>
     <div class="grid-2" style="gap:16px">
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-share" style="font-size:20px"></i> Data Exposure</div>
+        <div class="card-title mb-3"><i class="ti ti-share"></i> Data Exposure</div>
         ${metricGrid([
           { label: 'Public Content',           val: s.publicContent, cls: s.publicContent === 0 ? 'success' : 'danger' },
           { label: 'Large Downloads (30d)',    val: s.largeDownloads30d, cls: 'warning' },
@@ -873,12 +873,12 @@ function renderSharepoint() {
           { label: 'Ext. Sharing Restricted',  val: s.restrictedSharingEnabled ? 'Yes' : 'No', cls: s.restrictedSharingEnabled ? 'success' : 'danger' },
         ])}
         <div class="alert-banner ${s.anonymousLinks > 0 ? 'danger' : 'success'} mt-3" style="margin-bottom:0">
-          <i class="ti ti-${s.anonymousLinks > 0 ? 'alert-triangle' : 'circle-check'}" style="font-size:20px"></i>
+          <i class="ti ti-${s.anonymousLinks > 0 ? 'alert-triangle' : 'circle-check'}"></i>
           ${s.anonymousLinks > 0 ? `${s.anonymousLinks} anonymous "Anyone" links allow unauthenticated access to content.` : 'No anonymous links detected.'}
         </div>
       </div>
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-shield" style="font-size:20px"></i> Recommendations</div>
+        <div class="card-title mb-3"><i class="ti ti-shield"></i> Recommendations</div>
         ${recBox([
           'Remove 3 anonymous sharing links — replace with authenticated sharing',
           'Review 5 overshared sites with > 100 members',
@@ -898,15 +898,15 @@ function renderDataProtection() {
   const d = DATA_PROTECTION
   return `
     <div class="kpi-row mb-3">
-      <div class="kpi-tile"><div class="kpi-value warning">${d.sensitivityLabelsApplied}%</div><div class="kpi-label">Labels Applied</div></div>
-      <div class="kpi-tile"><div class="kpi-value danger">${d.dlpViolations30d}</div><div class="kpi-label">DLP Violations (30d)</div></div>
-      <div class="kpi-tile"><div class="kpi-value danger">${d.dataExfiltration30d}</div><div class="kpi-label">Exfiltration Events</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning">${d.usbTransfers30d}</div><div class="kpi-label">USB Transfers</div></div>
-      <div class="kpi-tile"><div class="kpi-value info">${d.complianceScore}</div><div class="kpi-label">Compliance Score</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${d.sensitivityLabelsApplied}%</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Labels Applied</div></div>
+      <div class="kpi-tile"><div class="kpi-value danger" style="font-size:28px;font-weight:700">${d.dlpViolations30d}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">DLP Violations (30d)</div></div>
+      <div class="kpi-tile"><div class="kpi-value danger" style="font-size:28px;font-weight:700">${d.dataExfiltration30d}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Exfiltration Events</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${d.usbTransfers30d}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">USB Transfers</div></div>
+      <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${d.complianceScore}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Compliance Score</div></div>
     </div>
     <div class="grid-2" style="gap:16px">
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-tag" style="font-size:20px"></i> Data Governance</div>
+        <div class="card-title mb-3"><i class="ti ti-tag"></i> Data Governance</div>
         ${metricGrid([
           { label: 'Files Without Labels',   val: d.filesWithoutLabels.toLocaleString(), cls: 'danger' },
           { label: 'Retention Policies',     val: d.retentionPoliciesActive, cls: 'info' },
@@ -929,7 +929,7 @@ function renderDataProtection() {
         `).join('')}
       </div>
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-shield" style="font-size:20px"></i> Recommendations</div>
+        <div class="card-title mb-3"><i class="ti ti-shield"></i> Recommendations</div>
         ${recBox([
           'Enable sensitivity auto-labeling for ~18,000 unlabeled Office files',
           'Extend DLP policy coverage to include Teams messages',
@@ -937,7 +937,7 @@ function renderDataProtection() {
           'Review 3 USB transfer events — check device compliance policy',
           'Expand retention policies to cover Teams chat and OneDrive',
         ])}
-        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api" style="font-size:20px"></i><code style="font-size:9px">Get-DlpCompliancePolicy | Get-Label | Get-RetentionCompliancePolicy</code></div>
+        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api"></i><code style="font-size:9px">Get-DlpCompliancePolicy | Get-Label | Get-RetentionCompliancePolicy</code></div>
       </div>
     </div>
   `
@@ -950,15 +950,15 @@ function renderPrivAccess() {
   const p = PRIV_ACCESS
   return `
     <div class="kpi-row mb-3">
-      <div class="kpi-tile"><div class="kpi-value info">${p.globalAdminCount}</div><div class="kpi-label">Global Admins</div></div>
-      <div class="kpi-tile"><div class="kpi-value info">${p.securityAdminCount}</div><div class="kpi-label">Security Admins</div></div>
-      <div class="kpi-tile"><div class="kpi-value ${p.permanentAssignments > 2 ? 'danger' : 'success'}">${p.permanentAssignments}</div><div class="kpi-label">Permanent Roles</div></div>
-      <div class="kpi-tile"><div class="kpi-value success">${p.pimAdoption}%</div><div class="kpi-label">PIM Adoption</div></div>
-      <div class="kpi-tile"><div class="kpi-value ${p.newAdmins30d > 0 ? 'warning' : 'success'}">${p.newAdmins30d}</div><div class="kpi-label">New Admins (30d)</div></div>
+      <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${p.globalAdminCount}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Global Admins</div></div>
+      <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${p.securityAdminCount}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Security Admins</div></div>
+      <div class="kpi-tile"><div class="kpi-value ${p.permanentAssignments > 2 ? 'danger' : 'success'}" style="font-size:28px;font-weight:700">${p.permanentAssignments}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Permanent Roles</div></div>
+      <div class="kpi-tile"><div class="kpi-value success" style="font-size:28px;font-weight:700">${p.pimAdoption}%</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">PIM Adoption</div></div>
+      <div class="kpi-tile"><div class="kpi-value ${p.newAdmins30d > 0 ? 'warning' : 'success'}" style="font-size:28px;font-weight:700">${p.newAdmins30d}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">New Admins (30d)</div></div>
     </div>
     <div class="grid-2" style="gap:16px">
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-crown" style="font-size:20px"></i> Admin Role Distribution</div>
+        <div class="card-title mb-3"><i class="ti ti-crown"></i> Admin Role Distribution</div>
         ${[
           { role: 'Global Administrator',  count: p.globalAdminCount,    pim: true },
           { role: 'Security Administrator',count: p.securityAdminCount,  pim: true },
@@ -979,7 +979,7 @@ function renderPrivAccess() {
         </div>
       </div>
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-alert-triangle" style="font-size:20px"></i> Critical Alerts (30d)</div>
+        <div class="card-title mb-3"><i class="ti ti-alert-triangle"></i> Critical Alerts (30d)</div>
         ${metricGrid([
           { label: 'New Admin Created',        val: p.newAdmins30d,              cls: p.newAdmins30d > 0 ? 'warning' : 'success' },
           { label: 'Priv. Role Assignments',   val: p.privRoleAssignments30d,    cls: 'info' },
@@ -987,7 +987,7 @@ function renderPrivAccess() {
           { label: 'PIM Eligible Roles',       val: p.pimEligibleRoles,          cls: 'success' },
         ])}
         ${recBox(['Convert 4 permanent admin role assignments to PIM eligible', 'Implement Just-in-Time access for all privileged roles', 'Conduct quarterly access review for all admin role holders', 'Enable PIM access review notifications for approvers'])}
-        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api" style="font-size:20px"></i><code style="font-size:9px">GET /beta/roleManagement/directory/roleEligibilitySchedules</code></div>
+        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api"></i><code style="font-size:9px">GET /beta/roleManagement/directory/roleEligibilitySchedules</code></div>
       </div>
     </div>
   `
@@ -1000,29 +1000,29 @@ function renderGuests() {
   const g = GUEST_GOVERNANCE
   return `
     <div class="kpi-row mb-3">
-      <div class="kpi-tile"><div class="kpi-value info">${g.totalGuests}</div><div class="kpi-label">Total Guests</div></div>
-      <div class="kpi-tile"><div class="kpi-value ${g.dormantGuests90d > 5 ? 'danger' : 'success'}">${g.dormantGuests90d}</div><div class="kpi-label">Dormant (90d+)</div></div>
-      <div class="kpi-tile"><div class="kpi-value danger">${g.expiredGuests}</div><div class="kpi-label">Expired</div></div>
-      <div class="kpi-tile"><div class="kpi-value success">${g.guestsWithPrivAccess}</div><div class="kpi-label">With Priv. Access</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning">${g.quarterlyReviewOverdue}</div><div class="kpi-label">Review Overdue</div></div>
+      <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${g.totalGuests}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Total Guests</div></div>
+      <div class="kpi-tile"><div class="kpi-value ${g.dormantGuests90d > 5 ? 'danger' : 'success'}" style="font-size:28px;font-weight:700">${g.dormantGuests90d}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Dormant (90d+)</div></div>
+      <div class="kpi-tile"><div class="kpi-value danger" style="font-size:28px;font-weight:700">${g.expiredGuests}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Expired</div></div>
+      <div class="kpi-tile"><div class="kpi-value success" style="font-size:28px;font-weight:700">${g.guestsWithPrivAccess}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">With Priv. Access</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${g.quarterlyReviewOverdue}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Review Overdue</div></div>
     </div>
     <div class="grid-2" style="gap:16px">
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-user-plus" style="font-size:20px"></i> Guest Activity</div>
+        <div class="card-title mb-3"><i class="ti ti-user-plus"></i> Guest Activity</div>
         ${metricGrid([
           { label: 'Added (30d)',          val: g.guestsAddedLast30d,  cls: 'info' },
           { label: 'Removed (30d)',        val: g.guestsRemovedLast30d,cls: 'success' },
           { label: 'Avg Account Age',     val: g.avgGuestAgeDays + 'd',cls: 'warning' },
         ])}
         <div class="alert-banner danger mt-3" style="margin-bottom:0">
-          <i class="ti ti-clock" style="font-size:20px"></i>
+          <i class="ti ti-clock"></i>
           ${g.expiredGuests} expired guest accounts should be removed immediately.
           ${g.dormantGuests90d} dormant guests require review.
         </div>
-        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api" style="font-size:20px"></i><code style="font-size:9px">GET /v1.0/users?$filter=userType eq 'Guest'&$select=displayName,signInActivity</code></div>
+        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api"></i><code style="font-size:9px">GET /v1.0/users?$filter=userType eq 'Guest'&$select=displayName,signInActivity</code></div>
       </div>
       <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-shield" style="font-size:20px"></i> Recommendations</div>
+        <div class="card-title mb-3"><i class="ti ti-shield"></i> Recommendations</div>
         ${recBox([
           'Remove 3 expired guest accounts immediately',
           'Review and remove 12 dormant guests (90d+ no sign-in)',
@@ -1048,15 +1048,15 @@ function renderIncidents() {
 
   return `
     <div class="kpi-row mb-3">
-      <div class="kpi-tile"><div class="kpi-value ${critical > 0 ? 'danger' : 'success'}">${critical}</div><div class="kpi-label">Critical</div></div>
-      <div class="kpi-tile"><div class="kpi-value ${high > 0 ? 'danger' : 'success'}">${high}</div><div class="kpi-label">High</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning">${med}</div><div class="kpi-label">Medium</div></div>
-      <div class="kpi-tile"><div class="kpi-value info">${low}</div><div class="kpi-label">Low</div></div>
-      <div class="kpi-tile"><div class="kpi-value success">${resolved.length}</div><div class="kpi-label">Resolved (7d)</div></div>
+      <div class="kpi-tile"><div class="kpi-value ${critical > 0 ? 'danger' : 'success'}" style="font-size:28px;font-weight:700">${critical}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Critical</div></div>
+      <div class="kpi-tile"><div class="kpi-value ${high > 0 ? 'danger' : 'success'}" style="font-size:28px;font-weight:700">${high}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">High</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${med}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Medium</div></div>
+      <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${low}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Low</div></div>
+      <div class="kpi-tile"><div class="kpi-value success" style="font-size:28px;font-weight:700">${resolved.length}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Resolved (7d)</div></div>
     </div>
 
     <div class="alert-banner danger mb-3">
-      <i class="ti ti-robot" style="font-size:20px"></i>
+      <i class="ti ti-robot"></i>
       <div>
         <strong>AI Security Summary:</strong> ${critical} critical incident detected involving ransomware indicators on a managed endpoint.
         ${high} high-severity incidents include a BEC (business email compromise) attempt and risky identity sign-ins from unfamiliar locations.
@@ -1211,7 +1211,7 @@ function renderSecurityCopilot() {
 
       <div class="chat-input-area" style="padding:0;border-top:none;margin-top:4px">
         <textarea class="chat-input" id="sec-cop-input" placeholder="Ask about Secure Score, risky users, vulnerabilities, recommendations..." rows="1"></textarea>
-        <button class="btn btn-primary" id="sec-cop-send"><i class="ti ti-send" style="font-size:20px"></i></button>
+        <button class="btn btn-primary" id="sec-cop-send"><i class="ti ti-send"></i></button>
       </div>
     </div>
   `
@@ -1224,7 +1224,7 @@ function renderApiReference() {
   const cats = [...new Set(API_REFERENCE.map(r => r.category))]
   return `
     <div class="alert-banner info mb-3">
-      <i class="ti ti-info-circle" style="font-size:20px"></i>
+      <i class="ti ti-info-circle"></i>
       <div style="line-height:1.5">
         <strong>Security Data Abstraction Layer</strong> — AgentOps uses a hybrid collection model:
         <strong>Microsoft Graph API</strong> (Identity, Intune, Teams, SharePoint, Secure Score) +
@@ -1266,7 +1266,7 @@ function renderApiReference() {
     `).join('')}
 
     <div class="card" style="background:var(--color-background-secondary)">
-      <div class="card-title mb-2"><i class="ti ti-sitemap" style="font-size:20px"></i> AgentOps Collector Architecture</div>
+      <div class="card-title mb-2"><i class="ti ti-sitemap"></i> AgentOps Collector Architecture</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:8px">
         ${[
           { name: 'Graph Collector', items: ['Entra ID', 'Teams', 'Intune', 'SharePoint', 'Secure Score'], icon: 'ti-api', color: 'info' },
@@ -1398,7 +1398,7 @@ function renderDemoSecurityPage(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-shield-check" style="font-size:20px"></i> Security</div>
+        <div class="page-title"><i class="ti ti-shield-check"></i> Security</div>
         <div class="page-subtitle">Comprehensive security posture and threat assessment</div>
       </div>
       <div class="page-actions">
