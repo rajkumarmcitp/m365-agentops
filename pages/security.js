@@ -422,46 +422,8 @@ function renderExecutive() {
       </div>
     </div>
 
-    <div class="grid-2 mb-3" style="gap:16px">
-      <!-- Score trend + category breakdown -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><i class="ti ti-trending-up"></i> Secure Score Trend</span>
-          <div style="display:flex;gap:4px">
-            <button class="btn btn-xs ${trendRange === '7d' ? 'btn-primary' : ''}" data-trend="7d">7d</button>
-            <button class="btn btn-xs ${trendRange === '30d' ? 'btn-primary' : ''}" data-trend="30d">30d</button>
-          </div>
-        </div>
-        <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:16px">
-          ${scoreGauge(ss.current, ss.max, 80)}
-          <div>
-            <div style="font-size:26px;font-weight:800;color:var(--clr-warning-text)">${ss.current}<span style="font-size:13px;font-weight:500;color:var(--color-text-tertiary)"> / ${ss.max}</span></div>
-            <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:6px">Industry avg: ${ss.avgComparable}/100 — you are +${ss.current - ss.avgComparable} above</div>
-            <div style="display:flex;gap:12px;font-size:10px">
-              <span style="color:${ss.delta7d >= 0 ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'}">${ss.delta7d >= 0 ? '▲' : '▼'}${Math.abs(ss.delta7d)} this week</span>
-              <span style="color:${ss.delta30d >= 0 ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'}">${ss.delta30d >= 0 ? '▲' : '▼'}${Math.abs(ss.delta30d)} this month</span>
-            </div>
-          </div>
-        </div>
-        <div style="margin-bottom:12px" id="exec-trend-chart">
-          ${trendBars((trendRange === '30d' ? ss.trend30d : ss.trend7d) || [72, 73, 74, 75, 76, 77, 78], 32)}
-        </div>
-        <div class="section-heading">Category breakdown</div>
-        ${(Array.isArray(ss.categories) ? ss.categories : []).map(c => `
-          <div class="score-bar-row" style="margin-bottom:6px">
-            <span class="score-label" style="display:flex;align-items:center;gap:5px;min-width:120px">
-              <i class="ti ${c.icon}" style="color:${c.color};font-size:12px"></i>${c.name}
-            </span>
-            <div class="score-bar" style="flex:1">
-              <div class="score-bar-fill" style="width:${c.score}%;background:${c.color}"></div>
-            </div>
-            <span class="score-pct" style="color:${c.color}">${c.score}%</span>
-          </div>
-        `).join('')}
-      </div>
-
-      <!-- Service security cards - Entra Apps style -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:16px">
+    <!-- Service security cards - Entra Apps style -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:16px">
         ${[
           { name: 'Identity',    icon: 'ti-user-check',        score: realIdentityPosture.identitySecureScore || 72, color: '#0C447C', issues: realIdentityPosture.highRiskUsers, issueText: 'high-risk users' },
           { name: 'Secure Score',icon: 'ti-shield-check',      score: Math.round(ss.percentOf100 || 0), color: '#854F0B', issues: 0, issueText: '' },
@@ -487,7 +449,6 @@ function renderExecutive() {
           </div>
         `).join('')}
       </div>
-    </div>
 
     <!-- Real Incidents only -->
     <div class="grid-2" style="gap:16px">
