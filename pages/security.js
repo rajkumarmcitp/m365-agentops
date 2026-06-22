@@ -423,6 +423,7 @@ function renderExecutive() {
     </div>
 
     <!-- Service security cards - Entra Apps style -->
+    <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:1px">Service Security Posture</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:16px">
         ${[
           { name: 'Identity',    icon: 'ti-user-check',        score: realIdentityPosture.identitySecureScore || 72, color: '#0C447C', issues: realIdentityPosture.highRiskUsers, issueText: 'high-risk users' },
