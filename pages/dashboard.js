@@ -79,11 +79,11 @@ function renderDashboardSkeleton(el) {
 
     <!-- 📊 Enhanced KPI Dashboard (16-18 Metrics) -->
     <div style="margin-bottom:24px">
-      <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-bottom:16px"><i class="ti ti-chart-dots"></i> Tenant Health Overview</div>
+      <div style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid var(--color-border-secondary)"><i class="ti ti-chart-dots"></i> Tenant Health Overview</div>
 
       <!-- Section 1: Foundational (3) -->
-      <div style="margin-bottom:20px">
-        <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:1px">Foundational</div>
+      <div style="margin-bottom:24px">
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:0.5px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary)">Foundational</div>
         <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
           <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="margin-bottom:12px"><i class="ti ti-device-laptop" style="font-size:20px;color:#0066cc"></i></div>
@@ -104,8 +104,8 @@ function renderDashboardSkeleton(el) {
       </div>
 
       <!-- Section 2: Alerts & Risks (4) -->
-      <div style="margin-bottom:20px">
-        <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:1px">Alerts & Risks</div>
+      <div style="margin-bottom:24px">
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:0.5px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary)">Alerts & Risks</div>
         <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
           <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="margin-bottom:12px"><i class="ti ti-alert-triangle" style="font-size:20px;color:#f44336"></i></div>
@@ -135,8 +135,8 @@ function renderDashboardSkeleton(el) {
       </div>
 
       <!-- Section 3: Compliance (4) -->
-      <div style="margin-bottom:20px">
-        <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:1px">Compliance & Governance</div>
+      <div style="margin-bottom:24px">
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:0.5px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary)">Compliance & Governance</div>
         <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
           <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="margin-bottom:12px"><i class="ti ti-device-laptop" style="font-size:20px;color:#4caf50"></i></div>
@@ -166,8 +166,8 @@ function renderDashboardSkeleton(el) {
       </div>
 
       <!-- Section 4: Threats & Governance (4) -->
-      <div style="margin-bottom:20px">
-        <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:1px">Threats & Operations</div>
+      <div style="margin-bottom:24px">
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:0.5px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary)">Threats & Operations</div>
         <div class="dash-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
           <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="margin-bottom:12px"><i class="ti ti-lock-check" style="font-size:20px;color:#0066cc"></i></div>
@@ -198,7 +198,7 @@ function renderDashboardSkeleton(el) {
 
       <!-- Section 5: Operational (1) -->
       <div style="margin-bottom:0">
-        <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:1px">Service Health</div>
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:16px;letter-spacing:0.5px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary)">Service Health</div>
         <div class="dash-kpi-grid" style="display:grid;grid-template-columns:1fr;gap:12px">
           <div class="kpi-tile" style="background:var(--color-background-secondary);padding:16px;border-radius:8px;border:0.5px solid var(--color-border-secondary)">
             <div style="margin-bottom:12px"><i class="ti ti-heartbeat" style="font-size:20px;color:#4caf50"></i></div>
@@ -215,8 +215,8 @@ function renderDashboardSkeleton(el) {
     </div>
 
     <!-- 📊 Critical Alerts Section -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px"><i class="ti ti-alert-triangle"></i> Critical Alerts</div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--color-border-secondary)"><i class="ti ti-alert-triangle"></i> Critical Alerts</div>
       <div class="dash-cards-row mb-3">
         <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-inbox"></i> Pending Requests</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:28px;font-weight:700;color:var(--clr-warning-text)" id="dash-requests-pending">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Pending</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-requests-total">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Total</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-requests-time">⏱ Loading...</div><button class="btn btn-sm" id="dash-to-requests" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Requests</button></div></div>
         <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-alert-triangle"></i> Security Incidents</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:28px;font-weight:700;color:var(--clr-success-text)" id="dash-incidents-active">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Active</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-incidents-week">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">This Week</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-incidents-status">✓ Loading...</div><button class="btn btn-sm" id="dash-to-security" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Security</button></div></div>
@@ -226,8 +226,8 @@ function renderDashboardSkeleton(el) {
     </div>
 
     <!-- 🏥 System Health Overview -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px"><i class="ti ti-heartbeat"></i> System Health Overview</div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--color-border-secondary)"><i class="ti ti-heartbeat"></i> System Health Overview</div>
       <div class="dash-cards-row mb-3">
         <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</span></div><div style="padding:12px"><div style="text-align:center;margin-bottom:12px"><div style="font-size:16px;color:var(--color-text-secondary)" id="dash-zt-status">—</div></div><div style="padding:8px;background:var(--color-background-primary);border-radius:var(--border-radius-sm);text-align:center"><div style="font-size:10px;color:var(--color-text-secondary)" id="dash-zt-pillars">Loading...</div></div><button class="btn btn-sm" id="dash-to-zt" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> Request Assessment</button></div></div>
         <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-settings-2"></i> CIS Controls</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:28px;font-weight:700;color:var(--clr-warning-text)" id="dash-cis-compliance">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Compliance</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-cis-topics">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Topics</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-cis-trend">📊 Loading...</div><button class="btn btn-sm" id="dash-to-m365" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Config</button></div></div>
@@ -237,8 +237,8 @@ function renderDashboardSkeleton(el) {
     </div>
 
     <!-- 🚀 Applications & Enterprise Health -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px"><i class="ti ti-rocket"></i> Applications & Enterprise Health</div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--color-border-secondary)"><i class="ti ti-rocket"></i> Applications & Enterprise Health</div>
       <div class="dash-cards-row mb-3">
         <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-app-window"></i> Entra Apps</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:28px;font-weight:700;color:var(--clr-danger-text)" id="dash-apps-expiring">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Expiring</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-apps-total">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Total</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-apps-status">⚠ Loading...</div><button class="btn btn-sm" id="dash-to-apps" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> View Apps</button></div></div>
         <div class="card" style="opacity:0.5;background:var(--color-background-secondary)"><div class="card-header"><span class="card-title"><i class="ti ti-shield-check"></i> Risk Analysis</span></div><div style="padding:12px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="text-align:center"><div style="font-size:28px;font-weight:700;color:var(--clr-warning-text)" id="dash-risk-high">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">High-Risk</div></div><div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--clr-info-text)" id="dash-risk-users">—</div><div style="font-size:9px;color:var(--color-text-tertiary)">Users</div></div></div><div style="padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-secondary)" id="dash-risk-score">📊 Loading...</div><button class="btn btn-sm" id="dash-to-investigation" style="margin-top:8px;width:100%"><i class="ti ti-arrow-right"></i> Investigate</button></div></div>
