@@ -411,6 +411,38 @@ export const CIS_CONTROLS_DATA = [
     ]
   },
   {
+    id: 't4',
+    num: '4',
+    name: 'Microsoft Intune Admin Center',
+    icon: 'ti-device-mobile',
+    subsections: [
+      {
+        id: 't4s41',
+        name: '4.1 Device Management',
+        controls: [
+          {
+            id: '4.1.1',
+            title: 'Ensure devices without a compliance policy are marked not compliant',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'deviceCompliance',
+            validator: (data) => data?.totalPolicies > 0 ? 'pass' : 'warn',
+            description: 'CIS Control 4.1.1 - Device compliance enforcement'
+          },
+          {
+            id: '4.2.1',
+            title: 'Ensure device enrollment for personally owned devices is blocked by default',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'deviceEnrollmentRestrictions',
+            validator: (data) => (data?.iosPersonalBlocked && data?.androidPersonalBlocked) ? 'pass' : 'warn',
+            description: 'CIS Control 4.2.1 - BYOD enrollment restriction'
+          }
+        ]
+      }
+    ]
+  },
+  {
     id: 't5',
     num: '5',
     name: 'Microsoft Entra Admin Center',

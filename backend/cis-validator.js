@@ -51,7 +51,7 @@ export async function validateAllCISControls() {
       globalAdmins, authPolicy, securityDefaults, caPolicy, dlpPolicies,
       safeLinksPolicies, safeAttachmentPolicies, antiPhishPolicies,
       spfRecords, dkimConfigs, dmarcRecords, mailForwardingRules,
-      deviceCompliancePolicies, passwordPolicy, sspr, auditLog,
+      deviceCompliancePolicies, deviceEnrollmentRestrictions, passwordPolicy, sspr, auditLog,
       domain, deviceList, defenderStatus, mfaPolicies,
       externalSharingPolicy, groupCreationPolicy, tenantSettings,
       defenderForCloudApps, alertPolicy, reportMessageAddin
@@ -69,6 +69,7 @@ export async function validateAllCISControls() {
       validateDMARC(),
       validateMailForwarding(),
       validateDeviceCompliance(),
+      validateDeviceEnrollmentRestrictions(),
       validatePasswordPolicy(),
       validateSSPR(),
       validateAuditLog(),
@@ -99,6 +100,7 @@ export async function validateAllCISControls() {
       dmarc: dmarcRecords.value || null,
       mailForwarding: mailForwardingRules.value || null,
       deviceCompliance: deviceCompliancePolicies.value || null,
+      deviceEnrollmentRestrictions: deviceEnrollmentRestrictions.value || null,
       passwordPolicy: passwordPolicy.value || null,
       sspr: sspr.value || null,
       auditLog: auditLog.value || null,
@@ -730,6 +732,53 @@ async function validateDeviceCompliance() {
     }
   } catch (error) {
     console.warn(`⚠️ Device Compliance validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Device Enrollment Restrictions - Block BYOD (4.2.1)
+ */
+async function validateDeviceEnrollmentRestrictions() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get device enrollment platform restrictions',
+      endpoint: 'GET /deviceManagement/deviceEnrollmentPlatformRestrictionsConfiguration',
+      expand: 'none',
+      select: 'id,iosRestriction,androidRestriction,windowsMobileRestriction,macRestriction',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/deviceManagement/deviceEnrollmentPlatformRestrictionsConfiguration'
+  ]
+
+  try {
+    const restrictions = await graphClient
+      .api('/deviceManagement/deviceEnrollmentPlatformRestrictionsConfiguration')
+      .get()
+
+    const iosRestriction = restrictions?.iosRestriction
+    const androidRestriction = restrictions?.androidRestriction
+
+    const iosPersonalBlocked = iosRestriction?.personalDeviceEnrollmentBlocked === true
+    const androidPersonalBlocked = androidRestriction?.personalDeviceEnrollmentBlocked === true
+
+    return {
+      status: iosPersonalBlocked && androidPersonalBlocked ? 'pass' : 'warn',
+      iosPersonalBlocked: iosPersonalBlocked,
+      androidPersonalBlocked: androidPersonalBlocked,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Device Enrollment Restrictions validation failed: ${error.message}`)
     return {
       status: 'warn',
       error: error.message,
