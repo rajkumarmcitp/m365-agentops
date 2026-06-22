@@ -91,8 +91,8 @@ function renderDemoMain(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-settings-2"></i> M365 Config — CIS Benchmark v7.0.0</div>
-        <div class="page-subtitle">Last validated: Today at 08:45 AM · ${stats.total} controls across 9 topics</div>
+        <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
+        <div class="page-subtitle">CIS Benchmark Compliance · ${stats.total} controls across 9 configuration areas</div>
       </div>
       <div class="page-actions">
         <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Run scan now</button>
@@ -146,7 +146,7 @@ function renderDemoMain(el) {
       <span><strong style="color:var(--color-text-secondary)">Demo Mode</strong> · Showing sample CIS controls</span>
     </div>
 
-    <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">Topics</div>
+    <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary);text-transform:uppercase;letter-spacing:0.5px">Configuration Areas</div>
     <div class="cfg-topic-grid" id="cfg-topic-grid"></div>
   `
 
@@ -161,8 +161,7 @@ function renderDemoMain(el) {
       <div class="cfg-topic-icon" style="background:${tc.bg};color:${tc.color}">
         <i class="ti ${topic.icon}"></i>
       </div>
-      <div class="cfg-topic-num">Topic ${topic.num}</div>
-      <div class="cfg-topic-name">${topic.name}</div>
+      <div class="cfg-topic-name" style="font-weight:600;font-size:13px">${topic.name}</div>
       <div class="cfg-topic-badges">
         ${s.fail > 0 ? `<span class="badge danger">${s.fail} fail</span>` : ''}
         ${s.warn > 0 ? `<span class="badge warning">${s.warn} warn</span>` : ''}
@@ -202,7 +201,7 @@ function renderDemoTopic(el, topic) {
     <div class="page-header">
       <div>
         <div class="page-title"><i class="ti ti-settings-2"></i> ${topic.name}</div>
-        <div class="page-subtitle">Topic ${topic.num} · ${stats.total} controls</div>
+        <div class="page-subtitle">Microsoft 365 Admin Center · ${stats.total} controls</div>
       </div>
       <div class="page-actions">
         <button class="btn" id="cfg-back"><i class="ti ti-arrow-left"></i> Back</button>
@@ -274,7 +273,7 @@ async function renderProductionMain(el) {
   // Show skeleton immediately
   el.innerHTML = `
     <div>
-      ${skeletonLoader.renderPageHeader('M365 Config — CIS Benchmark', 'Loading configuration compliance from Graph API...', true)}
+      ${skeletonLoader.renderPageHeader('Microsoft 365 Configuration', 'Loading configuration compliance from Graph API...', true)}
       ${skeletonLoader.renderMetricsRowSkeleton(4)}
       ${skeletonLoader.renderCardGridSkeleton(3, 9)}
     </div>
@@ -295,8 +294,8 @@ async function renderProductionMain(el) {
     el.innerHTML = `
       <div class="page-header">
         <div>
-          <div class="page-title"><i class="ti ti-settings-2"></i> M365 Config — CIS Benchmark v7.0.0</div>
-          <div class="page-subtitle">Last validated: Today · ${stats.total} controls from Graph API</div>
+          <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
+          <div class="page-subtitle">CIS Benchmark Compliance · ${stats.total} controls from Graph API</div>
         </div>
         <div class="page-actions">
           <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Re-scan</button>
@@ -411,8 +410,8 @@ function renderBlankProductionState(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-settings-2"></i> M365 Config — CIS Benchmark</div>
-        <div class="page-subtitle">Configuration compliance assessment from Graph API</div>
+        <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
+        <div class="page-subtitle">CIS Benchmark Compliance Assessment</div>
       </div>
       <div class="page-actions">
         <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Run scan</button>
