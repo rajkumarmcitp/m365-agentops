@@ -56,15 +56,17 @@ function renderTenantGuardContent(el) {
   el.innerHTML = `
     <div>
       <!-- Page Header -->
-      <div style="margin-bottom: 20px;">
-        <h1 style="margin: 0 0 4px 0; font-size: 28px;"><i class="ti ti-shield-check"></i> Tenant Guard</h1>
-        <p style="margin: 0; color: var(--color-text-secondary); font-size: 13px;">Real-time security threat detection and response across your Microsoft 365 environment</p>
+      <div class="page-header">
+        <div>
+          <div class="page-title"><i class="ti ti-shield-check"></i> Tenant Guard</div>
+          <div class="page-subtitle">Real-time security threat detection and response across your Microsoft 365 environment</div>
+        </div>
       </div>
 
       <!-- KPI Row -->
       <div class="kpi-row mb-3">
         <div class="kpi-tile" style="border-left:4px solid var(--clr-danger)">
-          <div class="kpi-value danger" id="kpi-critical" style="font-size:48px;font-weight:900">0</div>
+          <div class="kpi-value danger" id="kpi-critical">0</div>
           <div class="kpi-label">Critical Alerts</div>
           <div style="font-size:10px;margin-top:3px;color:var(--clr-danger);font-weight:600">Immediate action required</div>
         </div>
@@ -103,19 +105,19 @@ function renderTenantGuardContent(el) {
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
             <div style="padding:10px;background:var(--color-bg-secondary);border-radius:6px;text-align:center">
-              <div style="font-size:18px;font-weight:700;color:var(--clr-primary)">41</div>
-              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:3px">Alert Types</div>
+              <div style="font-size:24px;font-weight:700;color:var(--clr-primary)">41</div>
+              <div style="font-size:10px;color:var(--color-text-secondary);margin-top:3px;font-weight:600;text-transform:uppercase">Alert Types</div>
             </div>
             <div style="padding:10px;background:var(--color-bg-secondary);border-radius:6px;text-align:center">
-              <div style="font-size:18px;font-weight:700;color:var(--clr-primary)">6</div>
-              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:3px">Platforms</div>
+              <div style="font-size:24px;font-weight:700;color:var(--clr-primary)">6</div>
+              <div style="font-size:10px;color:var(--color-text-secondary);margin-top:3px;font-weight:600;text-transform:uppercase">Platforms</div>
             </div>
             <div style="padding:10px;background:var(--color-bg-secondary);border-radius:6px;text-align:center">
-              <div style="font-size:18px;font-weight:700;color:var(--clr-primary)">60+</div>
-              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:3px">Scenarios</div>
+              <div style="font-size:24px;font-weight:700;color:var(--clr-primary)">60+</div>
+              <div style="font-size:10px;color:var(--color-text-secondary);margin-top:3px;font-weight:600;text-transform:uppercase">Scenarios</div>
             </div>
           </div>
-          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">Monitoring:</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:8px;font-weight:600;text-transform:uppercase">Monitoring:</div>
           <div style="display:flex;flex-wrap:wrap;gap:4px">
             <span class="badge" style="background:var(--color-bg-secondary)">Entra</span>
             <span class="badge" style="background:var(--color-bg-secondary)">Exchange</span>
@@ -132,20 +134,20 @@ function renderTenantGuardContent(el) {
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div style="padding:10px;background:var(--color-bg-secondary);border-radius:6px">
-              <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:4px">Identity & Access</div>
-              <div style="font-size:16px;font-weight:700;color:var(--clr-primary)">26</div>
+              <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;text-transform:uppercase">Identity & Access</div>
+              <div style="font-size:20px;font-weight:700;color:var(--clr-primary)">26</div>
             </div>
             <div style="padding:10px;background:var(--color-bg-secondary);border-radius:6px">
-              <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:4px">Policy & Config</div>
-              <div style="font-size:16px;font-weight:700;color:var(--clr-primary)">12</div>
+              <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;text-transform:uppercase">Policy & Config</div>
+              <div style="font-size:20px;font-weight:700;color:var(--clr-primary)">12</div>
             </div>
             <div style="padding:10px;background:var(--color-bg-secondary);border-radius:6px">
-              <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:4px">Application</div>
-              <div style="font-size:16px;font-weight:700;color:var(--clr-primary)">8</div>
+              <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;text-transform:uppercase">Application</div>
+              <div style="font-size:20px;font-weight:700;color:var(--clr-primary)">8</div>
             </div>
             <div style="padding:10px;background:var(--color-bg-secondary);border-radius:6px">
-              <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:4px">Device & Data</div>
-              <div style="font-size:16px;font-weight:700;color:var(--clr-primary)">15</div>
+              <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:600;text-transform:uppercase">Device & Data</div>
+              <div style="font-size:20px;font-weight:700;color:var(--clr-primary)">15</div>
             </div>
           </div>
         </div>
