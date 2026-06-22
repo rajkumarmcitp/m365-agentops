@@ -349,7 +349,7 @@ async function renderProductionMain(el) {
         <span><strong style="color:var(--color-text-secondary)">Production Mode</strong> · Real tenant configuration from Graph API</span>
       </div>
 
-      <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">Topics</div>
+      <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary);text-transform:uppercase;letter-spacing:0.5px">Configuration Areas</div>
       <div class="cfg-topic-grid" id="cfg-topic-grid"></div>
     `
 
@@ -364,8 +364,7 @@ async function renderProductionMain(el) {
         <div class="cfg-topic-icon" style="background:${tc.bg};color:${tc.color}">
           <i class="ti ${topic.icon}"></i>
         </div>
-        <div class="cfg-topic-num">Topic ${topic.num}</div>
-        <div class="cfg-topic-name">${topic.name}</div>
+        <div class="cfg-topic-name" style="font-weight:600;font-size:13px">${topic.name}</div>
         <div class="cfg-topic-badges">
           ${s.fail > 0 ? `<span class="badge danger">${s.fail} fail</span>` : ''}
           ${s.warn > 0 ? `<span class="badge warning">${s.warn} warn</span>` : ''}
