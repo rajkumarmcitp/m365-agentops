@@ -19,6 +19,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure Administrative accounts are cloud-only',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'globalAdmins',
             validator: () => 'warn',
             description: 'CIS Control 1.1.1'
           },
@@ -35,6 +36,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure that between two and four global admins are designated',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'globalAdmins',
             validator: () => 'warn',
             description: 'CIS Control 1.1.3'
           },
@@ -43,6 +45,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure administrative accounts use licenses with a reduced application footprint',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: ['securityDefaults', 'caPolicy'],
             validator: () => 'warn',
             description: 'CIS Control 1.1.4'
           }
@@ -57,6 +60,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure that only organizationally managed/approved public groups exist . 39',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'groupCreationPolicy',
             validator: () => 'warn',
             description: 'CIS Control 1.2.1'
           },
@@ -111,6 +115,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure internal phishing protection for Forms is enabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'auditLog',
             validator: () => 'warn',
             description: 'CIS Control 1.3.5'
           },
@@ -119,6 +124,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure the customer lockbox feature is enabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'tenantSettings',
             validator: () => 'warn',
             description: 'CIS Control 1.3.6'
           },
@@ -135,6 +141,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure that Sways cannot be shared with people outside of your organization',
             type: 'manual',
             profile: 'E3 L1',
+            graphQuery: 'sspr',
             validator: () => 'pass',
             description: 'CIS Control 1.3.8'
           },
@@ -173,6 +180,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure the Common Attachment Types Filter is enabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'safeLinks',
             validator: () => 'warn',
             description: 'CIS Control 2.1.2'
           },
@@ -181,6 +189,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure notifications for internal users sending malware is Enabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'safeAttachments',
             validator: () => 'warn',
             description: 'CIS Control 2.1.3'
           },
@@ -189,6 +198,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure Safe Attachments policy is enabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'antiPhishing',
             validator: () => 'warn',
             description: 'CIS Control 2.1.4'
           },
@@ -205,6 +215,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure Exchange Online Spam Policies are set to notify administrators',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'exchangeSpamPolicies',
             validator: () => 'warn',
             description: 'CIS Control 2.1.6'
           },
@@ -213,6 +224,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure that an anti-phishing policy has been created',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'antiPhishing',
             validator: () => 'warn',
             description: 'CIS Control 2.1.7'
           },
@@ -221,6 +233,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure that SPF records are published for all Exchange Domains',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'spfRecords',
             validator: () => 'warn',
             description: 'CIS Control 2.1.8'
           },
@@ -229,6 +242,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure that DKIM is enabled for all Exchange Online Domains',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'dkim',
             validator: () => 'warn',
             description: 'CIS Control 2.1.9'
           },
@@ -237,6 +251,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure DMARC records for all Exchange Online domains are published',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'dmarc',
             validator: () => 'warn',
             description: 'CIS Control 2.1.10'
           },
@@ -305,6 +320,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure Priority account protection is enabled and configured',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'defenderForEndpoint',
             validator: () => 'warn',
             description: 'CIS Control 2.4.1'
           },
@@ -359,6 +375,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure Microsoft 365 audit log search is Enabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'auditLog',
             validator: () => 'warn',
             description: 'CIS Control 3.1.1'
           }
@@ -373,6 +390,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure DLP policies are enabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'dlpPolicies',
             validator: () => 'warn',
             description: 'CIS Control 3.2.1'
           },
@@ -381,6 +399,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure DLP policies are enabled for Microsoft Teams',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'dlpPolicies',
             validator: () => 'warn',
             description: 'CIS Control 3.2.2'
           },
@@ -389,6 +408,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure DLP policies are published for Copilot users',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'dlpPolicies',
             validator: () => 'warn',
             description: 'CIS Control 3.2.3'
           }
@@ -457,6 +477,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Overview 5.1.2.1 Ensure \'Per-user MFA\' is disabled',
             type: 'manual',
             profile: 'E3 L1',
+            graphQuery: 'mfaPolicies',
             validator: () => 'pass',
             description: 'CIS Control 5.1.1'
           },
