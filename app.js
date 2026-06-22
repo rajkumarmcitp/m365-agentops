@@ -1,3 +1,6 @@
+// Configuration System
+import { CONFIG, isFeatureEnabled, isProdMode, isDevMode, getHotfixStatus } from './config/index.js'
+
 import { USERS } from './data/users.js'
 import { renderHeader } from './components/header.js'
 import { renderNav } from './components/nav.js'
@@ -177,6 +180,9 @@ const PAGE_INIT = {
   audit: initAudit,
   settings: initSettings,
 }
+
+// Export configuration utilities
+export { CONFIG, isFeatureEnabled, isProdMode, isDevMode, getHotfixStatus }
 
 export async function go(pageId) {
   if (!hasAccess(pageId)) {
