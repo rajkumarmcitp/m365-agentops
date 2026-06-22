@@ -10,37 +10,45 @@
  * VITE_HOTFIX_DASHBOARD_REFRESH=120000 (milliseconds)
  */
 
+// Handle both browser (import.meta) and Node.js (process.env) environments
+const getEnv = (key, defaultValue = undefined) => {
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    return import.meta.env[key] || defaultValue
+  }
+  return process.env[key] || defaultValue
+}
+
 export const HOTFIXES = {
   // TenantGuard alerts loading issue
-  skipTenantGuardAlerts: import.meta.env.VITE_HOTFIX_SKIP_ALERTS === 'true',
+  skipTenantGuardAlerts: getEnv('VITE_HOTFIX_SKIP_ALERTS') === 'true',
   skipTenantGuardAlertsReason: 'Performance issue - backend API slow',
   skipTenantGuardAlertsAppliedDate: '2026-06-22',
 
   // API timeout reduction
-  reduceApiTimeout: import.meta.env.VITE_HOTFIX_REDUCE_TIMEOUT === 'true',
-  reducedApiTimeout: import.meta.env.VITE_HOTFIX_API_TIMEOUT ? parseInt(import.meta.env.VITE_HOTFIX_API_TIMEOUT) : 15000,
+  reduceApiTimeout: getEnv('VITE_HOTFIX_REDUCE_TIMEOUT') === 'true',
+  reducedApiTimeout: getEnv('VITE_HOTFIX_API_TIMEOUT') ? parseInt(getEnv('VITE_HOTFIX_API_TIMEOUT')) : 15000,
   reduceApiTimeoutReason: 'Network latency issue',
   reduceApiTimeoutAppliedDate: '2026-06-23',
 
   // Disabled features (comma-separated)
-  disabledFeatures: (import.meta.env.VITE_HOTFIX_DISABLE_FEATURES || '').split(',').filter(Boolean),
+  disabledFeatures: (getEnv('VITE_HOTFIX_DISABLE_FEATURES') || '').split(',').filter(Boolean),
   disabledFeaturesReason: 'Temporary disable due to bugs',
 
   // Dashboard refresh interval override
-  dashboardRefreshInterval: import.meta.env.VITE_HOTFIX_DASHBOARD_REFRESH ? parseInt(import.meta.env.VITE_HOTFIX_DASHBOARD_REFRESH) : null,
+  dashboardRefreshInterval: getEnv('VITE_HOTFIX_DASHBOARD_REFRESH') ? parseInt(getEnv('VITE_HOTFIX_DASHBOARD_REFRESH')) : null,
   dashboardRefreshReason: 'Reduce API load',
 
   // Security page disable
-  disableSecurity: import.meta.env.VITE_HOTFIX_DISABLE_SECURITY === 'true',
+  disableSecurity: getEnv('VITE_HOTFIX_DISABLE_SECURITY') === 'true',
   disableSecurityReason: 'Memory leak in compliance checks',
   disableSecurityAppliedDate: '2026-06-24',
 
   // Configuration page disable
-  disableM365Config: import.meta.env.VITE_HOTFIX_DISABLE_M365CONFIG === 'true',
+  disableM365Config: getEnv('VITE_HOTFIX_DISABLE_M365CONFIG') === 'true',
   disableM365ConfigReason: 'CIS benchmark API timing out',
 
   // Change Intelligence disable
-  disableChangeIntelligence: import.meta.env.VITE_HOTFIX_DISABLE_CHANGEINTEL === 'true',
+  disableChangeIntelligence: getEnv('VITE_HOTFIX_DISABLE_CHANGEINTEL') === 'true',
   disableChangeIntelligenceReason: 'SharePoint sync issues',
 
   /**
