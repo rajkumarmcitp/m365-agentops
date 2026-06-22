@@ -364,6 +364,47 @@ async function validateDLPPolicies() {
 }
 
 /**
+ * Validate: Safe Links for Office Applications (2.1.1)
+ */
+async function validateSafeLinksOffice() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Check organizational settings for Office application protection',
+      endpoint: 'GET /organization or /security/threatSubmissionPolicies',
+      expand: 'none',
+      select: 'id,displayName',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/organization',
+    'Note: Safe Links for Office apps requires Security & Compliance Center configuration'
+  ]
+
+  try {
+    const org = await graphClient.api('/organization').get()
+
+    return {
+      status: 'warn',
+      organizationName: org?.value?.[0]?.displayName,
+      note: 'Safe Links for Office Applications must be verified in Security & Compliance Center > Threat management > Safe Links',
+      remediation: 'Enable Safe Links for Office applications and set to "Block users from clicking to original URL"',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Safe Links for Office validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
  * Validate: Safe Links (2.1.2)
  */
 async function validateSafeLinks() {
@@ -438,28 +479,72 @@ async function validateSafeAttachments() {
 }
 
 /**
- * Validate: Anti-Phishing Policies (2.1.4)
+ * Validate: Exchange Online Spam Policies (2.1.6)
+ */
+async function validateExchangeSpamPolicies() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get email threat submission policies',
+      endpoint: 'GET /security/emailThreatSubmissionPolicies',
+      expand: 'none',
+      select: 'id,isReportingEmailEnabled,isReportingPhishEnabled',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/security/emailThreatSubmissionPolicies'
+  ]
+
+  try {
+    const policies = await graphClient.api('/security/emailThreatSubmissionPolicies').get()
+    const hasPolicy = policies?.value?.length > 0
+    const isReporting = policies?.value?.[0]?.isReportingEmailEnabled === true
+
+    return {
+      status: hasPolicy && isReporting ? 'pass' : 'warn',
+      policyCount: policies?.value?.length || 0,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Exchange Spam Policies validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Anti-Phishing Policies (2.1.7)
  */
 async function validateAntiPhishing() {
   const graphApiCommands = [
     {
       step: 1,
-      description: 'Get Exchange service health status',
-      endpoint: 'GET /admin/serviceAnnouncement/healthOverviews/Exchange',
+      description: 'Check security configuration for threat protection',
+      endpoint: 'GET /security/securityScores or manual verification in Security & Compliance',
       expand: 'none',
-      select: 'id,status,service',
+      select: 'id,displayName',
       filter: 'none'
     }
   ]
   const graphExplorerCommands = [
-    `GET https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/healthOverviews/Exchange?$select=id,status,service`
+    'Note: Anti-phishing policies are managed in Security & Compliance Center',
+    'Verify using: Get-AntiPhishPolicy | Select-Object DisplayName,Enabled'
   ]
 
   try {
-    const policies = await graphClient.api('/admin/serviceAnnouncement/healthOverviews/Exchange').get()
+    // Check organization configuration
+    const config = await graphClient.api('/organization').get()
 
     return {
-      status: policies?.status === 'serviceOperational' ? 'pass' : 'warn',
+      status: 'warn',
+      note: 'Anti-phishing policy verification requires Security & Compliance access',
+      remediation: 'Verify anti-phishing policies in Security & Compliance Center > Threat management > Anti-phishing',
       graphApiCommands: graphApiCommands,
       graphExplorerCommands: graphExplorerCommands
     }
@@ -475,48 +560,131 @@ async function validateAntiPhishing() {
 }
 
 /**
- * Validate: SPF Records (2.1.5)
+ * Validate: SPF Records (2.1.8)
  */
 async function validateSPFRecords() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get all verified domains in organization',
+      endpoint: 'GET /domains',
+      expand: 'none',
+      select: 'id,isVerified,authenticationType',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/domains?$select=id,isVerified,authenticationType',
+    'Verify SPF records manually: nslookup -type=TXT yourdomain.com'
+  ]
+
   try {
     const domains = await graphClient.api('/domains').get()
 
     return {
+      status: 'warn',
       totalDomains: domains.value?.length || 0,
+      verifiedDomains: domains.value?.filter(d => d.isVerified)?.length || 0,
       domains: domains.value?.map(d => ({
         name: d.id,
-        isVerified: d.isVerified
-      })) || []
+        isVerified: d.isVerified,
+        authenticationType: d.authenticationType
+      })) || [],
+      note: 'SPF validation requires DNS verification. Recommended: "v=spf1 include:*.mail.protection.outlook.com ~all"',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
     }
   } catch (error) {
     console.warn(`⚠️ SPF Records validation failed: ${error.message}`)
-    return { status: 'fail', error: error.message }
+    return {
+      status: 'fail',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
   }
 }
 
 /**
- * Validate: DKIM Configuration (2.1.6)
+ * Validate: DKIM Configuration (2.1.9)
  */
 async function validateDKIM() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Check organization domain configuration for DKIM',
+      endpoint: 'GET /domains (Graph API) or use Exchange Online PowerShell',
+      expand: 'none',
+      select: 'id,isVerified',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/domains?$select=id,isVerified',
+    'Check DKIM with PowerShell: Get-DkimSigningConfig | Select-Object Domain,Enabled'
+  ]
+
   try {
-    // This would require Exchange Online PowerShell or Advanced Threat Protection API
-    return { status: 'pass', note: 'Manual verification required in Exchange Admin Center' }
+    const domains = await graphClient.api('/domains').get()
+
+    return {
+      status: 'warn',
+      totalDomains: domains.value?.length || 0,
+      note: 'DKIM requires Exchange Online access. Verify all domains have DKIM signing enabled.',
+      remediation: 'Enable DKIM: Set-DkimSigningConfig -Identity yourdomain.onmicrosoft.com -Enabled $true',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
   } catch (error) {
     console.warn(`⚠️ DKIM validation failed: ${error.message}`)
-    return { status: 'warn', error: error.message }
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
   }
 }
 
 /**
- * Validate: DMARC Records (2.1.7)
+ * Validate: DMARC Records (2.1.10)
  */
 async function validateDMARC() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get organization domains for DMARC verification',
+      endpoint: 'GET /domains',
+      expand: 'none',
+      select: 'id,isVerified',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/domains?$select=id,isVerified',
+    'Verify DMARC records manually: nslookup -type=TXT _dmarc.yourdomain.com'
+  ]
+
   try {
-    // This would require DNS lookup
-    return { status: 'pass', note: 'Manual verification required via DNS lookup' }
+    const domains = await graphClient.api('/domains').get()
+
+    return {
+      status: 'warn',
+      totalDomains: domains.value?.length || 0,
+      verifiedDomains: domains.value?.filter(d => d.isVerified)?.length || 0,
+      note: 'DMARC records require DNS configuration. Recommended policy: "v=DMARC1; p=quarantine; rua=mailto:admin@yourdomain.com"',
+      remediation: 'Add DMARC TXT record: _dmarc.yourdomain.com with value "v=DMARC1; p=quarantine; rua=mailto:admin@yourdomain.com"',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
   } catch (error) {
     console.warn(`⚠️ DMARC validation failed: ${error.message}`)
-    return { status: 'warn', error: error.message }
+    return {
+      status: 'fail',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
   }
 }
 
