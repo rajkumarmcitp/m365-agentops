@@ -442,8 +442,19 @@ async function renderProductionMain(el) {
       return
     }
 
-    // Use full CFG_TOPICS structure with real data from Graph API assessment
-    const stats = getOverallStats()
+    // Calculate stats from real data
+    const allControls = result.data.flatMap(t => t.subsections.flatMap(s => s.controls))
+    const totalReal = allControls.length
+    let passReal = 0, failReal = 0, warnReal = 0, manualReal = 0
+    allControls.forEach(c => {
+      const eff = getEffectiveStatus(c)
+      if (eff === 'pass') passReal++
+      else if (eff === 'fail') failReal++
+      else if (eff === 'warn') warnReal++
+      if (c.type === 'manual') manualReal++
+    })
+    const scoreReal = totalReal > 0 ? Math.round((passReal / totalReal) * 100) : 0
+    const stats = { total: totalReal, pass: passReal, fail: failReal, warn: warnReal, manual: manualReal, score: scoreReal }
     const cls = scoreClass(stats.score)
 
     el.innerHTML = `
@@ -510,7 +521,7 @@ async function renderProductionMain(el) {
     `
 
     const grid = el.querySelector('#cfg-topic-grid')
-    CFG_TOPICS.forEach(topic => {
+    result.data.forEach(topic => {
       const s = getTopicStats(topic)
       const tCls = scoreClass(s.score)
       const card = document.createElement('div')
