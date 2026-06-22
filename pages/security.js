@@ -32,7 +32,7 @@ let trendRange = '7d'
 let copilotMessages = []
 let copilotInit = false
 
-const SEC_TABS = [
+const SEC_TABS_ROW1 = [
   { id: 'executive',      label: 'Executive',       icon: 'ti-layout-dashboard' },
   { id: 'securescore',    label: 'Secure Score',    icon: 'ti-shield-check' },
   { id: 'identity',       label: 'Identity',        icon: 'ti-user-check' },
@@ -40,6 +40,9 @@ const SEC_TABS = [
   { id: 'endpoint',       label: 'Endpoint',        icon: 'ti-device-laptop' },
   { id: 'teams',          label: 'Teams',           icon: 'ti-brand-teams' },
   { id: 'sharepoint',     label: 'SharePoint',      icon: 'ti-brand-sharepoint' },
+]
+
+const SEC_TABS_ROW2 = [
   { id: 'dataprotection', label: 'Data Protection', icon: 'ti-lock' },
   { id: 'privaccess',     label: 'Priv. Access',    icon: 'ti-crown' },
   { id: 'guests',         label: 'Guests',          icon: 'ti-user-plus' },
@@ -48,6 +51,8 @@ const SEC_TABS = [
   { id: 'copilot',        label: 'Security Copilot',icon: 'ti-robot' },
   { id: 'apiref',         label: 'API Reference',   icon: 'ti-api' },
 ]
+
+const SEC_TABS = [...SEC_TABS_ROW1, ...SEC_TABS_ROW2]
 
 // ============================================================
 // Entry
@@ -244,14 +249,23 @@ function render(el) {
       ${topFiveKpi()}
     </div>
 
-    <!-- Internal sub-navigation -->
-    <div class="tabs" id="sec-subnav">
-      ${SEC_TABS.map(t => `
+    <!-- Internal sub-navigation - Row 1 -->
+    <div class="tabs" id="sec-subnav-row1">
+      ${SEC_TABS_ROW1.map(t => `
+        <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
+          <i class="ti ${t.icon}"></i><span>${t.label}</span>
+          ${t.id === 'identity' && realIdentityPosture.highRiskUsers > 0 ? `<span class="sec-tab-badge red">${realIdentityPosture.highRiskUsers}</span>` : ''}
+        </button>
+      `).join('')}
+    </div>
+
+    <!-- Internal sub-navigation - Row 2 -->
+    <div class="tabs" id="sec-subnav-row2">
+      ${SEC_TABS_ROW2.map(t => `
         <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
           <i class="ti ${t.icon}"></i><span>${t.label}</span>
           ${t.id === 'incidents' && critCount > 0 ? `<span class="sec-tab-badge red">${critCount}</span>` : ''}
           ${t.id === 'recommendations' ? `<span class="sec-tab-badge amber">${openRec}</span>` : ''}
-          ${t.id === 'identity' && realIdentityPosture.highRiskUsers > 0 ? `<span class="sec-tab-badge red">${realIdentityPosture.highRiskUsers}</span>` : ''}
         </button>
       `).join('')}
     </div>
@@ -260,11 +274,11 @@ function render(el) {
     <div id="sec-content" style="margin-top:16px">${renderSection()}</div>
   `
 
-  el.querySelectorAll('#sec-subnav .tab-btn').forEach(btn => {
+  el.querySelectorAll('#sec-subnav-row1 .tab-btn, #sec-subnav-row2 .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeSection = btn.dataset.sec
       render(el)
-      el.querySelector('#sec-subnav')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      el.querySelector('#sec-subnav-row1')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     })
   })
 
