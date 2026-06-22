@@ -302,7 +302,6 @@ async function refreshData() {
 
 async function storeToSharePoint(baseUrl) {
   try {
-    console.log('📤 Storing data to SharePoint...')
     const response = await fetch(`${baseUrl}/api/tenantguard/store-to-sharepoint`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -313,14 +312,17 @@ async function storeToSharePoint(baseUrl) {
       })
     })
 
+    if (!response.ok) {
+      console.debug(`⚠️ SharePoint storage unavailable (${response.status})`)
+      return
+    }
+
     const result = await response.json()
     if (result.success) {
-      console.log('✅ Data stored to SharePoint:', result)
-    } else {
-      console.warn('⚠️ SharePoint storage warning:', result.message)
+      console.debug('✅ Data stored to SharePoint')
     }
   } catch (error) {
-    console.warn('⚠️ Could not store to SharePoint (non-blocking):', error.message)
+    console.debug('⚠️ SharePoint storage skipped (non-blocking):', error.message)
   }
 }
 
