@@ -161,15 +161,26 @@ async function validateGlobalAdmins() {
 
     // Step 2: Get members of Global Administrator role (note: this endpoint doesn't support $top parameter)
     const membersQuery = `/directoryRoles/${globalAdminRole.id}/members`
-    const members = await graphClient.api(membersQuery).query({ $select: 'id,displayName,userPrincipalName,userType' }).get()
+    const members = await graphClient.api(membersQuery).query({ $select: 'id,displayName,userPrincipalName,userType,onPremisesImmutableId' }).get()
     const count = members.value?.length || 0
 
+    // Check if all members are cloud-only (no onPremisesImmutableId and userType is not Guest)
+    const cloudOnlyMembers = members.value?.filter(m => !m.onPremisesImmutableId && m.userType !== 'Guest') || []
+    const allCloudOnly = cloudOnlyMembers.length === count && count > 0
+
     return {
-      status: count >= 2 && count <= 4 ? 'pass' : (count === 0 ? 'fail' : 'warn'),
+      status: count >= 2 && count <= 4 ? (allCloudOnly ? 'pass' : 'fail') : (count === 0 ? 'fail' : 'warn'),
       count,
       expected: '2-4',
       actual: count,
-      members: members.value?.map(m => ({ name: m.displayName, upn: m.userPrincipalName })) || [],
+      cloudOnlyCount: cloudOnlyMembers.length,
+      allCloudOnly: allCloudOnly,
+      members: members.value?.map(m => ({
+        name: m.displayName,
+        upn: m.userPrincipalName,
+        userType: m.userType,
+        isCloudOnly: !m.onPremisesImmutableId
+      })) || [],
       graphApiCommands: [
         {
           step: 1,
@@ -181,16 +192,16 @@ async function validateGlobalAdmins() {
         },
         {
           step: 2,
-          description: 'Get members of Global Administrator role',
+          description: 'Get members of Global Administrator role and check if cloud-only',
           endpoint: `GET /directoryRoles/${globalAdminRole.id}/members`,
           expand: 'none',
-          select: 'id,displayName,userPrincipalName,userType',
+          select: 'id,displayName,userPrincipalName,userType,onPremisesImmutableId',
           filter: 'none'
         }
       ],
       graphExplorerCommands: [
         `GET https://graph.microsoft.com/v1.0/directoryRoles?$filter=displayName eq 'Global Administrator'`,
-        `GET https://graph.microsoft.com/v1.0/directoryRoles/${globalAdminRole.id}/members?$select=id,displayName,userPrincipalName,userType`
+        `GET https://graph.microsoft.com/v1.0/directoryRoles/${globalAdminRole.id}/members?$select=id,displayName,userPrincipalName,userType,onPremisesImmutableId`
       ]
     }
   } catch (error) {

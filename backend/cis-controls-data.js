@@ -20,7 +20,12 @@ export const CIS_CONTROLS_DATA = [
             type: 'auto',
             profile: 'E3 L1',
             graphQuery: 'globalAdmins',
-            validator: () => 'warn',
+            validator: (data) => {
+              // Check if all global admins are cloud-only (not synchronized/guest accounts)
+              if (!data?.members || data.members.length === 0) return 'fail'
+              const allCloudOnly = data.members.every(m => m.userType !== 'Guest' && !m.onPremisesImmutableId)
+              return allCloudOnly ? 'pass' : 'fail'
+            },
             description: 'CIS Control 1.1.1'
           },
           {
