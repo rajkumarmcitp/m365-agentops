@@ -686,17 +686,21 @@ tr:hover td { background: var(--color-background-secondary); }
   flex-wrap: wrap;
   margin-bottom: 16px;
   gap: 8px;
-  padding: 12px;
-  border: 0.5px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-md);
-  background: var(--color-background-primary);
+  padding: 12px 0;
+  border: none;
+  background: transparent;
 }
 
 .tab-btn {
-  padding: 4px 8px;
-  font-size: 11px;
+  padding: 6px 12px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--color-text-secondary);
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: 4px;
+  background: var(--color-background-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
   background: var(--color-background-primary) !important;
   border: 0.5px solid var(--color-border-secondary) !important;
   border-radius: var(--border-radius-md) !important;
@@ -710,6 +714,11 @@ tr:hover td { background: var(--color-background-secondary); }
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.tab-btn i {
+  font-size: 14px;
+  margin-right: 4px;
 }
 
 .tab-btn:hover {
