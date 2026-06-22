@@ -68,7 +68,11 @@ export async function validateAllCISControls() {
       liveCaptions, qAndANotAvailable, preventAnonymousUsers,
       preventDialOut, teamsLiveEventsRestricted, e2eEncryption,
       auditLogSearch, dlpPoliciesEnabled, dlpForTeams,
-      dlpForCollaboration, sensitivityLabels
+      dlpForCollaboration, sensitivityLabels,
+      mailboxAuditingEnabled, mailboxAuditRetention, mailboxDelegationAuditing,
+      mailFlowRules, emailAuthentication, forwardingRules,
+      clientAccess, legacyAuthentication, modernAuthenticationRequired,
+      oauthTokenLifetime, sessionTimeout, mfaForOWA, mfaForPowerShell
     ] = await Promise.allSettled([
       validateGlobalAdmins(),
       validateAuthorizationPolicy(),
@@ -134,7 +138,20 @@ export async function validateAllCISControls() {
       validateDLPPoliciesEnabled(),
       validateDLPForTeams(),
       validateDLPForCollaboration(),
-      validateSensitivityLabels()
+      validateSensitivityLabels(),
+      validateMailboxAuditingEnabled(),
+      validateMailboxAuditRetention(),
+      validateMailboxDelegationAuditing(),
+      validateMailFlowRules(),
+      validateEmailAuthentication(),
+      validateForwardingRules(),
+      validateClientAccess(),
+      validateLegacyAuthentication(),
+      validateModernAuthenticationRequired(),
+      validateOAuthTokenLifetime(),
+      validateSessionTimeout(),
+      validateMFAForOWA(),
+      validateMFAForPowerShell()
     ])
 
     // Build CIS Topics from validation results
@@ -203,7 +220,20 @@ export async function validateAllCISControls() {
       dlpPoliciesEnabled: dlpPoliciesEnabled.value || null,
       dlpForTeams: dlpForTeams.value || null,
       dlpForCollaboration: dlpForCollaboration.value || null,
-      sensitivityLabels: sensitivityLabels.value || null
+      sensitivityLabels: sensitivityLabels.value || null,
+      mailboxAuditingEnabled: mailboxAuditingEnabled.value || null,
+      mailboxAuditRetention: mailboxAuditRetention.value || null,
+      mailboxDelegationAuditing: mailboxDelegationAuditing.value || null,
+      mailFlowRules: mailFlowRules.value || null,
+      emailAuthentication: emailAuthentication.value || null,
+      forwardingRules: forwardingRules.value || null,
+      clientAccess: clientAccess.value || null,
+      legacyAuthentication: legacyAuthentication.value || null,
+      modernAuthenticationRequired: modernAuthenticationRequired.value || null,
+      oauthTokenLifetime: oauthTokenLifetime.value || null,
+      sessionTimeout: sessionTimeout.value || null,
+      mfaForOWA: mfaForOWA.value || null,
+      mfaForPowerShell: mfaForPowerShell.value || null
     })
 
     const result = {
@@ -2902,6 +2932,517 @@ async function validateSensitivityLabels() {
 }
 
 /**
+ * Validate: Mailbox Auditing Enabled (6.1.1)
+ */
+async function validateMailboxAuditingEnabled() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get mailbox audit settings for Exchange Online',
+      endpoint: 'GET /audit/auditLog/mailbox',
+      expand: 'none',
+      select: 'id,isEnabled,auditLevel',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/audit/auditLog/mailbox`
+  ]
+
+  try {
+    const auditSettings = await graphClient.api('/audit/auditLog/mailbox').get()
+    return {
+      status: auditSettings?.isEnabled ? 'pass' : 'fail',
+      auditingEnabled: auditSettings?.isEnabled || false,
+      auditLevel: auditSettings?.auditLevel || 'None',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Mailbox Auditing validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Mailbox Audit Log Retention (6.1.2)
+ */
+async function validateMailboxAuditRetention() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get mailbox audit log retention policy',
+      endpoint: 'GET /audit/auditLog/retention',
+      expand: 'none',
+      select: 'id,retentionDays,policy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/audit/auditLog/retention`
+  ]
+
+  try {
+    const retention = await graphClient.api('/audit/auditLog/retention').get()
+    const retentionDays = retention?.retentionDays || 0
+    return {
+      status: retentionDays >= 90 ? 'pass' : 'fail',
+      retentionDays: retentionDays,
+      retentionConfigured: retentionDays >= 90,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Mailbox Audit Retention validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Mailbox Delegation Auditing (6.1.3)
+ */
+async function validateMailboxDelegationAuditing() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get mailbox delegation audit settings',
+      endpoint: 'GET /audit/auditLog/mailbox/delegation',
+      expand: 'none',
+      select: 'id,delegationAuditEnabled',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/audit/auditLog/mailbox`
+  ]
+
+  try {
+    const delegationAudit = await graphClient.api('/audit/auditLog/mailbox').get()
+    return {
+      status: delegationAudit?.delegationAuditEnabled ? 'pass' : 'fail',
+      delegationAuditEnabled: delegationAudit?.delegationAuditEnabled || false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Mailbox Delegation Auditing validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Mail Flow Rules (6.2.1)
+ */
+async function validateMailFlowRules() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Exchange mail flow rules and policies',
+      endpoint: 'GET /admin/exchange/transportRules',
+      expand: 'none',
+      select: 'id,name,enabled,priority',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/exchange/transportRules`
+  ]
+
+  try {
+    const rules = await graphClient.api('/admin/exchange/transportRules').get()
+    const enabledRules = rules?.value?.filter(r => r.enabled)?.length || 0
+    return {
+      status: enabledRules > 0 ? 'pass' : 'warn',
+      totalRules: rules?.value?.length || 0,
+      enabledRules: enabledRules,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Mail Flow Rules validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Email Authentication (6.2.2)
+ */
+async function validateEmailAuthentication() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get domain authentication policies (SPF, DKIM, DMARC)',
+      endpoint: 'GET /domains',
+      expand: 'none',
+      select: 'id,displayName,authenticationType',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/domains`
+  ]
+
+  try {
+    const domains = await graphClient.api('/domains').get()
+    const authenticatedDomains = domains?.value?.filter(d =>
+      d.authenticationType === 'Federated' || d.authenticationType === 'Managed'
+    ) || []
+    return {
+      status: authenticatedDomains.length > 0 ? 'pass' : 'fail',
+      totalDomains: domains?.value?.length || 0,
+      authenticatedDomains: authenticatedDomains.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Email Authentication validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Forwarding Rules (6.2.3)
+ */
+async function validateForwardingRules() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get mail forwarding policies and restrictions',
+      endpoint: 'GET /admin/exchange/forwardingPolicy',
+      expand: 'none',
+      select: 'id,isForwardingAllowed,isAutomaticForwardingAllowed',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/exchange/forwardingPolicy`
+  ]
+
+  try {
+    const forwardingPolicy = await graphClient.api('/admin/exchange/forwardingPolicy').get()
+    return {
+      status: !forwardingPolicy?.isForwardingAllowed ? 'pass' : 'warn',
+      forwardingAllowed: forwardingPolicy?.isForwardingAllowed || false,
+      automaticForwardingAllowed: forwardingPolicy?.isAutomaticForwardingAllowed || false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Forwarding Rules validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Client Access (6.3.1)
+ */
+async function validateClientAccess() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Exchange client access policies and restrictions',
+      endpoint: 'GET /admin/exchange/clientAccessPolicy',
+      expand: 'none',
+      select: 'id,protocol,enabled',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/exchange/clientAccessPolicy`
+  ]
+
+  try {
+    const clientPolicy = await graphClient.api('/admin/exchange/clientAccessPolicy').get()
+    return {
+      status: clientPolicy?.id ? 'pass' : 'warn',
+      policyConfigured: clientPolicy?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Client Access validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Legacy Authentication (6.3.2)
+ */
+async function validateLegacyAuthentication() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get authentication policies blocking legacy authentication',
+      endpoint: 'GET /identity/authenticationMethods/policies',
+      expand: 'none',
+      select: 'id,displayName,restrictionType',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/identity/authenticationMethods/policies`
+  ]
+
+  try {
+    const authPolicies = await graphClient.api('/identity/authenticationMethods/policies').get()
+    const blockLegacy = authPolicies?.value?.some(p =>
+      p.displayName?.includes('Legacy') || p.restrictionType === 'blockLegacy'
+    )
+    return {
+      status: blockLegacy ? 'pass' : 'fail',
+      legacyAuthBlocked: blockLegacy || false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Legacy Authentication validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Modern Authentication (6.5.1)
+ */
+async function validateModernAuthenticationRequired() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get authentication policies requiring modern authentication',
+      endpoint: 'GET /policies/authenticationMethodsPolicy',
+      expand: 'none',
+      select: 'id,displayName,authenticationMethodConfigurations',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/policies/authenticationMethodsPolicy`
+  ]
+
+  try {
+    const authPolicy = await graphClient.api('/policies/authenticationMethodsPolicy').get()
+    return {
+      status: authPolicy?.id ? 'pass' : 'warn',
+      modernAuthEnabled: authPolicy?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Modern Authentication validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: OAuth Token Lifetime (6.5.2)
+ */
+async function validateOAuthTokenLifetime() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get token lifetime policies for OAuth sessions',
+      endpoint: 'GET /policies/tokenLifetimePolicies',
+      expand: 'none',
+      select: 'id,displayName,accessTokenLifetime',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/policies/tokenLifetimePolicies`
+  ]
+
+  try {
+    const tokenPolicies = await graphClient.api('/policies/tokenLifetimePolicies').get()
+    const shortLifetimePolicies = tokenPolicies?.value?.filter(p =>
+      p.accessTokenLifetime && p.accessTokenLifetime < 3600
+    ) || []
+    return {
+      status: shortLifetimePolicies.length > 0 ? 'pass' : 'warn',
+      totalPolicies: tokenPolicies?.value?.length || 0,
+      restrictedPolicies: shortLifetimePolicies.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ OAuth Token Lifetime validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Session Timeout (6.5.3)
+ */
+async function validateSessionTimeout() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get session timeout policies for Exchange',
+      endpoint: 'GET /policies/tokenLifetimePolicies',
+      expand: 'none',
+      select: 'id,displayName,refreshTokenLifetime',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/policies/tokenLifetimePolicies`
+  ]
+
+  try {
+    const timeoutPolicies = await graphClient.api('/policies/tokenLifetimePolicies').get()
+    const configuredTimeout = timeoutPolicies?.value?.some(p =>
+      p.refreshTokenLifetime && p.refreshTokenLifetime < 86400
+    )
+    return {
+      status: configuredTimeout ? 'pass' : 'warn',
+      timeoutConfigured: configuredTimeout || false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Session Timeout validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Multi-Factor Authentication for OWA (6.5.4)
+ */
+async function validateMFAForOWA() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get conditional access policies requiring MFA for Outlook Web Access',
+      endpoint: 'GET /identity/conditionalAccess/policies',
+      expand: 'none',
+      select: 'id,displayName,grantControls,applications',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies`
+  ]
+
+  try {
+    const policies = await graphClient.api('/identity/conditionalAccess/policies').get()
+    const mfaPolicies = policies?.value?.filter(p =>
+      p.grantControls?.builtInControls?.includes('mfa') &&
+      p.applications?.includeApplications?.some(a =>
+        a === '00b41c95-dab0-4487-9791-b9d2c32c1fc6' || a === '*'
+      )
+    ) || []
+    return {
+      status: mfaPolicies.length > 0 ? 'pass' : 'fail',
+      totalPolicies: policies?.value?.length || 0,
+      mfaPolicies: mfaPolicies.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ MFA for OWA validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: MFA for PowerShell (6.5.5)
+ */
+async function validateMFAForPowerShell() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get authentication policies for Exchange PowerShell access',
+      endpoint: 'GET /identity/authenticationMethods/policies',
+      expand: 'none',
+      select: 'id,displayName,powerShellMFARequired',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/identity/authenticationMethods/policies`
+  ]
+
+  try {
+    const authPolicies = await graphClient.api('/identity/authenticationMethods/policies').get()
+    const psPolicy = authPolicies?.value?.find(p =>
+      p.displayName?.includes('PowerShell') || p.powerShellMFARequired
+    )
+    return {
+      status: psPolicy?.powerShellMFARequired ? 'pass' : 'fail',
+      psAuthRequired: psPolicy?.powerShellMFARequired || false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ MFA for PowerShell validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
  * Build CIS Topics from validation results using CIS_CONTROLS_DATA
  * Returns complete detailed structure with all control information
  */
@@ -3066,7 +3607,21 @@ function getControlValue(controlId, data) {
     '3.2.1': (d) => `DLP policies: ${d?.enabledPolicies || 0}/${d?.totalPolicies || 0} enabled`,
     '3.2.2': (d) => `DLP for Teams: ${d?.teamsPolicies || 0} policies configured`,
     '3.2.3': (d) => `DLP for collaboration: ${d?.collaborationPolicies || 0} policies configured`,
-    '3.3.1': (d) => `Sensitivity labels: ${d?.enabledLabels || 0}/${d?.totalLabels || 0} enabled`
+    '3.3.1': (d) => `Sensitivity labels: ${d?.enabledLabels || 0}/${d?.totalLabels || 0} enabled`,
+    // Phase 5: Exchange Admin Center
+    '6.1.1': (d) => d?.auditingEnabled ? `Mailbox auditing: ${d?.auditLevel || 'Enabled'}` : 'Mailbox auditing: Disabled',
+    '6.1.2': (d) => d?.retentionConfigured ? `Audit retention: ${d?.retentionDays || 0} days` : 'Audit retention: Less than 90 days',
+    '6.1.3': (d) => d?.delegationAuditEnabled ? 'Mailbox delegation auditing: Enabled' : 'Mailbox delegation auditing: Disabled',
+    '6.2.1': (d) => `Mail flow rules: ${d?.enabledRules || 0}/${d?.totalRules || 0} active`,
+    '6.2.2': (d) => `Authenticated domains: ${d?.authenticatedDomains || 0}/${d?.totalDomains || 0}`,
+    '6.2.3': (d) => d?.forwardingAllowed ? 'Automatic forwarding: Allowed' : 'Automatic forwarding: Restricted',
+    '6.3.1': (d) => d?.policyConfigured ? 'Client access: Configured' : 'Client access: Not configured',
+    '6.3.2': (d) => d?.legacyAuthBlocked ? 'Legacy authentication: Blocked' : 'Legacy authentication: Allowed',
+    '6.5.1': (d) => d?.modernAuthEnabled ? 'Modern authentication: Required' : 'Modern authentication: Not enforced',
+    '6.5.2': (d) => `OAuth token policies: ${d?.restrictedPolicies || 0} restricted`,
+    '6.5.3': (d) => d?.timeoutConfigured ? 'Session timeout: Configured' : 'Session timeout: Not configured',
+    '6.5.4': (d) => `MFA for OWA: ${d?.mfaPolicies || 0} policies configured`,
+    '6.5.5': (d) => d?.psAuthRequired ? 'PowerShell MFA: Required' : 'PowerShell MFA: Not required'
   }
 
   if (valueMap[controlId]) {

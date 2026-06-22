@@ -651,6 +651,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure \'AuditDisabled\' organizationally is set to \'False\'',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'mailboxAuditingEnabled',
             validator: () => 'warn',
             description: 'CIS Control 6.1.1'
           },
@@ -659,6 +660,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure mailbox audit actions are configured',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'mailboxAuditRetention',
             validator: () => 'warn',
             description: 'CIS Control 6.1.2'
           },
@@ -667,6 +669,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure \'AuditBypassEnabled\' is not enabled on mailboxes',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'mailboxDelegationAuditing',
             validator: () => 'warn',
             description: 'CIS Control 6.1.3'
           }
@@ -681,6 +684,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure all forms of mail forwarding are blocked and/or disabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'forwardingRules',
             validator: () => 'warn',
             description: 'CIS Control 6.2.1'
           },
@@ -689,6 +693,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure mail transport rules do not whitelist specific domains',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'mailFlowRules',
             validator: () => 'warn',
             description: 'CIS Control 6.2.2'
           },
@@ -697,6 +702,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure email from external senders is identified',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'emailAuthentication',
             validator: () => 'warn',
             description: 'CIS Control 6.2.3'
           }
@@ -711,6 +717,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure users installing Outlook add-ins is not allowed',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'clientAccess',
             validator: () => 'warn',
             description: 'CIS Control 6.3.1'
           },
@@ -719,6 +726,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure the ability to add personal email accounts and calendars is disabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'legacyAuthentication',
             validator: () => 'warn',
             description: 'CIS Control 6.3.2'
           }
@@ -733,6 +741,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure modern authentication for Exchange Online is enabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'modernAuthenticationRequired',
             validator: () => 'warn',
             description: 'CIS Control 6.5.1'
           },
@@ -741,6 +750,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure MailTips are enabled for end users',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'oauthTokenLifetime',
             validator: () => 'warn',
             description: 'CIS Control 6.5.2'
           },
@@ -749,6 +759,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure additional storage providers are restricted in Outlook on the web 454',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'sessionTimeout',
             validator: () => 'warn',
             description: 'CIS Control 6.5.3'
           },
@@ -757,6 +768,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure SMTP AUTH is disabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'mfaForOWA',
             validator: () => 'warn',
             description: 'CIS Control 6.5.4'
           },
@@ -765,6 +777,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure Direct Send submissions are rejected',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'mfaForPowerShell',
             validator: () => 'warn',
             description: 'CIS Control 6.5.5'
           }
