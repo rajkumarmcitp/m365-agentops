@@ -458,7 +458,7 @@ function renderExecutive() {
                 <i class="ti ${s.icon}" style="font-size:20px;color:${s.color}"></i>
                 <span class="card-title" style="margin:0;flex:1">${s.name}</span>
               </div>
-              <div style="font-size:32px;font-weight:700;color:${s.color};margin-bottom:4px">${s.score}%</div>
+              <div style="font-size:26px;font-weight:700;color:${s.color};margin-bottom:4px">${s.score}%</div>
               <div style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Score</div>
             </div>
             <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--color-border-secondary)">
