@@ -90,18 +90,18 @@ function updateAdminActionsTable(announcements, tasks = []) {
       myTasksTbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#999">No tasks assigned to you</td></tr>'
     } else {
       myTasksTbody.innerHTML = myTasks.map(task => `
-        <tr style="border-bottom:0.5px solid #ddd">
-          <td style="padding:10px;font-weight:600;color:#333;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${task.title}</td>
+        <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+          <td style="padding:10px;font-weight:600;color:var(--color-text-primary);max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${task.title}</td>
           <td style="padding:10px">
             <span class="badge ${getStatusColor(task.taskStatus)}" style="font-size:9px">${task.taskStatus}</span>
           </td>
           <td style="padding:10px">
-            <div style="width:80px;height:20px;background:#e0e0e0;border-radius:4px;overflow:hidden;display:inline-block">
-              <div style="width:${parseInt(task.progress) || 0}%;height:100%;background:#4CAF50"></div>
+            <div style="width:80px;height:20px;background:var(--color-background-secondary);border-radius:4px;overflow:hidden;display:inline-block">
+              <div style="width:${parseInt(task.progress) || 0}%;height:100%;background:var(--clr-success-text)"></div>
             </div>
-            <span style="font-size:9px;color:#666;margin-left:4px">${task.progress}</span>
+            <span style="font-size:9px;color:var(--color-text-secondary);margin-left:4px">${task.progress}</span>
           </td>
-          <td style="padding:10px;font-size:10px">${task.dueDate?.split('T')[0] || '—'}</td>
+          <td style="padding:10px;font-size:10px;color:var(--color-text-secondary)">${task.dueDate?.split('T')[0] || '—'}</td>
           <td style="padding:10px;text-align:center">
             <button class="btn-small update-assignee-task" data-task-id="${task.id}" style="font-size:9px;padding:4px 8px;cursor:pointer">
               <i class="ti ti-pencil"></i> Update
@@ -167,9 +167,9 @@ function updateAdminActionsTable(announcements, tasks = []) {
     const assignedToDueDisplay = [assignedToText, dueText].filter(Boolean).join(' | ') || '—'
 
     return `
-      <tr style="border-bottom:0.5px solid #ddd">
-        <td style="padding:10px;color:#0066cc;font-weight:600;cursor:pointer" title="${msgId}">${msgId}</td>
-        <td style="padding:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.title}</td>
+      <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+        <td style="padding:10px;color:var(--clr-primary);font-weight:600;cursor:pointer" title="${msgId}">${msgId}</td>
+        <td style="padding:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-primary)">${item.title}</td>
         <td style="padding:10px">
           <span class="badge ${getStatusBadgeColor(item.taskStatus)}" style="font-size:9px">${item.taskStatus || '—'}</span>
         </td>
@@ -177,13 +177,13 @@ function updateAdminActionsTable(announcements, tasks = []) {
           <span class="badge ${getStatusColor(item.approvalStatus || 'Pending')}" style="font-size:9px">${item.approvalStatus || 'Pending'}</span>
         </td>
         <td style="padding:10px">
-          <div style="width:60px;height:16px;background:#e0e0e0;border-radius:3px;overflow:hidden;display:inline-block">
-            <div style="width:${parseInt(item.progress) || 0}%;height:100%;background:#4CAF50"></div>
+          <div style="width:60px;height:16px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden;display:inline-block">
+            <div style="width:${parseInt(item.progress) || 0}%;height:100%;background:var(--clr-success-text)"></div>
           </div>
-          <span style="font-size:9px;color:#666;margin-left:4px">${item.progress || '0%'}</span>
+          <span style="font-size:9px;color:var(--color-text-secondary);margin-left:4px">${item.progress || '0%'}</span>
         </td>
-        <td style="padding:10px;color:#666;font-size:10px">${assignedToDueDisplay}</td>
-        <td style="padding:10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#666;font-size:9px">${item.notes || '—'}</td>
+        <td style="padding:10px;color:var(--color-text-secondary);font-size:10px">${assignedToDueDisplay}</td>
+        <td style="padding:10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-secondary);font-size:9px">${item.notes || '—'}</td>
         <td style="padding:10px;text-align:center">
           ${isPendingApproval ? `
             <button class="btn-small approve-resolution-btn" data-task-id="${item.id}" style="font-size:9px;padding:4px 8px;cursor:pointer;background:#4caf50;color:white;border:none;border-radius:4px">
@@ -400,18 +400,18 @@ async function renderProductionMsgCenter(el) {
         </div>
       </div>
 
-      <div style="padding:12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px">
-        <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);margin-bottom:10px;text-transform:uppercase">Filters</div>
+      <div style="padding:12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:20px">
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-secondary);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary);text-transform:uppercase;letter-spacing:0.5px">Filters</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
           <div>
-            <label style="font-size:10px;color:var(--color-text-secondary);display:block;margin-bottom:6px">Service</label>
-            <select id="filter-service" style="width:100%;padding:6px;font-size:10px;border:0.5px solid var(--color-border-secondary);border-radius:4px;background:var(--color-background-secondary)">
+            <label style="font-size:10px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px;text-transform:uppercase">Service</label>
+            <select id="filter-service" style="width:100%;padding:8px;font-size:11px;border:0.5px solid var(--color-border-secondary);border-radius:4px;background:var(--color-background-secondary)">
               <option value="">All Services</option>
             </select>
           </div>
           <div>
-            <label style="font-size:10px;color:var(--color-text-secondary);display:block;margin-bottom:6px">Severity</label>
-            <select id="filter-severity" style="width:100%;padding:6px;font-size:10px;border:0.5px solid var(--color-border-secondary);border-radius:4px;background:var(--color-background-secondary)">
+            <label style="font-size:10px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px;text-transform:uppercase">Severity</label>
+            <select id="filter-severity" style="width:100%;padding:8px;font-size:11px;border:0.5px solid var(--color-border-secondary);border-radius:4px;background:var(--color-background-secondary)">
               <option value="">All Severities</option>
               <option value="normal">Normal</option>
               <option value="high">High</option>
@@ -419,16 +419,16 @@ async function renderProductionMsgCenter(el) {
             </select>
           </div>
           <div>
-            <label style="font-size:10px;color:var(--color-text-secondary);display:block;margin-bottom:6px">Review Status</label>
-            <select id="filter-review-status" style="width:100%;padding:6px;font-size:10px;border:0.5px solid var(--color-border-secondary);border-radius:4px;background:var(--color-background-secondary)">
+            <label style="font-size:10px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px;text-transform:uppercase">Review Status</label>
+            <select id="filter-review-status" style="width:100%;padding:8px;font-size:11px;border:0.5px solid var(--color-border-secondary);border-radius:4px;background:var(--color-background-secondary)">
               <option value="">All States</option>
               <option value="Not Reviewed">Not Reviewed</option>
               <option value="Reviewed">Reviewed</option>
             </select>
           </div>
           <div>
-            <label style="font-size:10px;color:var(--color-text-secondary);display:block;margin-bottom:6px">Task Status</label>
-            <select id="filter-task-status" style="width:100%;padding:6px;font-size:10px;border:0.5px solid var(--color-border-secondary);border-radius:4px;background:var(--color-background-secondary)">
+            <label style="font-size:10px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px;text-transform:uppercase">Task Status</label>
+            <select id="filter-task-status" style="width:100%;padding:8px;font-size:11px;border:0.5px solid var(--color-border-secondary);border-radius:4px;background:var(--color-background-secondary)">
               <option value="">All Tasks</option>
               <option value="Not Started">Not Started</option>
               <option value="In Progress">In Progress</option>
@@ -438,9 +438,9 @@ async function renderProductionMsgCenter(el) {
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" style="margin-bottom:20px">
         <div class="card-header">
-          <span class="card-title">Announcements Review Queue</span>
+          <span class="card-title"><i class="ti ti-inbox"></i> Announcements Review Queue</span>
           <span class="badge info">${announcements.length} total</span>
         </div>
         <div style="max-height:700px;overflow-y:auto" id="announcements-container"></div>
@@ -448,18 +448,18 @@ async function renderProductionMsgCenter(el) {
 
       <div class="card" style="margin-top:20px">
         <div class="card-header">
-          <span class="card-title">📋 My Assigned Tasks</span>
+          <span class="card-title"><i class="ti ti-check-list"></i> My Assigned Tasks</span>
           <span class="badge info" id="my-tasks-count" style="font-size:10px">0 tasks</span>
         </div>
         <div style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;font-size:11px">
             <thead>
-              <tr style="background:#f5f5f5;border-bottom:1px solid #ddd">
-                <th style="padding:10px;text-align:left;font-weight:600;color:#333">Task Title</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:#333">Status</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:#333">Progress</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:#333">Due Date</th>
-                <th style="padding:10px;text-align:center;font-weight:600;color:#333">Update</th>
+              <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-secondary)">
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Task Title</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Status</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Progress</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Due Date</th>
+                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary)">Update</th>
               </tr>
             </thead>
             <tbody id="my-tasks-tbody">
@@ -471,20 +471,20 @@ async function renderProductionMsgCenter(el) {
 
       <div class="card" style="margin-top:20px">
         <div class="card-header">
-          <span class="card-title">Admin Actions Summary</span>
+          <span class="card-title"><i class="ti ti-list-check"></i> Admin Actions Summary</span>
           <span class="badge info" id="admin-actions-count">0 with actions</span>
         </div>
         <div style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;font-size:11px" id="admin-actions-table">
             <thead>
-              <tr style="background:#f5f5f5;border-bottom:1px solid #ddd">
-                <th style="padding:10px;text-align:left;font-weight:600;color:#333">Message ID</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:#333">Task Title</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:#333">Task Status</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:#333">Approval</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:#333">Progress</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:#333">Assigned To / Due</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:#333">Notes</th>
+              <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-secondary)">
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Message ID</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Task Title</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Task Status</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Approval</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Progress</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Assigned To / Due</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Notes</th>
               </tr>
             </thead>
             <tbody id="admin-actions-tbody">
