@@ -66,7 +66,9 @@ export async function validateAllCISControls() {
       restrictConditionalAccessPolicies, sharePointTermsAcceptance,
       meetingOrganizerOnly, meetingTranscripts, recordingNotifications,
       liveCaptions, qAndANotAvailable, preventAnonymousUsers,
-      preventDialOut, teamsLiveEventsRestricted, e2eEncryption
+      preventDialOut, teamsLiveEventsRestricted, e2eEncryption,
+      auditLogSearch, dlpPoliciesEnabled, dlpForTeams,
+      dlpForCollaboration, sensitivityLabels
     ] = await Promise.allSettled([
       validateGlobalAdmins(),
       validateAuthorizationPolicy(),
@@ -127,7 +129,12 @@ export async function validateAllCISControls() {
       validatePreventAnonymousUsers(),
       validatePreventDialOut(),
       validateTeamsLiveEventsRestricted(),
-      validateE2EEncryption()
+      validateE2EEncryption(),
+      validateAuditLogSearch(),
+      validateDLPPoliciesEnabled(),
+      validateDLPForTeams(),
+      validateDLPForCollaboration(),
+      validateSensitivityLabels()
     ])
 
     // Build CIS Topics from validation results
@@ -191,7 +198,12 @@ export async function validateAllCISControls() {
       preventAnonymousUsers: preventAnonymousUsers.value || null,
       preventDialOut: preventDialOut.value || null,
       teamsLiveEventsRestricted: teamsLiveEventsRestricted.value || null,
-      e2eEncryption: e2eEncryption.value || null
+      e2eEncryption: e2eEncryption.value || null,
+      auditLogSearch: auditLogSearch.value || null,
+      dlpPoliciesEnabled: dlpPoliciesEnabled.value || null,
+      dlpForTeams: dlpForTeams.value || null,
+      dlpForCollaboration: dlpForCollaboration.value || null,
+      sensitivityLabels: sensitivityLabels.value || null
     })
 
     const result = {
@@ -2692,6 +2704,204 @@ async function validateE2EEncryption() {
 }
 
 /**
+ * Validate: Microsoft 365 Audit Log Search (3.1.1)
+ */
+async function validateAuditLogSearch() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get audit log settings and retention policies',
+      endpoint: 'GET /audit/auditLog/retention',
+      expand: 'none',
+      select: 'id,retention,isEnabled',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/audit/auditLog/retention`
+  ]
+
+  try {
+    const auditSettings = await graphClient.api('/audit/auditLog/retention').get()
+    return {
+      status: auditSettings?.isEnabled ? 'pass' : 'fail',
+      auditEnabled: auditSettings?.isEnabled || false,
+      retentionDays: auditSettings?.retention || 0,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Audit Log Search validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: DLP Policies Enabled (3.2.1)
+ */
+async function validateDLPPoliciesEnabled() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get all data loss prevention policies',
+      endpoint: 'GET /dataSecurity/dataLossPreventionPolicies',
+      expand: 'none',
+      select: 'id,name,isEnabled,createdDateTime',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/dataSecurity/dataLossPreventionPolicies`
+  ]
+
+  try {
+    const dlpPolicies = await graphClient.api('/dataSecurity/dataLossPreventionPolicies').get()
+    const enabledCount = dlpPolicies?.value?.filter(p => p.isEnabled)?.length || 0
+    return {
+      status: enabledCount > 0 ? 'pass' : 'fail',
+      totalPolicies: dlpPolicies?.value?.length || 0,
+      enabledPolicies: enabledCount,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ DLP Policies Enabled validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: DLP Policies for Microsoft Teams (3.2.2)
+ */
+async function validateDLPForTeams() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get DLP policies with Teams workload targeting',
+      endpoint: 'GET /dataSecurity/dataLossPreventionPolicies',
+      expand: 'none',
+      select: 'id,name,workloadScopes',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/dataSecurity/dataLossPreventionPolicies`
+  ]
+
+  try {
+    const dlpPolicies = await graphClient.api('/dataSecurity/dataLossPreventionPolicies').get()
+    const teamsPolicies = dlpPolicies?.value?.filter(p =>
+      p.workloadScopes?.some(w => w.workload === 'teams')
+    ) || []
+    return {
+      status: teamsPolicies.length > 0 ? 'pass' : 'fail',
+      totalPolicies: dlpPolicies?.value?.length || 0,
+      teamsPolicies: teamsPolicies.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ DLP for Teams validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: DLP Policies for Collaboration (3.2.3)
+ */
+async function validateDLPForCollaboration() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get DLP policies with Exchange and SharePoint workload targeting',
+      endpoint: 'GET /dataSecurity/dataLossPreventionPolicies',
+      expand: 'none',
+      select: 'id,name,workloadScopes,enabled',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/dataSecurity/dataLossPreventionPolicies`
+  ]
+
+  try {
+    const dlpPolicies = await graphClient.api('/dataSecurity/dataLossPreventionPolicies').get()
+    const collaborationPolicies = dlpPolicies?.value?.filter(p =>
+      p.workloadScopes?.some(w => w.workload === 'exchange' || w.workload === 'sharepoint')
+    ) || []
+    return {
+      status: collaborationPolicies.length > 0 ? 'pass' : 'fail',
+      totalPolicies: dlpPolicies?.value?.length || 0,
+      collaborationPolicies: collaborationPolicies.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ DLP for Collaboration validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Information Protection Sensitivity Labels (3.3.1)
+ */
+async function validateSensitivityLabels() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get information protection policy with sensitivity labels',
+      endpoint: 'GET /informationProtection/policy/labels',
+      expand: 'none',
+      select: 'id,displayName,enabled,parent',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/informationProtection/policy/labels`
+  ]
+
+  try {
+    const labels = await graphClient.api('/informationProtection/policy/labels').get()
+    const enabledLabels = labels?.value?.filter(l => l.enabled)?.length || 0
+    return {
+      status: enabledLabels > 0 ? 'pass' : 'fail',
+      totalLabels: labels?.value?.length || 0,
+      enabledLabels: enabledLabels,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Sensitivity Labels validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
  * Build CIS Topics from validation results using CIS_CONTROLS_DATA
  * Returns complete detailed structure with all control information
  */
@@ -2850,7 +3060,13 @@ function getControlValue(controlId, data) {
     '8.5.6': (d) => d?.anonymousJoinDisabled ? 'Anonymous join: Prevented' : 'Anonymous join: Not restricted',
     '8.5.7': (d) => d?.dialOutDisabled ? 'Attendee dial-out: Disabled' : 'Attendee dial-out: Not restricted',
     '8.5.8': (d) => d?.liveEventsRestricted ? 'Live events: Restricted' : 'Live events: Not restricted',
-    '8.5.9': (d) => d?.e2eEncryptionEnabled ? 'End-to-end encryption: Enabled' : 'End-to-end encryption: Not configured'
+    '8.5.9': (d) => d?.e2eEncryptionEnabled ? 'End-to-end encryption: Enabled' : 'End-to-end encryption: Not configured',
+    // Phase 4: Data Governance & Compliance (Microsoft Purview)
+    '3.1.1': (d) => d?.auditEnabled ? `Audit log search: Enabled (${d?.retentionDays || 0} days retention)` : 'Audit log search: Disabled',
+    '3.2.1': (d) => `DLP policies: ${d?.enabledPolicies || 0}/${d?.totalPolicies || 0} enabled`,
+    '3.2.2': (d) => `DLP for Teams: ${d?.teamsPolicies || 0} policies configured`,
+    '3.2.3': (d) => `DLP for collaboration: ${d?.collaborationPolicies || 0} policies configured`,
+    '3.3.1': (d) => `Sensitivity labels: ${d?.enabledLabels || 0}/${d?.totalLabels || 0} enabled`
   }
 
   if (valueMap[controlId]) {

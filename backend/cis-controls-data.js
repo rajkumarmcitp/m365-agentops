@@ -380,7 +380,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure Microsoft 365 audit log search is Enabled',
             type: 'auto',
             profile: 'E3 L1',
-            graphQuery: 'auditLog',
+            graphQuery: 'auditLogSearch',
             validator: () => 'warn',
             description: 'CIS Control 3.1.1'
           }
@@ -395,7 +395,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure DLP policies are enabled',
             type: 'auto',
             profile: 'E3 L1',
-            graphQuery: 'dlpPolicies',
+            graphQuery: 'dlpPoliciesEnabled',
             validator: () => 'warn',
             description: 'CIS Control 3.2.1'
           },
@@ -404,7 +404,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure DLP policies are enabled for Microsoft Teams',
             type: 'auto',
             profile: 'E3 L1',
-            graphQuery: 'dlpPolicies',
+            graphQuery: 'dlpForTeams',
             validator: () => 'warn',
             description: 'CIS Control 3.2.2'
           },
@@ -413,7 +413,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure DLP policies are published for Copilot users',
             type: 'auto',
             profile: 'E3 L1',
-            graphQuery: 'dlpPolicies',
+            graphQuery: 'dlpForCollaboration',
             validator: () => 'warn',
             description: 'CIS Control 3.2.3'
           }
@@ -428,6 +428,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure Information Protection sensitivity label policies are published',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'sensitivityLabels',
             validator: () => 'warn',
             description: 'CIS Control 3.3.1'
           }
