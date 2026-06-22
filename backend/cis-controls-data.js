@@ -786,6 +786,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure modern authentication for SharePoint applications is required',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'sharePointModernAuth',
             validator: () => 'warn',
             description: 'CIS Control 7.2.1'
           },
@@ -794,6 +795,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'externalUserExpiration',
             validator: () => 'warn',
             description: 'CIS Control 7.2.2'
           },
@@ -802,6 +804,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure external content sharing is restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'restrictExternalSharing',
             validator: () => 'warn',
             description: 'CIS Control 7.2.3'
           },
@@ -810,6 +813,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure OneDrive content sharing is restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fileFolderLinkSettings',
             validator: () => 'warn',
             description: 'CIS Control 7.2.4'
           },
@@ -818,6 +822,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure that SharePoint guest users cannot share items they don\'t own  . 474',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'preventDownload',
             validator: () => 'warn',
             description: 'CIS Control 7.2.5'
           },
@@ -826,6 +831,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure SharePoint external sharing is restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'restrictUnmanagedDevices',
             validator: () => 'warn',
             description: 'CIS Control 7.2.6'
           },
@@ -834,6 +840,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure link sharing is restricted in SharePoint and OneDrive',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'allowLimitedAccess',
             validator: () => 'warn',
             description: 'CIS Control 7.2.7'
           },
@@ -842,6 +849,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure external sharing is restricted by security group',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'restrictUnmanagedDevicesAccess',
             validator: () => 'warn',
             description: 'CIS Control 7.2.8'
           },
@@ -850,6 +858,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure guest access to a site or OneDrive will expire automatically',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'restrictNetworkLocation',
             validator: () => 'warn',
             description: 'CIS Control 7.2.9'
           },
@@ -858,6 +867,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure reauthentication with verification code is restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'restrictConditionalAccessPolicies',
             validator: () => 'warn',
             description: 'CIS Control 7.2.10'
           },
@@ -866,6 +876,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure the SharePoint default sharing link permission is set',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'sharePointTermsAcceptance',
             validator: () => 'warn',
             description: 'CIS Control 7.2.11'
           }
@@ -976,6 +987,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure anonymous users can\'t join a meeting',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'meetingOrganizerOnly',
             validator: () => 'warn',
             description: 'CIS Control 8.5.1'
           },
@@ -984,6 +996,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure anonymous users and dial-in callers can\'t start a meeting',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'meetingTranscripts',
             validator: () => 'warn',
             description: 'CIS Control 8.5.2'
           },
@@ -992,6 +1005,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure only people in my org can bypass the lobby',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'recordingNotifications',
             validator: () => 'warn',
             description: 'CIS Control 8.5.3'
           },
@@ -1000,6 +1014,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure users dialing in can\'t bypass the lobby',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'liveCaptions',
             validator: () => 'warn',
             description: 'CIS Control 8.5.4'
           },
@@ -1008,6 +1023,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure meeting chat does not allow anonymous users',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'qAndANotAvailable',
             validator: () => 'warn',
             description: 'CIS Control 8.5.5'
           },
@@ -1016,6 +1032,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure only organizers and co-organizers can present',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'preventAnonymousUsers',
             validator: () => 'warn',
             description: 'CIS Control 8.5.6'
           },
@@ -1024,6 +1041,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure external participants can\'t give or request control',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'preventDialOut',
             validator: () => 'warn',
             description: 'CIS Control 8.5.7'
           },
@@ -1032,6 +1050,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure external meeting chat is off',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'teamsLiveEventsRestricted',
             validator: () => 'warn',
             description: 'CIS Control 8.5.8'
           },
@@ -1040,6 +1059,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure meeting recording is off by default',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'e2eEncryption',
             validator: () => 'warn',
             description: 'CIS Control 8.5.9'
           }

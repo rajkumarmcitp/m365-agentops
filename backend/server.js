@@ -41,6 +41,7 @@ import {
   addCorrelation, getCorrelations,
   addInvestigation, getInvestigation, updateInvestigation
 } from './lib/sharepoint-client.js'
+import { setValidationGraphClient, validateAllCISControls, clearValidationCache } from './cis-validator.js'
 
 dotenv.config()
 
@@ -292,6 +293,9 @@ if (isValidCredentials) {
 
       // Initialize SharePoint client with Graph client
       initSharePointClient(graphClient)
+
+      // Initialize CIS Validator with Graph client
+      setValidationGraphClient(graphClient)
     })().catch(error => {
       console.warn('⚠️ Graph Client initialization failed:', error.message)
       console.warn('⚠️ Will use simulated data for endpoints')
@@ -906,190 +910,99 @@ app.get('/api/device-compliance-policies', async (req, res) => {
 })
 
 // ============================================================
-// Configuration & Compliance - CIS Controls
+// Configuration & Compliance - CIS Controls (Comprehensive Real-Time)
 // ============================================================
 app.get('/api/config/cis-controls', async (req, res) => {
   try {
-    console.log('📋 Fetching CIS Controls configuration assessment...')
-    let cisControls = []
+    console.log('📋 CIS Controls: Fetching comprehensive real-time validation...')
 
-    // Fetch real configuration data from Graph API
-    if (graphClient) {
-      try {
-        let caCount = 0, dcCount = 0, authMethod = null
+    // Use the comprehensive CIS validator
+    const validation = await validateAllCISControls()
 
-        // Fetch conditional access policies
-        try {
-          const caPolicy = await graphClient.api('/identity/conditionalAccess/policies').get()
-          caCount = caPolicy.value?.length || 0
-          console.log(`✓ Conditional Access: ${caCount} policies found`)
-        } catch (caError) {
-          console.warn(`⚠️ CA Policy fetch failed: ${caError.message}`)
-        }
-
-        // Fetch device compliance policies
-        try {
-          const dcPolicy = await graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
-          dcCount = dcPolicy.value?.length || 0
-          console.log(`✓ Device Compliance: ${dcCount} policies found`)
-        } catch (dcError) {
-          console.warn(`⚠️ Device Compliance fetch failed: ${dcError.message}`)
-        }
-
-        // Fetch authentication method policies
-        try {
-          authMethod = await graphClient.api('/policies/authenticationMethodsPolicy').get()
-          console.log(`✓ Authentication Methods: configured`)
-        } catch (authError) {
-          console.warn(`⚠️ Auth Methods fetch failed: ${authError.message}`)
-        }
-
-        // Fetch organization settings
-        const org = await graphClient.api('/organization').get()
-
-        // Map collected data to CIS Controls
-        cisControls = [
-          {
-            id: '1.1',
-            name: 'Microsoft 365 Admin Center',
-            title: 'Admin Center Configuration',
-            status: caCount > 0 ? 'pass' : 'warn',
-            type: 'auto',
-            value: `Conditional Access policies: ${caCount} configured`,
-            passCount: caCount > 0 ? 1 : 0,
-            failCount: 0,
-            warnCount: caCount > 0 ? 0 : 1,
-            controlCount: 1,
-            icon: 'ti-shield'
-          },
-          {
-            id: '1.2',
-            name: 'Teams & Groups',
-            title: 'Teams and Group Configuration',
-            status: 'pass',
-            type: 'auto',
-            value: 'Groups configuration available',
-            passCount: 1,
-            failCount: 0,
-            warnCount: 0,
-            controlCount: 1,
-            icon: 'ti-users'
-          },
-          {
-            id: '1.3',
-            name: 'Settings & Policies',
-            title: 'Tenant Settings and Policies',
-            status: 'pass',
-            type: 'auto',
-            value: 'Organization policies configured',
-            passCount: 1,
-            failCount: 0,
-            warnCount: 0,
-            controlCount: 1,
-            icon: 'ti-settings-2'
-          },
-          {
-            id: '2.1',
-            name: 'Microsoft Defender',
-            title: 'Defender Configuration',
-            status: 'pass',
-            type: 'auto',
-            value: 'Defender policies available',
-            passCount: 1,
-            failCount: 0,
-            warnCount: 0,
-            controlCount: 1,
-            icon: 'ti-shield-check'
-          },
-          {
-            id: '3.1',
-            name: 'Compliance Management',
-            title: 'Device Compliance Policies',
-            status: dcCount > 0 ? 'pass' : 'warn',
-            type: 'auto',
-            value: `Compliance policies: ${dcCount} configured`,
-            passCount: dcCount > 0 ? 1 : 0,
-            failCount: 0,
-            warnCount: dcCount > 0 ? 0 : 1,
-            controlCount: 1,
-            icon: 'ti-checkbox'
-          },
-          {
-            id: '4.1',
-            name: 'Data Governance',
-            title: 'Data Retention & Classification',
-            status: 'pass',
-            type: 'auto',
-            value: 'Governance policies configured',
-            passCount: 1,
-            failCount: 0,
-            warnCount: 0,
-            controlCount: 1,
-            icon: 'ti-database'
-          },
-          {
-            id: '5.1',
-            name: 'Email & Collaboration',
-            title: 'Email Security Configuration',
-            status: 'pass',
-            type: 'auto',
-            value: 'Exchange security policies available',
-            passCount: 1,
-            failCount: 0,
-            warnCount: 0,
-            controlCount: 1,
-            icon: 'ti-mail'
-          },
-          {
-            id: '6.1',
-            name: 'SharePoint & OneDrive',
-            title: 'SharePoint Configuration',
-            status: 'pass',
-            type: 'auto',
-            value: 'SharePoint security policies available',
-            passCount: 1,
-            failCount: 0,
-            warnCount: 0,
-            controlCount: 1,
-            icon: 'ti-cloud'
-          },
-          {
-            id: '7.1',
-            name: 'Identity & Access',
-            title: 'Authentication & Access Control',
-            status: authMethod ? 'pass' : 'warn',
-            type: 'auto',
-            value: authMethod ? 'Authentication methods configured' : 'Configure authentication methods',
-            passCount: authMethod ? 1 : 0,
-            failCount: 0,
-            warnCount: authMethod ? 0 : 1,
-            controlCount: 1,
-            icon: 'ti-lock'
-          }
-        ]
-
-        console.log(`✓ CIS Controls assessment: Found ${cisControls.length} topics from Graph API`)
-      } catch (apiError) {
-        console.error(`❌ Failed to fetch Graph API configuration:`, apiError.message)
-        cisControls = []
-      }
-    } else {
-      console.warn('⚠️ Graph Client not initialized - cannot fetch CIS Controls data')
-      cisControls = []
+    if (!validation.success) {
+      console.warn('⚠️ CIS Validation failed, will return demo data fallback')
+      return res.json({
+        success: false,
+        error: validation.error,
+        data: [],
+        source: 'error',
+        timestamp: new Date().toISOString()
+      })
     }
 
+    // Return comprehensive validation results
     res.json({
       success: true,
-      data: cisControls,
-      count: cisControls.length,
-      source: cisControls.length > 0 ? 'Graph API' : 'none'
+      data: validation.topics || [],
+      stats: validation.stats || {},
+      tenantId: validation.tenantId,
+      tenantDomain: validation.tenantDomain,
+      timestamp: validation.timestamp,
+      source: validation.source || 'Graph API',
+      cacheTimestamp: new Date().toISOString()
     })
   } catch (error) {
     console.error('✗ CIS Controls error:', error.message)
     res.status(500).json({
       success: false,
       error: error.message,
-      data: []
+      data: [],
+      source: 'error'
+    })
+  }
+})
+
+// ============================================================
+// CIS Controls - Cache Management
+// ============================================================
+app.post('/api/config/cis-controls/refresh', async (req, res) => {
+  try {
+    console.log('🔄 CIS Controls: Clearing cache and forcing refresh...')
+    clearValidationCache()
+
+    // Run validation immediately
+    const validation = await validateAllCISControls()
+
+    res.json({
+      success: true,
+      message: 'CIS Controls validation refreshed',
+      stats: validation.stats || {},
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('✗ CIS Controls refresh error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+// ============================================================
+// CIS Controls - Debug Endpoint
+// ============================================================
+app.get('/api/config/cis-controls/debug', async (req, res) => {
+  try {
+    const validation = await validateAllCISControls()
+
+    res.json({
+      success: validation.success,
+      message: 'CIS Controls validation debug data',
+      tenantInfo: {
+        tenantId: validation.tenantId,
+        tenantDomain: validation.tenantDomain,
+        timestamp: validation.timestamp
+      },
+      stats: validation.stats || {},
+      topicCount: validation.topics?.length || 0,
+      sampleTopic: validation.topics?.[0] || null,
+      source: validation.source
+    })
+  } catch (error) {
+    console.error('✗ CIS Controls debug error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
     })
   }
 })

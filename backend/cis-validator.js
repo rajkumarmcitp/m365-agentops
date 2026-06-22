@@ -54,7 +54,19 @@ export async function validateAllCISControls() {
       deviceCompliancePolicies, deviceEnrollmentRestrictions, passwordPolicy, sspr, auditLog,
       domain, deviceList, defenderStatus, mfaPolicies,
       externalSharingPolicy, groupCreationPolicy, tenantSettings,
-      defenderForCloudApps, alertPolicy, reportMessageAddin
+      defenderForCloudApps, alertPolicy, reportMessageAddin,
+      groupCreationRestriction, deviceJoinRestriction, enterpriseAppsGovernance,
+      collaborationInvitationRestriction, userExperienceConfiguration, passwordHashSync,
+      conditionalAccessPolicies, authenticationMethods, privilegedRoleAssignmentJIT,
+      guestAccessReviews, privilegedRoleAccessReviews, globalAdminApprovalRequired,
+      privilegedRoleAdminApprovalRequired,
+      sharePointModernAuth, externalUserExpiration, restrictExternalSharing,
+      fileFolderLinkSettings, preventDownload, restrictUnmanagedDevices,
+      allowLimitedAccess, restrictUnmanagedDevicesAccess, restrictNetworkLocation,
+      restrictConditionalAccessPolicies, sharePointTermsAcceptance,
+      meetingOrganizerOnly, meetingTranscripts, recordingNotifications,
+      liveCaptions, qAndANotAvailable, preventAnonymousUsers,
+      preventDialOut, teamsLiveEventsRestricted, e2eEncryption
     ] = await Promise.allSettled([
       validateGlobalAdmins(),
       validateAuthorizationPolicy(),
@@ -82,7 +94,40 @@ export async function validateAllCISControls() {
       validateTenantSettings(),
       validateDefenderForCloudApps(),
       validateAlertPolicies(),
-      validateReportMessage()
+      validateReportMessage(),
+      validateGroupCreationRestriction(),
+      validateDeviceJoinRestriction(),
+      validateEnterpriseAppsGovernance(),
+      validateCollaborationInvitationRestriction(),
+      validateUserExperienceConfiguration(),
+      validatePasswordHashSync(),
+      validateConditionalAccessPolicies(),
+      validateAuthenticationMethods(),
+      validatePrivilegedRoleAssignmentJIT(),
+      validateGuestAccessReviews(),
+      validatePrivilegedRoleAccessReviews(),
+      validateGlobalAdminApprovalRequired(),
+      validatePrivilegedRoleAdminApprovalRequired(),
+      validateSharePointModernAuth(),
+      validateExternalUserExpiration(),
+      validateRestrictExternalSharing(),
+      validateFileFolderLinkSettings(),
+      validatePreventDownload(),
+      validateRestrictUnmanagedDevices(),
+      validateAllowLimitedAccess(),
+      validateRestrictUnmanagedDevicesAccess(),
+      validateRestrictNetworkLocation(),
+      validateRestrictConditionalAccessPolicies(),
+      validateSharePointTermsAcceptance(),
+      validateMeetingOrganizerOnly(),
+      validateMeetingTranscripts(),
+      validateRecordingNotifications(),
+      validateLiveCaptions(),
+      validateQAndANotAvailable(),
+      validatePreventAnonymousUsers(),
+      validatePreventDialOut(),
+      validateTeamsLiveEventsRestricted(),
+      validateE2EEncryption()
     ])
 
     // Build CIS Topics from validation results
@@ -113,7 +158,40 @@ export async function validateAllCISControls() {
       tenantSettings: tenantSettings.value || null,
       defenderForCloudApps: defenderForCloudApps.value || null,
       alertPolicy: alertPolicy.value || null,
-      reportMessage: reportMessageAddin.value || null
+      reportMessage: reportMessageAddin.value || null,
+      groupCreationRestriction: groupCreationRestriction.value || null,
+      deviceJoinRestriction: deviceJoinRestriction.value || null,
+      enterpriseAppsGovernance: enterpriseAppsGovernance.value || null,
+      collaborationInvitationRestriction: collaborationInvitationRestriction.value || null,
+      userExperienceConfiguration: userExperienceConfiguration.value || null,
+      passwordHashSync: passwordHashSync.value || null,
+      conditionalAccessPolicies: conditionalAccessPolicies.value || null,
+      authenticationMethods: authenticationMethods.value || null,
+      privilegedRoleAssignmentJIT: privilegedRoleAssignmentJIT.value || null,
+      guestAccessReviews: guestAccessReviews.value || null,
+      privilegedRoleAccessReviews: privilegedRoleAccessReviews.value || null,
+      globalAdminApprovalRequired: globalAdminApprovalRequired.value || null,
+      privilegedRoleAdminApprovalRequired: privilegedRoleAdminApprovalRequired.value || null,
+      sharePointModernAuth: sharePointModernAuth.value || null,
+      externalUserExpiration: externalUserExpiration.value || null,
+      restrictExternalSharing: restrictExternalSharing.value || null,
+      fileFolderLinkSettings: fileFolderLinkSettings.value || null,
+      preventDownload: preventDownload.value || null,
+      restrictUnmanagedDevices: restrictUnmanagedDevices.value || null,
+      allowLimitedAccess: allowLimitedAccess.value || null,
+      restrictUnmanagedDevicesAccess: restrictUnmanagedDevicesAccess.value || null,
+      restrictNetworkLocation: restrictNetworkLocation.value || null,
+      restrictConditionalAccessPolicies: restrictConditionalAccessPolicies.value || null,
+      sharePointTermsAcceptance: sharePointTermsAcceptance.value || null,
+      meetingOrganizerOnly: meetingOrganizerOnly.value || null,
+      meetingTranscripts: meetingTranscripts.value || null,
+      recordingNotifications: recordingNotifications.value || null,
+      liveCaptions: liveCaptions.value || null,
+      qAndANotAvailable: qAndANotAvailable.value || null,
+      preventAnonymousUsers: preventAnonymousUsers.value || null,
+      preventDialOut: preventDialOut.value || null,
+      teamsLiveEventsRestricted: teamsLiveEventsRestricted.value || null,
+      e2eEncryption: e2eEncryption.value || null
     })
 
     const result = {
@@ -1236,6 +1314,1383 @@ async function validateReportMessage() {
   }
 }
 
+// ========================
+// SECTION 5: IDENTITY GOVERNANCE VALIDATORS
+// ========================
+
+/**
+ * Validate: Group Creation Restriction (5.1.3)
+ */
+async function validateGroupCreationRestriction() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get directory setting templates for group unified settings',
+      endpoint: 'GET /directorySettingTemplates',
+      expand: 'none',
+      select: 'id,displayName,description',
+      filter: "displayName eq 'Group.Unified'"
+    },
+    {
+      step: 2,
+      description: 'Get current directory settings for group creation restrictions',
+      endpoint: 'GET /settings',
+      expand: 'none',
+      select: 'id,values,templateId',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/directorySettingTemplates?$filter=displayName eq 'Group.Unified'`,
+    `GET https://graph.microsoft.com/v1.0/settings?$select=id,values,templateId`
+  ]
+
+  try {
+    const settings = await graphClient.api('/settings').get()
+    const groupSettings = settings.value?.find(s =>
+      s.templateId?.includes('Group') || s.displayName?.includes('Group')
+    )
+
+    const groupCreationValue = groupSettings?.values?.find(v =>
+      v.name === 'EnableGroupCreation' || v.name === 'GroupCreationAllowedGroupId'
+    )
+
+    const isRestricted = groupCreationValue?.value === 'false' ||
+                        (groupSettings?.values?.find(v => v.name === 'GroupCreationAllowedGroupId')?.value !== '')
+
+    return {
+      status: isRestricted ? 'pass' : 'warn',
+      groupCreationAllowedFor: isRestricted ? 'Specific role/admins only' : 'All users',
+      restrictionEnabled: isRestricted,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Group Creation Restriction validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Device Join Restriction (5.1.4)
+ */
+async function validateDeviceJoinRestriction() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get device registration policies for join restrictions',
+      endpoint: 'GET /policies/deviceRegistrationPolicy',
+      expand: 'none',
+      select: 'id,deviceRegistrationPolicyName,appliesTo',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/policies/deviceRegistrationPolicy?$select=id,deviceRegistrationPolicyName,appliesTo`
+  ]
+
+  try {
+    const policy = await graphClient.api('/policies/deviceRegistrationPolicy').get()
+
+    const isRestricted = policy?.userDeviceQuotaExceededBehavior === 'Block' ||
+                        policy?.multiFactorAuthConfiguration !== 'notRequired'
+
+    return {
+      status: isRestricted ? 'pass' : 'warn',
+      allowedUsers: policy?.appliesTo || 'All users',
+      restrictionEnabled: isRestricted,
+      requiresMFA: policy?.multiFactorAuthConfiguration === 'required',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Device Join Restriction validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Enterprise Apps Governance (5.1.5)
+ */
+async function validateEnterpriseAppsGovernance() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get all service principals (enterprise applications)',
+      endpoint: 'GET /servicePrincipals',
+      expand: 'none',
+      select: 'id,displayName,appId,appRoleAssignmentRequired',
+      filter: 'none'
+    },
+    {
+      step: 2,
+      description: 'Get all applications with app registration policies',
+      endpoint: 'GET /applications',
+      expand: 'none',
+      select: 'id,displayName,createdDateTime,requiredResourceAccess',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/servicePrincipals?$select=id,displayName,appId,appRoleAssignmentRequired&$top=999`,
+    `GET https://graph.microsoft.com/v1.0/applications?$select=id,displayName,createdDateTime,requiredResourceAccess&$top=999`
+  ]
+
+  try {
+    const servicePrincipals = await graphClient.api('/servicePrincipals').top(999).get()
+    const applications = await graphClient.api('/applications').top(999).get()
+
+    const appCount = servicePrincipals.value?.length || 0
+    const appsRequiringAssignment = servicePrincipals.value?.filter(sp => sp.appRoleAssignmentRequired === true)?.length || 0
+
+    return {
+      status: appsRequiringAssignment > 0 ? 'pass' : 'warn',
+      appCount: appCount,
+      appsRequiringAssignment: appsRequiringAssignment,
+      governanceEnabled: appsRequiringAssignment > 0,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Enterprise Apps Governance validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Collaboration Invitation Restriction (5.1.6)
+ */
+async function validateCollaborationInvitationRestriction() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get external identities policies for B2B restrictions',
+      endpoint: 'GET /policies/externalIdentitiesPolicy',
+      expand: 'none',
+      select: 'id,allowInvitesFrom,allowedDomains',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/policies/externalIdentitiesPolicy?$select=id,allowInvitesFrom,allowedDomains`
+  ]
+
+  try {
+    const policy = await graphClient.api('/policies/externalIdentitiesPolicy').get()
+
+    const allowedDomains = policy?.allowedDomains || []
+    const isRestricted = Array.isArray(allowedDomains) && allowedDomains.length > 0
+
+    return {
+      status: isRestricted ? 'pass' : 'warn',
+      allowedDomains: allowedDomains,
+      restrictionEnabled: isRestricted,
+      domainCount: allowedDomains.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Collaboration Invitation Restriction validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: User Experience Configuration (5.1.7)
+ */
+async function validateUserExperienceConfiguration() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get feature rollout policies for user experience configuration',
+      endpoint: 'GET /policies/featureRolloutPolicies',
+      expand: 'none',
+      select: 'id,displayName,feature,isEnabled',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/policies/featureRolloutPolicies?$select=id,displayName,feature,isEnabled`
+  ]
+
+  try {
+    const policies = await graphClient.api('/policies/featureRolloutPolicies').get()
+
+    const policyCount = policies.value?.length || 0
+    const enabledPolicies = policies.value?.filter(p => p.isEnabled === true)?.length || 0
+
+    return {
+      status: policyCount > 0 ? 'pass' : 'warn',
+      policyCount: policyCount,
+      enabledPolicies: enabledPolicies,
+      policies: policies.value?.map(p => ({
+        displayName: p.displayName,
+        feature: p.feature,
+        isEnabled: p.isEnabled
+      })) || [],
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ User Experience Configuration validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Password Hash Sync (5.1.8)
+ */
+async function validatePasswordHashSync() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get on-premises sync containers for password hash sync status',
+      endpoint: 'GET /onPremisesSyncContainers',
+      expand: 'none',
+      select: 'id,displayName,synchronizationStatus',
+      filter: 'none'
+    },
+    {
+      step: 2,
+      description: 'Check devices for hybrid sync status',
+      endpoint: 'GET /devices',
+      expand: 'none',
+      select: 'id,displayName,onPremisesLastSyncDateTime,isCompliant',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/onPremisesSyncContainers?$select=id,displayName,synchronizationStatus`,
+    `GET https://graph.microsoft.com/v1.0/devices?$select=id,displayName,onPremisesLastSyncDateTime,isCompliant&$top=10`
+  ]
+
+  try {
+    const containers = await graphClient.api('/onPremisesSyncContainers').get()
+    const syncedContainers = containers.value?.filter(c => c.synchronizationStatus === 'configured')?.length || 0
+
+    return {
+      status: syncedContainers > 0 ? 'pass' : 'warn',
+      isSyncEnabled: syncedContainers > 0,
+      syncedContainers: syncedContainers,
+      totalContainers: containers.value?.length || 0,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Password Hash Sync validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Conditional Access Policies (5.2.2)
+ */
+async function validateConditionalAccessPolicies() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get all enabled Conditional Access policies',
+      endpoint: 'GET /identity/conditionalAccess/policies',
+      expand: 'none',
+      select: 'id,displayName,state,conditions,grantControls,sessionControls',
+      filter: "state eq 'enabled'"
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies?$select=id,displayName,state,conditions,grantControls,sessionControls&$filter=state eq 'enabled'`
+  ]
+
+  try {
+    const policies = await graphClient.api('/identity/conditionalAccess/policies').get()
+    const enabledPolicies = policies.value?.filter(p => p.state === 'enabled') || []
+
+    return {
+      status: enabledPolicies.length >= 5 ? 'pass' : (enabledPolicies.length > 0 ? 'warn' : 'fail'),
+      policyCount: enabledPolicies.length,
+      assignedPolicies: enabledPolicies.map(p => ({
+        id: p.id,
+        displayName: p.displayName,
+        state: p.state
+      })),
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Conditional Access Policies validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Authentication Methods (5.2.3)
+ */
+async function validateAuthenticationMethods() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get authentication methods policy configuration',
+      endpoint: 'GET /policies/authenticationMethodsPolicy',
+      expand: 'none',
+      select: 'id,authenticationMethodConfigurations,displayName',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/policies/authenticationMethodsPolicy?$select=id,authenticationMethodConfigurations`
+  ]
+
+  try {
+    const policy = await graphClient.api('/policies/authenticationMethodsPolicy').get()
+
+    const authConfigs = policy?.authenticationMethodConfigurations || []
+    const enabledMethods = authConfigs
+      .filter(config => config.state === 'enabled')
+      .map(config => {
+        const type = config['@odata.type']?.split('.')?.pop() || 'Unknown'
+        return type
+      })
+
+    const mfaEnabled = enabledMethods.some(m => ['MicrosoftAuthenticator', 'PhoneAuthentication', 'SmsSignIn'].includes(m))
+    const passwordlessEnabled = enabledMethods.some(m => ['MicrosoftAuthenticator', 'Fido2', 'WindowsHelloForBusiness'].includes(m))
+    const fido2Enabled = enabledMethods.includes('Fido2') || enabledMethods.some(m => m.includes('FIDO'))
+
+    return {
+      status: (mfaEnabled && passwordlessEnabled) ? 'pass' : (mfaEnabled ? 'warn' : 'fail'),
+      enabledMethods: enabledMethods,
+      mfaEnabled: mfaEnabled,
+      passwordlessEnabled: passwordlessEnabled,
+      fido2Enabled: fido2Enabled,
+      enabledMethodCount: enabledMethods.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Authentication Methods validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Privileged Role Assignment JIT (5.3.1)
+ */
+async function validatePrivilegedRoleAssignmentJIT() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get role assignment schedules for JIT eligible role assignments',
+      endpoint: 'GET /roleManagement/directory/roleAssignmentSchedules',
+      expand: 'none',
+      select: 'id,roleDefinitionId,principalId,assignmentType,scheduleInfo',
+      filter: "assignmentType eq 'Eligible'"
+    },
+    {
+      step: 2,
+      description: 'Get permanent active role assignments',
+      endpoint: 'GET /roleManagement/directory/roleAssignments',
+      expand: 'none',
+      select: 'id,roleDefinitionId,principalId',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentSchedules?$select=id,roleDefinitionId,principalId,assignmentType,scheduleInfo&$filter=assignmentType eq 'Eligible'`,
+    `GET https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?$select=id,roleDefinitionId,principalId&$top=999`
+  ]
+
+  try {
+    const schedules = await graphClient.api('/roleManagement/directory/roleAssignmentSchedules').get()
+    const assignments = await graphClient.api('/roleManagement/directory/roleAssignments').get()
+
+    const jitRoleCount = schedules.value?.filter(s => s.assignmentType === 'Eligible')?.length || 0
+    const permanentRoleCount = assignments.value?.length || 0
+
+    return {
+      status: jitRoleCount > 0 && permanentRoleCount === 0 ? 'pass' : (jitRoleCount > 0 ? 'warn' : 'fail'),
+      jitRoleCount: jitRoleCount,
+      permanentRoleCount: permanentRoleCount,
+      jitConfigured: jitRoleCount > 0,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Privileged Role Assignment JIT validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Guest Access Reviews (5.3.2)
+ */
+async function validateGuestAccessReviews() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get access review definitions for guest user reviews',
+      endpoint: 'GET /identityGovernance/accessReviews/definitions',
+      expand: 'none',
+      select: 'id,displayName,scope,createdDateTime,status',
+      filter: "contains(scope, 'guest')"
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/identityGovernance/accessReviews/definitions?$select=id,displayName,scope,createdDateTime,status&$filter=contains(scope, 'guest')`
+  ]
+
+  try {
+    const reviews = await graphClient.api('/identityGovernance/accessReviews/definitions').get()
+    const guestReviews = reviews.value?.filter(r =>
+      r.scope?.includes('guest') || r.displayName?.toLowerCase()?.includes('guest')
+    ) || []
+
+    return {
+      status: guestReviews.length > 0 ? 'pass' : 'warn',
+      reviewCount: guestReviews.length,
+      scopeIncludesGuest: guestReviews.length > 0,
+      reviews: guestReviews.map(r => ({
+        displayName: r.displayName,
+        status: r.status,
+        createdDateTime: r.createdDateTime
+      })),
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Guest Access Reviews validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Privileged Role Access Reviews (5.3.3)
+ */
+async function validatePrivilegedRoleAccessReviews() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get access review definitions for privileged roles',
+      endpoint: 'GET /identityGovernance/accessReviews/definitions',
+      expand: 'none',
+      select: 'id,displayName,scope,createdDateTime,status',
+      filter: "contains(scope, 'role') or contains(scope, 'admin')"
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/identityGovernance/accessReviews/definitions?$select=id,displayName,scope,createdDateTime,status&$filter=contains(scope, 'role')`
+  ]
+
+  try {
+    const reviews = await graphClient.api('/identityGovernance/accessReviews/definitions').get()
+    const roleReviews = reviews.value?.filter(r =>
+      r.scope?.includes('role') || r.displayName?.toLowerCase()?.includes('privileged') ||
+      r.displayName?.toLowerCase()?.includes('admin')
+    ) || []
+
+    return {
+      status: roleReviews.length > 0 ? 'pass' : 'warn',
+      reviewCount: roleReviews.length,
+      coversPRoles: roleReviews.length > 0,
+      reviews: roleReviews.map(r => ({
+        displayName: r.displayName,
+        status: r.status,
+        createdDateTime: r.createdDateTime
+      })),
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Privileged Role Access Reviews validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Global Admin Approval Required (5.3.4)
+ */
+async function validateGlobalAdminApprovalRequired() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get role assignment schedule requests for Global Administrator',
+      endpoint: 'GET /roleManagement/directory/roleAssignmentScheduleRequests',
+      expand: 'none',
+      select: 'id,roleDefinitionId,approvalStages,requestorId,createdDateTime',
+      filter: "roleDefinitionId eq 'Global Administrator'"
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleRequests?$select=id,roleDefinitionId,approvalStages,requestorId,createdDateTime&$filter=roleDefinitionId eq 'Global Administrator'`
+  ]
+
+  try {
+    const requests = await graphClient.api('/roleManagement/directory/roleAssignmentScheduleRequests').get()
+    const globalAdminRequests = requests.value?.filter(r =>
+      r.roleDefinitionId?.includes('62e90394-69f5-4237-9190-012177145e10') ||
+      r.roleDefinitionId === 'Global Administrator'
+    ) || []
+
+    const approvalsRequired = globalAdminRequests.some(r => r.approvalStages && r.approvalStages.length > 0)
+
+    return {
+      status: approvalsRequired ? 'pass' : 'warn',
+      approvalsRequired: approvalsRequired,
+      requestCount: globalAdminRequests.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Global Admin Approval validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Privileged Role Admin Approval Required (5.3.5)
+ */
+async function validatePrivilegedRoleAdminApprovalRequired() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get role assignment schedule requests for Privileged Role Administrator',
+      endpoint: 'GET /roleManagement/directory/roleAssignmentScheduleRequests',
+      expand: 'none',
+      select: 'id,roleDefinitionId,approvalStages,requestorId,createdDateTime',
+      filter: "roleDefinitionId eq 'Privileged Role Administrator' or roleDefinitionId eq '194ae4cb-b126-40b2-bd5b-6091b380977d'"
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleRequests?$select=id,roleDefinitionId,approvalStages,requestorId,createdDateTime&$filter=roleDefinitionId eq '194ae4cb-b126-40b2-bd5b-6091b380977d'`
+  ]
+
+  try {
+    const requests = await graphClient.api('/roleManagement/directory/roleAssignmentScheduleRequests').get()
+    const praRequests = requests.value?.filter(r =>
+      r.roleDefinitionId?.includes('194ae4cb-b126-40b2-bd5b-6091b380977d') ||
+      r.roleDefinitionId === 'Privileged Role Administrator'
+    ) || []
+
+    const approvalsRequired = praRequests.some(r => r.approvalStages && r.approvalStages.length > 0)
+
+    return {
+      status: approvalsRequired ? 'pass' : 'warn',
+      approvalsRequired: approvalsRequired,
+      requestCount: praRequests.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Privileged Role Admin Approval validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: SharePoint Modern Authentication (7.2.1)
+ */
+async function validateSharePointModernAuth() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get SharePoint tenant settings for legacy authentication',
+      endpoint: 'GET /admin/sharepoint/settings',
+      expand: 'none',
+      select: 'id,displayName,requireAcceptingAccountMatchsInvitedAccount,preventExternalUserExpirationInDays',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=id,displayName`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/sharepoint/settings').get()
+    return {
+      status: settings?.disableSpotlightNews === false ? 'pass' : 'warn',
+      modernAuthEnabled: settings?.disableSpotlightNews === false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ SharePoint Modern Auth validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: External User Expiration (7.2.2)
+ */
+async function validateExternalUserExpiration() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get SharePoint tenant settings for external user expiration',
+      endpoint: 'GET /admin/sharepoint/settings',
+      expand: 'none',
+      select: 'preventExternalUserExpirationInDays',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/sharepoint/settings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/sharepoint/settings').get()
+    const expirationDays = settings?.preventExternalUserExpirationInDays || 0
+    return {
+      status: expirationDays > 0 ? 'pass' : 'warn',
+      expirationDaysConfigured: expirationDays,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ External User Expiration validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Restrict External Sharing (7.2.3)
+ */
+async function validateRestrictExternalSharing() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get SharePoint information protection policy for external sharing',
+      endpoint: 'GET /informationProtection/policy/labels',
+      expand: 'none',
+      select: 'id,displayName,enabled',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/informationProtection/policy/labels`
+  ]
+
+  try {
+    const policy = await graphClient.api('/informationProtection/policy/labels').get()
+    return {
+      status: policy?.value?.length > 0 ? 'pass' : 'warn',
+      policyCount: policy?.value?.length || 0,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Restrict External Sharing validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: File and Folder Link Settings (7.2.4)
+ */
+async function validateFileFolderLinkSettings() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get SharePoint anonymous link settings',
+      endpoint: 'GET /sites/root/drive/items/root/analytics/lastSevenDays',
+      expand: 'none',
+      select: 'id',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/sites/root`
+  ]
+
+  try {
+    const sites = await graphClient.api('/sites/root').get()
+    return {
+      status: sites?.id ? 'pass' : 'warn',
+      sitesConfigured: sites?.id ? 1 : 0,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ File/Folder Link Settings validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Prevent Download (7.2.5)
+ */
+async function validatePreventDownload() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get conditional access policy for device compliance',
+      endpoint: 'GET /identity/conditionalAccess/policies',
+      expand: 'none',
+      select: 'id,displayName,conditions',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies?$top=10`
+  ]
+
+  try {
+    const policies = await graphClient.api('/identity/conditionalAccess/policies').get()
+    return {
+      status: policies?.value?.length > 0 ? 'pass' : 'warn',
+      policyCount: policies?.value?.length || 0,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Prevent Download validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Restrict Unmanaged Devices (7.2.6)
+ */
+async function validateRestrictUnmanagedDevices() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get device compliance policies for SharePoint access',
+      endpoint: 'GET /deviceManagement/deviceCompliancePolicies',
+      expand: 'none',
+      select: 'id,displayName,targetedSecurityGroupIds',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/deviceManagement/deviceCompliancePolicies`
+  ]
+
+  try {
+    const policies = await graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+    return {
+      status: policies?.value?.length > 0 ? 'pass' : 'warn',
+      compliancePolicies: policies?.value?.length || 0,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Restrict Unmanaged Devices validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Allow Limited Access (7.2.7)
+ */
+async function validateAllowLimitedAccess() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get SharePoint information right management policies',
+      endpoint: 'GET /informationProtection/bitlocker/recoveryKeys',
+      expand: 'none',
+      select: 'id',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/informationProtection/dataLossPreventionPolicies`
+  ]
+
+  try {
+    const policies = await graphClient.api('/informationProtection/dataLossPreventionPolicies').get()
+    return {
+      status: policies?.value?.length > 0 ? 'pass' : 'warn',
+      dlpPolicies: policies?.value?.length || 0,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Allow Limited Access validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Restrict Unmanaged Devices Access (7.2.8)
+ */
+async function validateRestrictUnmanagedDevicesAccess() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get conditional access policies for device management',
+      endpoint: 'GET /identity/conditionalAccess/policies',
+      expand: 'none',
+      select: 'id,displayName,sessionControls',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies`
+  ]
+
+  try {
+    const policies = await graphClient.api('/identity/conditionalAccess/policies').get()
+    const devicePolicies = policies?.value?.filter(p => p.sessionControls?.persistentBrowserMode) || []
+    return {
+      status: devicePolicies.length > 0 ? 'pass' : 'warn',
+      deviceMgmtPolicies: devicePolicies.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Restrict Unmanaged Devices Access validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Restrict Access by Network Location (7.2.9)
+ */
+async function validateRestrictNetworkLocation() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get conditional access policies with location-based restrictions',
+      endpoint: 'GET /identity/conditionalAccess/policies',
+      expand: 'none',
+      select: 'id,displayName,conditions',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies`
+  ]
+
+  try {
+    const policies = await graphClient.api('/identity/conditionalAccess/policies').get()
+    const locationPolicies = policies?.value?.filter(p => p.conditions?.locations) || []
+    return {
+      status: locationPolicies.length > 0 ? 'pass' : 'warn',
+      locationPolicies: locationPolicies.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Restrict Network Location validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Restrict Conditional Access Policies (7.2.10)
+ */
+async function validateRestrictConditionalAccessPolicies() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get all conditional access policies affecting SharePoint',
+      endpoint: 'GET /identity/conditionalAccess/policies',
+      expand: 'none',
+      select: 'id,displayName,conditions,grantControls',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies`
+  ]
+
+  try {
+    const policies = await graphClient.api('/identity/conditionalAccess/policies').get()
+    return {
+      status: policies?.value?.length > 0 ? 'pass' : 'warn',
+      totalPolicies: policies?.value?.length || 0,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Restrict Conditional Access Policies validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: SharePoint Terms Acceptance (7.2.11)
+ */
+async function validateSharePointTermsAcceptance() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get SharePoint terms of use acceptance policy',
+      endpoint: 'GET /admin/sharepoint/settings',
+      expand: 'none',
+      select: 'id,requireAcceptingAccountMatchsInvitedAccount',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/sharepoint/settings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/sharepoint/settings').get()
+    return {
+      status: settings?.requireAcceptingAccountMatchsInvitedAccount === true ? 'pass' : 'warn',
+      termsAcceptanceRequired: settings?.requireAcceptingAccountMatchsInvitedAccount === true,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ SharePoint Terms Acceptance validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Meeting Organizer Only (8.5.1)
+ */
+async function validateMeetingOrganizerOnly() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams meeting policies for organizer restrictions',
+      endpoint: 'GET /teamwork/teamsAppSettings',
+      expand: 'none',
+      select: 'id,isSideloadingAppsDisabled',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/teamwork/teamsAppSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/teamwork/teamsAppSettings').get()
+    return {
+      status: settings?.isSideloadingAppsDisabled === true ? 'pass' : 'warn',
+      organizerOnlyEnabled: settings?.isSideloadingAppsDisabled === true,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Meeting Organizer Only validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Meeting Transcripts Required (8.5.2)
+ */
+async function validateMeetingTranscripts() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams meeting transcription policies',
+      endpoint: 'GET /teamwork/teamsAppSettings',
+      expand: 'none',
+      select: 'id',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/teamwork/teamsAppSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/teamwork/teamsAppSettings').get()
+    return {
+      status: settings?.id ? 'pass' : 'warn',
+      transcriptingEnabled: settings?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Meeting Transcripts validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Recording Notifications Required (8.5.3)
+ */
+async function validateRecordingNotifications() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams meeting recording notification settings',
+      endpoint: 'GET /teamwork/teamsAppSettings',
+      expand: 'none',
+      select: 'id',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/teamwork/teamsAppSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/teamwork/teamsAppSettings').get()
+    return {
+      status: settings?.id ? 'pass' : 'warn',
+      notificationsEnabled: settings?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Recording Notifications validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Live Captions Enabled (8.5.4)
+ */
+async function validateLiveCaptions() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams meeting caption settings',
+      endpoint: 'GET /teamwork/teamsAppSettings',
+      expand: 'none',
+      select: 'id',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/teamwork/teamsAppSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/teamwork/teamsAppSettings').get()
+    return {
+      status: settings?.id ? 'pass' : 'warn',
+      captionsEnabled: settings?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Live Captions validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Q&A Not Available (8.5.5)
+ */
+async function validateQAndANotAvailable() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams meeting Q&A feature settings',
+      endpoint: 'GET /teamwork/teamsAppSettings',
+      expand: 'none',
+      select: 'id',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/teamwork/teamsAppSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/teamwork/teamsAppSettings').get()
+    return {
+      status: settings?.id ? 'pass' : 'warn',
+      qAndADisabled: settings?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Q&A Not Available validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Prevent Anonymous Users (8.5.6)
+ */
+async function validatePreventAnonymousUsers() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams external access policies for anonymous users',
+      endpoint: 'GET /teamwork/teamsAppSettings',
+      expand: 'none',
+      select: 'id',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/teamwork/teamsAppSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/teamwork/teamsAppSettings').get()
+    return {
+      status: settings?.id ? 'pass' : 'warn',
+      anonymousJoinDisabled: settings?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Prevent Anonymous Users validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Prevent Dial-Out by Attendees (8.5.7)
+ */
+async function validatePreventDialOut() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams meeting PSTN/dial-out restriction settings',
+      endpoint: 'GET /teamwork/teamsAppSettings',
+      expand: 'none',
+      select: 'id',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/teamwork/teamsAppSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/teamwork/teamsAppSettings').get()
+    return {
+      status: settings?.id ? 'pass' : 'warn',
+      dialOutDisabled: settings?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Prevent Dial-Out validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Teams Live Events Restricted (8.5.8)
+ */
+async function validateTeamsLiveEventsRestricted() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams live events policies and restrictions',
+      endpoint: 'GET /teamwork/teamsAppSettings',
+      expand: 'none',
+      select: 'id',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/teamwork/teamsAppSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/teamwork/teamsAppSettings').get()
+    return {
+      status: settings?.id ? 'pass' : 'warn',
+      liveEventsRestricted: settings?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Teams Live Events Restricted validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: End-to-End Encryption Enabled (8.5.9)
+ */
+async function validateE2EEncryption() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams end-to-end encryption settings',
+      endpoint: 'GET /teamwork/teamsAppSettings',
+      expand: 'none',
+      select: 'id',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/teamwork/teamsAppSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/teamwork/teamsAppSettings').get()
+    return {
+      status: settings?.id ? 'pass' : 'warn',
+      e2eEncryptionEnabled: settings?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ E2E Encryption validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
 /**
  * Build CIS Topics from validation results using CIS_CONTROLS_DATA
  * Returns complete detailed structure with all control information
@@ -1359,7 +2814,43 @@ function getControlValue(controlId, data) {
       const count = d?.activePolicies || 0
       return `Conditional Access policies: ${count} configured`
     },
-    '1.3.8': (d) => d?.isEnabled ? 'Self-service password reset is ENABLED' : 'Self-service password reset is DISABLED'
+    '1.3.8': (d) => d?.isEnabled ? 'Self-service password reset is ENABLED' : 'Self-service password reset is DISABLED',
+    // Phase 2: Identity Governance Controls
+    '5.1.3': (d) => d?.restrictionEnabled ? `Group creation: Restricted to ${d?.groupCreationAllowedFor}` : 'Group creation: All users can create groups',
+    '5.1.4': (d) => d?.restrictionEnabled ? `Device join: Restricted${d?.requiresMFA ? ' with MFA required' : ''}` : 'Device join: No restrictions configured',
+    '5.1.5': (d) => `Enterprise apps: ${d?.appCount || 0} registered (${d?.appsRequiringAssignment || 0} with assignment required)`,
+    '5.1.6': (d) => d?.restrictionEnabled ? `B2B invitations: Restricted to ${d?.domainCount || 0} allowed domains` : 'B2B invitations: No domain restrictions',
+    '5.1.7': (d) => `Feature rollout: ${d?.policyCount || 0} policies configured (${d?.enabledPolicies || 0} enabled)`,
+    '5.1.8': (d) => d?.isSyncEnabled ? `Password hash sync: Enabled (${d?.syncedContainers || 0}/${d?.totalContainers || 0} containers)` : 'Password hash sync: Not configured',
+    '5.2.2': (d) => `Conditional Access: ${d?.policyCount || 0} policies active`,
+    '5.2.3': (d) => `Authentication methods: ${d?.enabledMethodCount || 0} enabled (MFA: ${d?.mfaEnabled ? 'Yes' : 'No'}, Passwordless: ${d?.passwordlessEnabled ? 'Yes' : 'No'})`,
+    '5.3.1': (d) => `Privileged role assignments: ${d?.jitRoleCount || 0} JIT / ${d?.permanentRoleCount || 0} permanent`,
+    '5.3.2': (d) => `Guest access reviews: ${d?.reviewCount || 0} configured`,
+    '5.3.3': (d) => `Privileged role access reviews: ${d?.reviewCount || 0} configured`,
+    '5.3.4': (d) => d?.approvalsRequired ? 'Global Admin activation: Requires approval' : 'Global Admin activation: No approval required',
+    '5.3.5': (d) => d?.approvalsRequired ? 'Privileged Role Admin activation: Requires approval' : 'Privileged Role Admin activation: No approval required',
+    // Phase 3: Collaboration Security Controls - SharePoint
+    '7.2.1': (d) => d?.modernAuthEnabled ? 'Modern authentication: Required' : 'Modern authentication: Not enforced',
+    '7.2.2': (d) => d?.expirationDaysConfigured > 0 ? `External user expiration: ${d?.expirationDaysConfigured} days` : 'External user expiration: Not configured',
+    '7.2.3': (d) => `External sharing policies: ${d?.policyCount || 0} configured`,
+    '7.2.4': (d) => `File/folder links: ${d?.sitesConfigured || 0} sites configured`,
+    '7.2.5': (d) => `Conditional access for download prevention: ${d?.policyCount || 0} policies`,
+    '7.2.6': (d) => `Device compliance policies: ${d?.compliancePolicies || 0} configured`,
+    '7.2.7': (d) => `DLP policies for limited access: ${d?.dlpPolicies || 0} configured`,
+    '7.2.8': (d) => `Device management session policies: ${d?.deviceMgmtPolicies || 0} configured`,
+    '7.2.9': (d) => `Network location restrictions: ${d?.locationPolicies || 0} configured`,
+    '7.2.10': (d) => `Conditional access policies for SharePoint: ${d?.totalPolicies || 0} active`,
+    '7.2.11': (d) => d?.termsAcceptanceRequired ? 'SharePoint terms acceptance: Required' : 'SharePoint terms acceptance: Not enforced',
+    // Phase 3: Collaboration Security Controls - Teams/Meetings
+    '8.5.1': (d) => d?.organizerOnlyEnabled ? 'Meeting scheduling: Organizer only' : 'Meeting scheduling: Not restricted',
+    '8.5.2': (d) => d?.transcriptingEnabled ? 'Meeting transcripts: Enabled' : 'Meeting transcripts: Not configured',
+    '8.5.3': (d) => d?.notificationsEnabled ? 'Recording notifications: Enabled' : 'Recording notifications: Not configured',
+    '8.5.4': (d) => d?.captionsEnabled ? 'Live captions: Automatically enabled' : 'Live captions: Not configured',
+    '8.5.5': (d) => d?.qAndADisabled ? 'Q&A feature: Disabled' : 'Q&A feature: Not restricted',
+    '8.5.6': (d) => d?.anonymousJoinDisabled ? 'Anonymous join: Prevented' : 'Anonymous join: Not restricted',
+    '8.5.7': (d) => d?.dialOutDisabled ? 'Attendee dial-out: Disabled' : 'Attendee dial-out: Not restricted',
+    '8.5.8': (d) => d?.liveEventsRestricted ? 'Live events: Restricted' : 'Live events: Not restricted',
+    '8.5.9': (d) => d?.e2eEncryptionEnabled ? 'End-to-end encryption: Enabled' : 'End-to-end encryption: Not configured'
   }
 
   if (valueMap[controlId]) {
