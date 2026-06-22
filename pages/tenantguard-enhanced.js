@@ -29,11 +29,12 @@ export async function initTenantGuardEnhanced() {
   // Show skeleton immediately
   renderTenantGuardSkeleton(el)
 
+  // Render content structure so elements exist before updating
+  renderTenantGuardContent(el)
+
   // Load data in background
   try {
     await refreshData()
-    // Once data is loaded, render actual content
-    renderTenantGuardContent(el)
   } catch (error) {
     console.error('Error loading data:', error)
     showToast('Failed to load alerts', 'error')
@@ -268,17 +269,28 @@ async function refreshData() {
     const highCount = p1p2Alerts.filter(a => a.severity === 'HIGH').length
     const mediumCount = p1p2Alerts.filter(a => a.severity === 'MEDIUM').length
 
-    // Update KPIs (P1/P2 only)
-    document.getElementById('kpi-critical').textContent = criticalCount
-    document.getElementById('kpi-high').textContent = highCount
-    document.getElementById('kpi-medium').textContent = mediumCount
-    document.getElementById('kpi-corr').textContent = allCorrelations.length
-    document.getElementById('kpi-risk').textContent = calculateRiskScore()
-    document.getElementById('kpi-total').textContent = p1p2Alerts.length
+    // Update KPIs (P1/P2 only) - only if elements exist
+    const kpiCritical = document.getElementById('kpi-critical')
+    const kpiHigh = document.getElementById('kpi-high')
+    const kpiMedium = document.getElementById('kpi-medium')
+    const kpiCorr = document.getElementById('kpi-corr')
+    const kpiRisk = document.getElementById('kpi-risk')
+    const kpiTotal = document.getElementById('kpi-total')
 
-    // Render alerts
-    renderAlerts()
-    renderDrift()
+    if (kpiCritical) kpiCritical.textContent = criticalCount
+    if (kpiHigh) kpiHigh.textContent = highCount
+    if (kpiMedium) kpiMedium.textContent = mediumCount
+    if (kpiCorr) kpiCorr.textContent = allCorrelations.length
+    if (kpiRisk) kpiRisk.textContent = calculateRiskScore()
+    if (kpiTotal) kpiTotal.textContent = p1p2Alerts.length
+
+    // Render alerts and drift - only if containers exist
+    const alertsContainer = document.getElementById('alertsContainer')
+    if (alertsContainer) renderAlerts()
+
+    const driftContainer = document.getElementById('driftContainer')
+    if (driftContainer) renderDrift()
+
     updateTimestamp()
 
     // Store to SharePoint in background (non-blocking)
