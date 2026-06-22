@@ -249,25 +249,28 @@ function render(el) {
       ${topFiveKpi()}
     </div>
 
-    <!-- Internal sub-navigation - Row 1 -->
-    <div class="tabs" id="sec-subnav-row1">
-      ${SEC_TABS_ROW1.map(t => `
-        <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
-          <i class="ti ${t.icon}"></i><span>${t.label}</span>
-          ${t.id === 'identity' && realIdentityPosture.highRiskUsers > 0 ? `<span class="sec-tab-badge red">${realIdentityPosture.highRiskUsers}</span>` : ''}
-        </button>
-      `).join('')}
-    </div>
+    <!-- Internal sub-navigation - Boxed container -->
+    <div style="border:0.5px solid var(--color-border-secondary);border-radius:8px;background:var(--color-background-primary);padding:12px;margin-bottom:16px">
+      <!-- Row 1 -->
+      <div class="tabs" id="sec-subnav-row1" style="margin-bottom:4px;padding-bottom:0">
+        ${SEC_TABS_ROW1.map(t => `
+          <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
+            <i class="ti ${t.icon}"></i><span>${t.label}</span>
+            ${t.id === 'identity' && realIdentityPosture.highRiskUsers > 0 ? `<span class="sec-tab-badge red">${realIdentityPosture.highRiskUsers}</span>` : ''}
+          </button>
+        `).join('')}
+      </div>
 
-    <!-- Internal sub-navigation - Row 2 -->
-    <div class="tabs" id="sec-subnav-row2">
-      ${SEC_TABS_ROW2.map(t => `
-        <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
-          <i class="ti ${t.icon}"></i><span>${t.label}</span>
-          ${t.id === 'incidents' && critCount > 0 ? `<span class="sec-tab-badge red">${critCount}</span>` : ''}
-          ${t.id === 'recommendations' ? `<span class="sec-tab-badge amber">${openRec}</span>` : ''}
-        </button>
-      `).join('')}
+      <!-- Row 2 -->
+      <div class="tabs" id="sec-subnav-row2" style="margin-bottom:0;padding-bottom:0">
+        ${SEC_TABS_ROW2.map(t => `
+          <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
+            <i class="ti ${t.icon}"></i><span>${t.label}</span>
+            ${t.id === 'incidents' && critCount > 0 ? `<span class="sec-tab-badge red">${critCount}</span>` : ''}
+            ${t.id === 'recommendations' ? `<span class="sec-tab-badge amber">${openRec}</span>` : ''}
+          </button>
+        `).join('')}
+      </div>
     </div>
 
     <!-- Section content -->
