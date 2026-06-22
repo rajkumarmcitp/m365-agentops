@@ -692,46 +692,45 @@ tr:hover td { background: var(--color-background-secondary); }
 }
 
 .tab-btn {
-  padding: 6px 12px;
+  padding: 8px 14px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text-secondary);
   border: 0.5px solid var(--color-border-secondary);
-  border-radius: 4px;
-  background: var(--color-background-secondary);
+  border-radius: 6px;
+  background: var(--color-background-primary);
   cursor: pointer;
   transition: all 0.2s ease;
-  background: var(--color-background-primary) !important;
-  border: 0.5px solid var(--color-border-secondary) !important;
-  border-radius: var(--border-radius-md) !important;
-  outline: none !important;
-  cursor: pointer;
-  transition: all var(--transition);
+  outline: none;
   white-space: nowrap;
   height: auto;
   line-height: 1.2;
-  min-height: 28px;
-  display: flex;
+  min-height: 32px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  letter-spacing: 0.3px;
 }
 
 .tab-btn i {
-  font-size: 14px;
-  margin-right: 4px;
+  font-size: 16px;
+  flex-shrink: 0;
 }
 
 .tab-btn:hover {
-  background: var(--color-background-tertiary) !important;
+  background: var(--color-background-secondary);
   color: var(--color-text-primary);
-  border-color: var(--color-border-primary) !important;
+  border-color: var(--clr-primary);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
 
 .tab-btn.active {
-  background: var(--clr-primary) !important;
-  color: white !important;
-  border-color: var(--clr-primary) !important;
-  font-weight: 600;
+  background: var(--clr-primary);
+  color: white;
+  border-color: var(--clr-primary);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0,102,204,0.2);
 }
 
 .tab-panel { display: none; }
