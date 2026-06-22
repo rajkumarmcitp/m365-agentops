@@ -158,19 +158,27 @@ function renderDemoMain(el) {
     card.className = 'cfg-topic-card'
     const tc = TOPIC_COLOURS[topic.id] || { bg: '#f0f0f0', color: '#555' }
     card.innerHTML = `
-      <div class="cfg-topic-icon" style="background:${tc.bg};color:${tc.color}">
-        <i class="ti ${topic.icon}"></i>
-      </div>
-      <div class="cfg-topic-name" style="font-weight:600;font-size:13px">${topic.name}</div>
-      <div class="cfg-topic-badges">
-        ${s.fail > 0 ? `<span class="badge danger">${s.fail} fail</span>` : ''}
-        ${s.warn > 0 ? `<span class="badge warning">${s.warn} warn</span>` : ''}
-        ${s.pass > 0 ? `<span class="badge success">${s.pass} pass</span>` : ''}
-      </div>
-      <div class="cfg-topic-bar">
-        <div class="score-bar">
-          <div class="score-bar-fill ${tCls}" style="width:${s.score}%"></div>
+      <!-- Header with Icon and Name -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border-secondary)">
+        <div style="background:${tc.bg};color:${tc.color};width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ${topic.icon}" style="font-size:20px"></i>
         </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);line-height:1.3">${topic.name}</div>
+        </div>
+        <div style="font-size:16px;font-weight:700;color:${tc.color}">${s.score}%</div>
+      </div>
+
+      <!-- Stats Row -->
+      <div style="display:flex;gap:12px;margin-bottom:12px">
+        ${s.fail > 0 ? `<span style="padding:4px 8px;background:var(--clr-danger-bg);color:var(--clr-danger-text);border-radius:4px;font-size:11px;font-weight:600">${s.fail} Failed</span>` : ''}
+        ${s.warn > 0 ? `<span style="padding:4px 8px;background:var(--clr-warning-bg);color:var(--clr-warning-text);border-radius:4px;font-size:11px;font-weight:600">${s.warn} Warnings</span>` : ''}
+        ${s.pass > 0 ? `<span style="padding:4px 8px;background:var(--clr-success-bg);color:var(--clr-success-text);border-radius:4px;font-size:11px;font-weight:600">${s.pass} Passed</span>` : ''}
+      </div>
+
+      <!-- Progress Bar -->
+      <div style="background:var(--color-background-secondary);height:6px;border-radius:3px;overflow:hidden">
+        <div style="background:${tc.color};height:100%;width:${s.score}%;transition:width 0.3s ease"></div>
       </div>
     `
     card.addEventListener('click', () => {
@@ -361,19 +369,27 @@ async function renderProductionMain(el) {
       card.className = 'cfg-topic-card'
       const tc = TOPIC_COLOURS[topic.id] || { bg: '#f0f0f0', color: '#555' }
       card.innerHTML = `
-        <div class="cfg-topic-icon" style="background:${tc.bg};color:${tc.color}">
-          <i class="ti ${topic.icon}"></i>
-        </div>
-        <div class="cfg-topic-name" style="font-weight:600;font-size:13px">${topic.name}</div>
-        <div class="cfg-topic-badges">
-          ${s.fail > 0 ? `<span class="badge danger">${s.fail} fail</span>` : ''}
-          ${s.warn > 0 ? `<span class="badge warning">${s.warn} warn</span>` : ''}
-          ${s.pass > 0 ? `<span class="badge success">${s.pass} pass</span>` : ''}
-        </div>
-        <div class="cfg-topic-bar">
-          <div class="score-bar">
-            <div class="score-bar-fill ${tCls}" style="width:${s.score}%"></div>
+        <!-- Header with Icon and Name -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border-secondary)">
+          <div style="background:${tc.bg};color:${tc.color};width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ${topic.icon}" style="font-size:20px"></i>
           </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);line-height:1.3">${topic.name}</div>
+          </div>
+          <div style="font-size:16px;font-weight:700;color:${tc.color}">${s.score}%</div>
+        </div>
+
+        <!-- Stats Row -->
+        <div style="display:flex;gap:12px;margin-bottom:12px">
+          ${s.fail > 0 ? `<span style="padding:4px 8px;background:var(--clr-danger-bg);color:var(--clr-danger-text);border-radius:4px;font-size:11px;font-weight:600">${s.fail} Failed</span>` : ''}
+          ${s.warn > 0 ? `<span style="padding:4px 8px;background:var(--clr-warning-bg);color:var(--clr-warning-text);border-radius:4px;font-size:11px;font-weight:600">${s.warn} Warnings</span>` : ''}
+          ${s.pass > 0 ? `<span style="padding:4px 8px;background:var(--clr-success-bg);color:var(--clr-success-text);border-radius:4px;font-size:11px;font-weight:600">${s.pass} Passed</span>` : ''}
+        </div>
+
+        <!-- Progress Bar -->
+        <div style="background:var(--color-background-secondary);height:6px;border-radius:3px;overflow:hidden">
+          <div style="background:${tc.color};height:100%;width:${s.score}%;transition:width 0.3s ease"></div>
         </div>
       `
       card.addEventListener('click', () => {

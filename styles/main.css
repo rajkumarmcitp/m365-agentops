@@ -1787,6 +1787,30 @@ tr:hover td { background: var(--color-background-secondary); }
   min-width: 180px;
 }
 
+/* Configuration Topic Grid - Premium Design */
+.cfg-topic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.cfg-topic-card {
+  background: var(--color-background-primary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.cfg-topic-card:hover {
+  border-color: var(--color-border-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
 /* Landscape mode optimization */
 @media (max-width: 768px) and (orientation: landscape) {
   #sidebar {
@@ -1805,5 +1829,9 @@ tr:hover td { background: var(--color-background-secondary); }
   /* Hide text labels in landscape */
   .sidebar-item-text {
     display: none;
+  }
+
+  .cfg-topic-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 }
