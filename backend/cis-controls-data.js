@@ -499,6 +499,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Groups 5.1.3.1 Ensure users cannot create security groups',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'groupCreationRestriction',
             validator: () => 'warn',
             description: 'CIS Control 5.1.3'
           },
@@ -507,6 +508,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Devices 5.1.4.1 Ensure the ability to join devices to Entra is restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'deviceJoinRestriction',
             validator: () => 'warn',
             description: 'CIS Control 5.1.4'
           },
@@ -515,6 +517,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Enterprise apps',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'enterpriseAppsGovernance',
             validator: () => 'warn',
             description: 'CIS Control 5.1.5'
           },
@@ -523,6 +526,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'External Identities 5.1.6.1 Ensure that collaboration invitations are sent to al',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'collaborationInvitationRestriction',
             validator: () => 'warn',
             description: 'CIS Control 5.1.6'
           },
@@ -531,6 +535,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'User experiences................................................................',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'userExperienceConfiguration',
             validator: () => 'warn',
             description: 'CIS Control 5.1.7'
           },
@@ -539,6 +544,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Hybrid management 5.1.8.1 Ensure that password hash sync is enabled for hybrid d',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'passwordHashSync',
             validator: () => 'warn',
             description: 'CIS Control 5.1.8'
           }
@@ -553,6 +559,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Conditional Access',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'conditionalAccessPolicies',
             validator: () => 'warn',
             description: 'CIS Control 5.2.2'
           },
@@ -561,6 +568,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Authentication Methods',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'authenticationMethods',
             validator: () => 'warn',
             description: 'CIS Control 5.2.3'
           },
@@ -583,6 +591,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure privileged role assignments are activated and not assigned',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'privilegedRoleAssignmentJIT',
             validator: () => 'warn',
             description: 'CIS Control 5.3.1'
           },
@@ -591,6 +600,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure \'Access reviews\' for guest users are configured',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'guestAccessReviews',
             validator: () => 'warn',
             description: 'CIS Control 5.3.2'
           },
@@ -599,6 +609,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure \'Access reviews\' for privileged roles are configured',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'privilegedRoleAccessReviews',
             validator: () => 'warn',
             description: 'CIS Control 5.3.3'
           },
@@ -607,6 +618,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure approval is required for Global Administrator role activation',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'globalAdminApprovalRequired',
             validator: () => 'warn',
             description: 'CIS Control 5.3.4'
           },
@@ -615,6 +627,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure approval is required for Privileged Role Administrator activation  . 412',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'privilegedRoleAdminApprovalRequired',
             validator: () => 'warn',
             description: 'CIS Control 5.3.5'
           }
