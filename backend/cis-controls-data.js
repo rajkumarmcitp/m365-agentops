@@ -1118,6 +1118,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure guest user access is restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fabricGuestAccess',
             validator: () => 'warn',
             description: 'CIS Control 9.1.1'
           },
@@ -1126,6 +1127,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure external user invitations are restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fabricExternalInvitations',
             validator: () => 'warn',
             description: 'CIS Control 9.1.2'
           },
@@ -1134,6 +1136,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure guest access to content is restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fabricGuestContentAccess',
             validator: () => 'warn',
             description: 'CIS Control 9.1.3'
           },
@@ -1142,6 +1145,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure \'Publish to web\' is restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fabricPublishToWeb',
             validator: () => 'warn',
             description: 'CIS Control 9.1.4'
           },
@@ -1150,6 +1154,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure \'Interact with and share R and Python\' visuals is \'Disabled\'',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fabricPythonRSharing',
             validator: () => 'warn',
             description: 'CIS Control 9.1.5'
           },
@@ -1158,6 +1163,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure \'Allow users to apply sensitivity labels for content\' is \'Enabled\'',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fabricSensitivityLabels',
             validator: () => 'warn',
             description: 'CIS Control 9.1.6'
           },
@@ -1166,6 +1172,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure shareable links are restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fabricShareableLinks',
             validator: () => 'warn',
             description: 'CIS Control 9.1.7'
           },
@@ -1174,6 +1181,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure enabling of external data sharing is restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fabricExternalDataSharing',
             validator: () => 'warn',
             description: 'CIS Control 9.1.8'
           },
@@ -1182,6 +1190,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure \'Block ResourceKey Authentication\' is \'Enabled\'',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fabricResourceKeyAuth',
             validator: () => 'warn',
             description: 'CIS Control 9.1.9'
           },
@@ -1190,6 +1199,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure access to APIs by service principals is restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fabricSPAPIAccess',
             validator: () => 'warn',
             description: 'CIS Control 9.1.10'
           },
@@ -1198,6 +1208,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure service principals cannot create and use profiles',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fabricSPProvisioning',
             validator: () => 'warn',
             description: 'CIS Control 9.1.11'
           },
@@ -1206,6 +1217,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure service principals ability to create workspaces; connections and deployme',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'fabricSPWorkspaceCreation',
             validator: () => 'warn',
             description: 'CIS Control 9.1.12'
           }

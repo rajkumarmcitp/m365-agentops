@@ -75,7 +75,11 @@ export async function validateAllCISControls() {
       oauthTokenLifetime, sessionTimeout, mfaForOWA, mfaForPowerShell,
       emergencyAccessAccounts, sharedMailboxSignIn, passwordExpirationPolicy,
       idleSessionTimeout, externalCalendarSharing, userOwnedAppsServices,
-      thirdPartyStorageServices, sharedBookingsPages
+      thirdPartyStorageServices, sharedBookingsPages,
+      fabricGuestAccess, fabricExternalInvitations, fabricGuestContentAccess,
+      fabricPublishToWeb, fabricPythonRSharing, fabricSensitivityLabels,
+      fabricShareableLinks, fabricExternalDataSharing, fabricResourceKeyAuth,
+      fabricSPAPIAccess, fabricSPProvisioning, fabricSPWorkspaceCreation
     ] = await Promise.allSettled([
       validateGlobalAdmins(),
       validateAuthorizationPolicy(),
@@ -162,7 +166,19 @@ export async function validateAllCISControls() {
       validateExternalCalendarSharing(),
       validateUserOwnedAppsServices(),
       validateThirdPartyStorageServices(),
-      validateSharedBookingsPages()
+      validateSharedBookingsPages(),
+      validateFabricGuestAccess(),
+      validateFabricExternalInvitations(),
+      validateFabricGuestContentAccess(),
+      validateFabricPublishToWeb(),
+      validateFabricPythonRSharing(),
+      validateFabricSensitivityLabels(),
+      validateFabricShareableLinks(),
+      validateFabricExternalDataSharing(),
+      validateFabricResourceKeyAuth(),
+      validateFabricSPAPIAccess(),
+      validateFabricSPProvisioning(),
+      validateFabricSPWorkspaceCreation()
     ])
 
     // Build CIS Topics from validation results
@@ -252,7 +268,19 @@ export async function validateAllCISControls() {
       externalCalendarSharing: externalCalendarSharing.value || null,
       userOwnedAppsServices: userOwnedAppsServices.value || null,
       thirdPartyStorageServices: thirdPartyStorageServices.value || null,
-      sharedBookingsPages: sharedBookingsPages.value || null
+      sharedBookingsPages: sharedBookingsPages.value || null,
+      fabricGuestAccess: fabricGuestAccess.value || null,
+      fabricExternalInvitations: fabricExternalInvitations.value || null,
+      fabricGuestContentAccess: fabricGuestContentAccess.value || null,
+      fabricPublishToWeb: fabricPublishToWeb.value || null,
+      fabricPythonRSharing: fabricPythonRSharing.value || null,
+      fabricSensitivityLabels: fabricSensitivityLabels.value || null,
+      fabricShareableLinks: fabricShareableLinks.value || null,
+      fabricExternalDataSharing: fabricExternalDataSharing.value || null,
+      fabricResourceKeyAuth: fabricResourceKeyAuth.value || null,
+      fabricSPAPIAccess: fabricSPAPIAccess.value || null,
+      fabricSPProvisioning: fabricSPProvisioning.value || null,
+      fabricSPWorkspaceCreation: fabricSPWorkspaceCreation.value || null
     })
 
     const result = {
@@ -3767,6 +3795,464 @@ async function validateSharedBookingsPages() {
 }
 
 /**
+ * Validate: Fabric Guest User Access Restrictions (9.1.1)
+ */
+async function validateFabricGuestAccess() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Fabric tenant guest user access policies',
+      endpoint: 'GET /admin/powerBi/tenantSettings',
+      expand: 'none',
+      select: 'id,guestUserAccessPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/powerBi/tenantSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/powerBi/tenantSettings').get()
+    return {
+      status: settings?.guestUserAccessPolicy === 'Restricted' ? 'pass' : 'fail',
+      guestAccessRestricted: settings?.guestUserAccessPolicy === 'Restricted',
+      currentPolicy: settings?.guestUserAccessPolicy || 'Unknown',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Fabric Guest Access validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: External User Invitations Restrictions (9.1.2)
+ */
+async function validateFabricExternalInvitations() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Fabric external user invitation policies',
+      endpoint: 'GET /admin/powerBi/tenantSettings',
+      expand: 'none',
+      select: 'id,externalInvitationPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/powerBi/tenantSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/powerBi/tenantSettings').get()
+    return {
+      status: settings?.externalInvitationPolicy === 'Restricted' ? 'pass' : 'fail',
+      invitationsRestricted: settings?.externalInvitationPolicy === 'Restricted',
+      currentPolicy: settings?.externalInvitationPolicy || 'Unknown',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Fabric External Invitations validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Guest Content Access Restrictions (9.1.3)
+ */
+async function validateFabricGuestContentAccess() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Fabric guest content access policies',
+      endpoint: 'GET /admin/powerBi/tenantSettings',
+      expand: 'none',
+      select: 'id,guestContentAccessPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/powerBi/tenantSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/powerBi/tenantSettings').get()
+    return {
+      status: settings?.guestContentAccessPolicy === 'Restricted' ? 'pass' : 'fail',
+      contentAccessRestricted: settings?.guestContentAccessPolicy === 'Restricted',
+      currentPolicy: settings?.guestContentAccessPolicy || 'Unknown',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Fabric Guest Content Access validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Publish to Web Restrictions (9.1.4)
+ */
+async function validateFabricPublishToWeb() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Fabric publish to web policy',
+      endpoint: 'GET /admin/powerBi/tenantSettings',
+      expand: 'none',
+      select: 'id,publishToWebPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/powerBi/tenantSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/powerBi/tenantSettings').get()
+    return {
+      status: settings?.publishToWebPolicy === 'Disabled' ? 'pass' : 'fail',
+      publishToWebDisabled: settings?.publishToWebPolicy === 'Disabled',
+      currentPolicy: settings?.publishToWebPolicy || 'Unknown',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Fabric Publish to Web validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Python and R Visualization Sharing (9.1.5)
+ */
+async function validateFabricPythonRSharing() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Fabric Python/R visualization sharing policies',
+      endpoint: 'GET /admin/powerBi/tenantSettings',
+      expand: 'none',
+      select: 'id,pythonVisualsPolicy,rScriptPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/powerBi/tenantSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/powerBi/tenantSettings').get()
+    const pythonDisabled = settings?.pythonVisualsPolicy === 'Disabled'
+    const rDisabled = settings?.rScriptPolicy === 'Disabled'
+    return {
+      status: pythonDisabled && rDisabled ? 'pass' : 'fail',
+      pythonDisabled: pythonDisabled,
+      rScriptDisabled: rDisabled,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Fabric Python/R Sharing validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Sensitivity Labels Application (9.1.6)
+ */
+async function validateFabricSensitivityLabels() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Fabric sensitivity labels application policy',
+      endpoint: 'GET /admin/powerBi/tenantSettings',
+      expand: 'none',
+      select: 'id,sensitivityLabelPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/powerBi/tenantSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/powerBi/tenantSettings').get()
+    return {
+      status: settings?.sensitivityLabelPolicy === 'Enabled' ? 'pass' : 'fail',
+      labelsEnabled: settings?.sensitivityLabelPolicy === 'Enabled',
+      currentPolicy: settings?.sensitivityLabelPolicy || 'Unknown',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Fabric Sensitivity Labels validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Shareable Links Restrictions (9.1.7)
+ */
+async function validateFabricShareableLinks() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Fabric shareable links restriction policy',
+      endpoint: 'GET /admin/powerBi/tenantSettings',
+      expand: 'none',
+      select: 'id,shareableLinkPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/powerBi/tenantSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/powerBi/tenantSettings').get()
+    return {
+      status: settings?.shareableLinkPolicy === 'Restricted' ? 'pass' : 'fail',
+      linksRestricted: settings?.shareableLinkPolicy === 'Restricted',
+      currentPolicy: settings?.shareableLinkPolicy || 'Unknown',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Fabric Shareable Links validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: External Data Sharing Restrictions (9.1.8)
+ */
+async function validateFabricExternalDataSharing() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Fabric external data sharing policies',
+      endpoint: 'GET /admin/powerBi/tenantSettings',
+      expand: 'none',
+      select: 'id,dataSharingPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/powerBi/tenantSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/powerBi/tenantSettings').get()
+    return {
+      status: settings?.dataSharingPolicy === 'Restricted' ? 'pass' : 'fail',
+      dataSharingRestricted: settings?.dataSharingPolicy === 'Restricted',
+      currentPolicy: settings?.dataSharingPolicy || 'Unknown',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Fabric External Data Sharing validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Block ResourceKey Authentication (9.1.9)
+ */
+async function validateFabricResourceKeyAuth() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Fabric ResourceKey authentication blocking policy',
+      endpoint: 'GET /admin/powerBi/tenantSettings',
+      expand: 'none',
+      select: 'id,resourceKeyAuthPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/powerBi/tenantSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/powerBi/tenantSettings').get()
+    return {
+      status: settings?.resourceKeyAuthPolicy === 'Blocked' ? 'pass' : 'fail',
+      resourceKeyBlocked: settings?.resourceKeyAuthPolicy === 'Blocked',
+      currentPolicy: settings?.resourceKeyAuthPolicy || 'Unknown',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Fabric ResourceKey Authentication validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Service Principal API Access Restrictions (9.1.10)
+ */
+async function validateFabricSPAPIAccess() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Fabric service principal API access policies',
+      endpoint: 'GET /admin/powerBi/tenantSettings',
+      expand: 'none',
+      select: 'id,servicePrincipalAPIPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/powerBi/tenantSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/powerBi/tenantSettings').get()
+    return {
+      status: settings?.servicePrincipalAPIPolicy === 'Restricted' ? 'pass' : 'fail',
+      apiAccessRestricted: settings?.servicePrincipalAPIPolicy === 'Restricted',
+      currentPolicy: settings?.servicePrincipalAPIPolicy || 'Unknown',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Fabric Service Principal API Access validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Service Principal Provisioning Restrictions (9.1.11)
+ */
+async function validateFabricSPProvisioning() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Fabric service principal provisioning policies',
+      endpoint: 'GET /admin/powerBi/tenantSettings',
+      expand: 'none',
+      select: 'id,servicePrincipalProvisioningPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/powerBi/tenantSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/powerBi/tenantSettings').get()
+    return {
+      status: settings?.servicePrincipalProvisioningPolicy === 'Disabled' ? 'pass' : 'fail',
+      provisioningDisabled: settings?.servicePrincipalProvisioningPolicy === 'Disabled',
+      currentPolicy: settings?.servicePrincipalProvisioningPolicy || 'Unknown',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Fabric Service Principal Provisioning validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Service Principal Workspace Creation (9.1.12)
+ */
+async function validateFabricSPWorkspaceCreation() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Fabric service principal workspace creation policy',
+      endpoint: 'GET /admin/powerBi/tenantSettings',
+      expand: 'none',
+      select: 'id,servicePrincipalWorkspacePolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/powerBi/tenantSettings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/powerBi/tenantSettings').get()
+    return {
+      status: settings?.servicePrincipalWorkspacePolicy === 'Disabled' ? 'pass' : 'fail',
+      workspaceCreationDisabled: settings?.servicePrincipalWorkspacePolicy === 'Disabled',
+      currentPolicy: settings?.servicePrincipalWorkspacePolicy || 'Unknown',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Fabric Service Principal Workspace Creation validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
  * Build CIS Topics from validation results using CIS_CONTROLS_DATA
  * Returns complete detailed structure with all control information
  */
@@ -3954,7 +4440,20 @@ function getControlValue(controlId, data) {
     '1.3.3': (d) => d?.policyConfigured ? 'External calendar sharing: Restricted' : 'External calendar sharing: Not restricted',
     '1.3.4': (d) => d?.policyConfigured ? 'User-owned apps: Policy configured' : 'User-owned apps: Not restricted',
     '1.3.7': (d) => `Third-party storage: ${d?.storagePolicies || 0} DLP policies`,
-    '1.3.9': (d) => d?.bookingsRestricted ? 'Shared bookings: Internal only' : 'Shared bookings: External access allowed'
+    '1.3.9': (d) => d?.bookingsRestricted ? 'Shared bookings: Internal only' : 'Shared bookings: External access allowed',
+    // Phase 7: Microsoft Fabric Security
+    '9.1.1': (d) => d?.guestAccessRestricted ? 'Guest access: Restricted' : `Guest access: ${d?.currentPolicy || 'Not restricted'}`,
+    '9.1.2': (d) => d?.invitationsRestricted ? 'External invitations: Restricted' : `External invitations: ${d?.currentPolicy || 'Not restricted'}`,
+    '9.1.3': (d) => d?.contentAccessRestricted ? 'Guest content access: Restricted' : `Guest content access: ${d?.currentPolicy || 'Not restricted'}`,
+    '9.1.4': (d) => d?.publishToWebDisabled ? 'Publish to web: Disabled' : `Publish to web: ${d?.currentPolicy || 'Enabled'}`,
+    '9.1.5': (d) => d?.pythonDisabled && d?.rDisabled ? 'Python/R sharing: Disabled' : 'Python/R sharing: Enabled',
+    '9.1.6': (d) => d?.labelsEnabled ? 'Sensitivity labels: Enabled' : `Sensitivity labels: ${d?.currentPolicy || 'Disabled'}`,
+    '9.1.7': (d) => d?.linksRestricted ? 'Shareable links: Restricted' : `Shareable links: ${d?.currentPolicy || 'Not restricted'}`,
+    '9.1.8': (d) => d?.dataSharingRestricted ? 'External data sharing: Restricted' : `External data sharing: ${d?.currentPolicy || 'Not restricted'}`,
+    '9.1.9': (d) => d?.resourceKeyBlocked ? 'ResourceKey auth: Blocked' : `ResourceKey auth: ${d?.currentPolicy || 'Allowed'}`,
+    '9.1.10': (d) => d?.apiAccessRestricted ? 'Service principal API: Restricted' : `Service principal API: ${d?.currentPolicy || 'Not restricted'}`,
+    '9.1.11': (d) => d?.provisioningDisabled ? 'Service principal provisioning: Disabled' : `Service principal provisioning: ${d?.currentPolicy || 'Enabled'}`,
+    '9.1.12': (d) => d?.workspaceCreationDisabled ? 'Service principal workspaces: Disabled' : `Service principal workspaces: ${d?.currentPolicy || 'Enabled'}`
   }
 
   if (valueMap[controlId]) {
