@@ -41,7 +41,12 @@ import {
   addCorrelation, getCorrelations,
   addInvestigation, getInvestigation, updateInvestigation
 } from './lib/sharepoint-client.js'
-import { setValidationGraphClient, validateAllCISControls, clearValidationCache } from './cis-validator.js'
+import { setValidationGraphClient, validateAllCISControls, clearValidationCache, getValidationMethodSummary, getValidationMetadata } from './cis-validator.js'
+import {
+  getValidationConfig, updateValidationConfig, getValidationMethod,
+  setControlValidationMethod, clearControlValidationMethod, getCustomMethodControls,
+  isPowerShellEnabled, setPowerShellEnabled, resetValidationConfig, exportConfig
+} from './validation-config.js'
 
 dotenv.config()
 
@@ -11287,6 +11292,225 @@ app.post('/api/tenantguard/cleanup/unwanted-alerts', (req, res) => {
     })
   } catch (error) {
     console.error('Error cleaning up unwanted alerts:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// ============================================================
+// Validation Settings Endpoints - Phase 1
+// ============================================================
+
+/**
+ * GET /api/config/validation-settings
+ * Get current validation configuration
+ */
+app.get('/api/config/validation-settings', (req, res) => {
+  try {
+    const config = exportConfig()
+    res.json({
+      success: true,
+      data: config
+    })
+  } catch (error) {
+    console.error('Error fetching validation settings:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/config/validation-settings
+ * Update validation configuration
+ */
+app.post('/api/config/validation-settings', express.json(), (req, res) => {
+  try {
+    const { validationMethod, timeout, retryAttempts, retryBackoffMs, cacheTTL, enablePowerShell } = req.body
+
+    const updates = {}
+    if (validationMethod) updates.validationMethod = validationMethod
+    if (timeout !== undefined) updates.timeout = timeout
+    if (retryAttempts !== undefined) updates.retryAttempts = retryAttempts
+    if (retryBackoffMs !== undefined) updates.retryBackoffMs = retryBackoffMs
+    if (cacheTTL !== undefined) updates.cacheTTL = cacheTTL
+    if (enablePowerShell !== undefined) updates.enablePowerShell = enablePowerShell
+
+    const success = updateValidationConfig(updates)
+
+    if (!success) {
+      return res.status(500).json({ success: false, error: 'Failed to save configuration' })
+    }
+
+    res.json({
+      success: true,
+      message: 'Validation settings updated',
+      data: exportConfig()
+    })
+  } catch (error) {
+    console.error('Error updating validation settings:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/config/validation-methods
+ * Get available validation methods per control
+ */
+app.get('/api/config/validation-methods', (req, res) => {
+  try {
+    const config = getValidationConfig()
+    const customMethods = getCustomMethodControls()
+
+    // For now, return summary - can be extended to include all 160 controls
+    res.json({
+      success: true,
+      data: {
+        globalMethod: config.validationMethod,
+        powerShellEnabled: isPowerShellEnabled(),
+        customMethods: customMethods,
+        availableMethods: ['graphAPI', 'powershell', 'hybrid'],
+        totalControlsCount: 160
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching validation methods:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/config/validation-methods/:controlId
+ * Set validation method for specific control
+ */
+app.post('/api/config/validation-methods/:controlId', express.json(), (req, res) => {
+  try {
+    const { controlId } = req.params
+    const { method } = req.body
+
+    if (!['graphAPI', 'powershell', 'hybrid'].includes(method)) {
+      return res.status(400).json({ success: false, error: 'Invalid method' })
+    }
+
+    const success = setControlValidationMethod(controlId, method)
+
+    if (!success) {
+      return res.status(500).json({ success: false, error: 'Failed to set method' })
+    }
+
+    res.json({
+      success: true,
+      message: `Control ${controlId} validation method set to ${method}`
+    })
+  } catch (error) {
+    console.error('Error setting control method:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * DELETE /api/config/validation-methods/:controlId
+ * Clear custom method for control (use global setting)
+ */
+app.delete('/api/config/validation-methods/:controlId', (req, res) => {
+  try {
+    const { controlId } = req.params
+    const success = clearControlValidationMethod(controlId)
+
+    if (!success) {
+      return res.status(500).json({ success: false, error: 'Failed to clear method' })
+    }
+
+    res.json({
+      success: true,
+      message: `Control ${controlId} now uses global validation method`
+    })
+  } catch (error) {
+    console.error('Error clearing control method:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/config/powershell-enable
+ * Enable/disable PowerShell validation
+ */
+app.post('/api/config/powershell-enable', express.json(), (req, res) => {
+  try {
+    const { enabled } = req.body
+
+    if (enabled === undefined) {
+      return res.status(400).json({ success: false, error: 'enabled flag required' })
+    }
+
+    const success = setPowerShellEnabled(enabled)
+
+    if (!success) {
+      return res.status(500).json({ success: false, error: 'Failed to update setting' })
+    }
+
+    res.json({
+      success: true,
+      message: `PowerShell validation ${enabled ? 'enabled' : 'disabled'}`,
+      data: { powerShellEnabled: enabled }
+    })
+  } catch (error) {
+    console.error('Error updating PowerShell setting:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/validation/summary
+ * Get validation method summary from last validation
+ */
+app.get('/api/validation/summary', (req, res) => {
+  try {
+    const summary = getValidationMethodSummary()
+    res.json({
+      success: true,
+      data: summary
+    })
+  } catch (error) {
+    console.error('Error fetching validation summary:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/validation/metadata
+ * Get detailed validation metadata for all controls
+ */
+app.get('/api/validation/metadata', (req, res) => {
+  try {
+    const metadata = getValidationMetadata()
+    res.json({
+      success: true,
+      data: metadata,
+      count: metadata.length
+    })
+  } catch (error) {
+    console.error('Error fetching validation metadata:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/config/validation-reset
+ * Reset validation configuration to defaults
+ */
+app.post('/api/config/validation-reset', (req, res) => {
+  try {
+    const success = resetValidationConfig()
+
+    if (!success) {
+      return res.status(500).json({ success: false, error: 'Failed to reset configuration' })
+    }
+
+    res.json({
+      success: true,
+      message: 'Validation configuration reset to defaults',
+      data: exportConfig()
+    })
+  } catch (error) {
+    console.error('Error resetting validation config:', error.message)
     res.status(500).json({ success: false, error: error.message })
   }
 })

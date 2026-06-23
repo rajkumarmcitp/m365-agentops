@@ -2,9 +2,12 @@
  * CIS Benchmark Validator
  * Real-time validation of 160 CIS controls against Microsoft Graph API
  * Returns detailed pass/fail/warn status for all 9 configuration areas
+ * Supports hybrid validation with PowerShell fallback
  */
 
 import { CIS_CONTROLS_DATA, getTotalControlsCount } from './cis-controls-data.js'
+import { getValidationMethod } from './validation-config.js'
+import { recordValidationAttempt, getValidationSummary, getAllValidationMetadata, resetValidationState } from './validation-state.js'
 
 let graphClient = null
 let validationCache = null
@@ -34,6 +37,9 @@ function getCachedValidation() {
  * Validate all CIS controls against real Graph API data
  */
 export async function validateAllCISControls() {
+  // Reset validation state for new validation run
+  resetValidationState()
+
   // Check cache first
   const cached = getCachedValidation()
   if (cached) return cached
@@ -337,6 +343,9 @@ export async function validateAllCISControls() {
       sharePointInfectedFiles: sharePointInfectedFiles.value || null
     })
 
+    // Get validation method summary
+    const validationSummary = getValidationSummary()
+
     const result = {
       success: true,
       timestamp: new Date().toISOString(),
@@ -344,13 +353,22 @@ export async function validateAllCISControls() {
       tenantDomain: domain.value?.name || 'unknown',
       topics: cisTopics,
       stats: calculateStats(cisTopics),
-      source: 'Graph API'
+      source: 'Graph API',
+      // Validation method metadata
+      validationMethodSummary: {
+        totalControls: validationSummary.totalControls,
+        graphAPIControls: validationSummary.methodCounts.graphAPI,
+        powerShellControls: validationSummary.methodCounts.powershell,
+        fallbackControls: validationSummary.fallbackCount,
+        totalExecutionTime: validationSummary.totalExecutionTime,
+        averageExecutionTime: validationSummary.averageExecutionTime
+      }
     }
 
     // Cache the result
     validationCache = result
     cacheTimestamp = Date.now()
-    console.log(`✓ CIS Validator: Validation complete (${result.stats.totalControls} controls, ${result.stats.passRate}% pass rate)`)
+    console.log(`✓ CIS Validator: Validation complete (${result.stats.totalControls} controls, ${result.stats.passRate}% pass rate, ${validationSummary.fallbackCount} fallbacks)`)
 
     return result
   } catch (error) {
@@ -5347,6 +5365,9 @@ function buildCISTopics(validationResults) {
         const status = control.validator ? control.validator(validationData) : 'pass'
         const value = getControlValue(control.id, validationData)
 
+        // Get validation method metadata if available
+        const methodMetadata = getAllValidationMetadata().find(m => m.controlId === control.id)
+
         // Build complete control object with all fields
         const validatedControl = {
           id: control.id,
@@ -5357,6 +5378,11 @@ function buildCISTopics(validationResults) {
           value: value,
           desc: control.description,
           ps: control.ps || null,
+          // Validation method information
+          validationMethod: methodMetadata?.validationMethod || 'graphAPI',
+          fallbackUsed: methodMetadata?.fallbackUsed || false,
+          fallbackReason: methodMetadata?.fallbackReason || null,
+          executionTime: methodMetadata?.executionTime || 0,
           // Graph API command information
           graphApiDetails: {
             queryType: control.graphQuery,
@@ -5590,5 +5616,20 @@ function getRiskLevel(score) {
 export function clearValidationCache() {
   validationCache = null
   cacheTimestamp = null
+  resetValidationState()
   console.log('✓ CIS Validator: Cache cleared')
+}
+
+/**
+ * Get validation method summary
+ */
+export function getValidationMethodSummary() {
+  return getValidationSummary()
+}
+
+/**
+ * Get all validation metadata
+ */
+export function getValidationMetadata() {
+  return getAllValidationMetadata()
 }
