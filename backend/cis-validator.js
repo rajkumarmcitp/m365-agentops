@@ -5475,6 +5475,14 @@ async function buildCISTopics(validationResults) {
           console.log(`📊 Using PowerShell output for ${control.id}: ${value}`)
         }
 
+        // Store raw PowerShell output for manual validation display
+        let psOutputDisplay = null
+        if (psOutput && psOutput.raw) {
+          psOutputDisplay = psOutput.raw
+        } else if (psResult && psResult.success && psResult.output) {
+          psOutputDisplay = psResult.output
+        }
+
         // Get validation method metadata if available
         const methodMetadata = getAllValidationMetadata().find(m => m.controlId === control.id)
 
@@ -5491,6 +5499,7 @@ async function buildCISTopics(validationResults) {
           psExecuted: psExecuted,
           psOutput: psOutput?.parsed || psResult?.output || null,
           psOutputRaw: psOutput?.raw || null,
+          psOutputDisplay: psOutputDisplay,
           // Validation method information
           validationMethod: methodMetadata?.validationMethod || (psExecuted ? 'powershell' : 'graphAPI'),
           fallbackUsed: methodMetadata?.fallbackUsed || false,
@@ -5507,7 +5516,14 @@ async function buildCISTopics(validationResults) {
             graphExplorerCommands: graphExplorerCommands
           },
           // Additional metadata
-          validatedAt: new Date().toISOString()
+          validatedAt: new Date().toISOString(),
+          // PowerShell command reference for manual validation
+          psCommandsForManualValidation: psCommands ? {
+            description: 'Run these PowerShell commands to validate manually',
+            commands: psCommands,
+            howToRun: 'Execute each command in PowerShell and compare the output to the validation result',
+            note: 'Commands require authentication: Connect-MgGraph and/or Connect-ExchangeOnline'
+          } : null
         }
 
         validatedSubsection.controls.push(validatedControl)
