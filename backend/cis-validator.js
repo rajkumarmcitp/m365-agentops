@@ -10,6 +10,7 @@ import { getValidationMethod } from './validation-config.js'
 import { recordValidationAttempt, getValidationSummary, getAllValidationMetadata, resetValidationState } from './validation-state.js'
 import { getControlPowerShellCommands } from './powershell-commands-loader.js'
 import { executePowerShellCommands } from './powershell-executor.js'
+import { parseControlOutput, getControlValueFromOutput, getStatusFromOutput } from './powershell-output-parser.js'
 
 let graphClient = null
 let validationCache = null
@@ -5369,6 +5370,7 @@ async function buildCISTopics(validationResults) {
         let psCommands = null
         let psExecuted = false
         let psResult = null
+        let psOutput = null
         const validationStartTime = Date.now()
 
         // Enrichment step: Load PowerShell commands for all auto controls
@@ -5393,8 +5395,17 @@ async function buildCISTopics(validationResults) {
               console.log(`✓ PowerShell execution complete for ${control.id}: ${psResult.success ? 'success' : 'failed'}`)
 
               if (psResult.success) {
-                // For now, use Graph API validator result (PowerShell execution confirmed)
-                status = control.validator ? control.validator(validationData) : 'pass'
+                // Parse PowerShell output and use result
+                const parsedResult = parseControlOutput(control.id, psResult.output)
+                status = parsedResult.status
+
+                // Store PowerShell output details
+                psOutput = {
+                  raw: psResult.output,
+                  parsed: parsedResult,
+                  value: parsedResult.value
+                }
+
                 recordValidationAttempt({
                   controlId: control.id,
                   method: 'powershell',
@@ -5403,6 +5414,7 @@ async function buildCISTopics(validationResults) {
                 })
               } else if (currentValidationMethod === 'hybrid') {
                 // Fallback to Graph API if PowerShell fails in hybrid mode
+                console.log(`⚠️ PowerShell failed for ${control.id}, falling back to Graph API`)
                 status = control.validator ? control.validator(validationData) : 'pass'
                 recordValidationAttempt({
                   controlId: control.id,
@@ -5412,8 +5424,10 @@ async function buildCISTopics(validationResults) {
                   executionTime: Date.now() - validationStartTime
                 })
               } else {
-                // PowerShell mode: still use Graph validator as fallback
-                status = control.validator ? control.validator(validationData) : 'pass'
+                // PowerShell mode: warn but show result if available
+                console.log(`⚠️ PowerShell command failed for ${control.id}: ${psResult.error}`)
+                status = 'warn'
+                psOutput = { raw: psResult.error, error: true }
               }
             } catch (error) {
               // If PowerShell execution throws, use Graph API validator
@@ -5452,7 +5466,14 @@ async function buildCISTopics(validationResults) {
           })
         }
 
-        const value = getControlValue(control.id, validationData)
+        // Determine value based on validation method used
+        let value = getControlValue(control.id, validationData)
+
+        // If PowerShell was used and output was parsed, use that value instead
+        if (psOutput && psOutput.parsed && psOutput.value) {
+          value = psOutput.value
+          console.log(`📊 Using PowerShell output for ${control.id}: ${value}`)
+        }
 
         // Get validation method metadata if available
         const methodMetadata = getAllValidationMetadata().find(m => m.controlId === control.id)
@@ -5468,7 +5489,8 @@ async function buildCISTopics(validationResults) {
           desc: control.description,
           ps: psCommands || control.ps || null,
           psExecuted: psExecuted,
-          psOutput: psResult?.output || null,
+          psOutput: psOutput?.parsed || psResult?.output || null,
+          psOutputRaw: psOutput?.raw || null,
           // Validation method information
           validationMethod: methodMetadata?.validationMethod || (psExecuted ? 'powershell' : 'graphAPI'),
           fallbackUsed: methodMetadata?.fallbackUsed || false,
