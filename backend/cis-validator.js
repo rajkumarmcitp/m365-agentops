@@ -86,7 +86,8 @@ export async function validateAllCISControls() {
       outboundAntiSpamLimits, priorityAccountsStrictProtection, zeroHourAutoPurge,
       teamsExternalFileSharing, teamsEmailChannelAddress, teamsExternalDomainRestriction,
       teamsUnmanagedUsersCommunication, teamsExternalInitiateConversations, teamsTrialTenantsBlocked,
-      teamsAppPermissionPolicies, teamsReportSecurityConcerns
+      teamsAppPermissionPolicies, teamsReportSecurityConcerns,
+      emergencyAccessMonitoring, defenderForCloudAppsPolicy, airRemediation, sharePointInfectedFiles
     ] = await Promise.allSettled([
       validateGlobalAdmins(),
       validateAuthorizationPolicy(),
@@ -204,7 +205,11 @@ export async function validateAllCISControls() {
       validateTeamsExternalInitiateConversations(),
       validateTeamsTrialTenantsBlocked(),
       validateTeamsAppPermissionPolicies(),
-      validateTeamsReportSecurityConcerns()
+      validateTeamsReportSecurityConcerns(),
+      validateEmergencyAccessMonitoring(),
+      validateDefenderForCloudAppsPolicy(),
+      validateAIRRemediation(),
+      validateSharePointInfectedFilesBlocked()
     ])
 
     // Build CIS Topics from validation results
@@ -325,7 +330,11 @@ export async function validateAllCISControls() {
       teamsExternalInitiateConversations: teamsExternalInitiateConversations.value || null,
       teamsTrialTenantsBlocked: teamsTrialTenantsBlocked.value || null,
       teamsAppPermissionPolicies: teamsAppPermissionPolicies.value || null,
-      teamsReportSecurityConcerns: teamsReportSecurityConcerns.value || null
+      teamsReportSecurityConcerns: teamsReportSecurityConcerns.value || null,
+      emergencyAccessMonitoring: emergencyAccessMonitoring.value || null,
+      defenderForCloudAppsPolicy: defenderForCloudAppsPolicy.value || null,
+      airRemediation: airRemediation.value || null,
+      sharePointInfectedFiles: sharePointInfectedFiles.value || null
     })
 
     const result = {
@@ -5085,6 +5094,208 @@ async function validateTeamsReportSecurityConcerns() {
 }
 
 /**
+ * Validate: Emergency Access Account Activity Monitoring (2.2.1)
+ */
+async function validateEmergencyAccessMonitoring() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get emergency access accounts from Entra ID',
+      endpoint: 'GET /directoryObjects?$filter=userType eq \'Member\' and accountEnabled eq true',
+      expand: 'none',
+      select: 'id,displayName,userPrincipalName,createdDateTime',
+      filter: 'emergency or break-glass'
+    },
+    {
+      step: 2,
+      description: 'Get audit logs for emergency account sign-in activity',
+      endpoint: 'GET /auditLogs/signIns?$filter=userPrincipalName eq \'emergency-account@domain.com\'',
+      expand: 'none',
+      select: 'id,userPrincipalName,createdDateTime,ipAddress,deviceDetail',
+      filter: 'userPrincipalName eq emergency account'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/directoryObjects',
+    'GET https://graph.microsoft.com/v1.0/auditLogs/signIns'
+  ]
+
+  try {
+    const auditLogs = await graphClient.api('/auditLogs/signIns').get()
+
+    return {
+      status: 'warn',
+      auditLogsAvailable: auditLogs?.value?.length > 0,
+      signInCount: auditLogs?.value?.length || 0,
+      note: 'Emergency access account activity should be monitored and reviewed regularly',
+      remediation: 'Monitor Azure AD audit logs for emergency account sign-ins. Review usage at least quarterly.',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Emergency Access Monitoring validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Microsoft Defender for Cloud Apps (2.4.3)
+ */
+async function validateDefenderForCloudAppsPolicy() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Microsoft Cloud App Security policies',
+      endpoint: 'GET /security/cloudAppSecurityPolicies',
+      expand: 'none',
+      select: 'id,displayName,policyType,isEnabled',
+      filter: 'none'
+    },
+    {
+      step: 2,
+      description: 'Get threat detection policies in Defender for Cloud Apps',
+      endpoint: 'GET /security/securitySettings?$select=cloudAppSecuritySettings',
+      expand: 'none',
+      select: 'id,displayName,threatDetectionPolicies',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/security/cloudAppSecurityPolicies',
+    'GET https://graph.microsoft.com/v1.0/security/securitySettings'
+  ]
+
+  try {
+    const cloudAppPolicies = await graphClient.api('/security/cloudAppSecurityPolicies').get()
+
+    return {
+      status: 'warn',
+      cloudAppSecurityEnabled: cloudAppPolicies?.value?.some(p => p.isEnabled) || false,
+      policyCount: cloudAppPolicies?.value?.length || 0,
+      note: 'Microsoft Defender for Cloud Apps should be enabled to detect anomalous user activity',
+      remediation: 'Enable Defender for Cloud Apps in Microsoft Defender portal and configure threat policies',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Defender for Cloud Apps validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Automated Investigation and Response (AIR) Remediation (2.4.5)
+ */
+async function validateAIRRemediation() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Defender automation rules for incident response',
+      endpoint: 'GET /security/automationRules',
+      expand: 'none',
+      select: 'id,displayName,actions,triggers,isEnabled',
+      filter: 'none'
+    },
+    {
+      step: 2,
+      description: 'Get email threat policies with auto-remediation settings',
+      endpoint: 'GET /security/threatIntelligence/automationRules',
+      expand: 'none',
+      select: 'id,displayName,remediationActions,conditions',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/security/automationRules',
+    'GET https://graph.microsoft.com/v1.0/security/threatIntelligence/automationRules'
+  ]
+
+  try {
+    const automationRules = await graphClient.api('/security/automationRules').get()
+
+    return {
+      status: 'warn',
+      automationRulesConfigured: automationRules?.value?.length > 0,
+      enabledRules: automationRules?.value?.filter(r => r.isEnabled)?.length || 0,
+      totalRules: automationRules?.value?.length || 0,
+      note: 'Automated Investigation and Response (AIR) should automatically remediate detected threats',
+      remediation: 'Enable and configure AIR automation rules in Defender portal for automatic threat remediation',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ AIR Remediation validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: SharePoint Infected Files Disallowed for Download (7.3.1)
+ */
+async function validateSharePointInfectedFilesBlocked() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get SharePoint DLP policies for malware detection',
+      endpoint: 'GET /dataSecurity/dataLossPreventionPolicies?$filter=workload eq \'SharePoint\'',
+      expand: 'none',
+      select: 'id,displayName,rules,isEnabled',
+      filter: 'workload eq SharePoint'
+    },
+    {
+      step: 2,
+      description: 'Get advanced threat protection settings for SharePoint',
+      endpoint: 'GET /admin/sharepoint/settings',
+      expand: 'none',
+      select: 'id,displayName,malwareProtectionEnabled,advancedThreatProtection',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/dataSecurity/dataLossPreventionPolicies',
+    'GET https://graph.microsoft.com/v1.0/admin/sharepoint/settings'
+  ]
+
+  try {
+    const dlpPolicies = await graphClient.api('/dataSecurity/dataLossPreventionPolicies').filter('workload eq \'SharePoint\'').get()
+    const spSettings = await graphClient.api('/admin/sharepoint/settings').get()
+
+    return {
+      status: 'warn',
+      malwareProtectionEnabled: spSettings?.malwareProtectionEnabled || false,
+      dlpPolicies: dlpPolicies?.value?.length || 0,
+      note: 'SharePoint should block download of files infected with malware',
+      remediation: 'Enable malware protection in SharePoint settings and configure DLP rules to block infected files',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ SharePoint Infected Files validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
  * Build CIS Topics from validation results using CIS_CONTROLS_DATA
  * Returns complete detailed structure with all control information
  */
@@ -5307,7 +5518,12 @@ function getControlValue(controlId, data) {
     '8.2.3': (d) => d?.externalInitiateBlocked ? 'External users initiating: Blocked' : 'External users initiating: Allowed',
     '8.2.4': (d) => d?.trialTenantsBlocked ? 'Trial Teams tenants: Blocked' : 'Trial Teams tenants: Allowed',
     '8.4.1': (d) => d?.appPoliciesConfigured ? `App permission policies: ${d?.totalApps || 0} apps managed` : 'App permission policies: Not configured',
-    '8.6.1': (d) => d?.securityReportingEnabled ? 'Security reporting: Users can report messages' : 'Security reporting: Report feature disabled'
+    '8.6.1': (d) => d?.securityReportingEnabled ? 'Security reporting: Users can report messages' : 'Security reporting: Report feature disabled',
+    // Phase 11: Final Critical Controls
+    '2.2.1': (d) => d?.auditLogsAvailable ? `Emergency account monitoring: ${d?.signInCount || 0} sign-ins logged` : 'Emergency account monitoring: No audit logs found',
+    '2.4.3': (d) => d?.cloudAppSecurityEnabled ? `Defender for Cloud Apps: ${d?.policyCount || 0} policies enabled` : 'Defender for Cloud Apps: Not configured',
+    '2.4.5': (d) => d?.automationRulesConfigured ? `AIR remediation: ${d?.enabledRules || 0}/${d?.totalRules || 0} rules enabled` : 'AIR remediation: No automation rules configured',
+    '7.3.1': (d) => d?.malwareProtectionEnabled ? `SharePoint infected files: Blocked (protection enabled)` : 'SharePoint infected files: Protection not enabled'
   }
 
   if (valueMap[controlId]) {

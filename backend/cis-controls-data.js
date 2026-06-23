@@ -324,9 +324,10 @@ export const CIS_CONTROLS_DATA = [
           {
             id: '2.2.1',
             title: 'Ensure emergency access account activity is monitored',
-            type: 'manual',
+            type: 'auto',
             profile: 'E3 L1',
-            validator: () => 'pass',
+            graphQuery: 'emergencyAccessMonitoring',
+            validator: () => 'warn',
             description: 'CIS Control 2.2.1'
           }
         ]
@@ -356,9 +357,10 @@ export const CIS_CONTROLS_DATA = [
           {
             id: '2.4.3',
             title: 'Ensure Microsoft Defender for Cloud Apps is enabled and configured',
-            type: 'manual',
+            type: 'auto',
             profile: 'E3 L1',
-            validator: () => 'pass',
+            graphQuery: 'defenderForCloudAppsPolicy',
+            validator: () => 'warn',
             description: 'CIS Control 2.4.3'
           },
           {
@@ -373,9 +375,10 @@ export const CIS_CONTROLS_DATA = [
           {
             id: '2.4.5',
             title: 'Ensure \'AIR\' remediation is enabled',
-            type: 'manual',
+            type: 'auto',
             profile: 'E3 L1',
-            validator: () => 'pass',
+            graphQuery: 'airRemediation',
+            validator: () => 'warn',
             description: 'CIS Control 2.4.5'
           }
         ]
@@ -921,9 +924,10 @@ export const CIS_CONTROLS_DATA = [
         controls: [
           {
             id: '7.3.1',
-            title: 'Ensure Office 365 SharePoint infected files are disallowed for download  496',
+            title: 'Ensure Office 365 SharePoint infected files are disallowed for download',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'sharePointInfectedFiles',
             validator: () => 'warn',
             description: 'CIS Control 7.3.1'
           }
