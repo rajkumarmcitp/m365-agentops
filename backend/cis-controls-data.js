@@ -946,6 +946,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure external file sharing in Teams is enabled for only approved cloud storage',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'teamsExternalFileSharing',
             validator: () => 'warn',
             description: 'CIS Control 8.1.1'
           },
@@ -954,6 +955,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure users can\'t send emails to a channel email address',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'teamsEmailChannelAddress',
             validator: () => 'warn',
             description: 'CIS Control 8.1.2'
           }
@@ -968,6 +970,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure external domains are restricted in the Teams admin center',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'teamsExternalDomainRestriction',
             validator: () => 'warn',
             description: 'CIS Control 8.2.1'
           },
@@ -976,6 +979,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure communication with unmanaged Teams users is disabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'teamsUnmanagedUsersCommunication',
             validator: () => 'warn',
             description: 'CIS Control 8.2.2'
           },
@@ -984,6 +988,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure external Teams users cannot initiate conversations',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'teamsExternalInitiateConversations',
             validator: () => 'warn',
             description: 'CIS Control 8.2.3'
           },
@@ -992,6 +997,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure the organization cannot communicate with accounts in trial Teams tenants',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'teamsTrialTenantsBlocked',
             validator: () => 'warn',
             description: 'CIS Control 8.2.4'
           }
@@ -1004,9 +1010,10 @@ export const CIS_CONTROLS_DATA = [
           {
             id: '8.4.1',
             title: 'Ensure app permission policies are configured',
-            type: 'manual',
+            type: 'auto',
             profile: 'E3 L1',
-            validator: () => 'pass',
+            graphQuery: 'teamsAppPermissionPolicies',
+            validator: () => 'warn',
             description: 'CIS Control 8.4.1'
           }
         ]
@@ -1107,6 +1114,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure users can report security concerns in Teams',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'teamsReportSecurityConcerns',
             validator: () => 'warn',
             description: 'CIS Control 8.6.1'
           }

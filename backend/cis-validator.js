@@ -83,7 +83,10 @@ export async function validateAllCISControls() {
       perUserMFADisabled, sspreEnabled,
       safeLinksOffice, safeAttachmentsSPOT, comprehensiveAttachmentFiltering,
       connectionFilterIPAllowList, connectionFilterSafeList, inboundAntiSpamAllowedDomains,
-      outboundAntiSpamLimits, priorityAccountsStrictProtection, zeroHourAutoPurge
+      outboundAntiSpamLimits, priorityAccountsStrictProtection, zeroHourAutoPurge,
+      teamsExternalFileSharing, teamsEmailChannelAddress, teamsExternalDomainRestriction,
+      teamsUnmanagedUsersCommunication, teamsExternalInitiateConversations, teamsTrialTenantsBlocked,
+      teamsAppPermissionPolicies, teamsReportSecurityConcerns
     ] = await Promise.allSettled([
       validateGlobalAdmins(),
       validateAuthorizationPolicy(),
@@ -193,7 +196,15 @@ export async function validateAllCISControls() {
       validateInboundAntiSpamAllowedDomains(),
       validateOutboundAntiSpamLimits(),
       validatePriorityAccountsStrictProtection(),
-      validateZeroHourAutoPurge()
+      validateZeroHourAutoPurge(),
+      validateTeamsExternalFileSharing(),
+      validateTeamsEmailChannelAddress(),
+      validateTeamsExternalDomainRestriction(),
+      validateTeamsUnmanagedUsersCommunication(),
+      validateTeamsExternalInitiateConversations(),
+      validateTeamsTrialTenantsBlocked(),
+      validateTeamsAppPermissionPolicies(),
+      validateTeamsReportSecurityConcerns()
     ])
 
     // Build CIS Topics from validation results
@@ -306,7 +317,15 @@ export async function validateAllCISControls() {
       inboundAntiSpamAllowedDomains: inboundAntiSpamAllowedDomains.value || null,
       outboundAntiSpamLimits: outboundAntiSpamLimits.value || null,
       priorityAccountsStrictProtection: priorityAccountsStrictProtection.value || null,
-      zeroHourAutoPurge: zeroHourAutoPurge.value || null
+      zeroHourAutoPurge: zeroHourAutoPurge.value || null,
+      teamsExternalFileSharing: teamsExternalFileSharing.value || null,
+      teamsEmailChannelAddress: teamsEmailChannelAddress.value || null,
+      teamsExternalDomainRestriction: teamsExternalDomainRestriction.value || null,
+      teamsUnmanagedUsersCommunication: teamsUnmanagedUsersCommunication.value || null,
+      teamsExternalInitiateConversations: teamsExternalInitiateConversations.value || null,
+      teamsTrialTenantsBlocked: teamsTrialTenantsBlocked.value || null,
+      teamsAppPermissionPolicies: teamsAppPermissionPolicies.value || null,
+      teamsReportSecurityConcerns: teamsReportSecurityConcerns.value || null
     })
 
     const result = {
@@ -4725,6 +4744,347 @@ async function validateZeroHourAutoPurge() {
 }
 
 /**
+ * Validate: External File Sharing in Teams (8.1.1)
+ */
+async function validateTeamsExternalFileSharing() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams organizational settings for external file sharing',
+      endpoint: 'GET /teamwork/teamsSettings',
+      expand: 'none',
+      select: 'id,displayName,sharePointStorageLocation,externalFileSharing',
+      filter: 'none'
+    },
+    {
+      step: 2,
+      description: 'Verify allowed cloud storage providers in Teams file sharing policies',
+      endpoint: 'GET /team/teams?$filter=template eq null',
+      expand: 'none',
+      select: 'id,displayName,webUrl,resourceBehaviorOptions',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/teamwork/teamsSettings',
+    'GET https://graph.microsoft.com/v1.0/teams?$select=id,displayName,webUrl'
+  ]
+
+  try {
+    const teamsSettings = await graphClient.api('/teamwork/teamsSettings').get()
+
+    return {
+      status: 'warn',
+      externalFileSharingConfigured: teamsSettings?.externalFileSharing ? true : false,
+      sharePointLocationConfigured: teamsSettings?.sharePointStorageLocation ? true : false,
+      note: 'External file sharing in Teams should be restricted to approved cloud storage only',
+      remediation: 'Configure Teams file sharing policies to restrict to approved providers (Box, Dropbox, Google Drive, Citrix)',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Teams External File Sharing validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Users Cannot Send Emails to Channel Address (8.1.2)
+ */
+async function validateTeamsEmailChannelAddress() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams channel email capabilities and settings',
+      endpoint: 'GET /teamwork/teamsSettings',
+      expand: 'none',
+      select: 'id,displayName,channelEmailConfiguration',
+      filter: 'none'
+    },
+    {
+      step: 2,
+      description: 'Verify channel email delivery restrictions',
+      endpoint: 'GET /teams/{team-id}/channels',
+      expand: 'none',
+      select: 'id,displayName,email,isFavoriteByDefault',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/teamwork/teamsSettings',
+    'GET https://graph.microsoft.com/v1.0/teams/{team-id}/channels'
+  ]
+
+  try {
+    const teamsSettings = await graphClient.api('/teamwork/teamsSettings').get()
+
+    return {
+      status: 'warn',
+      channelEmailConfigured: teamsSettings?.channelEmailConfiguration ? true : false,
+      note: 'Channel email addresses should not accept external emails',
+      remediation: 'Disable external email delivery to Teams channel addresses in Teams admin center',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Teams Email Channel Address validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: External Domains Restricted (8.2.1)
+ */
+async function validateTeamsExternalDomainRestriction() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get external access configuration for Teams',
+      endpoint: 'GET /teamwork/teamsSettings',
+      expand: 'none',
+      select: 'id,displayName,externalAccess,allowedExternalDomains',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/teamwork/teamsSettings?$select=id,displayName,externalAccess'
+  ]
+
+  try {
+    const teamsSettings = await graphClient.api('/teamwork/teamsSettings').get()
+
+    return {
+      status: 'warn',
+      externalDomainsRestricted: teamsSettings?.externalAccess?.allowedExternalDomains ? true : false,
+      externalAccessEnabled: teamsSettings?.externalAccess?.isEnabled || false,
+      note: 'External domain access should be restricted to trusted organizations',
+      remediation: 'Configure Teams external access to block unknown external domains',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Teams External Domain Restriction validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Unmanaged Teams Users Communication Disabled (8.2.2)
+ */
+async function validateTeamsUnmanagedUsersCommunication() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get unmanaged users access policy in Teams',
+      endpoint: 'GET /teamwork/teamsSettings',
+      expand: 'none',
+      select: 'id,displayName,externalAccess,unmanagedUsersAccess',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/teamwork/teamsSettings?$select=id,displayName,externalAccess'
+  ]
+
+  try {
+    const teamsSettings = await graphClient.api('/teamwork/teamsSettings').get()
+
+    return {
+      status: 'warn',
+      unmanagedUserAccessBlocked: teamsSettings?.externalAccess?.unmanagedUsersAccessBlocked || false,
+      note: 'Communication with unmanaged Teams organizations should be disabled for security',
+      remediation: 'Block external communication with unmanaged Teams tenants in Teams admin center',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Teams Unmanaged Users Communication validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: External Teams Users Cannot Initiate Conversations (8.2.3)
+ */
+async function validateTeamsExternalInitiateConversations() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get external user conversation initiation policy',
+      endpoint: 'GET /teamwork/teamsSettings',
+      expand: 'none',
+      select: 'id,displayName,externalAccess,allowExternalUsersToInitiate',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/teamwork/teamsSettings?$select=id,displayName'
+  ]
+
+  try {
+    const teamsSettings = await graphClient.api('/teamwork/teamsSettings').get()
+
+    return {
+      status: 'warn',
+      externalInitiateBlocked: !teamsSettings?.externalAccess?.allowExternalUsersToInitiate,
+      note: 'External Teams users should not be able to initiate conversations',
+      remediation: 'Disable external user conversation initiation in Teams admin center External Access settings',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Teams External Initiate Conversations validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Trial Teams Tenants Communication Blocked (8.2.4)
+ */
+async function validateTeamsTrialTenantsBlocked() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get external access policy for trial Teams organizations',
+      endpoint: 'GET /teamwork/teamsSettings',
+      expand: 'none',
+      select: 'id,displayName,externalAccess,trialTenantsAllowed',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/teamwork/teamsSettings'
+  ]
+
+  try {
+    const teamsSettings = await graphClient.api('/teamwork/teamsSettings').get()
+
+    return {
+      status: 'warn',
+      trialTenantsBlocked: !teamsSettings?.externalAccess?.allowTrialTenantsAccess,
+      note: 'Organization should not communicate with unverified trial Teams tenants',
+      remediation: 'Disable communication with trial Teams tenants in External Access configuration',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Teams Trial Tenants validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: App Permission Policies Configured (8.4.1)
+ */
+async function validateTeamsAppPermissionPolicies() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams app permission policies',
+      endpoint: 'GET /teamwork/appCatalog/appDefinitions',
+      expand: 'none',
+      select: 'id,displayName,teamsAppId,appPermissions',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/teamwork/appCatalog/appDefinitions'
+  ]
+
+  try {
+    const appDefinitions = await graphClient.api('/teamwork/appCatalog/appDefinitions').get()
+
+    return {
+      status: 'warn',
+      appPoliciesConfigured: appDefinitions?.value?.length > 0,
+      totalApps: appDefinitions?.value?.length || 0,
+      note: 'App permission policies should restrict which Teams apps users can install and use',
+      remediation: 'Configure Teams app permission policies in Teams admin center > Manage Apps > Permission policies',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Teams App Permission Policies validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Users Can Report Security Concerns in Teams (8.6.1)
+ */
+async function validateTeamsReportSecurityConcerns() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams security and compliance reporting settings',
+      endpoint: 'GET /teamwork/teamsSettings',
+      expand: 'none',
+      select: 'id,displayName,securityReporting,reportingFeatures',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/teamwork/teamsSettings'
+  ]
+
+  try {
+    const teamsSettings = await graphClient.api('/teamwork/teamsSettings').get()
+
+    return {
+      status: 'warn',
+      securityReportingEnabled: teamsSettings?.securityReporting?.reportingFeatures?.reportMessage || false,
+      note: 'Teams should allow users to report suspicious messages to admins',
+      remediation: 'Enable message reporting feature in Teams admin center > Messaging policies > Report a message for review',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Teams Report Security Concerns validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
  * Build CIS Topics from validation results using CIS_CONTROLS_DATA
  * Returns complete detailed structure with all control information
  */
@@ -4938,7 +5298,16 @@ function getControlValue(controlId, data) {
     '2.1.14': (d) => d?.antispamConfigured ? 'Inbound anti-spam allowed domains: Configured' : 'Inbound anti-spam allowed domains: Verify allowed senders',
     '2.1.15': (d) => d?.messageLimitsConfigured ? 'Outbound anti-spam limits: Configured' : 'Outbound anti-spam limits: Set per-user limit (2000 msgs/24h)',
     '2.4.2': (d) => d?.priorityAccountsConfigured ? `Priority accounts strict protection: ${d?.accountCount || 0} accounts` : 'Priority accounts strict protection: Configure strict preset',
-    '2.4.4': (d) => d?.zeroHourAutoPurgeEnabled ? 'Zero-hour auto purge (Teams): Enabled' : 'Zero-hour auto purge (Teams): Requires enabling in Security Center'
+    '2.4.4': (d) => d?.zeroHourAutoPurgeEnabled ? 'Zero-hour auto purge (Teams): Enabled' : 'Zero-hour auto purge (Teams): Requires enabling in Security Center',
+    // Phase 10: Teams Admin Center Settings (Remaining Controls)
+    '8.1.1': (d) => d?.externalFileSharingConfigured ? 'External file sharing: Configured (verify allowed providers)' : 'External file sharing: Not configured',
+    '8.1.2': (d) => d?.channelEmailConfigured ? 'Channel email addresses: Configured (verify restrictions)' : 'Channel email addresses: Not configured',
+    '8.2.1': (d) => d?.externalDomainsRestricted ? 'External domains: Restricted to approved' : 'External domains: Not restricted',
+    '8.2.2': (d) => d?.unmanagedUserAccessBlocked ? 'Unmanaged Teams users: Communication blocked' : 'Unmanaged Teams users: Allowed (not compliant)',
+    '8.2.3': (d) => d?.externalInitiateBlocked ? 'External users initiating: Blocked' : 'External users initiating: Allowed',
+    '8.2.4': (d) => d?.trialTenantsBlocked ? 'Trial Teams tenants: Blocked' : 'Trial Teams tenants: Allowed',
+    '8.4.1': (d) => d?.appPoliciesConfigured ? `App permission policies: ${d?.totalApps || 0} apps managed` : 'App permission policies: Not configured',
+    '8.6.1': (d) => d?.securityReportingEnabled ? 'Security reporting: Users can report messages' : 'Security reporting: Report feature disabled'
   }
 
   if (valueMap[controlId]) {
