@@ -26,7 +26,7 @@ export const CIS_CONTROLS_DATA = [
               const allCloudOnly = data.members.every(m => m.userType !== 'Guest' && !m.onPremisesImmutableId)
               return allCloudOnly ? 'pass' : 'fail'
             },
-            description: 'CIS Control 1.1.1'
+            description: 'Administrative accounts are special privileged accounts that could have varying levels of access to data, users, and settings. Regular user accounts should never be utilized for administrative tasks and care should be taken, in the case of a hybrid environment, to keep administrative accounts separate from on-prem accounts. Administrative accounts should not have applications assigned so that they have no access to potentially vulnerable services (EX. email, Teams, SharePoint, etc.) and only access to perform tasks as needed for administrative purposes. Ensure administrative accounts are not On-premises sync enabled.'
           },
           {
             id: '1.1.2',
@@ -35,7 +35,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'emergencyAccessAccounts',
             validator: () => 'warn',
-            description: 'CIS Control 1.1.2'
+            description: 'Emergency access or \'break glass\' accounts are limited for emergency scenarios where normal administrative accounts are unavailable. They are not assigned to a specific user and will have a combination of physical and technical controls to prevent them from being accessed outside a true emergency. These emergencies could be due to several things, including technical failures of a cellular provider or Microsoft related service such as MFA. The last remaining Global Administrator account is inaccessible. Ensure two Emergency Access accounts have been defined.'
           },
           {
             id: '1.1.3',
@@ -44,7 +44,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'globalAdmins',
             validator: () => 'warn',
-            description: 'CIS Control 1.1.3'
+            description: 'Between two and four global administrators should be designated in the tenant. Ideally, these accounts will not have licenses assigned to them which supports additional controls found in this benchmark.'
           },
           {
             id: '1.1.4',
@@ -53,7 +53,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: ['securityDefaults', 'caPolicy'],
             validator: () => 'warn',
-            description: 'CIS Control 1.1.4'
+            description: 'Administrative accounts are special privileged accounts that could have varying levels of access to data, users, and settings. A license can enable an account to gain access to a variety of different applications, depending on the license assigned. The recommended state is to not license a privileged account or use licenses without associated applications such as Microsoft Entra ID P1 or Microsoft Entra ID P2.'
           }
         ]
       },
@@ -68,7 +68,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'groupCreationPolicy',
             validator: () => 'warn',
-            description: 'CIS Control 1.2.1'
+            description: 'Microsoft 365 Groups is the foundational membership service that drives all teamwork across Microsoft 365. With Microsoft 365 Groups, you can give a group of people access to a collection of shared resources. When a new group is created in the Administration panel, the default privacy value of the group is \'Public\'. The recommended state is Microsoft 365 Groups are set to Private in the Administration panel.'
           },
           {
             id: '1.2.2',
@@ -77,7 +77,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'sharedMailboxSignIn',
             validator: () => 'warn',
-            description: 'CIS Control 1.2.2'
+            description: 'Shared mailboxes are used when multiple people need access to the same mailbox, such as a company information or support email address, reception desk, or other function that might be shared by multiple people. Shared mailboxes are created with a corresponding user account using a system generated password that is unknown at the time of creation. The recommended state is Sign in blocked for Shared mailboxes.'
           }
         ]
       },
@@ -92,7 +92,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'passwordExpirationPolicy',
             validator: () => 'warn',
-            description: 'CIS Control 1.3.1'
+            description: 'Microsoft cloud-only accounts have a pre-defined password policy that cannot be changed. The only items that can change are the number of days until a password expires and whether or not passwords expire at all.'
           },
           {
             id: '1.3.2',
@@ -101,7 +101,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'idleSessionTimeout',
             validator: () => 'warn',
-            description: 'CIS Control 1.3.2'
+            description: 'Idle session timeout allows the configuration of a setting which will timeout inactive users after a pre-determined amount of time. When a user reaches the set idle timeout session, they\'ll get a notification that they\'re about to be signed out. They must choose to stay signed in or they\'ll be automatically signed out of all Microsoft 365 web apps. Combined with a Conditional Access rule this will only impact unmanaged devices.'
           },
           {
             id: '1.3.3',
@@ -110,7 +110,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'externalCalendarSharing',
             validator: () => 'warn',
-            description: 'CIS Control 1.3.3'
+            description: 'External calendar sharing allows an administrator to enable the ability for users to share calendars with anyone outside of the organization. Outside users will be sent a URL that can be used to view the calendar.'
           },
           {
             id: '1.3.4',
@@ -119,7 +119,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'userOwnedAppsServices',
             validator: () => 'warn',
-            description: 'CIS Control 1.3.4'
+            description: 'By default, users can install add-ins in their Microsoft Word, Excel, and PowerPoint applications, allowing data access within the application. Do not allow users to install add-ins in Word, Excel, or PowerPoint.'
           },
           {
             id: '1.3.5',
@@ -128,7 +128,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'auditLog',
             validator: () => 'warn',
-            description: 'CIS Control 1.3.5'
+            description: 'Microsoft Forms allows users to create surveys, quizzes, and forms that are easily shared among colleagues. As internal phishing attacks can be launched using Forms, it is important to ensure that phishing protection is enabled.'
           },
           {
             id: '1.3.6',
@@ -137,7 +137,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'tenantSettings',
             validator: () => 'warn',
-            description: 'CIS Control 1.3.6'
+            description: 'The Customer Lockbox feature in Office 365 allows organizations to approve or deny Microsoft support personnel access to their data during a support session. This adds an additional layer of protection to sensitive data.'
           },
           {
             id: '1.3.7',
@@ -146,7 +146,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'thirdPartyStorageServices',
             validator: () => 'warn',
-            description: 'CIS Control 1.3.7'
+            description: 'Microsoft 365 web apps can integrate with third-party storage services. This setting controls whether users are able to access third-party storage services from the web versions of Microsoft Office applications.'
           },
           {
             id: '1.3.8',
@@ -155,7 +155,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'sspr',
             validator: () => 'pass',
-            description: 'CIS Control 1.3.8'
+            description: 'Sway is a web-based application that allows users to create visually appealing reports, newsletters, and presentations. By default, Sways can be shared with anyone including external users.'
           },
           {
             id: '1.3.9',
@@ -164,7 +164,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'sharedBookingsPages',
             validator: () => 'warn',
-            description: 'CIS Control 1.3.9'
+            description: 'Shared Bookings allows you to invite your team members and create booking pages and let your customers book time with you and your team. It contains various settings to define services, manage staff members, configure schedules and availability, business hours and customize how appointments are scheduled. These pages can be customized to fit the diverse needs of your organization. The recommended state is to restrict the OwaMailboxPolicy-Default policy or disable at the organization level.'
           }
         ]
       }
@@ -187,7 +187,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'safeLinksOffice',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.1'
+            description: 'Safe Links is a feature in Microsoft Defender for Office 365 that provides click-time protection against malicious URLs in email messages and Office documents.'
           },
           {
             id: '2.1.2',
@@ -196,7 +196,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'safeLinks',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.2'
+            description: 'The Common Attachment Types Filter helps block dangerous file types that are commonly used in malware attacks.'
           },
           {
             id: '2.1.3',
@@ -205,7 +205,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'safeAttachments',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.3'
+            description: 'This setting enables notifications to be sent when an internal user account is detected sending malware.'
           },
           {
             id: '2.1.4',
@@ -214,7 +214,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'antiPhishing',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.4'
+            description: 'Safe Attachments is a feature in Microsoft Defender for Office 365 that provides sandboxing for email attachments to detect malware.'
           },
           {
             id: '2.1.5',
@@ -223,7 +223,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'safeAttachmentsSPOT',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.5'
+            description: 'Safe Attachments can be extended to protect files uploaded to SharePoint Online, OneDrive for Business, and Microsoft Teams.'
           },
           {
             id: '2.1.6',
@@ -232,7 +232,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'exchangeSpamPolicies',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.6'
+            description: 'This setting ensures that administrators are notified when spam is detected in Exchange Online.'
           },
           {
             id: '2.1.7',
@@ -241,7 +241,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'antiPhishing',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.7'
+            description: 'Anti-phishing policies in Microsoft Defender for Office 365 help protect users from phishing attacks by detecting and blocking phishing emails.'
           },
           {
             id: '2.1.8',
@@ -250,7 +250,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'spfRecords',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.8'
+            description: 'SPF (Sender Policy Framework) records help prevent email spoofing by specifying which mail servers are authorized to send emails for a domain.'
           },
           {
             id: '2.1.9',
@@ -259,7 +259,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'dkim',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.9'
+            description: 'DKIM (DomainKeys Identified Mail) provides email authentication by cryptographically signing outgoing emails.'
           },
           {
             id: '2.1.10',
@@ -268,7 +268,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'dmarc',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.10'
+            description: 'DMARC (Domain-based Message Authentication, Reporting and Conformance) provides a mechanism for domain owners to specify how to handle emails that fail authentication.'
           },
           {
             id: '2.1.11',
@@ -277,7 +277,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'comprehensiveAttachmentFiltering',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.11'
+            description: 'Comprehensive attachment filtering helps block dangerous file types that could be used to deliver malware.'
           },
           {
             id: '2.1.12',
@@ -286,7 +286,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'connectionFilterIPAllowList',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.12'
+            description: 'The connection filter IP allow list should not be used as it bypasses spam and malware filtering for specified IP addresses.'
           },
           {
             id: '2.1.13',
@@ -295,7 +295,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'connectionFilterSafeList',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.13'
+            description: 'The connection filter safe list should be disabled to ensure all inbound connections are properly evaluated.'
           },
           {
             id: '2.1.14',
@@ -304,7 +304,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'inboundAntiSpamAllowedDomains',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.14'
+            description: 'Inbound anti-spam policies should not whitelist specific domains as this could allow malicious emails to bypass filtering.'
           },
           {
             id: '2.1.15',
@@ -313,7 +313,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'outboundAntiSpamLimits',
             validator: () => 'warn',
-            description: 'CIS Control 2.1.15'
+            description: 'Outbound anti-spam settings should limit the number of messages that can be sent in a specified timeframe to prevent spam distribution.'
           }
         ]
       },
@@ -328,7 +328,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'emergencyAccessMonitoring',
             validator: () => 'warn',
-            description: 'CIS Control 2.2.1'
+            description: 'Emergency access accounts should have activity monitoring in place to detect unauthorized use or compromise.'
           }
         ]
       },
@@ -343,7 +343,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'defenderForEndpoint',
             validator: () => 'warn',
-            description: 'CIS Control 2.4.1'
+            description: 'Enabling self-service password reset allows users to reset their own passwords in Entra ID. When users sign in to Microsoft 365, they will be prompted to enter additional contact information that will help them reset their password in the future. The recommended state is All.'
           },
           {
             id: '2.4.2',
@@ -352,7 +352,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'priorityAccountsStrictProtection',
             validator: () => 'warn',
-            description: 'CIS Control 2.4.2'
+            description: 'Self-service password reset should require at least 2 authentication methods to verify user identity.'
           },
           {
             id: '2.4.3',
@@ -361,7 +361,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'defenderForCloudAppsPolicy',
             validator: () => 'warn',
-            description: 'CIS Control 2.4.3'
+            description: 'Users should be required to register SSPR methods and periodically re-confirm their authentication information.'
           },
           {
             id: '2.4.4',
@@ -370,7 +370,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'zeroHourAutoPurge',
             validator: () => 'warn',
-            description: 'CIS Control 2.4.4'
+            description: 'Users should be notified when their password is reset to detect unauthorized password resets.'
           },
           {
             id: '2.4.5',
@@ -379,7 +379,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'airRemediation',
             validator: () => 'warn',
-            description: 'CIS Control 2.4.5'
+            description: 'Automated Incident Response (AIR) should be enabled to automatically remediate detected threats.'
           }
         ]
       }
@@ -402,7 +402,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'auditLogSearch',
             validator: () => 'warn',
-            description: 'CIS Control 3.1.1'
+            description: 'Audit log search should be enabled to allow administrators to search for and review user and admin activity in the organization.'
           }
         ]
       },
@@ -417,7 +417,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'dlpPoliciesEnabled',
             validator: () => 'warn',
-            description: 'CIS Control 3.2.1'
+            description: 'Data Loss Prevention (DLP) policies should be created and enabled to protect sensitive data from being shared outside the organization.'
           },
           {
             id: '3.2.2',
@@ -426,7 +426,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'dlpForTeams',
             validator: () => 'warn',
-            description: 'CIS Control 3.2.2'
+            description: 'DLP policies should be extended to Microsoft Teams to protect data shared through Teams channels and messages.'
           },
           {
             id: '3.2.3',
@@ -435,7 +435,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'dlpForCollaboration',
             validator: () => 'warn',
-            description: 'CIS Control 3.2.3'
+            description: 'DLP policies should be configured for Copilot users to prevent sensitive data from being shared with AI systems.'
           }
         ]
       },
@@ -450,7 +450,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'sensitivityLabels',
             validator: () => 'warn',
-            description: 'CIS Control 3.3.1'
+            description: 'Sensitivity label policies should be configured and published to help users classify and protect sensitive data.'
           }
         ]
       }
@@ -616,7 +616,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'privilegedRoleAssignmentJIT',
             validator: () => 'warn',
-            description: 'CIS Control 5.3.1'
+            description: 'Privileged roles should be activated on-demand through Privileged Identity Management (PIM) rather than assigned permanently.'
           },
           {
             id: '5.3.2',
@@ -625,7 +625,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'guestAccessReviews',
             validator: () => 'warn',
-            description: 'CIS Control 5.3.2'
+            description: 'Access reviews should be configured to periodically verify that guest user access is still appropriate.'
           },
           {
             id: '5.3.3',
@@ -634,7 +634,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'privilegedRoleAccessReviews',
             validator: () => 'warn',
-            description: 'CIS Control 5.3.3'
+            description: 'Access reviews in Microsoft Entra Privileged Identity Management (PIM) enable administrators to periodically validate whether users still require their privileged role assignments.'
           },
           {
             id: '5.3.4',
@@ -643,7 +643,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'globalAdminApprovalRequired',
             validator: () => 'warn',
-            description: 'CIS Control 5.3.4'
+            description: 'Global Administrator role activation through PIM should require approval to add an additional layer of control.'
           },
           {
             id: '5.3.5',
@@ -652,7 +652,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'privilegedRoleAdminApprovalRequired',
             validator: () => 'warn',
-            description: 'CIS Control 5.3.5'
+            description: 'Privileged Role Administrator role activation should require approval to add an additional layer of control.'
           }
         ]
       }
@@ -675,7 +675,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'mailboxAuditingEnabled',
             validator: () => 'warn',
-            description: 'CIS Control 6.1.1'
+            description: 'Mailbox audit logging should be enabled for the organization to ensure that user activity is tracked.'
           },
           {
             id: '6.1.2',
@@ -684,7 +684,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'mailboxAuditRetention',
             validator: () => 'warn',
-            description: 'CIS Control 6.1.2'
+            description: 'Mailbox audit actions should be configured to log important user activities on mailboxes.'
           },
           {
             id: '6.1.3',
@@ -693,7 +693,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'mailboxDelegationAuditing',
             validator: () => 'warn',
-            description: 'CIS Control 6.1.3'
+            description: 'When configuring a user or computer account to bypass mailbox audit logging, the system will not record any access, or actions performed by the said user or computer account on any mailbox. Ensure AuditBypassEnabled is not enabled on accounts without a written exception.'
           }
         ]
       },
@@ -708,7 +708,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'forwardingRules',
             validator: () => 'warn',
-            description: 'CIS Control 6.2.1'
+            description: 'Mail forwarding rules should be blocked or disabled to prevent unauthorized email routing.'
           },
           {
             id: '6.2.2',
@@ -717,7 +717,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'mailFlowRules',
             validator: () => 'warn',
-            description: 'CIS Control 6.2.2'
+            description: 'Mail flow rules (transport rules) in Exchange Online can be configured to set the spam confidence level (SCL) of a message to -1, which bypasses spam and phishing filtering. When a rule applies this action to messages based on the sender\'s domain, all mail from that domain is treated as trusted and skips anti-malware and anti-phishing evaluation regardless of message content.'
           },
           {
             id: '6.2.3',
@@ -726,7 +726,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'emailAuthentication',
             validator: () => 'warn',
-            description: 'CIS Control 6.2.3'
+            description: 'External emails should be marked to identify them as coming from outside the organization.'
           }
         ]
       },
@@ -741,7 +741,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'clientAccess',
             validator: () => 'warn',
-            description: 'CIS Control 6.3.1'
+            description: 'Users should not be allowed to install Outlook add-ins to prevent malicious add-ins from being used to compromise data.'
           },
           {
             id: '6.3.2',
@@ -750,7 +750,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'legacyAuthentication',
             validator: () => 'warn',
-            description: 'CIS Control 6.3.2'
+            description: 'Users should not be allowed to add personal email accounts to Outlook to prevent data leakage.'
           }
         ]
       },
@@ -765,7 +765,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'modernAuthenticationRequired',
             validator: () => 'warn',
-            description: 'CIS Control 6.5.1'
+            description: 'Modern authentication should be enabled for Exchange Online to ensure users authenticate using secure methods.'
           },
           {
             id: '6.5.2',
@@ -774,7 +774,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'oauthTokenLifetime',
             validator: () => 'warn',
-            description: 'CIS Control 6.5.2'
+            description: 'MailTips should be enabled to provide users with helpful information about recipients and email sending.'
           },
           {
             id: '6.5.3',
@@ -783,7 +783,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'sessionTimeout',
             validator: () => 'warn',
-            description: 'CIS Control 6.5.3'
+            description: 'Additional storage providers should be restricted in Outlook on the web to prevent data exfiltration.'
           },
           {
             id: '6.5.4',
@@ -792,7 +792,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'mfaForOWA',
             validator: () => 'warn',
-            description: 'CIS Control 6.5.4'
+            description: 'SMTP AUTH should be disabled to prevent legacy authentication protocols from being used.'
           },
           {
             id: '6.5.5',
@@ -801,7 +801,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'mfaForPowerShell',
             validator: () => 'warn',
-            description: 'CIS Control 6.5.5'
+            description: 'Direct Send capability should be disabled to prevent unauthenticated email submissions.'
           }
         ]
       }
@@ -824,7 +824,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'sharePointModernAuth',
             validator: () => 'warn',
-            description: 'CIS Control 7.2.1'
+            description: 'Modern authentication should be required for SharePoint applications to ensure secure authentication.'
           },
           {
             id: '7.2.2',
@@ -833,7 +833,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'externalUserExpiration',
             validator: () => 'warn',
-            description: 'CIS Control 7.2.2'
+            description: 'SharePoint and OneDrive should integrate with Azure AD B2B to provide secure guest access.'
           },
           {
             id: '7.2.3',
@@ -842,7 +842,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'restrictExternalSharing',
             validator: () => 'warn',
-            description: 'CIS Control 7.2.3'
+            description: 'External content sharing should be restricted to prevent organizational data from being shared outside the organization.'
           },
           {
             id: '7.2.4',
@@ -851,7 +851,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fileFolderLinkSettings',
             validator: () => 'warn',
-            description: 'CIS Control 7.2.4'
+            description: 'OneDrive content sharing should be restricted to prevent users from sharing organizational data without authorization.'
           },
           {
             id: '7.2.5',
@@ -860,7 +860,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'preventDownload',
             validator: () => 'warn',
-            description: 'CIS Control 7.2.5'
+            description: 'Guest users should not be allowed to share SharePoint items that they don\'t own.'
           },
           {
             id: '7.2.6',
@@ -869,7 +869,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'restrictUnmanagedDevices',
             validator: () => 'warn',
-            description: 'CIS Control 7.2.6'
+            description: 'SharePoint external sharing should be restricted to minimize the risk of data leakage.'
           },
           {
             id: '7.2.7',
@@ -878,7 +878,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'allowLimitedAccess',
             validator: () => 'warn',
-            description: 'CIS Control 7.2.7'
+            description: 'This setting sets the default link type that a user will see when sharing content in OneDrive or SharePoint. It does not restrict or exclude any other options. The recommended state is Specific people (only the people the user specifies) or Only people in your organization.'
           },
           {
             id: '7.2.8',
@@ -887,7 +887,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'restrictUnmanagedDevicesAccess',
             validator: () => 'warn',
-            description: 'CIS Control 7.2.8'
+            description: 'External sharing should be restricted to members of specified security groups to limit who can share content externally.'
           },
           {
             id: '7.2.9',
@@ -896,7 +896,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'restrictNetworkLocation',
             validator: () => 'warn',
-            description: 'CIS Control 7.2.9'
+            description: 'Guest access to SharePoint sites and OneDrive should be set to expire automatically to limit long-term access.'
           },
           {
             id: '7.2.10',
@@ -905,7 +905,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'restrictConditionalAccessPolicies',
             validator: () => 'warn',
-            description: 'CIS Control 7.2.10'
+            description: 'This setting configures if guests who use a verification code to access the site or links are required to reauthenticate after a set number of days. The recommended state is 15 or less.'
           },
           {
             id: '7.2.11',
@@ -914,7 +914,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'sharePointTermsAcceptance',
             validator: () => 'warn',
-            description: 'CIS Control 7.2.11'
+            description: 'The default sharing link permission in SharePoint should be set to restrict the permissions granted by default.'
           }
         ]
       },
@@ -929,7 +929,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'sharePointInfectedFiles',
             validator: () => 'warn',
-            description: 'CIS Control 7.3.1'
+            description: 'SharePoint should be configured to block downloads of files detected as infected.'
           }
         ]
       }
@@ -952,7 +952,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'teamsExternalFileSharing',
             validator: () => 'warn',
-            description: 'CIS Control 8.1.1'
+            description: 'External file sharing in Teams should be restricted to only approved cloud storage services.'
           },
           {
             id: '8.1.2',
@@ -961,7 +961,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'teamsEmailChannelAddress',
             validator: () => 'warn',
-            description: 'CIS Control 8.1.2'
+            description: 'This setting controls whether Teams channels are allowed to receive emails sent to their unique email addresses. When enabled, emails sent to a channel\'s address will be delivered and appear in the channel\'s conversation thread; when disabled, the channel will reject incoming emails, preventing them from being posted. The recommended state is Off.'
           }
         ]
       },
@@ -976,7 +976,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'teamsExternalDomainRestriction',
             validator: () => 'warn',
-            description: 'CIS Control 8.2.1'
+            description: 'Teams external domain access should be restricted to approved domains only.'
           },
           {
             id: '8.2.2',
@@ -985,7 +985,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'teamsUnmanagedUsersCommunication',
             validator: () => 'warn',
-            description: 'CIS Control 8.2.2'
+            description: 'Communication with unmanaged Teams users should be disabled to prevent access by users without organizational control.'
           },
           {
             id: '8.2.3',
@@ -994,7 +994,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'teamsExternalInitiateConversations',
             validator: () => 'warn',
-            description: 'CIS Control 8.2.3'
+            description: 'This setting prevents external users who are not managed by an organization from initiating contact with users in the protected organization. The recommended state is to uncheck People in my org can chat and have meetings with external users who have unmanaged Microsoft accounts.'
           },
           {
             id: '8.2.4',
@@ -1003,7 +1003,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'teamsTrialTenantsBlocked',
             validator: () => 'warn',
-            description: 'CIS Control 8.2.4'
+            description: 'Communication with trial Teams tenants should be blocked to prevent unauthorized access.'
           }
         ]
       },
@@ -1018,7 +1018,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'teamsAppPermissionPolicies',
             validator: () => 'warn',
-            description: 'CIS Control 8.4.1'
+            description: 'Teams app permission policies should be configured to control which apps users can access.'
           }
         ]
       },
@@ -1033,7 +1033,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'meetingOrganizerOnly',
             validator: () => 'warn',
-            description: 'CIS Control 8.5.1'
+            description: 'Anonymous users should not be allowed to join Teams meetings to prevent unauthorized access.'
           },
           {
             id: '8.5.2',
@@ -1042,7 +1042,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'meetingTranscripts',
             validator: () => 'warn',
-            description: 'CIS Control 8.5.2'
+            description: 'Anonymous users and dial-in callers should not be allowed to start Teams meetings.'
           },
           {
             id: '8.5.3',
@@ -1051,7 +1051,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'recordingNotifications',
             validator: () => 'warn',
-            description: 'CIS Control 8.5.3'
+            description: 'Only internal users should be allowed to bypass the meeting lobby to control who joins meetings.'
           },
           {
             id: '8.5.4',
@@ -1060,7 +1060,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'liveCaptions',
             validator: () => 'warn',
-            description: 'CIS Control 8.5.4'
+            description: 'Users dialing in via phone should not be allowed to bypass the meeting lobby.'
           },
           {
             id: '8.5.5',
@@ -1069,7 +1069,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'qAndANotAvailable',
             validator: () => 'warn',
-            description: 'CIS Control 8.5.5'
+            description: 'Anonymous users should not be allowed to participate in meeting chat.'
           },
           {
             id: '8.5.6',
@@ -1078,7 +1078,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'preventAnonymousUsers',
             validator: () => 'warn',
-            description: 'CIS Control 8.5.6'
+            description: 'Only meeting organizers and co-organizers should be allowed to present in Teams meetings.'
           },
           {
             id: '8.5.7',
@@ -1087,7 +1087,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'preventDialOut',
             validator: () => 'warn',
-            description: 'CIS Control 8.5.7'
+            description: 'External participants should not be allowed to give or request control of the meeting.'
           },
           {
             id: '8.5.8',
@@ -1096,7 +1096,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'teamsLiveEventsRestricted',
             validator: () => 'warn',
-            description: 'CIS Control 8.5.8'
+            description: 'External users should not be allowed to use meeting chat.'
           },
           {
             id: '8.5.9',
@@ -1105,7 +1105,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'e2eEncryption',
             validator: () => 'warn',
-            description: 'CIS Control 8.5.9'
+            description: 'Meeting recording should be disabled by default to protect privacy and prevent unauthorized recording.'
           }
         ]
       },
@@ -1120,7 +1120,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'teamsReportSecurityConcerns',
             validator: () => 'warn',
-            description: 'CIS Control 8.6.1'
+            description: 'Users should be able to report security concerns and spam in Teams.'
           }
         ]
       }
@@ -1143,7 +1143,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fabricGuestAccess',
             validator: () => 'warn',
-            description: 'CIS Control 9.1.1'
+            description: 'Guest user access in Fabric should be restricted to minimize security risk.'
           },
           {
             id: '9.1.2',
@@ -1152,7 +1152,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fabricExternalInvitations',
             validator: () => 'warn',
-            description: 'CIS Control 9.1.2'
+            description: 'External user invitations in Fabric should be restricted or disabled.'
           },
           {
             id: '9.1.3',
@@ -1161,7 +1161,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fabricGuestContentAccess',
             validator: () => 'warn',
-            description: 'CIS Control 9.1.3'
+            description: 'Guest access to Fabric content should be restricted or disabled.'
           },
           {
             id: '9.1.4',
@@ -1170,7 +1170,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fabricPublishToWeb',
             validator: () => 'warn',
-            description: 'CIS Control 9.1.4'
+            description: 'The ability to publish Fabric reports to the web should be disabled.'
           },
           {
             id: '9.1.5',
@@ -1179,7 +1179,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fabricPythonRSharing',
             validator: () => 'warn',
-            description: 'CIS Control 9.1.5'
+            description: 'R and Python visual interaction and sharing should be disabled.'
           },
           {
             id: '9.1.6',
@@ -1188,7 +1188,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fabricSensitivityLabels',
             validator: () => 'warn',
-            description: 'CIS Control 9.1.6'
+            description: 'Users should be allowed to apply sensitivity labels to Fabric content.'
           },
           {
             id: '9.1.7',
@@ -1197,7 +1197,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fabricShareableLinks',
             validator: () => 'warn',
-            description: 'CIS Control 9.1.7'
+            description: 'Shareable links in Fabric should be restricted to prevent unauthorized access.'
           },
           {
             id: '9.1.8',
@@ -1206,7 +1206,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fabricExternalDataSharing',
             validator: () => 'warn',
-            description: 'CIS Control 9.1.8'
+            description: 'External data sharing in Fabric should be disabled.'
           },
           {
             id: '9.1.9',
@@ -1215,7 +1215,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fabricResourceKeyAuth',
             validator: () => 'warn',
-            description: 'CIS Control 9.1.9'
+            description: 'Resource Key authentication in Fabric should be blocked.'
           },
           {
             id: '9.1.10',
@@ -1224,7 +1224,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fabricSPAPIAccess',
             validator: () => 'warn',
-            description: 'CIS Control 9.1.10'
+            description: 'Service principal API access in Fabric should be restricted or disabled.'
           },
           {
             id: '9.1.11',
@@ -1233,7 +1233,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fabricSPProvisioning',
             validator: () => 'warn',
-            description: 'CIS Control 9.1.11'
+            description: 'Service principals should not be allowed to create or use profiles in Fabric.'
           },
           {
             id: '9.1.12',
@@ -1242,7 +1242,7 @@ export const CIS_CONTROLS_DATA = [
             profile: 'E3 L1',
             graphQuery: 'fabricSPWorkspaceCreation',
             validator: () => 'warn',
-            description: 'CIS Control 9.1.12'
+            description: 'Service principals should not be allowed to create workspaces, connections, or deployment pipelines in Fabric.'
           }
         ]
       }
