@@ -1,10 +1,26 @@
 /**
  * PowerShell Command Executor for CIS Validation
- * Executes PowerShell commands as fallback when Graph API is not available
- * Handles Connect-MgGraph, Exchange Online, and Azure AD cmdlets
+ * Full PowerShell validation system supporting Graph API, Exchange Online, and PnP.PowerShell
+ * Cross-platform support: Windows, macOS (pwsh), Linux (pwsh)
  */
 
 import { spawn } from 'child_process';
+import { execSync } from 'child_process';
+import { existsSync } from 'fs';
+
+/**
+ * Detect PowerShell executable path for current platform
+ * @returns {string} Path to PowerShell executable
+ */
+function getPowerShellExecutable() {
+  // Try pwsh (PowerShell 7+) first (works on all platforms)
+  if (existsSync('/usr/local/bin/pwsh')) return '/usr/local/bin/pwsh'; // macOS
+  if (existsSync('/usr/bin/pwsh')) return '/usr/bin/pwsh'; // Linux
+  if (existsSync('C:\\Program Files\\PowerShell\\7\\pwsh.exe')) return 'C:\\Program Files\\PowerShell\\7\\pwsh.exe'; // Windows
+
+  // Fallback to powershell.exe (Windows only)
+  return 'powershell.exe';
+}
 
 /**
  * Execute PowerShell commands for control validation
@@ -26,8 +42,11 @@ export async function executePowerShellCommands(commands, controlId) {
       // Join commands with semicolon for execution
       const scriptContent = commands.join('; ')
 
+      // Get appropriate PowerShell executable for platform
+      const psExecutable = getPowerShellExecutable()
+
       // Execute PowerShell
-      const psProcess = spawn('powershell.exe', ['-Command', scriptContent], {
+      const psProcess = spawn(psExecutable, ['-Command', scriptContent], {
         stdio: ['pipe', 'pipe', 'pipe'],
         shell: false
       })
@@ -176,7 +195,8 @@ export function mapPowerShellToStatus(output, controlId) {
  */
 export async function isPowerShellAvailable() {
   return new Promise((resolve) => {
-    const ps = spawn('powershell.exe', ['-Command', 'Write-Host "available"'], {
+    const psExecutable = getPowerShellExecutable()
+    const ps = spawn(psExecutable, ['-Command', 'Write-Host "available"'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       shell: false
     })

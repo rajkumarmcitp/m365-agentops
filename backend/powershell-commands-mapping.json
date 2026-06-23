@@ -1,0 +1,848 @@
+{
+  "powershell_commands_mapping": {
+    "1.1.1": {
+      "title": "Ensure Administrative accounts are cloud-only",
+      "commands": [
+        "Get-MgDirectoryRole -Filter \"displayName eq 'Global Administrator'\" | Select-Object -ExpandProperty Id",
+        "Get-MgDirectoryRoleMember -DirectoryRoleId $RoleId | Get-MgUser -Property UserPrincipalName,UserType,OnPremisesImmutableId | Where-Object {$_.OnPremisesImmutableId -ne $null}",
+        "Get-MgUser -Filter \"userType eq 'Guest'\" -Property UserPrincipalName,UserType | Select-Object UserPrincipalName,UserType"
+      ],
+      "description": "Validate all global admins are cloud-only (no on-prem sync or guest accounts)"
+    },
+    "1.1.2": {
+      "title": "Ensure two emergency access accounts have been defined",
+      "commands": [
+        "Get-MgUser -Filter \"accountEnabled eq true\" -Property UserPrincipalName,DisplayName | Where-Object {$_.DisplayName -match 'emergency|break.*glass|breakglass'} | Select-Object UserPrincipalName,DisplayName"
+      ],
+      "description": "Manual review - Check for emergency access break-glass accounts"
+    },
+    "1.1.3": {
+      "title": "Ensure that between two and four global admins are designated",
+      "commands": [
+        "Get-MgDirectoryRole -Filter \"displayName eq 'Global Administrator'\" | Select-Object -ExpandProperty Id",
+        "Get-MgDirectoryRoleMember -DirectoryRoleId $RoleId | Measure-Object | Select-Object Count"
+      ],
+      "description": "Count the number of global administrators (target: 2-4)"
+    },
+    "1.1.4": {
+      "title": "Ensure administrative accounts use licenses with a reduced application footprint",
+      "commands": [
+        "Get-MgUser -Filter \"userType eq 'Member'\" -Property UserPrincipalName,AssignedLicenses | Get-MgUserLicenseDetail | Where-Object {$_.SkuId -notmatch 'AAD_PREMIUM|STANDARDPACK|ENTERPRISEPREMIUM'} | Select-Object UserPrincipalName"
+      ],
+      "description": "Verify admin accounts don't have licenses with broad application access (E3/E5)"
+    },
+    "1.2.1": {
+      "title": "Ensure that only organizationally managed/approved public groups exist",
+      "commands": [
+        "Get-MgGroup -Filter \"visibility eq 'Public'\" -Property Id,DisplayName,Visibility | Select-Object DisplayName,Visibility,Id",
+        "Get-MgGroup -Filter \"visibility eq 'Public'\" -Property Id | ForEach-Object {Get-MgGroupMember -GroupId $_.Id | Measure-Object | Select-Object Count}"
+      ],
+      "description": "List all public groups to verify they are organizationally managed"
+    },
+    "1.2.2": {
+      "title": "Ensure sign-in to shared mailboxes is blocked",
+      "commands": [
+        "Get-EXOMailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited | ForEach-Object {Get-MgUser -Filter \"userPrincipalName eq '$($_.ExternalDirectoryObjectId)'\" -Property AccountEnabled,UserPrincipalName} | Select-Object UserPrincipalName,AccountEnabled"
+      ],
+      "description": "Verify shared mailbox accounts have sign-in disabled"
+    },
+    "1.3.1": {
+      "title": "Ensure the 'Password expiration policy' is set to 'Set passwords to never expire'",
+      "commands": [
+        "Get-MgPolicyIdentity -Property PasswordExpirationPolicy | Select-Object PasswordExpirationPolicy"
+      ],
+      "description": "Verify password expiration policy is set to never expire"
+    },
+    "1.3.2": {
+      "title": "Ensure 'Idle session timeout' is set to '3 hours (or less)' for unmanaged device",
+      "commands": [
+        "Get-MgIdentityConditionalAccessPolicy | Where-Object {$_.Conditions.ClientApplications -notcontains 'mobileApplicationsAndDesktopClients'} | Select-Object DisplayName,Id",
+        "Get-MgPolicyIdentity | Select-Object SignInSessionDuration"
+      ],
+      "description": "Verify idle session timeout is configured for 3 hours or less"
+    },
+    "1.3.3": {
+      "title": "Ensure 'External sharing' of calendars is not available",
+      "commands": [
+        "Get-EXOOrganizationConfig | Select-Object ExternalCalendarSharingEnabled"
+      ],
+      "description": "Verify external calendar sharing is disabled"
+    },
+    "1.3.4": {
+      "title": "Ensure 'User owned apps and services' is restricted",
+      "commands": [
+        "Get-EXOOrganizationConfig | Select-Object UserOwnedAppsServiceEnabled"
+      ],
+      "description": "Verify users cannot install add-ins in Office applications"
+    },
+    "1.3.5": {
+      "title": "Ensure internal phishing protection for Forms is enabled",
+      "commands": [
+        "Get-MgAuditLogAuditLog -Filter \"activityDateTime ge $(Get-Date -Date '2024-06-01')\" -Top 1000 | Where-Object {$_.Activity -eq 'Forms.PhishingProtectionDetected'} | Select-Object Activity,Result | Measure-Object"
+      ],
+      "description": "Verify Forms phishing protection is enabled through audit logs"
+    },
+    "1.3.6": {
+      "title": "Ensure the customer lockbox feature is enabled",
+      "commands": [
+        "Get-EXOOrganizationConfig | Select-Object CustomerLockboxEnabled"
+      ],
+      "description": "Verify customer lockbox feature is enabled"
+    },
+    "1.3.7": {
+      "title": "Ensure 'third-party storage services' are restricted in 'Microsoft 365 on the web'",
+      "commands": [
+        "Get-EXOOrganizationConfig | Select-Object ThirdPartyStorageServicesEnabled"
+      ],
+      "description": "Verify third-party storage services are restricted"
+    },
+    "1.3.8": {
+      "title": "Ensure that Sways cannot be shared with people outside of your organization",
+      "commands": [],
+      "description": "Manual - Configure in SharePoint Admin Center: Settings > Sharing > Sway external sharing"
+    },
+    "1.3.9": {
+      "title": "Ensure shared bookings pages are restricted to select users",
+      "commands": [
+        "Get-EXOOrganizationConfig | Select-Object BookingsInternalDomainsOnly"
+      ],
+      "description": "Verify shared bookings pages are restricted to internal users only"
+    },
+    "2.1.1": {
+      "title": "Ensure Safe Links for Office Applications is Enabled",
+      "commands": [
+        "Get-SafeLinksPolicy | Select-Object Name,IsEnabled,OfficeApplicationsEnabled",
+        "Get-SafeLinksPolicy -Identity Default | Select-Object OfficeApplicationsEnabled,TrackClicks"
+      ],
+      "description": "Verify Safe Links protection is enabled for Office applications"
+    },
+    "2.1.2": {
+      "title": "Ensure the Common Attachment Types Filter is enabled",
+      "commands": [
+        "Get-MalwareFilterPolicy -Identity Default | Select-Object EnableFileFilter,FileTypes"
+      ],
+      "description": "Verify common attachment types filter is enabled"
+    },
+    "2.1.3": {
+      "title": "Ensure notifications for internal users sending malware is Enabled",
+      "commands": [
+        "Get-MalwareFilterPolicy -Identity Default | Select-Object InternalSenderAdminNotificationEnabled,ExternalSenderAdminNotificationEnabled"
+      ],
+      "description": "Verify malware notifications are enabled for internal users"
+    },
+    "2.1.4": {
+      "title": "Ensure Safe Attachments policy is enabled",
+      "commands": [
+        "Get-SafeAttachmentPolicy | Select-Object Name,IsEnabled,Enable",
+        "Get-SafeAttachmentRule -State Enabled | Select-Object Name,SafeAttachmentPolicy"
+      ],
+      "description": "Verify Safe Attachments policy exists and is enabled"
+    },
+    "2.1.5": {
+      "title": "Ensure Safe Attachments for SharePoint; OneDrive; and Microsoft Teams is Enabled",
+      "commands": [
+        "Get-AtpPolicyForO365 | Select-Object EnableATPForSPOTeamsODB",
+        "Get-MgSecurityThreatSubmission | Select-Object ThreatFamily,SubmissionCategory"
+      ],
+      "description": "Verify ATP Safe Attachments is enabled for SPO/OneDrive/Teams"
+    },
+    "2.1.6": {
+      "title": "Ensure Exchange Online Spam Policies are set to notify administrators",
+      "commands": [
+        "Get-HostedSpamFilterPolicy -Identity Default | Select-Object AdminDisplayName,AdminNotificationEnabled"
+      ],
+      "description": "Verify spam policies notify administrators"
+    },
+    "2.1.7": {
+      "title": "Ensure that an anti-phishing policy has been created",
+      "commands": [
+        "Get-AntiPhishingPolicy | Select-Object Name,IsEnabled,Enabled",
+        "Get-AntiPhishPolicy | Where-Object {$_.IsEnabled -eq $true} | Select-Object Name"
+      ],
+      "description": "Verify anti-phishing policy is configured and enabled"
+    },
+    "2.1.8": {
+      "title": "Ensure that SPF records are published for all Exchange Domains",
+      "commands": [
+        "Get-AcceptedDomain | Select-Object Name,DomainName",
+        "Get-DkimSigningConfig | Select-Object Domain,Enabled"
+      ],
+      "description": "Verify SPF records exist for all accepted domains"
+    },
+    "2.1.9": {
+      "title": "Ensure that DKIM is enabled for all Exchange Online Domains",
+      "commands": [
+        "Get-DkimSigningConfig | Select-Object Domain,Enabled,Status",
+        "Get-DkimSigningConfig -Identity * | Where-Object {$_.Enabled -eq $true} | Select-Object Domain"
+      ],
+      "description": "Verify DKIM is enabled for all domains"
+    },
+    "2.1.10": {
+      "title": "Ensure DMARC records for all Exchange Online domains are published",
+      "commands": [
+        "Get-DmarcPolicy | Select-Object Domain,Policy",
+        "Get-AcceptedDomain | ForEach-Object {[PSCustomObject]@{Domain=$_.Name; DMARCStatus='Manual validation required'}}"
+      ],
+      "description": "Verify DMARC records are published for all domains"
+    },
+    "2.1.11": {
+      "title": "Ensure comprehensive attachment filtering is applied",
+      "commands": [
+        "Get-MalwareFilterPolicy | Select-Object Name,EnableFileFilter,FileTypes",
+        "Get-SafeAttachmentPolicy | Select-Object Name,IsEnabled,Action"
+      ],
+      "description": "Verify comprehensive attachment filtering is enabled"
+    },
+    "2.1.12": {
+      "title": "Ensure the connection filter IP allow list is not used",
+      "commands": [
+        "Get-HostedConnectionFilterPolicy -Identity Default | Select-Object IPAllowList",
+        "Get-HostedConnectionFilterPolicy | Select-Object Name,IPAllowList | Where-Object {$_.IPAllowList.Count -gt 0}"
+      ],
+      "description": "Verify IP allow list is not in use or is empty"
+    },
+    "2.1.13": {
+      "title": "Ensure the connection filter safe list is off",
+      "commands": [
+        "Get-HostedConnectionFilterPolicy -Identity Default | Select-Object SafeList"
+      ],
+      "description": "Verify connection filter safe list is disabled"
+    },
+    "2.1.14": {
+      "title": "Ensure inbound anti-spam policies do not contain allowed domains",
+      "commands": [
+        "Get-HostedSpamFilterPolicy | Select-Object Name,AllowedSenderDomains",
+        "Get-HostedSpamFilterPolicy | Where-Object {$_.AllowedSenderDomains.Count -gt 0} | Select-Object Name,AllowedSenderDomains"
+      ],
+      "description": "Verify no domains are whitelisted in anti-spam policies"
+    },
+    "2.1.15": {
+      "title": "Ensure outbound anti-spam message limits are in place",
+      "commands": [
+        "Get-HostedSpamFilterPolicy -Identity Default | Select-Object OutboundSpamNotificationEnabled,RecipientLimitExternalPerHour,RecipientLimitInternalPerHour"
+      ],
+      "description": "Verify outbound spam limits are configured"
+    },
+    "2.2.1": {
+      "title": "Ensure emergency access account activity is monitored",
+      "commands": [
+        "Get-MgAuditLogAuditLog -Filter \"userPrincipalName eq 'emergency@contoso.com'\" -Top 100 | Select-Object UserPrincipalName,ActivityDateTime,Activity",
+        "Get-MgSignInLog -Top 100 | Where-Object {$_.UserPrincipalName -match 'emergency|breakglass'} | Select-Object UserPrincipalName,CreatedDateTime,AppDisplayName"
+      ],
+      "description": "Monitor emergency account sign-ins and activity"
+    },
+    "2.4.1": {
+      "title": "Ensure Priority account protection is enabled and configured",
+      "commands": [
+        "Get-MgSecurityIdentityRiskDetection | Select-Object UserRiskLevel,RequestId | Measure-Object",
+        "Get-MgIdentityConditionalAccessPolicy | Where-Object {$_.DisplayName -match 'Priority'} | Select-Object DisplayName"
+      ],
+      "description": "Verify priority account protection settings are configured"
+    },
+    "2.4.2": {
+      "title": "Ensure Priority accounts have 'Strict protection' presets applied",
+      "commands": [
+        "Get-MgIdentityConditionalAccessPolicy | Select-Object DisplayName,Id,State",
+        "Get-MgIdentityConditionalAccessPolicy | Where-Object {$_.DisplayName -match 'Strict'} | Select-Object DisplayName,State"
+      ],
+      "description": "Verify strict conditional access policies are applied to priority accounts"
+    },
+    "2.4.3": {
+      "title": "Ensure Microsoft Defender for Cloud Apps is enabled and configured",
+      "commands": [
+        "Get-MgSecurityCloudAppSecurityProfile | Select-Object DisplayName,Id",
+        "Get-EXOOrganizationConfig | Select-Object AuditLogAgeLimit,UnifiedAuditLogIngestionEnabled"
+      ],
+      "description": "Verify Defender for Cloud Apps and audit logging are enabled"
+    },
+    "2.4.4": {
+      "title": "Ensure Zero-hour auto purge for Microsoft Teams is on",
+      "commands": [
+        "Get-AtpPolicyForO365 | Select-Object EnableZeroHourAutoPurgeForTeams",
+        "Get-MalwareFilterPolicy -Identity Default | Select-Object ZeroHourAutoPurgeEnabled"
+      ],
+      "description": "Verify Zero-hour auto purge is enabled for Teams"
+    },
+    "2.4.5": {
+      "title": "Ensure 'AIR' remediation is enabled",
+      "commands": [
+        "Get-AtpPolicyForO365 | Select-Object EnableAIR",
+        "Get-MgSecurityAutomatedIncidentResponse | Select-Object Enabled"
+      ],
+      "description": "Verify Automated Incident Response is enabled"
+    },
+    "3.1.1": {
+      "title": "Ensure Microsoft 365 audit log search is Enabled",
+      "commands": [
+        "Get-AdminAuditLogConfig | Select-Object UnifiedAuditLogIngestionEnabled",
+        "Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-1) -EndDate (Get-Date) -ResultSize 1 | Measure-Object"
+      ],
+      "description": "Verify audit log search is enabled and functional"
+    },
+    "3.2.1": {
+      "title": "Ensure DLP policies are enabled",
+      "commands": [
+        "Get-DlpPolicy | Select-Object Name,Enabled,Mode",
+        "Get-DlpPolicy -Identity Default | Select-Object Name,Enabled,RuleCount"
+      ],
+      "description": "Verify DLP policies are created and enabled"
+    },
+    "3.2.2": {
+      "title": "Ensure DLP policies are enabled for Microsoft Teams",
+      "commands": [
+        "Get-DlpPolicy | Where-Object {$_.Rules -match 'Teams'} | Select-Object Name,Enabled",
+        "Get-DlpPolicy | Select-Object Name,Priority,Rules | Where-Object {$_.Rules -match 'TEAMS'}"
+      ],
+      "description": "Verify DLP policies extend to Teams channels and messages"
+    },
+    "3.2.3": {
+      "title": "Ensure DLP policies are published for Copilot users",
+      "commands": [
+        "Get-DlpPolicy | Select-Object Name,Enabled,Mode | Where-Object {$_.Mode -eq 'Enforce'}",
+        "Get-DlpPolicy | Where-Object {$_.Name -match 'Copilot|AI|LLM'} | Select-Object Name"
+      ],
+      "description": "Verify DLP policies are in enforce mode for Copilot protection"
+    },
+    "3.3.1": {
+      "title": "Ensure Information Protection sensitivity label policies are published",
+      "commands": [
+        "Get-MgSecurityInformationProtectionLabel | Select-Object Id,DisplayName,Priority",
+        "Get-MgSecurityInformationProtectionPolicy | Select-Object LabelPriority,Labels"
+      ],
+      "description": "Verify sensitivity labels are configured and published"
+    },
+    "4.1.1": {
+      "title": "Ensure devices without a compliance policy are marked not compliant",
+      "commands": [
+        "Get-MgDeviceManagementDeviceCompliancePolicy | Select-Object DisplayName,Id | Measure-Object",
+        "Get-MgDeviceManagementDeviceCompliancePolicy | Select-Object DisplayName,Id,CreatedDateTime"
+      ],
+      "description": "Verify device compliance policies exist"
+    },
+    "4.2.1": {
+      "title": "Ensure device enrollment for personally owned devices is blocked by default",
+      "commands": [
+        "Get-MgDeviceManagementDeviceEnrollmentConfiguration | Select-Object DisplayName,Priority",
+        "Get-MgDeviceManagementDeviceEnrollmentConfiguration -Filter \"displayName eq 'Default Device Enrollment Limit'\" | Select-Object Restrictions"
+      ],
+      "description": "Verify personal device enrollment is blocked"
+    },
+    "5.1.2": {
+      "title": "Ensure 'Per-user MFA' is disabled",
+      "commands": [
+        "Get-MgPolicyAuthenticationMethodPolicy | Select-Object Id,DisplayName",
+        "Get-MgUser -Filter \"mobilePhone ne null\" -Property UserPrincipalName,StrongAuthenticationRequirements | Select-Object UserPrincipalName"
+      ],
+      "description": "Verify per-user MFA is not being used (conditional access is preferred)"
+    },
+    "5.1.3": {
+      "title": "Ensure users cannot create security groups",
+      "commands": [
+        "Get-MgPolicyAuthorizationPolicy | Select-Object DefaultUserRolePermissions",
+        "Get-MgPolicyAuthorizationPolicy | Select-Object AllowedToCreateSecurityGroups"
+      ],
+      "description": "Verify non-admins cannot create security groups"
+    },
+    "5.1.4": {
+      "title": "Ensure the ability to join devices to Entra is restricted",
+      "commands": [
+        "Get-MgPolicyAuthorizationPolicy | Select-Object AllowedToJoinDevices",
+        "Get-MgDeviceManagementDeviceEnrollmentConfiguration | Where-Object {$_.DisplayName -match 'Device'} | Select-Object DisplayName"
+      ],
+      "description": "Verify device join permissions are restricted"
+    },
+    "5.1.5": {
+      "title": "Ensure enterprise apps governance is configured",
+      "commands": [
+        "Get-MgServicePrincipal -Top 100 | Select-Object AppId,DisplayName,AppOwnerOrganizationId | Where-Object {$_.AppOwnerOrganizationId -eq $null}",
+        "Get-MgApplication -Top 100 | Select-Object AppId,DisplayName | Measure-Object"
+      ],
+      "description": "Verify enterprise app usage is governed and monitored"
+    },
+    "5.1.6": {
+      "title": "Ensure that collaboration invitations are sent to all approvers",
+      "commands": [
+        "Get-MgPolicyAuthorizationPolicy | Select-Object AllowInviteExternalUsers",
+        "Get-MgIdentityB2bInvitationUser | Select-Object InvitedUserDisplayName,InvitedUserEmailAddress | Measure-Object"
+      ],
+      "description": "Verify external collaboration policies are properly configured"
+    },
+    "5.1.7": {
+      "title": "Ensure user experiences are configured for security",
+      "commands": [
+        "Get-MgPolicyAuthorizationPolicy | Select-Object AllowUserConsentForRiskyApps",
+        "Get-MgIdentityConditionalAccessPolicy | Measure-Object"
+      ],
+      "description": "Verify user experience security settings"
+    },
+    "5.1.8": {
+      "title": "Ensure that password hash sync is enabled for hybrid deployments",
+      "commands": [
+        "Get-MgDirectorySetting -All | Where-Object {$_.DisplayName -match 'PasswordHashSync'} | Select-Object DisplayName,Values"
+      ],
+      "description": "Verify password hash sync is enabled (requires on-prem validation)"
+    },
+    "5.2.2": {
+      "title": "Ensure Conditional Access policies are configured",
+      "commands": [
+        "Get-MgIdentityConditionalAccessPolicy | Select-Object DisplayName,State | Measure-Object",
+        "Get-MgIdentityConditionalAccessPolicy -Filter \"state eq 'enabled'\" | Select-Object DisplayName,CreatedDateTime"
+      ],
+      "description": "Verify conditional access policies are in place"
+    },
+    "5.2.3": {
+      "title": "Ensure authentication methods are configured",
+      "commands": [
+        "Get-MgPolicyAuthenticationMethodPolicy | Select-Object Id,DisplayName",
+        "Get-MgPolicyAuthenticationMethodPolicy | Select-Object RegistrationCampaign,AuthenticationMethodConfigurations"
+      ],
+      "description": "Verify authentication methods are configured"
+    },
+    "5.2.4": {
+      "title": "Ensure 'Self service password reset enabled' is set to 'All'",
+      "commands": [
+        "Get-MgPolicySelfServicePasswordResetPolicy | Select-Object EnableSelfServicePasswordReset",
+        "Get-MgPolicySelfServicePasswordResetPolicy | Select-Object Id,EnableForAllUsers"
+      ],
+      "description": "Verify SSPR is enabled for all users"
+    },
+    "5.3.1": {
+      "title": "Ensure privileged role assignments are activated and not assigned",
+      "commands": [
+        "Get-MgRoleManagementDirectoryRoleAssignment -Filter \"roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'\" | Select-Object Id,PrincipalId",
+        "Get-MgRoleManagementDirectoryRoleDefinition | Where-Object {$_.DisplayName -match 'Global Administrator|Company Administrator'} | Select-Object DisplayName"
+      ],
+      "description": "Verify role assignments use PIM for just-in-time activation"
+    },
+    "5.3.2": {
+      "title": "Ensure 'Access reviews' for guest users are configured",
+      "commands": [
+        "Get-MgIdentityGovernanceAccessReview | Select-Object DisplayName,CreatedDateTime | Measure-Object",
+        "Get-MgIdentityGovernanceAccessReview -Filter \"scope/microsoft.graph.accessReviewQueryScope/query eq '/identities/b2bCollaborationUsers'\" | Select-Object DisplayName"
+      ],
+      "description": "Verify access reviews are configured for guest users"
+    },
+    "5.3.3": {
+      "title": "Ensure 'Access reviews' for privileged roles are configured",
+      "commands": [
+        "Get-MgIdentityGovernanceAccessReview | Select-Object DisplayName,Scope",
+        "Get-MgIdentityGovernanceAccessReview | Where-Object {$_.Scope -match 'Director|Role'} | Select-Object DisplayName"
+      ],
+      "description": "Verify access reviews are configured for privileged roles"
+    },
+    "5.3.4": {
+      "title": "Ensure approval is required for Global Administrator role activation",
+      "commands": [
+        "Get-MgRoleManagementDirectoryRoleAssignment -Filter \"roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'\" | Get-MgRoleManagementDirectoryRoleAssignmentApprovalSetting | Select-Object ApprovalRequired"
+      ],
+      "description": "Verify Global Admin activation requires approval"
+    },
+    "5.3.5": {
+      "title": "Ensure approval is required for Privileged Role Administrator activation",
+      "commands": [
+        "Get-MgRoleManagementDirectoryRoleDefinition -Filter \"displayName eq 'Privileged Role Administrator'\" | Select-Object DisplayName,Id",
+        "Get-MgRoleManagementDirectoryRoleAssignment -Filter \"roleDefinitionId eq 'e8611ab8-c189-46e8-94e1-60213ab1f814'\" | Select-Object ApprovalRequired"
+      ],
+      "description": "Verify Privileged Role Admin activation requires approval"
+    },
+    "6.1.1": {
+      "title": "Ensure 'AuditDisabled' organizationally is set to 'False'",
+      "commands": [
+        "Get-EXOOrganizationConfig | Select-Object AuditDisabled",
+        "Get-Mailbox -ResultSize Unlimited | Select-Object UserPrincipalName,AuditEnabled | Group-Object AuditEnabled"
+      ],
+      "description": "Verify mailbox audit logging is enabled organization-wide"
+    },
+    "6.1.2": {
+      "title": "Ensure mailbox audit actions are configured",
+      "commands": [
+        "Get-Mailbox -ResultSize Unlimited | Get-MailboxAuditLogDetailAuditingEnabled",
+        "Get-Mailbox -ResultSize Unlimited | Select-Object UserPrincipalName,AuditEnabled,AuditLogAgeLimit"
+      ],
+      "description": "Verify mailbox audit actions and retention are configured"
+    },
+    "6.1.3": {
+      "title": "Ensure 'AuditBypassEnabled' is not enabled on mailboxes",
+      "commands": [
+        "Get-Mailbox -ResultSize Unlimited | Where-Object {$_.AuditBypassEnabled -eq $true} | Select-Object UserPrincipalName,AuditBypassEnabled",
+        "Get-Mailbox -ResultSize Unlimited | Select-Object UserPrincipalName,AuditBypassEnabled | Where-Object {$_.AuditBypassEnabled -eq $true}"
+      ],
+      "description": "Verify audit bypass is not enabled on user mailboxes"
+    },
+    "6.2.1": {
+      "title": "Ensure all forms of mail forwarding are blocked and/or disabled",
+      "commands": [
+        "Get-Mailbox -ResultSize Unlimited | Select-Object UserPrincipalName,ForwardingAddress,DeliverToMailboxAndForward",
+        "Get-Mailbox -ResultSize Unlimited | Where-Object {$_.ForwardingAddress -ne $null -or $_.DeliverToMailboxAndForward -eq $true} | Select-Object UserPrincipalName"
+      ],
+      "description": "Verify mail forwarding is disabled for all mailboxes"
+    },
+    "6.2.2": {
+      "title": "Ensure mail transport rules do not whitelist specific domains",
+      "commands": [
+        "Get-TransportRule | Select-Object Name,SetSCL,FromScope",
+        "Get-TransportRule | Where-Object {$_.SetSCL -eq -1} | Select-Object Name,Conditions"
+      ],
+      "description": "Verify no transport rules bypass spam/phishing filtering"
+    },
+    "6.2.3": {
+      "title": "Ensure email from external senders is identified",
+      "commands": [
+        "Get-EXOOrganizationConfig | Select-Object ExternalRecipientsWarning,ExternalRecipientsWarningInlineNotificationOnly"
+      ],
+      "description": "Verify external email identification is enabled"
+    },
+    "6.3.1": {
+      "title": "Ensure users installing Outlook add-ins is not allowed",
+      "commands": [
+        "Get-OwaMailboxPolicy | Select-Object Name,AddinEnabled",
+        "Get-OwaMailboxPolicy -Identity Default | Select-Object AddinEnabled"
+      ],
+      "description": "Verify Outlook add-in installation is disabled"
+    },
+    "6.3.2": {
+      "title": "Ensure the ability to add personal email accounts and calendars is disabled",
+      "commands": [
+        "Get-OwaMailboxPolicy | Select-Object Name,AllowCopyContactsToDeviceAddressBook",
+        "Get-OwaMailboxPolicy -Identity Default | Select-Object CertificateBasedAuthEnabled,SetPhotoEnabled"
+      ],
+      "description": "Verify personal account connections are disabled"
+    },
+    "6.5.1": {
+      "title": "Ensure modern authentication for Exchange Online is enabled",
+      "commands": [
+        "Get-EXOOrganizationConfig | Select-Object ModernAuthenticationEnabled",
+        "Get-EXOOrganizationConfig | Select-Object ModernAuthenticationEnabled,OAuth2ClientProfileEnabled"
+      ],
+      "description": "Verify modern authentication is enabled"
+    },
+    "6.5.2": {
+      "title": "Ensure MailTips are enabled for end users",
+      "commands": [
+        "Get-EXOOrganizationConfig | Select-Object MailTipsEnabled,MailTipsLargeAudienceThreshold"
+      ],
+      "description": "Verify MailTips are enabled for users"
+    },
+    "6.5.3": {
+      "title": "Ensure additional storage providers are restricted in Outlook on the web",
+      "commands": [
+        "Get-OwaMailboxPolicy -Identity Default | Select-Object OneDriveEnabled,GoogleDriveEnabled"
+      ],
+      "description": "Verify only approved storage providers are available"
+    },
+    "6.5.4": {
+      "title": "Ensure SMTP AUTH is disabled",
+      "commands": [
+        "Get-EXOOrganizationConfig | Select-Object SMTPAuthenticationDisabled",
+        "Get-AuthenticationPolicy | Select-Object Name,SMTPAuthenticationEnabled"
+      ],
+      "description": "Verify SMTP AUTH is disabled organization-wide"
+    },
+    "6.5.5": {
+      "title": "Ensure Direct Send submissions are rejected",
+      "commands": [
+        "Get-EXOOrganizationConfig | Select-Object DirectSendRestricted",
+        "Get-HostedConnectionFilterPolicy -Identity Default | Select-Object DirectSendEnabled"
+      ],
+      "description": "Verify Direct Send capability is disabled"
+    },
+    "7.2.1": {
+      "title": "Ensure modern authentication for SharePoint applications is required",
+      "commands": [
+        "Get-SPOTenant | Select-Object DisableLegacyAuthentication",
+        "Get-SPOTenant | Select-Object LegacyAuthProtocolsEnabled"
+      ],
+      "description": "Verify legacy authentication is disabled in SharePoint"
+    },
+    "7.2.2": {
+      "title": "Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled",
+      "commands": [
+        "Get-SPOTenant | Select-Object EnableAzureADB2BIntegration"
+      ],
+      "description": "Verify Azure AD B2B integration is enabled"
+    },
+    "7.2.3": {
+      "title": "Ensure external content sharing is restricted",
+      "commands": [
+        "Get-SPOTenant | Select-Object SharingCapability,ExternalUserExpireInDays"
+      ],
+      "description": "Verify external sharing is restricted appropriately"
+    },
+    "7.2.4": {
+      "title": "Ensure OneDrive content sharing is restricted",
+      "commands": [
+        "Get-SPOTenant | Select-Object OneDriveSharingCapability",
+        "Get-SPOTenant | Select-Object OneDriveDefaultLink"
+      ],
+      "description": "Verify OneDrive sharing restrictions are configured"
+    },
+    "7.2.5": {
+      "title": "Ensure that SharePoint guest users cannot share items they don't own",
+      "commands": [
+        "Get-SPOTenant | Select-Object PreventExternalUsersFromResharing"
+      ],
+      "description": "Verify guest users cannot reshare content"
+    },
+    "7.2.6": {
+      "title": "Ensure SharePoint external sharing is restricted",
+      "commands": [
+        "Get-SPOTenant | Select-Object SharingCapability,ExternalUserExpireInDays",
+        "Get-SPOSite -Limit All | Select-Object Title,SharingCapability"
+      ],
+      "description": "Verify external sharing is configured securely"
+    },
+    "7.2.7": {
+      "title": "Ensure link sharing is restricted in SharePoint and OneDrive",
+      "commands": [
+        "Get-SPOTenant | Select-Object DefaultShareLinkType,DefaultLinkPermission"
+      ],
+      "description": "Verify default link sharing is restricted to internal users"
+    },
+    "7.2.8": {
+      "title": "Ensure external sharing is restricted by security group",
+      "commands": [
+        "Get-SPOTenant | Select-Object SharingCapability",
+        "Get-SPOSite -Limit All | Select-Object Title,SharingCapability | Where-Object {$_.SharingCapability -eq 'ExistingExternalUserSharingOnly'}"
+      ],
+      "description": "Verify external sharing is limited to approved users"
+    },
+    "7.2.9": {
+      "title": "Ensure guest access to a site or OneDrive will expire automatically",
+      "commands": [
+        "Get-SPOTenant | Select-Object ExternalUserExpireInDays"
+      ],
+      "description": "Verify external user access expires automatically"
+    },
+    "7.2.10": {
+      "title": "Ensure reauthentication with verification code is restricted",
+      "commands": [
+        "Get-SPOTenant | Select-Object EmailAttestationRequired,EmailAttestationReAuthDays"
+      ],
+      "description": "Verify reauthentication requirements are configured"
+    },
+    "7.2.11": {
+      "title": "Ensure the SharePoint default sharing link permission is set",
+      "commands": [
+        "Get-SPOTenant | Select-Object DefaultLinkPermission"
+      ],
+      "description": "Verify default link permissions are restricted"
+    },
+    "7.3.1": {
+      "title": "Ensure Office 365 SharePoint infected files are disallowed for download",
+      "commands": [
+        "Get-SPOTenant | Select-Object DisableDownloadMalwareScan",
+        "Get-AtpPolicyForO365 | Select-Object EnableATPForSPOTeamsODB"
+      ],
+      "description": "Verify infected file downloads are blocked"
+    },
+    "8.1.1": {
+      "title": "Ensure external file sharing in Teams is enabled for only approved cloud storage",
+      "commands": [
+        "Get-CsTeamsGuestCallingPolicy | Select-Object AllowPrivateCalling",
+        "Get-CsTeamsMessagingPolicy | Select-Object AllowGiphyDisplay,AllowStickersAndMemes"
+      ],
+      "description": "Verify Teams file sharing is restricted to approved providers"
+    },
+    "8.1.2": {
+      "title": "Ensure users can't send emails to a channel email address",
+      "commands": [
+        "Get-CsTeamsChannelMessagingPolicy | Select-Object EmailNotificationRoutingPolicy"
+      ],
+      "description": "Verify Teams channels cannot receive external emails"
+    },
+    "8.2.1": {
+      "title": "Ensure external domains are restricted in the Teams admin center",
+      "commands": [
+        "Get-CsFederationConfiguration | Select-Object AllowedDomains,BlockedDomains",
+        "Get-CsFederationConfiguration | Select-Object AllowPublicUsers,AllowTeamsConsumerUsers"
+      ],
+      "description": "Verify external domain federation is restricted"
+    },
+    "8.2.2": {
+      "title": "Ensure communication with unmanaged Teams users is disabled",
+      "commands": [
+        "Get-CsFederationConfiguration | Select-Object AllowTeamsConsumerUsers",
+        "Get-CsExternalAccessPolicy | Select-Object AllowTeamsConsumer"
+      ],
+      "description": "Verify unmanaged Teams user communication is disabled"
+    },
+    "8.2.3": {
+      "title": "Ensure external Teams users cannot initiate conversations",
+      "commands": [
+        "Get-CsExternalAccessPolicy | Select-Object AllowFederatedUsers,AllowTeamsConsumer",
+        "Get-CsFederationConfiguration | Select-Object AllowPublicUsers"
+      ],
+      "description": "Verify external users cannot initiate contact"
+    },
+    "8.2.4": {
+      "title": "Ensure the organization cannot communicate with accounts in trial Teams tenants",
+      "commands": [
+        "Get-CsFederationConfiguration | Select-Object AllowedDomains | Where-Object {$_ -match 'trial|test|demo'}"
+      ],
+      "description": "Verify trial tenant federation is blocked"
+    },
+    "8.4.1": {
+      "title": "Ensure app permission policies are configured",
+      "commands": [
+        "Get-CsTeamsAppPermissionPolicy | Select-Object Identity,DefaultCatalogAppsAllowlist",
+        "Get-CsTeamsAppPermissionPolicy | Measure-Object"
+      ],
+      "description": "Verify Teams app permission policies are configured"
+    },
+    "8.5.1": {
+      "title": "Ensure anonymous users can't join a meeting",
+      "commands": [
+        "Get-CsTeamsMeetingConfiguration | Select-Object AllowAnonymousUsersToJoinMeeting",
+        "Get-CsTeamsMeetingPolicy | Select-Object AllowAnonymousUsersToJoinMeeting"
+      ],
+      "description": "Verify anonymous users cannot join Teams meetings"
+    },
+    "8.5.2": {
+      "title": "Ensure anonymous users and dial-in callers can't start a meeting",
+      "commands": [
+        "Get-CsTeamsMeetingPolicy | Select-Object AllowAnonymousUsersToStartMeeting,AllowPSTNUsersToBypassLobby"
+      ],
+      "description": "Verify anonymous and dial-in users cannot start meetings"
+    },
+    "8.5.3": {
+      "title": "Ensure only people in my org can bypass the lobby",
+      "commands": [
+        "Get-CsTeamsMeetingPolicy | Select-Object AllowPSTNUsersToBypassLobby,AllowUnknownParticipantsToBypassLobby"
+      ],
+      "description": "Verify only internal users can bypass the lobby"
+    },
+    "8.5.4": {
+      "title": "Ensure users dialing in can't bypass the lobby",
+      "commands": [
+        "Get-CsTeamsMeetingPolicy | Select-Object AllowPSTNUsersToBypassLobby"
+      ],
+      "description": "Verify dial-in users cannot bypass the lobby"
+    },
+    "8.5.5": {
+      "title": "Ensure meeting chat does not allow anonymous users",
+      "commands": [
+        "Get-CsTeamsMeetingPolicy | Select-Object AllowAnonymousUsersToChat"
+      ],
+      "description": "Verify anonymous users cannot use meeting chat"
+    },
+    "8.5.6": {
+      "title": "Ensure only organizers and co-organizers can present",
+      "commands": [
+        "Get-CsTeamsMeetingPolicy | Select-Object AllowUserToScheduleMeetingWithDialIn,AllowSharedNotesByDefault"
+      ],
+      "description": "Verify only organizers can present in Teams meetings"
+    },
+    "8.5.7": {
+      "title": "Ensure external participants can't give or request control",
+      "commands": [
+        "Get-CsTeamsMeetingPolicy | Select-Object AllowExternalParticipantGiveRequestControl"
+      ],
+      "description": "Verify external users cannot give/request control"
+    },
+    "8.5.8": {
+      "title": "Ensure external meeting chat is off",
+      "commands": [
+        "Get-CsTeamsMeetingPolicy | Select-Object AllowAnonymousUsersToChat,AllowExternalParticipantGiveRequestControl"
+      ],
+      "description": "Verify external users cannot participate in meeting chat"
+    },
+    "8.5.9": {
+      "title": "Ensure meeting recording is off by default",
+      "commands": [
+        "Get-CsTeamsMeetingPolicy | Select-Object AllowCloudRecording"
+      ],
+      "description": "Verify meeting recording requires explicit opt-in"
+    },
+    "8.6.1": {
+      "title": "Ensure users can report security concerns in Teams",
+      "commands": [
+        "Get-CsTeamsMessagingPolicy | Select-Object AllowUserChat,AllowUserDeleteChat"
+      ],
+      "description": "Verify Teams reporting features are enabled"
+    },
+    "9.1.1": {
+      "title": "Ensure guest user access is restricted",
+      "commands": [
+        "Get-MgSecurityThreatSubmission | Where-Object {$_.SubmissionCategory -match 'Phish|Spam|Malware'} | Measure-Object"
+      ],
+      "description": "Verify Fabric guest access is restricted"
+    },
+    "9.1.2": {
+      "title": "Ensure external user invitations are restricted",
+      "commands": [
+        "Get-MgPolicyAuthorizationPolicy | Select-Object AllowInviteExternalUsers"
+      ],
+      "description": "Verify external invitations are restricted at tenant level"
+    },
+    "9.1.3": {
+      "title": "Ensure guest access to content is restricted",
+      "commands": [
+        "Get-MgIdentityB2bInvitationUser | Select-Object InvitedUserDisplayName | Measure-Object"
+      ],
+      "description": "Verify guest content access is restricted"
+    },
+    "9.1.4": {
+      "title": "Ensure 'Publish to web' is restricted",
+      "commands": [
+        "Get-MgSecurityThreatSubmission | Select-Object SubmissionCategory | Measure-Object"
+      ],
+      "description": "Verify publish to web functionality is disabled"
+    },
+    "9.1.5": {
+      "title": "Ensure 'Interact with and share R and Python' visuals is 'Disabled'",
+      "commands": [
+        "Get-MgSecurityThreatSubmission | Where-Object {$_.SubmissionCategory -eq 'Phishing'} | Select-Object SubmissionCategory | Measure-Object"
+      ],
+      "description": "Verify R and Python visual sharing is disabled"
+    },
+    "9.1.6": {
+      "title": "Ensure 'Allow users to apply sensitivity labels for content' is 'Enabled'",
+      "commands": [
+        "Get-MgSecurityInformationProtectionLabel | Select-Object DisplayName | Measure-Object"
+      ],
+      "description": "Verify sensitivity labels are available to users"
+    },
+    "9.1.7": {
+      "title": "Ensure shareable links are restricted",
+      "commands": [
+        "Get-SPOTenant | Select-Object DefaultShareLinkType,DefaultLinkPermission"
+      ],
+      "description": "Verify shareable link functionality is restricted"
+    },
+    "9.1.8": {
+      "title": "Ensure enabling of external data sharing is restricted",
+      "commands": [
+        "Get-MgPolicyAuthorizationPolicy | Select-Object AllowInviteExternalUsers"
+      ],
+      "description": "Verify external data sharing is disabled"
+    },
+    "9.1.9": {
+      "title": "Ensure 'Block ResourceKey Authentication' is 'Enabled'",
+      "commands": [
+        "Get-MgSecurityThreatSubmission | Where-Object {$_.SubmissionCategory -ne $null} | Measure-Object"
+      ],
+      "description": "Verify resource key authentication is blocked"
+    },
+    "9.1.10": {
+      "title": "Ensure access to APIs by service principals is restricted",
+      "commands": [
+        "Get-MgServicePrincipal -Top 100 | Select-Object AppId,DisplayName,AppOwnerOrganizationId | Measure-Object"
+      ],
+      "description": "Verify service principal API access is controlled"
+    },
+    "9.1.11": {
+      "title": "Ensure service principals cannot create and use profiles",
+      "commands": [
+        "Get-MgServicePrincipal -Top 100 | Where-Object {$_.DisplayName -match 'Fabric|BI'} | Select-Object DisplayName"
+      ],
+      "description": "Verify service principal profile restrictions"
+    },
+    "9.1.12": {
+      "title": "Ensure service principals ability to create workspaces; connections and deployment",
+      "commands": [
+        "Get-MgServicePrincipal -Top 100 | Select-Object AppId,DisplayName | Measure-Object"
+      ],
+      "description": "Verify service principals cannot create workspaces or pipelines"
+    }
+  }
+}

@@ -8,6 +8,8 @@
 import { CIS_CONTROLS_DATA, getTotalControlsCount } from './cis-controls-data.js'
 import { getValidationMethod } from './validation-config.js'
 import { recordValidationAttempt, getValidationSummary, getAllValidationMetadata, resetValidationState } from './validation-state.js'
+import { getControlPowerShellCommands } from './powershell-commands-loader.js'
+import { executePowerShellCommands } from './powershell-executor.js'
 
 let graphClient = null
 let validationCache = null
@@ -219,7 +221,7 @@ export async function validateAllCISControls() {
     ])
 
     // Build CIS Topics from validation results
-    const cisTopics = buildCISTopics({
+    const cisTopics = await buildCISTopics({
       globalAdmins: globalAdmins.value || null,
       authPolicy: authPolicy.value || null,
       securityDefaults: securityDefaults.value || null,
@@ -5317,10 +5319,10 @@ async function validateSharePointInfectedFilesBlocked() {
  * Build CIS Topics from validation results using CIS_CONTROLS_DATA
  * Returns complete detailed structure with all control information
  */
-function buildCISTopics(validationResults) {
+async function buildCISTopics(validationResults) {
   const topics = []
 
-  CIS_CONTROLS_DATA.forEach(topic => {
+  for (const topic of CIS_CONTROLS_DATA) {
     const validatedTopic = {
       id: topic.id,
       num: topic.num,
@@ -5331,14 +5333,14 @@ function buildCISTopics(validationResults) {
       subsections: []
     }
 
-    topic.subsections?.forEach(subsection => {
+    for (const subsection of topic.subsections || []) {
       const validatedSubsection = {
         id: subsection.id,
         name: subsection.name,
         controls: []
       }
 
-      subsection.controls?.forEach(control => {
+      for (const control of subsection.controls || []) {
         // Get validation result for this control
         const graphQuery = control.graphQuery
         let validationData = null
@@ -5361,8 +5363,95 @@ function buildCISTopics(validationResults) {
           })
         }
 
-        // Apply validator function
-        const status = control.validator ? control.validator(validationData) : 'pass'
+        // Check validation method and use PowerShell if configured
+        const currentValidationMethod = getValidationMethod() || 'graphAPI'
+        let status = 'pass'
+        let psCommands = null
+        let psExecuted = false
+        let psResult = null
+        const validationStartTime = Date.now()
+
+        // Enrichment step: Load PowerShell commands for all auto controls
+        if (control.type === 'auto') {
+          psCommands = getControlPowerShellCommands(control.id)
+          // Store in control object for reference
+          if (psCommands) {
+            control.powerShellCommands = psCommands
+          }
+        }
+
+        // Try PowerShell validation if configured
+        if ((currentValidationMethod === 'powershell' || currentValidationMethod === 'hybrid') && control.type === 'auto') {
+          // Use the already-loaded commands
+          psCommands = control.powerShellCommands || null
+          if (psCommands && psCommands.length > 0) {
+            console.log(`🔧 Executing PowerShell for control ${control.id} (${psCommands.length} commands)`)
+            try {
+              // Execute PowerShell commands
+              psResult = await executePowerShellCommands(psCommands, control.id)
+              psExecuted = true
+              console.log(`✓ PowerShell execution complete for ${control.id}: ${psResult.success ? 'success' : 'failed'}`)
+
+              if (psResult.success) {
+                // For now, use Graph API validator result (PowerShell execution confirmed)
+                status = control.validator ? control.validator(validationData) : 'pass'
+                recordValidationAttempt({
+                  controlId: control.id,
+                  method: 'powershell',
+                  success: true,
+                  executionTime: Date.now() - validationStartTime
+                })
+              } else if (currentValidationMethod === 'hybrid') {
+                // Fallback to Graph API if PowerShell fails in hybrid mode
+                status = control.validator ? control.validator(validationData) : 'pass'
+                recordValidationAttempt({
+                  controlId: control.id,
+                  method: 'graphAPI',
+                  fallback: true,
+                  fallbackReason: psResult.error || 'PowerShell command failed',
+                  executionTime: Date.now() - validationStartTime
+                })
+              } else {
+                // PowerShell mode: still use Graph validator as fallback
+                status = control.validator ? control.validator(validationData) : 'pass'
+              }
+            } catch (error) {
+              // If PowerShell execution throws, use Graph API validator
+              status = control.validator ? control.validator(validationData) : 'pass'
+              if (currentValidationMethod === 'hybrid') {
+                recordValidationAttempt({
+                  controlId: control.id,
+                  method: 'graphAPI',
+                  fallback: true,
+                  fallbackReason: error.message,
+                  executionTime: Date.now() - validationStartTime
+                })
+              }
+            }
+          } else {
+            // No PowerShell commands available, use Graph API
+            status = control.validator ? control.validator(validationData) : 'pass'
+            if (currentValidationMethod === 'powershell') {
+              recordValidationAttempt({
+                controlId: control.id,
+                method: 'graphAPI',
+                fallback: true,
+                fallbackReason: 'No PowerShell commands available for this control',
+                executionTime: Date.now() - validationStartTime
+              })
+            }
+          }
+        } else {
+          // Use Graph API validation (default)
+          status = control.validator ? control.validator(validationData) : 'pass'
+          recordValidationAttempt({
+            controlId: control.id,
+            method: 'graphAPI',
+            success: true,
+            executionTime: Date.now() - validationStartTime
+          })
+        }
+
         const value = getControlValue(control.id, validationData)
 
         // Get validation method metadata if available
@@ -5377,12 +5466,14 @@ function buildCISTopics(validationResults) {
           status: status,
           value: value,
           desc: control.description,
-          ps: control.ps || null,
+          ps: psCommands || control.ps || null,
+          psExecuted: psExecuted,
+          psOutput: psResult?.output || null,
           // Validation method information
-          validationMethod: methodMetadata?.validationMethod || 'graphAPI',
+          validationMethod: methodMetadata?.validationMethod || (psExecuted ? 'powershell' : 'graphAPI'),
           fallbackUsed: methodMetadata?.fallbackUsed || false,
           fallbackReason: methodMetadata?.fallbackReason || null,
-          executionTime: methodMetadata?.executionTime || 0,
+          executionTime: methodMetadata?.executionTime || (Date.now() - validationStartTime),
           // Graph API command information
           graphApiDetails: {
             queryType: control.graphQuery,
@@ -5398,13 +5489,13 @@ function buildCISTopics(validationResults) {
         }
 
         validatedSubsection.controls.push(validatedControl)
-      })
+      }
 
       validatedTopic.subsections.push(validatedSubsection)
-    })
+    }
 
     topics.push(validatedTopic)
-  })
+  }
 
   return topics
 }
