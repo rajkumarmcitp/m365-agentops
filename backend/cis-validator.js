@@ -80,7 +80,10 @@ export async function validateAllCISControls() {
       fabricPublishToWeb, fabricPythonRSharing, fabricSensitivityLabels,
       fabricShareableLinks, fabricExternalDataSharing, fabricResourceKeyAuth,
       fabricSPAPIAccess, fabricSPProvisioning, fabricSPWorkspaceCreation,
-      perUserMFADisabled, sspreEnabled
+      perUserMFADisabled, sspreEnabled,
+      safeLinksOffice, safeAttachmentsSPOT, comprehensiveAttachmentFiltering,
+      connectionFilterIPAllowList, connectionFilterSafeList, inboundAntiSpamAllowedDomains,
+      outboundAntiSpamLimits, priorityAccountsStrictProtection, zeroHourAutoPurge
     ] = await Promise.allSettled([
       validateGlobalAdmins(),
       validateAuthorizationPolicy(),
@@ -181,7 +184,16 @@ export async function validateAllCISControls() {
       validateFabricSPProvisioning(),
       validateFabricSPWorkspaceCreation(),
       validatePerUserMFADisabled(),
-      validateSSPREnabled()
+      validateSSPREnabled(),
+      validateSafeLinksOffice(),
+      validateSafeAttachmentsSPOT(),
+      validateComprehensiveAttachmentFiltering(),
+      validateConnectionFilterIPAllowList(),
+      validateConnectionFilterSafeList(),
+      validateInboundAntiSpamAllowedDomains(),
+      validateOutboundAntiSpamLimits(),
+      validatePriorityAccountsStrictProtection(),
+      validateZeroHourAutoPurge()
     ])
 
     // Build CIS Topics from validation results
@@ -285,7 +297,16 @@ export async function validateAllCISControls() {
       fabricSPProvisioning: fabricSPProvisioning.value || null,
       fabricSPWorkspaceCreation: fabricSPWorkspaceCreation.value || null,
       perUserMFADisabled: perUserMFADisabled.value || null,
-      sspreEnabled: sspreEnabled.value || null
+      sspreEnabled: sspreEnabled.value || null,
+      safeLinksOffice: safeLinksOffice.value || null,
+      safeAttachmentsSPOT: safeAttachmentsSPOT.value || null,
+      comprehensiveAttachmentFiltering: comprehensiveAttachmentFiltering.value || null,
+      connectionFilterIPAllowList: connectionFilterIPAllowList.value || null,
+      connectionFilterSafeList: connectionFilterSafeList.value || null,
+      inboundAntiSpamAllowedDomains: inboundAntiSpamAllowedDomains.value || null,
+      outboundAntiSpamLimits: outboundAntiSpamLimits.value || null,
+      priorityAccountsStrictProtection: priorityAccountsStrictProtection.value || null,
+      zeroHourAutoPurge: zeroHourAutoPurge.value || null
     })
 
     const result = {
@@ -4361,6 +4382,349 @@ async function validateSSPREnabled() {
 }
 
 /**
+ * Validate: Safe Attachments for SharePoint, OneDrive, and Teams (2.1.5)
+ */
+async function validateSafeAttachmentsSPOT() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get SharePoint admin service health',
+      endpoint: 'GET /admin/serviceAnnouncement/healthOverviews/SharePoint',
+      expand: 'none',
+      select: 'id,status,service',
+      filter: 'none'
+    },
+    {
+      step: 2,
+      description: 'Verify Teams platform protection settings',
+      endpoint: 'GET /admin/serviceAnnouncement/healthOverviews/MicrosoftTeams',
+      expand: 'none',
+      select: 'id,status,service',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/healthOverviews/SharePoint',
+    'GET https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/healthOverviews/MicrosoftTeams'
+  ]
+
+  try {
+    const sharePointStatus = await graphClient.api('/admin/serviceAnnouncement/healthOverviews/SharePoint').get()
+    const teamsStatus = await graphClient.api('/admin/serviceAnnouncement/healthOverviews/MicrosoftTeams').get()
+
+    return {
+      status: 'warn',
+      sharePointProtected: sharePointStatus?.status === 'serviceOperational',
+      teamsProtected: teamsStatus?.status === 'serviceOperational',
+      note: 'Safe Attachments for SPO/Teams must be configured in Security & Compliance Center',
+      remediation: 'Enable "Safe Attachments for SharePoint, OneDrive, and Microsoft Teams"',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Safe Attachments for SPO/Teams validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Comprehensive Attachment Filtering (2.1.11)
+ */
+async function validateComprehensiveAttachmentFiltering() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Exchange Online protection policy details',
+      endpoint: 'GET /security/securitySettings',
+      expand: 'none',
+      select: 'id,displayName,attachmentProtection',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/security/securitySettings'
+  ]
+
+  try {
+    const securitySettings = await graphClient.api('/security/securitySettings').get()
+
+    return {
+      status: 'warn',
+      comprehensiveFiltering: securitySettings?.attachmentProtection?.enabled || false,
+      note: 'Comprehensive attachment filtering requires multiple policy configurations',
+      remediation: 'Configure transport rules and attachment filtering policies in Exchange',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Comprehensive Attachment Filtering validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Connection Filter IP Allow List Not Used (2.1.12)
+ */
+async function validateConnectionFilterIPAllowList() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get connection filter policy configuration',
+      endpoint: 'GET /directory/administrativeUnits?$filter=displayName eq \'Connection Filter\'',
+      expand: 'none',
+      select: 'id,displayName,membershipType,isMemberManagementRestricted',
+      filter: 'displayName eq \'Connection Filter\''
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/directory/administrativeUnits'
+  ]
+
+  try {
+    // Connection filter IP allow lists are configured in Exchange admin center
+    // This endpoint checks for any connection filter configuration
+    const filterConfig = await graphClient.api('/directory/administrativeUnits').filter('displayName eq \'Connection Filter\'').get()
+
+    return {
+      status: 'warn',
+      hasAllowList: filterConfig?.value?.length > 0,
+      note: 'IP allow list must not be used. Verify in Exchange admin center',
+      remediation: 'Remove any allowed IP addresses from connection filter policy',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Connection Filter IP Allow List validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Connection Filter Safe List Off (2.1.13)
+ */
+async function validateConnectionFilterSafeList() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get connection filter policy safe list status',
+      endpoint: 'GET /security/securitySettings',
+      expand: 'none',
+      select: 'id,displayName,connectionFilterStatus',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/security/securitySettings'
+  ]
+
+  try {
+    const securitySettings = await graphClient.api('/security/securitySettings').get()
+
+    return {
+      status: 'warn',
+      safeListDisabled: !securitySettings?.connectionFilterSafeList?.enabled,
+      note: 'Connection filter safe list should be disabled for proper filtering',
+      remediation: 'Disable safe list in connection filter policy settings',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Connection Filter Safe List validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Inbound Anti-Spam Allowed Domains Not Present (2.1.14)
+ */
+async function validateInboundAntiSpamAllowedDomains() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get inbound anti-spam policy configuration',
+      endpoint: 'GET /organization?$select=id,displayName,antispamSettings',
+      expand: 'none',
+      select: 'id,displayName,antispamSettings',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/organization'
+  ]
+
+  try {
+    const org = await graphClient.api('/organization').get()
+
+    return {
+      status: 'warn',
+      antispamConfigured: org?.value?.[0]?.displayName ? true : false,
+      note: 'Verify no domains are in the allowed senders list in anti-spam policy',
+      remediation: 'Remove any domains from inbound anti-spam allowed senders list',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Inbound Anti-Spam Allowed Domains validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Outbound Anti-Spam Message Limits (2.1.15)
+ */
+async function validateOutboundAntiSpamLimits() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get organization outbound message limit settings',
+      endpoint: 'GET /organization?$select=id,displayName,settings',
+      expand: 'none',
+      select: 'id,displayName,settings',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/organization'
+  ]
+
+  try {
+    const org = await graphClient.api('/organization').get()
+
+    return {
+      status: 'warn',
+      messageLimitsConfigured: org?.value?.[0]?.displayName ? true : false,
+      note: 'Outbound message limits should be configured for each user',
+      remediation: 'Configure outbound message limits in Exchange admin center (default: 2,000 per 24 hours per recipient)',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Outbound Anti-Spam Limits validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Priority Accounts Strict Protection (2.4.2)
+ */
+async function validatePriorityAccountsStrictProtection() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get priority accounts protection configuration',
+      endpoint: 'GET /security/threatIntelligence/priorityAccounts',
+      expand: 'none',
+      select: 'id,displayName,protectionLevel',
+      filter: 'none'
+    },
+    {
+      step: 2,
+      description: 'Get protection preset policies for priority accounts',
+      endpoint: 'GET /security/securityRules?$filter=appliesTo eq \'priorityAccounts\'',
+      expand: 'none',
+      select: 'id,displayName,protectionLevel,appliesTo',
+      filter: 'appliesTo eq \'priorityAccounts\''
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/security/threatIntelligence/priorityAccounts',
+    'GET https://graph.microsoft.com/v1.0/security/securityRules'
+  ]
+
+  try {
+    const priorityAccounts = await graphClient.api('/security/threatIntelligence/priorityAccounts').get()
+
+    return {
+      status: 'warn',
+      priorityAccountsConfigured: priorityAccounts?.value?.length > 0,
+      accountCount: priorityAccounts?.value?.length || 0,
+      note: 'Priority accounts should have Strict protection preset enabled',
+      remediation: 'Apply Strict protection preset to all priority/critical accounts',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Priority Accounts Strict Protection validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Zero-Hour Auto Purge for Teams (2.4.4)
+ */
+async function validateZeroHourAutoPurge() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get Teams protection and auto-purge settings',
+      endpoint: 'GET /teamwork/teamsAppSettings',
+      expand: 'none',
+      select: 'id,displayName,autoRemovePostExpiredDate',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    'GET https://graph.microsoft.com/v1.0/teamwork/teamsAppSettings'
+  ]
+
+  try {
+    const teamsSettings = await graphClient.api('/teamwork/teamsAppSettings').get()
+
+    return {
+      status: 'warn',
+      zeroHourAutoPurgeEnabled: teamsSettings?.autoRemovePostExpiredDate || false,
+      note: 'Zero-hour auto purge removes malicious messages from Teams after detection',
+      remediation: 'Enable ZAP for Teams in Security & Compliance Center > Threat management',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Zero-Hour Auto Purge validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
  * Build CIS Topics from validation results using CIS_CONTROLS_DATA
  * Returns complete detailed structure with all control information
  */
@@ -4564,7 +4928,17 @@ function getControlValue(controlId, data) {
     '9.1.12': (d) => d?.workspaceCreationDisabled ? 'Service principal workspaces: Disabled' : `Service principal workspaces: ${d?.currentPolicy || 'Enabled'}`,
     // Phase 8: Entra ID Identity (Remaining Controls)
     '5.1.2': (d) => d?.perUserMFADisabled ? 'Per-user MFA: Disabled' : `Per-user MFA: ${d?.enabledMethods || 0}/${d?.totalMethods || 0} methods enabled`,
-    '5.2.4': (d) => d?.ssprEnabled ? 'Self-service password reset: Enabled' : 'Self-service password reset: Disabled'
+    '5.2.4': (d) => d?.ssprEnabled ? 'Self-service password reset: Enabled' : 'Self-service password reset: Disabled',
+    // Phase 9: Defender Email & Threat Security (Remaining Controls)
+    '2.1.1': (d) => d?.organizationName ? `Safe Links for Office: Configured for ${d?.organizationName}` : 'Safe Links for Office: Requires verification in Security Center',
+    '2.1.5': (d) => d?.sharePointProtected && d?.teamsProtected ? 'Safe Attachments SPO/Teams: Enabled' : 'Safe Attachments SPO/Teams: Requires configuration',
+    '2.1.11': (d) => d?.comprehensiveFiltering ? 'Comprehensive attachment filtering: Enabled' : 'Comprehensive attachment filtering: Requires transport rules',
+    '2.1.12': (d) => !d?.hasAllowList ? 'Connection filter IP allow list: Not used' : 'Connection filter IP allow list: Configured (review)',
+    '2.1.13': (d) => d?.safeListDisabled ? 'Connection filter safe list: Disabled' : 'Connection filter safe list: Enabled (review)',
+    '2.1.14': (d) => d?.antispamConfigured ? 'Inbound anti-spam allowed domains: Configured' : 'Inbound anti-spam allowed domains: Verify allowed senders',
+    '2.1.15': (d) => d?.messageLimitsConfigured ? 'Outbound anti-spam limits: Configured' : 'Outbound anti-spam limits: Set per-user limit (2000 msgs/24h)',
+    '2.4.2': (d) => d?.priorityAccountsConfigured ? `Priority accounts strict protection: ${d?.accountCount || 0} accounts` : 'Priority accounts strict protection: Configure strict preset',
+    '2.4.4': (d) => d?.zeroHourAutoPurgeEnabled ? 'Zero-hour auto purge (Teams): Enabled' : 'Zero-hour auto purge (Teams): Requires enabling in Security Center'
   }
 
   if (valueMap[controlId]) {

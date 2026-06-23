@@ -185,6 +185,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure Safe Links for Office Applications is Enabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'safeLinksOffice',
             validator: () => 'warn',
             description: 'CIS Control 2.1.1'
           },
@@ -220,6 +221,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure Safe Attachments for SharePoint; OneDrive; and Microsoft Teams is Enabled',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'safeAttachmentsSPOT',
             validator: () => 'warn',
             description: 'CIS Control 2.1.5'
           },
@@ -273,6 +275,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure comprehensive attachment filtering is applied',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'comprehensiveAttachmentFiltering',
             validator: () => 'warn',
             description: 'CIS Control 2.1.11'
           },
@@ -281,6 +284,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure the connection filter IP allow list is not used',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'connectionFilterIPAllowList',
             validator: () => 'warn',
             description: 'CIS Control 2.1.12'
           },
@@ -289,6 +293,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure the connection filter safe list is off',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'connectionFilterSafeList',
             validator: () => 'warn',
             description: 'CIS Control 2.1.13'
           },
@@ -297,6 +302,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure inbound anti-spam policies do not contain allowed domains',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'inboundAntiSpamAllowedDomains',
             validator: () => 'warn',
             description: 'CIS Control 2.1.14'
           },
@@ -305,6 +311,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure outbound anti-spam message limits are in place',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'outboundAntiSpamLimits',
             validator: () => 'warn',
             description: 'CIS Control 2.1.15'
           }
@@ -342,6 +349,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure Priority accounts have \'Strict protection\' presets applied',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'priorityAccountsStrictProtection',
             validator: () => 'warn',
             description: 'CIS Control 2.4.2'
           },
@@ -358,6 +366,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure Zero-hour auto purge for Microsoft Teams is on',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'zeroHourAutoPurge',
             validator: () => 'warn',
             description: 'CIS Control 2.4.4'
           },
