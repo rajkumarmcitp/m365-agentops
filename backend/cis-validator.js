@@ -72,7 +72,10 @@ export async function validateAllCISControls() {
       mailboxAuditingEnabled, mailboxAuditRetention, mailboxDelegationAuditing,
       mailFlowRules, emailAuthentication, forwardingRules,
       clientAccess, legacyAuthentication, modernAuthenticationRequired,
-      oauthTokenLifetime, sessionTimeout, mfaForOWA, mfaForPowerShell
+      oauthTokenLifetime, sessionTimeout, mfaForOWA, mfaForPowerShell,
+      emergencyAccessAccounts, sharedMailboxSignIn, passwordExpirationPolicy,
+      idleSessionTimeout, externalCalendarSharing, userOwnedAppsServices,
+      thirdPartyStorageServices, sharedBookingsPages
     ] = await Promise.allSettled([
       validateGlobalAdmins(),
       validateAuthorizationPolicy(),
@@ -151,7 +154,15 @@ export async function validateAllCISControls() {
       validateOAuthTokenLifetime(),
       validateSessionTimeout(),
       validateMFAForOWA(),
-      validateMFAForPowerShell()
+      validateMFAForPowerShell(),
+      validateEmergencyAccessAccounts(),
+      validateSharedMailboxSignIn(),
+      validatePasswordExpirationPolicy(),
+      validateIdleSessionTimeout(),
+      validateExternalCalendarSharing(),
+      validateUserOwnedAppsServices(),
+      validateThirdPartyStorageServices(),
+      validateSharedBookingsPages()
     ])
 
     // Build CIS Topics from validation results
@@ -233,7 +244,15 @@ export async function validateAllCISControls() {
       oauthTokenLifetime: oauthTokenLifetime.value || null,
       sessionTimeout: sessionTimeout.value || null,
       mfaForOWA: mfaForOWA.value || null,
-      mfaForPowerShell: mfaForPowerShell.value || null
+      mfaForPowerShell: mfaForPowerShell.value || null,
+      emergencyAccessAccounts: emergencyAccessAccounts.value || null,
+      sharedMailboxSignIn: sharedMailboxSignIn.value || null,
+      passwordExpirationPolicy: passwordExpirationPolicy.value || null,
+      idleSessionTimeout: idleSessionTimeout.value || null,
+      externalCalendarSharing: externalCalendarSharing.value || null,
+      userOwnedAppsServices: userOwnedAppsServices.value || null,
+      thirdPartyStorageServices: thirdPartyStorageServices.value || null,
+      sharedBookingsPages: sharedBookingsPages.value || null
     })
 
     const result = {
@@ -3443,6 +3462,311 @@ async function validateMFAForPowerShell() {
 }
 
 /**
+ * Validate: Emergency Access Accounts (1.1.2)
+ */
+async function validateEmergencyAccessAccounts() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get emergency access (break-glass) accounts from directory',
+      endpoint: 'GET /directoryObjects',
+      expand: 'none',
+      select: 'id,displayName,accountEnabled,createdDateTime',
+      filter: 'mail eq "emergencyaccess*"'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/directoryObjects?$filter=mail eq 'emergencyaccess@'`
+  ]
+
+  try {
+    const emergencyAccounts = await graphClient.api('/directoryObjects').filter('mail eq "emergencyaccess*"').get()
+    return {
+      status: emergencyAccounts?.value?.length >= 2 ? 'pass' : 'fail',
+      emergencyAccountCount: emergencyAccounts?.value?.length || 0,
+      hasMinimumRequired: (emergencyAccounts?.value?.length || 0) >= 2,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Emergency Access Accounts validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Shared Mailbox Sign-In Restrictions (1.2.2)
+ */
+async function validateSharedMailboxSignIn() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get authentication policies restricting shared mailbox sign-in',
+      endpoint: 'GET /policies/authenticationMethodsPolicy',
+      expand: 'none',
+      select: 'id,displayName,policyVersion',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/policies/authenticationMethodsPolicy`
+  ]
+
+  try {
+    const authPolicy = await graphClient.api('/policies/authenticationMethodsPolicy').get()
+    return {
+      status: authPolicy?.id ? 'pass' : 'warn',
+      policyConfigured: authPolicy?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Shared Mailbox Sign-In validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Password Expiration Policy (1.3.1)
+ */
+async function validatePasswordExpirationPolicy() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get password expiration policy from authentication settings',
+      endpoint: 'GET /policies/authenticationFlowsPolicy',
+      expand: 'none',
+      select: 'id,passwordPolicyExpiration',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/policies/authenticationFlowsPolicy`
+  ]
+
+  try {
+    const policy = await graphClient.api('/policies/authenticationFlowsPolicy').get()
+    return {
+      status: policy?.passwordPolicyExpiration?.daysBeforeExpiration ? 'pass' : 'fail',
+      expirationDays: policy?.passwordPolicyExpiration?.daysBeforeExpiration || 0,
+      policyConfigured: policy?.passwordPolicyExpiration?.daysBeforeExpiration ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Password Expiration Policy validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Idle Session Timeout (1.3.2)
+ */
+async function validateIdleSessionTimeout() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get conditional access policies with session timeout restrictions',
+      endpoint: 'GET /identity/conditionalAccess/policies',
+      expand: 'none',
+      select: 'id,displayName,sessionControls',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies`
+  ]
+
+  try {
+    const policies = await graphClient.api('/identity/conditionalAccess/policies').get()
+    const timeoutPolicies = policies?.value?.filter(p => p.sessionControls?.persistentBrowserMode) || []
+    return {
+      status: timeoutPolicies.length > 0 ? 'pass' : 'fail',
+      totalPolicies: policies?.value?.length || 0,
+      timeoutPolicies: timeoutPolicies.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Idle Session Timeout validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: External Calendar Sharing (1.3.3)
+ */
+async function validateExternalCalendarSharing() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get information protection policies for calendar sharing',
+      endpoint: 'GET /admin/sharepoint/settings',
+      expand: 'none',
+      select: 'id,calendarSharingPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/sharepoint/settings`
+  ]
+
+  try {
+    const settings = await graphClient.api('/admin/sharepoint/settings').get()
+    return {
+      status: settings?.id ? 'pass' : 'warn',
+      policyConfigured: settings?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ External Calendar Sharing validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: User Owned Apps and Services (1.3.4)
+ */
+async function validateUserOwnedAppsServices() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get tenant application policies restricting user app deployments',
+      endpoint: 'GET /policies/authenticationMethodsPolicy',
+      expand: 'none',
+      select: 'id,appConsentPolicy',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/policies/authenticationMethodsPolicy`
+  ]
+
+  try {
+    const policy = await graphClient.api('/policies/authenticationMethodsPolicy').get()
+    return {
+      status: policy?.id ? 'pass' : 'fail',
+      policyConfigured: policy?.id ? true : false,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ User Owned Apps validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Third-Party Storage Services (1.3.7)
+ */
+async function validateThirdPartyStorageServices() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get data loss prevention policies for third-party storage',
+      endpoint: 'GET /dataSecurity/dataLossPreventionPolicies',
+      expand: 'none',
+      select: 'id,name,workloadScopes',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/dataSecurity/dataLossPreventionPolicies`
+  ]
+
+  try {
+    const dlpPolicies = await graphClient.api('/dataSecurity/dataLossPreventionPolicies').get()
+    const storagePolicies = dlpPolicies?.value?.filter(p =>
+      p.workloadScopes?.some(w => w.workload === 'powerbi' || w.workload === 'onedrive')
+    ) || []
+    return {
+      status: storagePolicies.length > 0 ? 'pass' : 'warn',
+      totalPolicies: dlpPolicies?.value?.length || 0,
+      storagePolicies: storagePolicies.length,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Third-Party Storage Services validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Shared Bookings Pages Restrictions (1.3.9)
+ */
+async function validateSharedBookingsPages() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get organizational settings for Microsoft Bookings visibility',
+      endpoint: 'GET /admin/microsoft365apps/appsManagement',
+      expand: 'none',
+      select: 'id,bookingsPageVisibility',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/admin/microsoft365apps/appsManagement`
+  ]
+
+  try {
+    const appSettings = await graphClient.api('/admin/microsoft365apps/appsManagement').get()
+    return {
+      status: appSettings?.bookingsPageVisibility === 'InternalOnly' ? 'pass' : 'fail',
+      bookingsRestricted: appSettings?.bookingsPageVisibility === 'InternalOnly',
+      visibilitySetting: appSettings?.bookingsPageVisibility || 'Unknown',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Shared Bookings Pages validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
  * Build CIS Topics from validation results using CIS_CONTROLS_DATA
  * Returns complete detailed structure with all control information
  */
@@ -3621,7 +3945,16 @@ function getControlValue(controlId, data) {
     '6.5.2': (d) => `OAuth token policies: ${d?.restrictedPolicies || 0} restricted`,
     '6.5.3': (d) => d?.timeoutConfigured ? 'Session timeout: Configured' : 'Session timeout: Not configured',
     '6.5.4': (d) => `MFA for OWA: ${d?.mfaPolicies || 0} policies configured`,
-    '6.5.5': (d) => d?.psAuthRequired ? 'PowerShell MFA: Required' : 'PowerShell MFA: Not required'
+    '6.5.5': (d) => d?.psAuthRequired ? 'PowerShell MFA: Required' : 'PowerShell MFA: Not required',
+    // Phase 6: Admin Center Foundational Controls
+    '1.1.2': (d) => d?.hasMinimumRequired ? `Emergency access accounts: ${d?.emergencyAccountCount || 0} configured` : 'Emergency access accounts: Less than 2 found',
+    '1.2.2': (d) => d?.policyConfigured ? 'Shared mailbox sign-in: Restricted' : 'Shared mailbox sign-in: Not restricted',
+    '1.3.1': (d) => d?.policyConfigured ? `Password expiration: ${d?.expirationDays || 0} days` : 'Password expiration: Not configured',
+    '1.3.2': (d) => d?.timeoutPolicies > 0 ? `Idle session timeout: ${d?.timeoutPolicies || 0} policies` : 'Idle session timeout: Not configured',
+    '1.3.3': (d) => d?.policyConfigured ? 'External calendar sharing: Restricted' : 'External calendar sharing: Not restricted',
+    '1.3.4': (d) => d?.policyConfigured ? 'User-owned apps: Policy configured' : 'User-owned apps: Not restricted',
+    '1.3.7': (d) => `Third-party storage: ${d?.storagePolicies || 0} DLP policies`,
+    '1.3.9': (d) => d?.bookingsRestricted ? 'Shared bookings: Internal only' : 'Shared bookings: External access allowed'
   }
 
   if (valueMap[controlId]) {

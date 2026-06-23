@@ -31,9 +31,10 @@ export const CIS_CONTROLS_DATA = [
           {
             id: '1.1.2',
             title: 'Ensure two emergency access accounts have been defined',
-            type: 'manual',
+            type: 'auto',
             profile: 'E3 L1',
-            validator: () => 'pass',
+            graphQuery: 'emergencyAccessAccounts',
+            validator: () => 'warn',
             description: 'CIS Control 1.1.2'
           },
           {
@@ -74,6 +75,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure sign-in to shared mailboxes is blocked',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'sharedMailboxSignIn',
             validator: () => 'warn',
             description: 'CIS Control 1.2.2'
           }
@@ -88,6 +90,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure the \'Password expiration policy\' is set to \'Set passwords to never expire',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'passwordExpirationPolicy',
             validator: () => 'warn',
             description: 'CIS Control 1.3.1'
           },
@@ -96,6 +99,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure \'Idle session timeout\' is set to \'3 hours (or less)\' for unmanaged device',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'idleSessionTimeout',
             validator: () => 'warn',
             description: 'CIS Control 1.3.2'
           },
@@ -104,6 +108,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure \'External sharing\' of calendars is not available',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'externalCalendarSharing',
             validator: () => 'warn',
             description: 'CIS Control 1.3.3'
           },
@@ -112,6 +117,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure \'User owned apps and services\' is restricted',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'userOwnedAppsServices',
             validator: () => 'warn',
             description: 'CIS Control 1.3.4'
           },
@@ -138,6 +144,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure \'third-party storage services\' are restricted in \'Microsoft 365 on the we',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'thirdPartyStorageServices',
             validator: () => 'warn',
             description: 'CIS Control 1.3.7'
           },
@@ -155,6 +162,7 @@ export const CIS_CONTROLS_DATA = [
             title: 'Ensure shared bookings pages are restricted to select users',
             type: 'auto',
             profile: 'E3 L1',
+            graphQuery: 'sharedBookingsPages',
             validator: () => 'warn',
             description: 'CIS Control 1.3.9'
           }
