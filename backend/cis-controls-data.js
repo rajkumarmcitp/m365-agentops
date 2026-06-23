@@ -498,9 +498,10 @@ export const CIS_CONTROLS_DATA = [
           {
             id: '5.1.2',
             title: 'Users 5.1.2.1 Ensure \'Per-user MFA\' is disabled',
-            type: 'manual',
+            type: 'auto',
             profile: 'E3 L1',
-            validator: () => 'pass',
+            graphQuery: 'perUserMFADisabled',
+            validator: () => 'warn',
             description: 'CIS Control 5.1.2'
           },
           {
@@ -584,9 +585,10 @@ export const CIS_CONTROLS_DATA = [
           {
             id: '5.2.4',
             title: 'Password reset 5.2.4.1 Ensure \'Self service password reset enabled\' is set to \'A',
-            type: 'manual',
+            type: 'auto',
             profile: 'E3 L1',
-            validator: () => 'pass',
+            graphQuery: 'sspreEnabled',
+            validator: () => 'warn',
             description: 'CIS Control 5.2.4'
           }
         ]

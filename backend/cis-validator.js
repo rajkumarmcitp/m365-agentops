@@ -79,7 +79,8 @@ export async function validateAllCISControls() {
       fabricGuestAccess, fabricExternalInvitations, fabricGuestContentAccess,
       fabricPublishToWeb, fabricPythonRSharing, fabricSensitivityLabels,
       fabricShareableLinks, fabricExternalDataSharing, fabricResourceKeyAuth,
-      fabricSPAPIAccess, fabricSPProvisioning, fabricSPWorkspaceCreation
+      fabricSPAPIAccess, fabricSPProvisioning, fabricSPWorkspaceCreation,
+      perUserMFADisabled, sspreEnabled
     ] = await Promise.allSettled([
       validateGlobalAdmins(),
       validateAuthorizationPolicy(),
@@ -178,7 +179,9 @@ export async function validateAllCISControls() {
       validateFabricResourceKeyAuth(),
       validateFabricSPAPIAccess(),
       validateFabricSPProvisioning(),
-      validateFabricSPWorkspaceCreation()
+      validateFabricSPWorkspaceCreation(),
+      validatePerUserMFADisabled(),
+      validateSSPREnabled()
     ])
 
     // Build CIS Topics from validation results
@@ -280,7 +283,9 @@ export async function validateAllCISControls() {
       fabricResourceKeyAuth: fabricResourceKeyAuth.value || null,
       fabricSPAPIAccess: fabricSPAPIAccess.value || null,
       fabricSPProvisioning: fabricSPProvisioning.value || null,
-      fabricSPWorkspaceCreation: fabricSPWorkspaceCreation.value || null
+      fabricSPWorkspaceCreation: fabricSPWorkspaceCreation.value || null,
+      perUserMFADisabled: perUserMFADisabled.value || null,
+      sspreEnabled: sspreEnabled.value || null
     })
 
     const result = {
@@ -4253,6 +4258,109 @@ async function validateFabricSPWorkspaceCreation() {
 }
 
 /**
+ * Validate: Per-User MFA Disabled (5.1.2)
+ */
+async function validatePerUserMFADisabled() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get organization-wide authentication method policies',
+      endpoint: 'GET /policies/authenticationMethodsPolicy',
+      expand: 'none',
+      select: 'id,displayName,systemPreferences,authenticationMethodConfigurations',
+      filter: 'none'
+    },
+    {
+      step: 2,
+      description: 'Get per-user MFA enforcement status from authentication methods',
+      endpoint: 'GET /policies/authenticationMethodsPolicy/authenticationMethodConfigurations',
+      expand: 'none',
+      select: 'id,state,includeTargets,excludeTargets',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/policies/authenticationMethodsPolicy`,
+    `GET https://graph.microsoft.com/v1.0/policies/authenticationMethodsPolicy/authenticationMethodConfigurations`
+  ]
+
+  try {
+    const authPolicy = await graphClient.api('/policies/authenticationMethodsPolicy').get()
+    const authMethods = await graphClient.api('/policies/authenticationMethodsPolicy/authenticationMethodConfigurations').get()
+
+    const perUserMFADisabled = authMethods?.value?.every(m => m.state === 'disabled') || false
+
+    return {
+      status: perUserMFADisabled ? 'pass' : 'warn',
+      perUserMFADisabled: perUserMFADisabled,
+      enabledMethods: authMethods?.value?.filter(m => m.state !== 'disabled')?.length || 0,
+      totalMethods: authMethods?.value?.length || 0,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ Per-User MFA Disabled validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
+ * Validate: Self-Service Password Reset Enabled (5.2.4)
+ */
+async function validateSSPREnabled() {
+  const graphApiCommands = [
+    {
+      step: 1,
+      description: 'Get authentication methods policy for SSPR configuration',
+      endpoint: 'GET /policies/authenticationMethodsPolicy',
+      expand: 'none',
+      select: 'id,displayName,sspr,passwordReset',
+      filter: 'none'
+    },
+    {
+      step: 2,
+      description: 'Get password reset policy configuration details',
+      endpoint: 'GET /policies/authenticationMethodsPolicy/authenticationMethodConfigurations(\'Password\')',
+      expand: 'none',
+      select: 'id,state,state,includeTargets',
+      filter: 'none'
+    }
+  ]
+  const graphExplorerCommands = [
+    `GET https://graph.microsoft.com/v1.0/policies/authenticationMethodsPolicy`,
+    `GET https://graph.microsoft.com/v1.0/policies/authenticationMethodsPolicy/authenticationMethodConfigurations`
+  ]
+
+  try {
+    const authPolicy = await graphClient.api('/policies/authenticationMethodsPolicy').get()
+    const passwordConfig = await graphClient.api('/policies/authenticationMethodsPolicy/authenticationMethodConfigurations').get()
+
+    const ssprEnabled = passwordConfig?.value?.some(m => m.id?.includes('password') && m.state === 'enabled')
+
+    return {
+      status: ssprEnabled ? 'pass' : 'fail',
+      ssprEnabled: ssprEnabled,
+      passwordResetState: ssprEnabled ? 'Enabled' : 'Disabled',
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  } catch (error) {
+    console.warn(`⚠️ SSPR Enabled validation failed: ${error.message}`)
+    return {
+      status: 'warn',
+      error: error.message,
+      graphApiCommands: graphApiCommands,
+      graphExplorerCommands: graphExplorerCommands
+    }
+  }
+}
+
+/**
  * Build CIS Topics from validation results using CIS_CONTROLS_DATA
  * Returns complete detailed structure with all control information
  */
@@ -4453,7 +4561,10 @@ function getControlValue(controlId, data) {
     '9.1.9': (d) => d?.resourceKeyBlocked ? 'ResourceKey auth: Blocked' : `ResourceKey auth: ${d?.currentPolicy || 'Allowed'}`,
     '9.1.10': (d) => d?.apiAccessRestricted ? 'Service principal API: Restricted' : `Service principal API: ${d?.currentPolicy || 'Not restricted'}`,
     '9.1.11': (d) => d?.provisioningDisabled ? 'Service principal provisioning: Disabled' : `Service principal provisioning: ${d?.currentPolicy || 'Enabled'}`,
-    '9.1.12': (d) => d?.workspaceCreationDisabled ? 'Service principal workspaces: Disabled' : `Service principal workspaces: ${d?.currentPolicy || 'Enabled'}`
+    '9.1.12': (d) => d?.workspaceCreationDisabled ? 'Service principal workspaces: Disabled' : `Service principal workspaces: ${d?.currentPolicy || 'Enabled'}`,
+    // Phase 8: Entra ID Identity (Remaining Controls)
+    '5.1.2': (d) => d?.perUserMFADisabled ? 'Per-user MFA: Disabled' : `Per-user MFA: ${d?.enabledMethods || 0}/${d?.totalMethods || 0} methods enabled`,
+    '5.2.4': (d) => d?.ssprEnabled ? 'Self-service password reset: Enabled' : 'Self-service password reset: Disabled'
   }
 
   if (valueMap[controlId]) {
