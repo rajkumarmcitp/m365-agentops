@@ -18,6 +18,7 @@ export function parseControlOutput(controlId, output) {
     '1.1.3': parseAdminCount,
     '1.2.1': parsePublicGroups,
     '1.2.2': parseSharedMailboxSignIn,
+    '1.3.4': parseUserOwnedApps,
     '2.1.1': parseSafeLinks,
     '2.1.2': parseAttachmentFilter,
     '3.1.1': parseAuditLogSearch,
@@ -123,6 +124,22 @@ function parseSharedMailboxSignIn(output) {
     return { status: 'fail', value: `${enabledCount} shared mailbox(es) allow sign-in (should be disabled)`, details: output };
   }
   return { status: 'pass', value: 'All shared mailboxes have sign-in disabled', details: output };
+}
+
+/**
+ * Parse 1.3.4: User owned apps and services
+ */
+function parseUserOwnedApps(output) {
+  if (!output || output.includes('Authentication needed')) {
+    return { status: 'warn', value: 'Unable to check user-owned apps setting', details: output };
+  }
+
+  const restricted = output.includes('False') || output.toLowerCase().includes('restricted') || output.toLowerCase().includes('disabled');
+
+  if (restricted) {
+    return { status: 'pass', value: 'User-owned apps and services are restricted', details: output };
+  }
+  return { status: 'warn', value: 'User-owned apps and services restriction status unclear', details: output };
 }
 
 /**
