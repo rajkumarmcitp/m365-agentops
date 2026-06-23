@@ -791,7 +791,7 @@ function showControlDetails(parentEl, control, topic) {
         <!-- Description Section -->
         <div class="detail-section">
           <div class="detail-section-title">Description</div>
-          <div class="detail-section-content">${control.description || control.title}</div>
+          <div class="detail-section-content">${control.desc || control.description || control.title}</div>
         </div>
 
         <!-- CIS Profile -->
@@ -845,7 +845,7 @@ function showControlDetails(parentEl, control, topic) {
           <div class="detail-section-content">
             <span style="color:var(--color-text-secondary)">⚠️ Manual Validation Required</span>
             <div style="margin-top:8px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);font-size:10px">
-              ${control.description || 'This control requires manual verification in the Microsoft 365 admin center'}
+              ${control.desc || control.description || 'This control requires manual verification in the Microsoft 365 admin center'}
             </div>
             <div style="margin-top:12px">
               <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:8px">Admin Override</div>
