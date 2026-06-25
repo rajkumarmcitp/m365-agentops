@@ -329,11 +329,16 @@ async function renderProductionTopic(el, topic) {
       row.addEventListener('mouseleave', () => {
         row.style.background = ''
       })
-      row.addEventListener('click', () => {
+      row.addEventListener('click', (e) => {
+        e.stopPropagation()
         const controlId = row.dataset.controlId
+        console.log(`🔍 Control row clicked: ${controlId}`)
         const control = subsection.controls.find(c => c.id === controlId)
         if (control) {
+          console.log(`📋 Opening details for control ${controlId}:`, control)
           showControlDetails(el, control, displayTopic)
+        } else {
+          console.error(`❌ Control ${controlId} not found in subsection:`, subsection)
         }
       })
     })
@@ -956,9 +961,15 @@ function renderValidationView(el) {
 }
 
 function showControlDetails(parentEl, control, topic) {
+  console.log(`🎯 Creating modal for control ${control.id}`)
+
   // Create overlay modal
   const modal = document.createElement('div')
   modal.className = 'control-details-modal'
+  modal.id = `modal-${control.id}`
+  modal.style.zIndex = '10000'
+  console.log(`✅ Modal element created with ID: ${modal.id}`)
+
   modal.innerHTML = `
     <div class="control-details-content">
       <div class="control-details-header">
@@ -1124,10 +1135,33 @@ function showControlDetails(parentEl, control, topic) {
 
   // Add to DOM
   document.body.appendChild(modal)
+  console.log(`✅ Modal appended to DOM. Modal in body:`, document.body.contains(modal))
+
+  // Verify modal is visible
+  const modalInDOM = document.getElementById(`modal-${control.id}`)
+  console.log(`🔍 Modal found in DOM after append:`, !!modalInDOM)
 
   // Event listeners
-  modal.querySelector('#close-modal').addEventListener('click', () => modal.remove())
-  modal.querySelector('#close-modal-btn').addEventListener('click', () => modal.remove())
+  const closeBtn1 = modal.querySelector('#close-modal')
+  const closeBtn2 = modal.querySelector('#close-modal-btn')
+
+  if (closeBtn1) {
+    closeBtn1.addEventListener('click', () => {
+      console.log(`🔘 Close button 1 clicked`)
+      modal.remove()
+    })
+  } else {
+    console.warn(`⚠️ Close button #close-modal not found`)
+  }
+
+  if (closeBtn2) {
+    closeBtn2.addEventListener('click', () => {
+      console.log(`🔘 Close button 2 clicked`)
+      modal.remove()
+    })
+  } else {
+    console.warn(`⚠️ Close button #close-modal-btn not found`)
+  }
   modal.querySelector('#copy-details').addEventListener('click', () => {
     const text = `Control: ${control.id}\nTitle: ${control.title}\nStatus: ${getEffectiveStatus(control)}\nDescription: ${control.description}`
     navigator.clipboard.writeText(text).then(() => {
