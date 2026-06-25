@@ -1016,7 +1016,7 @@ function showControlDetails(parentEl, control, topic) {
                     ${(() => {
                       const psText = Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))
                       return psText.split('\n').map((line, idx) => `
-                        <div style="margin-bottom:4px;padding:6px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #ff9800;white-space:pre-wrap;word-break:break-word;color:var(--color-text-primary)">
+                        <div style="margin-bottom:4px;padding:6px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #ff9800;white-space:pre-wrap;word-break:break-word;color:var(--color-text-primary);text-align:left">
                           <span style="color:#999;margin-right:8px">${String(idx + 1).padStart(2, '0')}</span>${line || '&nbsp;'}
                         </div>
                       `).join('')
