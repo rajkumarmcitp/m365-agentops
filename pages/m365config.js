@@ -1140,6 +1140,12 @@ function showControlDetails(parentEl, control, topic) {
   // Verify modal is visible
   const modalInDOM = document.getElementById(`modal-${control.id}`)
   console.log(`🔍 Modal found in DOM after append:`, !!modalInDOM)
+  console.log(`📍 Modal display style:`, window.getComputedStyle(modal).display)
+  console.log(`📍 Modal visibility:`, window.getComputedStyle(modal).visibility)
+  console.log(`📍 Modal z-index:`, window.getComputedStyle(modal).zIndex)
+
+  // Show toast to confirm modal opened
+  showToast(`Opening control ${control.id} details...`, 'info')
 
   // Event listeners
   const closeBtn1 = modal.querySelector('#close-modal')
@@ -1162,12 +1168,24 @@ function showControlDetails(parentEl, control, topic) {
   } else {
     console.warn(`⚠️ Close button #close-modal-btn not found`)
   }
-  modal.querySelector('#copy-details').addEventListener('click', () => {
-    const text = `Control: ${control.id}\nTitle: ${control.title}\nStatus: ${getEffectiveStatus(control)}\nDescription: ${control.description}`
-    navigator.clipboard.writeText(text).then(() => {
-      showToast('Control details copied to clipboard', 'success')
-    })
+
+  // Close modal when clicking backdrop (outside the content area)
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      console.log(`🔘 Backdrop clicked, closing modal`)
+      modal.remove()
+    }
   })
+
+  const copyBtn = modal.querySelector('#copy-details')
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const text = `Control: ${control.id}\nTitle: ${control.title}\nStatus: ${getEffectiveStatus(control)}\nDescription: ${control.description}`
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Control details copied to clipboard', 'success')
+      })
+    })
+  }
 
   modal.querySelector('#toggle-steps')?.addEventListener('click', (btn) => {
     const steps = modal.querySelector('#graph-steps')
