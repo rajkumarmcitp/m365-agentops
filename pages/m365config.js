@@ -1009,10 +1009,10 @@ function showControlDetails(parentEl, control, topic) {
                 <span style="font-weight:500">🔵 PowerShell Validation</span>
                 <button class="btn btn-sm btn-outline" id="toggle-steps">Expand Commands</button>
               </div>
-              <div id="graph-steps" style="display:none;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;font-family:monospace;font-size:9px;line-height:1.6;max-height:400px;overflow-y:auto">
+              <div id="graph-steps" style="display:none;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;font-family:monospace;font-size:9px;line-height:1.6;max-height:400px;overflow-y:auto;text-align:left">
                 ${control.ps ? `
-                  <div style="margin-bottom:12px">
-                    <div style="color:var(--color-text-secondary);margin-bottom:8px;font-weight:600">📝 PowerShell Commands:</div>
+                  <div style="margin-bottom:12px;text-align:left">
+                    <div style="color:var(--color-text-secondary);margin-bottom:8px;font-weight:600;text-align:left">📝 PowerShell Commands:</div>
                     ${(() => {
                       const psText = Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))
                       return psText.split('\n').map((line, idx) => `
@@ -1029,10 +1029,10 @@ function showControlDetails(parentEl, control, topic) {
                 <span style="font-weight:500">Graph API Queries</span>
                 <button class="btn btn-sm btn-outline" id="toggle-steps">Expand Steps</button>
               </div>
-              <div id="graph-steps" style="display:none;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;font-family:monospace;font-size:9px;line-height:1.6;max-height:400px;overflow-y:auto">
+              <div id="graph-steps" style="display:none;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;font-family:monospace;font-size:9px;line-height:1.6;max-height:400px;overflow-y:auto;text-align:left">
                 ${control.graphApiDetails?.steps && Array.isArray(control.graphApiDetails.steps) ? `
-                  <div style="margin-bottom:12px">
-                    <div style="color:var(--color-text-secondary);margin-bottom:8px;font-weight:600">📍 Query Steps:</div>
+                  <div style="margin-bottom:12px;text-align:left">
+                    <div style="color:var(--color-text-secondary);margin-bottom:8px;font-weight:600;text-align:left">📍 Query Steps:</div>
                     ${control.graphApiDetails.steps.map(s => `
                       <div style="margin-bottom:12px;padding:10px;background:var(--color-background-primary);border-radius:4px;border-left:3px solid #0066cc">
                         <div style="color:#0066cc;font-weight:600">Step ${s.step}: ${s.description || s.endpoint}</div>
