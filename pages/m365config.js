@@ -1015,11 +1015,10 @@ function showControlDetails(parentEl, control, topic) {
                     <div style="color:var(--color-text-secondary);margin-bottom:8px;font-weight:600;text-align:left !important">📝 PowerShell Commands:</div>
                     ${(() => {
                       const psText = Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))
-                      return psText.split('\n').map((line, idx) => `
-                        <div style="margin-bottom:4px;padding:6px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #ff9800;white-space:pre-wrap;word-break:break-word;color:var(--color-text-primary);text-align:left !important;display:block;margin-left:0 !important">
-                          <span style="color:#999;margin-right:8px;display:inline">${String(idx + 1).padStart(2, '0')}</span><span style="display:inline;text-align:left">${line || '&nbsp;'}</span>
-                        </div>
-                      `).join('')
+                      return psText.split('\n').map((line, idx) => {
+                        const trimmedLine = line.trim()
+                        return `<div style="margin-bottom:4px;padding:6px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #ff9800;white-space:pre-wrap;word-break:break-word;color:var(--color-text-primary);text-align:left !important;display:block;margin-left:0 !important"><span style="color:#999;margin-right:8px;display:inline">${String(idx + 1).padStart(2, '0')}</span><span style="display:inline;text-align:left">${trimmedLine || '&nbsp;'}</span></div>`
+                      }).join('')
                     })()}
                   </div>
                 ` : ''}
@@ -1106,10 +1105,13 @@ function showControlDetails(parentEl, control, topic) {
               ${control.ps ? `
               <div style="margin-bottom:12px">
                 <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">Verify with PowerShell</div>
-                <div style="padding:12px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #ff9800;font-family:monospace;font-size:9px;line-height:1.8;cursor:pointer;max-height:300px;overflow-y:auto">
+                <div style="padding:12px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #ff9800;font-family:monospace;font-size:9px;line-height:1.8;cursor:pointer;max-height:300px;overflow-y:auto;text-align:left !important">
                   ${(() => {
                     const psText = Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))
-                    return psText.split('\n').map(line => `<div style="white-space:pre-wrap;word-break:break-word">${line || '&nbsp;'}</div>`).join('')
+                    return psText.split('\n').map(line => {
+                      const trimmedLine = line.trim()
+                      return `<div style="white-space:pre-wrap;word-break:break-word;text-align:left !important">${trimmedLine || '&nbsp;'}</div>`
+                    }).join('')
                   })()}
                 </div>
               </div>
@@ -1144,10 +1146,13 @@ function showControlDetails(parentEl, control, topic) {
             <div style="padding:12px;background:#FFF3CD;border:0.5px solid #FFE69C;border-radius:var(--border-radius-md)">
               <strong>Expected:</strong> ${control.expected || 'Configure ' + control.title}<br>
               <strong>Current:</strong> ${control.current || 'Review required'}<br>
-              ${control.ps ? `<br><strong>PowerShell Commands:</strong><br><div style="background:var(--color-background-primary);padding:8px;border-radius:4px;margin-top:8px;font-size:9px;line-height:1.6;overflow-y:auto;font-family:monospace;max-height:200px">
+              ${control.ps ? `<br><strong>PowerShell Commands:</strong><br><div style="background:var(--color-background-primary);padding:8px;border-radius:4px;margin-top:8px;font-size:9px;line-height:1.6;overflow-y:auto;font-family:monospace;max-height:200px;text-align:left !important">
                 ${(() => {
                   const psText = Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))
-                  return psText.split('\n').map(line => `<div style="white-space:pre-wrap;word-break:break-word">${line || '&nbsp;'}</div>`).join('')
+                  return psText.split('\n').map(line => {
+                    const trimmedLine = line.trim()
+                    return `<div style="white-space:pre-wrap;word-break:break-word;text-align:left !important">${trimmedLine || '&nbsp;'}</div>`
+                  }).join('')
                 })()}
               </div>` : ''}
             </div>
