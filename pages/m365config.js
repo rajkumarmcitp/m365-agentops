@@ -234,12 +234,18 @@ async function renderProductionTopic(el, topic) {
   console.log(`📂 Loading topic ${topic.id}: ${topic.name}`)
 
   // Fetch real data from backend
+  console.log(`⏳ Fetching CIS controls from API...`)
   const result = await getCISControls()
+  console.log(`📦 API response received:`, result)
+
   if (!result.success || !result.data) {
-    console.warn('⚠️ Using demo data for topic (API unavailable)')
+    console.warn(`⚠️ API failed or no data. Success: ${result.success}, Data length: ${result.data?.length || 0}`)
+    console.log(`⚠️ Using demo data for topic (API unavailable)`)
     renderDemoTopic(el, topic)
     return
   }
+
+  console.log(`✅ API returned ${result.data.length} topics`)
 
   // Find the topic in the real data
   const realTopic = result.data.find(t => t.id === topic.id)
