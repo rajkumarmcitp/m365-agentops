@@ -54,10 +54,10 @@ function buildAuthCommands(tenantId, clientId, clientSecret, controlId = null) {
     `Connect-MgGraph -TenantId '${tenantId}' -ClientSecretCredential $AppCredential -NoWelcome 2>&1 | Out-Null`
   ]
 
-  // Add Exchange Online connection only if needed
+  // Add Exchange Online connection only if needed (using delegated auth, same credentials)
   if (needsExchangeOnline) {
     commands.push(
-      `Connect-ExchangeOnline -AppId '${clientId}' -CertificateThumbprint '' -Organization '${tenantId}' -ShowBanner:$false 2>&1 | Out-Null`
+      `Connect-ExchangeOnline -Credential $AppCredential -Organization '${tenantId}' -ShowBanner:$false 2>&1 | Out-Null`
     )
   }
 
