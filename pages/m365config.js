@@ -553,14 +553,25 @@ function renderProductionTopicCards(el) {
     `
 
     const viewBtn = card.querySelector('.view-details-btn')
-    viewBtn.addEventListener('click', async (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      console.log(`🔍 Topic card clicked: ${topic.id} - ${topic.name}`)
-      cfgView = 'topic'
-      activeTopic = topic
-      await renderProductionTopic(el, topic)
-    })
+    if (viewBtn) {
+      viewBtn.addEventListener('click', async (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        console.log(`🔍 Topic card clicked: ${topic.id} - ${topic.name}`)
+        cfgView = 'topic'
+        activeTopic = topic
+        console.log(`📂 Calling renderProductionTopic for topic:`, topic)
+        try {
+          await renderProductionTopic(el, topic)
+          console.log(`✅ renderProductionTopic completed`)
+        } catch (err) {
+          console.error(`❌ Error in renderProductionTopic:`, err)
+          showToast(`Error opening topic: ${err.message}`, 'error')
+        }
+      })
+    } else {
+      console.warn(`⚠️ View Details button not found for topic ${topic.id}`)
+    }
 
     grid.appendChild(card)
   })
