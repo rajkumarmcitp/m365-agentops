@@ -5515,7 +5515,7 @@ async function buildCISTopics(validationResults) {
           status: status,
           value: value,
           desc: control.description,
-          ps: psCommands || control.ps || null,
+          ps: Array.isArray(psCommands) ? psCommands.join('\n') : (psCommands || control.ps || null),
           remediation: remediation,
           psExecuted: psExecuted,
           psOutput: psOutput?.parsed || psResult?.output || null,
@@ -5542,6 +5542,7 @@ async function buildCISTopics(validationResults) {
           psCommandsForManualValidation: psCommands ? {
             description: 'Run these PowerShell commands to validate manually',
             commands: psCommands,
+            commandsFormatted: Array.isArray(psCommands) ? psCommands.join('\n') : psCommands,
             howToRun: 'Execute each command in PowerShell and compare the output to the validation result',
             note: 'Commands require authentication: Connect-MgGraph and/or Connect-ExchangeOnline'
           } : null
