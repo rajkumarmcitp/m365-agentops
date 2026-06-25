@@ -83,8 +83,12 @@ export async function initM365Config() {
   if (cfgView === 'validation') {
     renderValidationView(el)
   } else if (cfgView === 'topic') {
-    if (activeTopic && isDemoAccount()) {
-      renderDemoTopic(el, activeTopic)
+    if (activeTopic) {
+      if (isDemoAccount()) {
+        renderDemoTopic(el, activeTopic)
+      } else {
+        await renderProductionTopic(el, activeTopic)
+      }
     }
   } else {
     cfgView = 'main'
@@ -221,9 +225,18 @@ function renderDemoMain(el) {
 }
 
 async function renderProductionTopic(el, topic) {
+  if (!topic || !topic.id) {
+    console.error('❌ Invalid topic data:', topic)
+    showToast('Error: Invalid topic data', 'error')
+    return
+  }
+
+  console.log(`📂 Loading topic ${topic.id}: ${topic.name}`)
+
   // Fetch real data from backend
   const result = await getCISControls()
   if (!result.success || !result.data) {
+    console.warn('⚠️ Using demo data for topic (API unavailable)')
     renderDemoTopic(el, topic)
     return
   }
@@ -231,7 +244,15 @@ async function renderProductionTopic(el, topic) {
   // Find the topic in the real data
   const realTopic = result.data.find(t => t.id === topic.id)
   const displayTopic = realTopic || topic
+
+  if (!displayTopic.subsections) {
+    console.error('❌ Topic missing subsections:', displayTopic)
+    showToast('Error: Topic data incomplete', 'error')
+    return
+  }
+
   const stats = getTopicStats(displayTopic)
+  console.log(`✅ Loaded topic ${topic.id} with ${displayTopic.subsections.length} subsections`)
   const cls = scoreClass(stats.score)
 
   el.innerHTML = `
@@ -523,10 +544,14 @@ function renderProductionTopicCards(el) {
         </div>
       </div>
 
-      <button class="btn btn-sm" style="width:100%;font-size:10px"><i class="ti ti-arrow-right"></i> View Details</button>
+      <button class="btn btn-sm view-details-btn" style="width:100%;font-size:10px"><i class="ti ti-arrow-right"></i> View Details</button>
     `
 
-    card.addEventListener('click', async () => {
+    const viewBtn = card.querySelector('.view-details-btn')
+    viewBtn.addEventListener('click', async (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      console.log(`🔍 Topic card clicked: ${topic.id} - ${topic.name}`)
       cfgView = 'topic'
       activeTopic = topic
       await renderProductionTopic(el, topic)
