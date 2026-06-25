@@ -1004,38 +1004,60 @@ function showControlDetails(parentEl, control, topic) {
         <div class="detail-section">
           <div class="detail-section-title">Validation Method</div>
           <div class="detail-section-content">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-              <span style="font-weight:500">Graph API Queries</span>
-              <button class="btn btn-sm btn-outline" id="toggle-steps">Expand Steps</button>
-            </div>
-            <div id="graph-steps" style="display:none;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;font-family:monospace;font-size:9px;line-height:1.6;max-height:400px;overflow-y:auto">
-              ${control.graphApiDetails?.steps && Array.isArray(control.graphApiDetails.steps) ? `
-                <div style="margin-bottom:12px">
-                  <div style="color:var(--color-text-secondary);margin-bottom:8px;font-weight:600">📍 Query Steps:</div>
-                  ${control.graphApiDetails.steps.map(s => `
-                    <div style="margin-bottom:12px;padding:10px;background:var(--color-background-primary);border-radius:4px;border-left:3px solid #0066cc">
-                      <div style="color:#0066cc;font-weight:600">Step ${s.step}: ${s.description || s.endpoint}</div>
-                      <div style="color:var(--color-text-primary);margin-top:6px">
-                        <div><strong>Endpoint:</strong> ${s.endpoint}</div>
-                        ${s.select && s.select !== 'none' ? `<div><strong>Select:</strong> ${s.select}</div>` : ''}
-                        ${s.filter && s.filter !== 'none' ? `<div><strong>Filter:</strong> ${s.filter}</div>` : ''}
-                        ${s.expand && s.expand !== 'none' ? `<div><strong>Expand:</strong> ${s.expand}</div>` : ''}
+            ${control.validationMethod === 'powershell' || control.psExecuted ? `
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <span style="font-weight:500">🔵 PowerShell Validation</span>
+                <button class="btn btn-sm btn-outline" id="toggle-steps">Expand Commands</button>
+              </div>
+              <div id="graph-steps" style="display:none;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;font-family:monospace;font-size:9px;line-height:1.6;max-height:400px;overflow-y:auto">
+                ${control.ps ? `
+                  <div style="margin-bottom:12px">
+                    <div style="color:var(--color-text-secondary);margin-bottom:8px;font-weight:600">📝 PowerShell Commands:</div>
+                    ${(() => {
+                      const psText = Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))
+                      return psText.split('\n').map((line, idx) => `
+                        <div style="margin-bottom:4px;padding:6px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #ff9800;white-space:pre-wrap;word-break:break-word;color:var(--color-text-primary)">
+                          <span style="color:#999;margin-right:8px">${String(idx + 1).padStart(2, '0')}</span>${line || '&nbsp;'}
+                        </div>
+                      `).join('')
+                    })()}
+                  </div>
+                ` : ''}
+              </div>
+            ` : `
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <span style="font-weight:500">Graph API Queries</span>
+                <button class="btn btn-sm btn-outline" id="toggle-steps">Expand Steps</button>
+              </div>
+              <div id="graph-steps" style="display:none;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;font-family:monospace;font-size:9px;line-height:1.6;max-height:400px;overflow-y:auto">
+                ${control.graphApiDetails?.steps && Array.isArray(control.graphApiDetails.steps) ? `
+                  <div style="margin-bottom:12px">
+                    <div style="color:var(--color-text-secondary);margin-bottom:8px;font-weight:600">📍 Query Steps:</div>
+                    ${control.graphApiDetails.steps.map(s => `
+                      <div style="margin-bottom:12px;padding:10px;background:var(--color-background-primary);border-radius:4px;border-left:3px solid #0066cc">
+                        <div style="color:#0066cc;font-weight:600">Step ${s.step}: ${s.description || s.endpoint}</div>
+                        <div style="color:var(--color-text-primary);margin-top:6px">
+                          <div><strong>Endpoint:</strong> ${s.endpoint}</div>
+                          ${s.select && s.select !== 'none' ? `<div><strong>Select:</strong> ${s.select}</div>` : ''}
+                          ${s.filter && s.filter !== 'none' ? `<div><strong>Filter:</strong> ${s.filter}</div>` : ''}
+                          ${s.expand && s.expand !== 'none' ? `<div><strong>Expand:</strong> ${s.expand}</div>` : ''}
+                        </div>
                       </div>
-                    </div>
-                  `).join('')}
-                </div>
-              ` : ''}
-              ${control.graphApiDetails?.graphExplorerCommands && Array.isArray(control.graphApiDetails.graphExplorerCommands) && control.graphApiDetails.graphExplorerCommands.length > 0 ? `
-                <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:12px">
-                  <div style="color:var(--color-text-secondary);margin-bottom:8px;font-weight:600">🔗 Graph Explorer URLs:</div>
-                  ${(control.graphApiDetails.graphExplorerCommands || []).map(cmd => `
-                    <div style="margin-bottom:8px;padding:8px;background:var(--color-background-primary);border-radius:4px;border-left:3px solid #4caf50;word-break:break-all;cursor:pointer" title="Click to copy">
-                      <span style="color:#4caf50">${cmd}</span>
-                    </div>
-                  `).join('')}
-                </div>
-              ` : ''}
-            </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+                ${control.graphApiDetails?.graphExplorerCommands && Array.isArray(control.graphApiDetails.graphExplorerCommands) && control.graphApiDetails.graphExplorerCommands.length > 0 ? `
+                  <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:12px">
+                    <div style="color:var(--color-text-secondary);margin-bottom:8px;font-weight:600">🔗 Graph Explorer URLs:</div>
+                    ${(control.graphApiDetails.graphExplorerCommands || []).map(cmd => `
+                      <div style="margin-bottom:8px;padding:8px;background:var(--color-background-primary);border-radius:4px;border-left:3px solid #4caf50;word-break:break-all;cursor:pointer" title="Click to copy">
+                        <span style="color:#4caf50">${cmd}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            `}
           </div>
         </div>
         ` : `
