@@ -559,6 +559,8 @@ function renderProductionTopicCards(el) {
     `
 
     const viewBtn = card.querySelector('.view-details-btn')
+    console.log(`🔘 View Details button for ${topic.id}:`, viewBtn ? '✅ FOUND' : '❌ NOT FOUND')
+
     if (viewBtn) {
       viewBtn.addEventListener('click', async (e) => {
         e.preventDefault()
@@ -575,6 +577,7 @@ function renderProductionTopicCards(el) {
           showToast(`Error opening topic: ${err.message}`, 'error')
         }
       })
+      console.log(`✅ Click handler attached for topic ${topic.id}`)
     } else {
       console.warn(`⚠️ View Details button not found for topic ${topic.id}`)
     }
