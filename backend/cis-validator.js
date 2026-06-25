@@ -8,9 +8,18 @@
 import { CIS_CONTROLS_DATA, getTotalControlsCount } from './cis-controls-data.js'
 import { getValidationMethod } from './validation-config.js'
 import { recordValidationAttempt, getValidationSummary, getAllValidationMetadata, resetValidationState } from './validation-state.js'
-import { getControlPowerShellCommands } from './powershell-commands-loader.js'
+import { getControlPowerShellCommands, getControlRemediation } from './powershell-commands-loader.js'
 import { executePowerShellCommands } from './powershell-executor.js'
 import { parseControlOutput, getControlValueFromOutput, getStatusFromOutput } from './powershell-output-parser.js'
+
+// Get app-only auth credentials for PowerShell execution
+function getAppCredentials() {
+  return {
+    tenantId: process.env.AZURE_TENANT_ID || process.env.GRAPH_TENANT_ID,
+    clientId: process.env.AZURE_CLIENT_ID || process.env.GRAPH_CLIENT_ID,
+    clientSecret: process.env.AZURE_CLIENT_SECRET || process.env.GRAPH_CLIENT_SECRET
+  }
+}
 
 let graphClient = null
 let validationCache = null
@@ -91,7 +100,7 @@ export async function validateAllCISControls() {
       fabricSPAPIAccess, fabricSPProvisioning, fabricSPWorkspaceCreation,
       perUserMFADisabled, sspreEnabled,
       safeLinksOffice, safeAttachmentsSPOT, comprehensiveAttachmentFiltering,
-      connectionFilterIPAllowList, connectionFilterSafeList, inboundAntiSpamAllowedDomains,
+      exchangeSpamPolicies, connectionFilterIPAllowList, connectionFilterSafeList, inboundAntiSpamAllowedDomains,
       outboundAntiSpamLimits, priorityAccountsStrictProtection, zeroHourAutoPurge,
       teamsExternalFileSharing, teamsEmailChannelAddress, teamsExternalDomainRestriction,
       teamsUnmanagedUsersCommunication, teamsExternalInitiateConversations, teamsTrialTenantsBlocked,
@@ -106,6 +115,7 @@ export async function validateAllCISControls() {
       validateSafeLinks(),
       validateSafeAttachments(),
       validateAntiPhishing(),
+      validateExchangeSpamPolicies(),
       validateSPFRecords(),
       validateDKIM(),
       validateDMARC(),
@@ -326,6 +336,7 @@ export async function validateAllCISControls() {
       safeLinksOffice: safeLinksOffice.value || null,
       safeAttachmentsSPOT: safeAttachmentsSPOT.value || null,
       comprehensiveAttachmentFiltering: comprehensiveAttachmentFiltering.value || null,
+      exchangeSpamPolicies: exchangeSpamPolicies.value || null,
       connectionFilterIPAllowList: connectionFilterIPAllowList.value || null,
       connectionFilterSafeList: connectionFilterSafeList.value || null,
       inboundAntiSpamAllowedDomains: inboundAntiSpamAllowedDomains.value || null,
@@ -5389,8 +5400,8 @@ async function buildCISTopics(validationResults) {
           if (psCommands && psCommands.length > 0) {
             console.log(`🔧 Executing PowerShell for control ${control.id} (${psCommands.length} commands)`)
             try {
-              // Execute PowerShell commands
-              psResult = await executePowerShellCommands(psCommands, control.id)
+              // Execute PowerShell commands with app-only authentication
+              psResult = await executePowerShellCommands(psCommands, control.id, getAppCredentials())
               psExecuted = true
               console.log(`✓ PowerShell execution complete for ${control.id}: ${psResult.success ? 'success' : 'failed'}`)
 
@@ -5416,6 +5427,8 @@ async function buildCISTopics(validationResults) {
                 // Fallback to Graph API if PowerShell fails in hybrid mode
                 console.log(`⚠️ PowerShell failed for ${control.id}, falling back to Graph API`)
                 status = control.validator ? control.validator(validationData) : 'pass'
+                // Store the PowerShell error for display
+                psOutput = { raw: `PowerShell command failed (falling back to Graph API):\n${psResult.error}`, error: true }
                 recordValidationAttempt({
                   controlId: control.id,
                   method: 'graphAPI',
@@ -5427,7 +5440,11 @@ async function buildCISTopics(validationResults) {
                 // PowerShell mode: warn but show result if available
                 console.log(`⚠️ PowerShell command failed for ${control.id}: ${psResult.error}`)
                 status = 'warn'
-                psOutput = { raw: psResult.error, error: true }
+                // Show the error to user with helpful guidance
+                const authMsg = psResult.error?.includes('Authentication needed')
+                  ? '\n\n💡 TIP: Run the PowerShell commands manually with proper authentication:\n   Connect-MgGraph -Scopes "Directory.Read.All"\n   Connect-ExchangeOnline'
+                  : ''
+                psOutput = { raw: `PowerShell Error:\n${psResult.error}${authMsg}`, error: true }
               }
             } catch (error) {
               // If PowerShell execution throws, use Graph API validator
@@ -5486,6 +5503,9 @@ async function buildCISTopics(validationResults) {
         // Get validation method metadata if available
         const methodMetadata = getAllValidationMetadata().find(m => m.controlId === control.id)
 
+        // Load remediation steps from PowerShell commands mapping
+        const remediation = getControlRemediation(control.id) || control.remediation || null
+
         // Build complete control object with all fields
         const validatedControl = {
           id: control.id,
@@ -5496,6 +5516,7 @@ async function buildCISTopics(validationResults) {
           value: value,
           desc: control.description,
           ps: psCommands || control.ps || null,
+          remediation: remediation,
           psExecuted: psExecuted,
           psOutput: psOutput?.parsed || psResult?.output || null,
           psOutputRaw: psOutput?.raw || null,

@@ -43,6 +43,16 @@ export function getControlPowerShellCommands(controlId) {
 }
 
 /**
+ * Get remediation steps for a specific control
+ * @param {string} controlId - Control ID (e.g., "1.1.1")
+ * @returns {string|null} Remediation steps or null if not found
+ */
+export function getControlRemediation(controlId) {
+  const mapping = loadPowerShellCommands();
+  return mapping[controlId]?.remediation || null;
+}
+
+/**
  * Get all PowerShell commands metadata
  * @returns {Object} Complete mapping with descriptions and commands
  */
@@ -51,8 +61,8 @@ export function getAllPowerShellCommandsMetadata() {
 }
 
 /**
- * Enrich controls with PowerShell commands
- * Recursively walks control tree and adds powerShellCommands property
+ * Enrich controls with PowerShell commands and remediation
+ * Recursively walks control tree and adds powerShellCommands and remediation properties
  * @param {Object} controlsData - CIS_CONTROLS_DATA structure
  * @returns {Object} Enriched controls data
  */
@@ -65,9 +75,12 @@ export function enrichControlsWithPowerShellCommands(controlsData) {
     }
 
     if (typeof obj === 'object' && obj !== null) {
-      // If this is a control with an ID, try to add PowerShell commands
+      // If this is a control with an ID, try to add PowerShell commands and remediation
       if (obj.id && obj.type === 'auto' && mapping[obj.id]) {
         obj.powerShellCommands = mapping[obj.id].commands;
+        if (mapping[obj.id].remediation) {
+          obj.remediation = mapping[obj.id].remediation;
+        }
       }
 
       // Recursively process all properties

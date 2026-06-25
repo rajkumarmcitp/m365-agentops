@@ -23,12 +23,41 @@ function getPowerShellExecutable() {
 }
 
 /**
+ * Build authentication commands for app-only auth
+ * Only connects to Microsoft Graph (most CIS controls use Graph commands)
+ * Exchange Online can be added separately if needed by specific commands
+ * @param {string} tenantId - Azure tenant ID
+ * @param {string} clientId - App registration client ID
+ * @param {string} clientSecret - App registration client secret
+ * @returns {string[]} Array of authentication commands
+ */
+function buildAuthCommands(tenantId, clientId, clientSecret) {
+  if (!tenantId || !clientId || !clientSecret) {
+    return [] // Return empty if credentials not available
+  }
+
+  return [
+    // Suppress warnings and errors globally
+    '$WarningPreference = "SilentlyContinue"',
+    '$ErrorActionPreference = "Continue"',
+
+    // Create credentials for app-only auth
+    `$SecurePassword = ConvertTo-SecureString -String '${clientSecret}' -AsPlainText -Force`,
+    `$AppCredential = New-Object System.Management.Automation.PSCredential('${clientId}', $SecurePassword)`,
+
+    // Connect to Microsoft Graph with app-only auth (fastest - most controls use Graph)
+    `Connect-MgGraph -TenantId '${tenantId}' -ClientSecretCredential $AppCredential -NoWelcome 2>&1 | Out-Null`
+  ]
+}
+
+/**
  * Execute PowerShell commands for control validation
  * @param {string[]} commands - Array of PowerShell commands to execute
  * @param {string} controlId - Control ID for logging
+ * @param {Object} appCredentials - Optional app credentials {tenantId, clientId, clientSecret}
  * @returns {Promise<Object>} Execution result with status and output
  */
-export async function executePowerShellCommands(commands, controlId) {
+export async function executePowerShellCommands(commands, controlId, appCredentials) {
   if (!commands || commands.length === 0) {
     return {
       success: false,
@@ -39,8 +68,23 @@ export async function executePowerShellCommands(commands, controlId) {
 
   return new Promise((resolve) => {
     try {
+      // Build script with authentication if credentials provided
+      let scriptParts = []
+
+      if (appCredentials?.tenantId && appCredentials?.clientId && appCredentials?.clientSecret) {
+        const authCommands = buildAuthCommands(appCredentials.tenantId, appCredentials.clientId, appCredentials.clientSecret)
+        console.log(`🔐 Using app-only auth (${authCommands.length} auth commands)`)
+        scriptParts = [
+          ...authCommands,
+          ...commands
+        ]
+      } else {
+        console.log(`⚠️ No app credentials provided - running without authentication`)
+        scriptParts = commands
+      }
+
       // Join commands with semicolon for execution
-      const scriptContent = commands.join('; ')
+      const scriptContent = scriptParts.join('; ')
 
       // Get appropriate PowerShell executable for platform
       const psExecutable = getPowerShellExecutable()

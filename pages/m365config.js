@@ -424,23 +424,163 @@ function renderDemoTopic(el, topic) {
   })
 }
 
+function renderProductionTopicCards(el) {
+  const stats = getOverallStats()
+  const cls = scoreClass(stats.score)
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
+        <div class="page-subtitle">CIS Benchmark Compliance · ${stats.total} controls from Graph API</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn" id="cfg-validation-btn"><i class="ti ti-checklist"></i> Validation Report</button>
+        <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Re-scan</button>
+        <button class="btn btn-primary" id="cfg-agent-btn"><i class="ti ti-robot"></i> Config Agent</button>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-tile">
+        <div class="kpi-value ${cls}">${stats.score}%</div>
+        <div class="kpi-label">Overall Score</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value success">${stats.pass}</div>
+        <div class="kpi-label">Passed</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value danger">${stats.fail}</div>
+        <div class="kpi-label">Failed</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value warning">${stats.warn}</div>
+        <div class="kpi-label">Warnings</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-value purple">${stats.manual}</div>
+        <div class="kpi-label">Manual</div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Overall Compliance Posture</span>
+        <span class="badge ${cls}">${stats.score}% compliant</span>
+      </div>
+      <div class="seg-bar" style="height:12px;border-radius:6px">
+        <div class="seg pass" style="width:${(stats.pass/stats.total*100).toFixed(1)}%"></div>
+        <div class="seg warn" style="width:${(stats.warn/stats.total*100).toFixed(1)}%"></div>
+        <div class="seg fail" style="width:${(stats.fail/stats.total*100).toFixed(1)}%"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
+      <span class="status-dot active pulse"></span>
+      <span><strong style="color:var(--color-text-secondary)">Tip:</strong> Click on any area below to view detailed controls</span>
+    </div>
+
+    <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary);text-transform:uppercase;letter-spacing:0.5px">Configuration Areas</div>
+    <div class="cfg-topic-grid" id="cfg-topic-grid"></div>
+  `
+
+  const grid = el.querySelector('#cfg-topic-grid')
+  CFG_TOPICS.forEach(topic => {
+    const s = getTopicStats(topic)
+    const tCls = scoreClass(s.score)
+    const card = document.createElement('div')
+    card.className = 'cfg-topic-card'
+    const tc = TOPIC_COLOURS[topic.id] || { bg: '#f0f0f0', color: '#555' }
+    card.style.cursor = 'pointer'
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border-secondary)">
+        <div style="background:${tc.bg};color:${tc.color};width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ${topic.icon}" style="font-size:20px"></i>
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:12px;color:var(--color-text-primary)">${topic.name}</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary)">${s.total} controls</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:14px;font-weight:700;color:var(--clr-${tCls}-text)">${s.score}%</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary)">Score</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div style="flex:1;text-align:center;padding:8px;background:var(--color-background-secondary);border-radius:4px">
+          <div style="font-size:12px;font-weight:600;color:var(--clr-success-text)">${s.pass}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary)">Pass</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:8px;background:var(--color-background-secondary);border-radius:4px">
+          <div style="font-size:12px;font-weight:600;color:var(--clr-warning-text)">${s.warn}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary)">Warn</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:8px;background:var(--color-background-secondary);border-radius:4px">
+          <div style="font-size:12px;font-weight:600;color:var(--clr-danger-text)">${s.fail}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary)">Fail</div>
+        </div>
+      </div>
+
+      <button class="btn btn-sm" style="width:100%;font-size:10px"><i class="ti ti-arrow-right"></i> View Details</button>
+    `
+
+    card.addEventListener('click', async () => {
+      cfgView = 'topic'
+      activeTopic = topic
+      await renderProductionTopic(el, topic)
+    })
+
+    grid.appendChild(card)
+  })
+
+  el.querySelector('#cfg-validation-btn')?.addEventListener('click', () => {
+    cfgView = 'validation'
+    renderValidationView(el)
+  })
+
+  el.querySelector('#cfg-scan-now')?.addEventListener('click', async () => {
+    const btn = el.querySelector('#cfg-scan-now')
+    btn.innerHTML = `<span class="spinner dark"></span> Scanning...`
+    btn.disabled = true
+    await renderProductionMain(el)
+    btn.innerHTML = `<i class="ti ti-refresh"></i> Re-scan`
+    btn.disabled = false
+  })
+
+  el.querySelector('#cfg-agent-btn')?.addEventListener('click', () => {
+    showToast('Configuration Agent will help remediate failed controls', 'info')
+  })
+}
+
 async function renderProductionMain(el) {
   // Show skeleton immediately
   el.innerHTML = `
     <div>
-      ${skeletonLoader.renderPageHeader('Microsoft 365 Configuration', 'Loading configuration compliance from Graph API...', true)}
+      ${skeletonLoader.renderPageHeader('Microsoft 365 Configuration', 'Loading compliance summary...', true)}
       ${skeletonLoader.renderMetricsRowSkeleton(4)}
       ${skeletonLoader.renderCardGridSkeleton(3, 9)}
     </div>
   `
 
   try {
+    console.log('📊 Loading topic summaries (no detailed controls yet)...')
+
+    // Render topic cards immediately with skeleton for each
+    renderProductionTopicCards(el)
+
+    // Fetch full data in background for quick access
     const result = await getCISControls()
+    console.log('📊 CIS Controls result:', result)
 
     if (!result.success || !result.data || result.data.length === 0) {
+      console.warn('⚠️ No data returned from CIS Controls API:', result)
       renderBlankProductionState(el)
       return
     }
+
+    console.log('✅ Successfully loaded', result.data.length, 'topics')
 
     // Calculate stats from real data
     const allControls = result.data.flatMap(t => t.subsections.flatMap(s => s.controls))
@@ -584,9 +724,40 @@ async function renderProductionMain(el) {
       showToast('Configuration Agent will help remediate failed controls', 'info')
     })
   } catch (error) {
-    console.error('Error loading CIS controls:', error)
-    renderBlankProductionState(el)
+    console.error('❌ Error loading CIS controls:', error)
+    renderErrorState(el, error.message)
   }
+}
+
+function renderErrorState(el, errorMsg) {
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
+        <div class="page-subtitle">CIS Benchmark Compliance Assessment</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn" id="cfg-retry"><i class="ti ti-refresh"></i> Retry</button>
+      </div>
+    </div>
+
+    <div class="alert alert-danger" style="margin-bottom:16px">
+      <i class="ti ti-alert-circle"></i>
+      <div>
+        <strong>Configuration Load Failed</strong>
+        <div style="font-size:11px;margin-top:4px">⏱️ The backend API is taking too long to respond (validation may take 2+ minutes)</div>
+        <div style="font-size:10px;margin-top:8px;font-family:monospace;background:var(--color-background-secondary);padding:8px;border-radius:4px">${errorMsg}</div>
+        <div style="font-size:11px;margin-top:8px;color:var(--color-text-tertiary)">💡 Try clicking "Retry" below, or check the browser console (F12) for more details</div>
+      </div>
+    </div>
+  `
+
+  el.querySelector('#cfg-retry').addEventListener('click', async () => {
+    const btn = el.querySelector('#cfg-retry')
+    btn.innerHTML = `<span class="spinner dark"></span> Loading...`
+    btn.disabled = true
+    await renderProductionMain(el)
+  })
 }
 
 function renderBlankProductionState(el) {
@@ -605,17 +776,9 @@ function renderBlankProductionState(el) {
       <i class="ti ti-settings-off" style="font-size:48px;color:var(--color-text-tertiary);margin-bottom:12px"></i>
       <div style="font-size:13px;font-weight:600;margin-bottom:4px">No Configuration Data Available</div>
       <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:16px">
-        Configuration scanning requires Graph API backend integration
+        The API returned no data. Backend may be initializing...
       </div>
-      <div style="font-size:10px;color:var(--color-text-tertiary);padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);text-align:left;max-width:400px">
-        <strong>Required data sources:</strong>
-        <div style="margin-top:6px;font-family:monospace;font-size:9px">
-          /deviceManagement/deviceCompliancePolicies<br>
-          /policies/conditionalAccessPolicies<br>
-          /identity/authenticationMethods/policies<br>
-          /admin/windows/updates/configs
-        </div>
-      </div>
+      <button class="btn btn-primary" id="cfg-scan-now"><i class="ti ti-refresh"></i> Try Again</button>
     </div>
   `
 
@@ -624,7 +787,7 @@ function renderBlankProductionState(el) {
     btn.innerHTML = `<span class="spinner dark"></span> Scanning...`
     btn.disabled = true
     setTimeout(async () => {
-      btn.innerHTML = `<i class="ti ti-refresh"></i> Run scan`
+      btn.innerHTML = `<i class="ti ti-refresh"></i> Try Again`
       btn.disabled = false
       await renderProductionMain(el)
     }, 2000)
@@ -887,6 +1050,15 @@ function showControlDetails(parentEl, control, topic) {
                 <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">Verify with PowerShell</div>
                 <div style="padding:8px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #ff9800;font-family:monospace;font-size:8px;line-height:1.4;word-break:break-all;cursor:pointer" title="Click to copy command">
                   ${control.ps}
+                </div>
+              </div>
+              ` : ''}
+
+              ${control.psOutputDisplay ? `
+              <div style="margin-bottom:12px">
+                <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">PowerShell Execution Output</div>
+                <div style="padding:8px;background:${control.psOutput?.error || control.psOutputDisplay?.includes('Error') || control.psOutputDisplay?.includes('failed') ? '#fee' : 'var(--color-background-primary)'};border-radius:4px;border-left:2px solid ${control.psOutput?.error || control.psOutputDisplay?.includes('Error') || control.psOutputDisplay?.includes('failed') ? '#f44' : '#4caf50'};font-family:monospace;font-size:8px;line-height:1.6;word-break:break-word;max-height:250px;overflow-y:auto;color:${control.psOutput?.error || control.psOutputDisplay?.includes('Error') || control.psOutputDisplay?.includes('failed') ? '#c33' : 'var(--color-text-tertiary)'}">
+                  ${control.psOutputDisplay.replace(/</g, '&lt;').replace(/>/g, '&gt;').split('\n').map(line => `<div>${line || '&nbsp;'}</div>`).join('')}
                 </div>
               </div>
               ` : ''}

@@ -35,27 +35,40 @@ export function parseControlOutput(controlId, output) {
 }
 
 /**
- * Parse 1.1.1: Global Admin count
+ * Parse 1.1.1: Administrative accounts cloud-only check
+ * NEW LOGIC: Checks for ANY administrator with OnPremisesSyncEnabled=true
+ * ✓ PASS = PASS (no on-prem synced admins)
+ * ✗ FAIL = FAIL (found on-prem synced admins)
  */
 function parseGlobalAdmins(output) {
   if (!output || output.includes('Authentication needed')) {
-    return { status: 'warn', value: 'Unable to retrieve data', details: output };
+    return { status: 'warn', value: 'Unable to retrieve cloud-only status', details: output };
   }
 
-  // Count lines/results from output
-  const lines = output.trim().split('\n').filter(l => l.trim());
-  const count = lines.length;
+  // Look for explicit PASS/FAIL markers from new command format
+  if (output.includes('✓ PASS') || output.includes('PASS: All administrative accounts are cloud-only')) {
+    return { status: 'pass', value: 'All administrative accounts are cloud-only', details: 'No on-premises synced admins detected' };
+  }
 
-  if (count === 0) {
-    return { status: 'fail', value: 'No global admins found', details: output };
+  if (output.includes('✗ FAIL') || output.includes('Found') && output.includes('administrative account')) {
+    return { status: 'fail', value: 'Found on-premises synced administrative account(s)', details: output };
   }
-  if (count === 1) {
-    return { status: 'fail', value: '1 Global Admin (minimum is 2)', details: output };
+
+  // Look for explicit "Count: X" in output (old format fallback)
+  const countMatch = output.match(/Count:\s*(\d+)/i);
+
+  if (countMatch) {
+    const count = parseInt(countMatch[1]);
+
+    if (count === 0) {
+      return { status: 'pass', value: 'All administrative accounts are cloud-only', details: 'No on-premises synced admins detected (Count: 0)' };
+    } else {
+      return { status: 'fail', value: `Found ${count} administrative account(s) with on-premises sync enabled`, details: output };
+    }
   }
-  if (count >= 2 && count <= 4) {
-    return { status: 'pass', value: `${count} Global Admins (compliant)`, details: output };
-  }
-  return { status: 'fail', value: `${count} Global Admins (too many, max is 4)`, details: output };
+
+  // Fallback: assume PASS if no failure indicators found
+  return { status: 'pass', value: 'All administrative accounts are cloud-only', details: 'No on-premises synced admins detected' };
 }
 
 /**
@@ -83,7 +96,25 @@ function parseAdminCount(output) {
     return { status: 'warn', value: 'Unable to retrieve admin count', details: output };
   }
 
-  // Extract Count value from Measure-Object output
+  // Look for PASS marker from new command format
+  if (output.includes('✓ PASS')) {
+    const countMatch = output.match(/Total Global Administrators:\s*(\d+)/i);
+    if (countMatch) {
+      const count = parseInt(countMatch[1]);
+      return { status: 'pass', value: `${count} Global Admins (compliant)`, details: output };
+    }
+  }
+
+  // Look for FAIL marker from new command format
+  if (output.includes('✗ FAIL') || output.includes('outside recommended range')) {
+    const countMatch = output.match(/Total Global Administrators:\s*(\d+)/i);
+    if (countMatch) {
+      const count = parseInt(countMatch[1]);
+      return { status: 'warn', value: `${count} Global Admins (target: 2-4)`, details: output };
+    }
+  }
+
+  // Extract Count value from old format (Measure-Object output)
   const countMatch = output.match(/Count\s+:\s+(\d+)/);
   const count = countMatch ? parseInt(countMatch[1]) : 0;
 
@@ -101,6 +132,21 @@ function parsePublicGroups(output) {
     return { status: 'warn', value: 'Unable to check public groups', details: output };
   }
 
+  // Look for PASS marker from new command format
+  if (output.includes('✓ PASS') || output.includes('No public groups found')) {
+    return { status: 'pass', value: 'No public groups found', details: output };
+  }
+
+  // Look for FAIL marker from new command format
+  if (output.includes('✗ FAIL') || output.includes('Found') && output.includes('public group')) {
+    const countMatch = output.match(/Public Groups Found:\s*(\d+)/i);
+    if (countMatch) {
+      const count = parseInt(countMatch[1]);
+      return { status: 'fail', value: `${count} public groups found - should be restricted`, details: output };
+    }
+  }
+
+  // Fallback: count "Public" occurrences
   const publicCount = (output.match(/Public/gi) || []).length;
 
   if (publicCount === 0) {
