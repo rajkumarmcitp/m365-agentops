@@ -24,19 +24,24 @@ function getPowerShellExecutable() {
 
 /**
  * Build authentication commands for app-only auth
- * Only connects to Microsoft Graph (most CIS controls use Graph commands)
- * Exchange Online can be added separately if needed by specific commands
+ * Connects to Microsoft Graph (most controls use Graph)
+ * Also connects to Exchange Online if needed (controls 1.2.2, 6.1.2)
  * @param {string} tenantId - Azure tenant ID
  * @param {string} clientId - App registration client ID
  * @param {string} clientSecret - App registration client secret
+ * @param {string} controlId - Control being validated (optional)
  * @returns {string[]} Array of authentication commands
  */
-function buildAuthCommands(tenantId, clientId, clientSecret) {
+function buildAuthCommands(tenantId, clientId, clientSecret, controlId = null) {
   if (!tenantId || !clientId || !clientSecret) {
     return [] // Return empty if credentials not available
   }
 
-  return [
+  // Controls that require Exchange Online
+  const exoControls = ['1.2.2', '6.1.2']
+  const needsExchangeOnline = controlId && exoControls.includes(controlId)
+
+  const commands = [
     // Suppress warnings and errors globally
     '$WarningPreference = "SilentlyContinue"',
     '$ErrorActionPreference = "Continue"',
@@ -48,6 +53,15 @@ function buildAuthCommands(tenantId, clientId, clientSecret) {
     // Connect to Microsoft Graph with app-only auth (fastest - most controls use Graph)
     `Connect-MgGraph -TenantId '${tenantId}' -ClientSecretCredential $AppCredential -NoWelcome 2>&1 | Out-Null`
   ]
+
+  // Add Exchange Online connection only if needed
+  if (needsExchangeOnline) {
+    commands.push(
+      `Connect-ExchangeOnline -AppId '${clientId}' -CertificateThumbprint '' -Organization '${tenantId}' -ShowBanner:$false 2>&1 | Out-Null`
+    )
+  }
+
+  return commands
 }
 
 /**
@@ -72,8 +86,9 @@ export async function executePowerShellCommands(commands, controlId, appCredenti
       let scriptParts = []
 
       if (appCredentials?.tenantId && appCredentials?.clientId && appCredentials?.clientSecret) {
-        const authCommands = buildAuthCommands(appCredentials.tenantId, appCredentials.clientId, appCredentials.clientSecret)
-        console.log(`🔐 Using app-only auth (${authCommands.length} auth commands)`)
+        const authCommands = buildAuthCommands(appCredentials.tenantId, appCredentials.clientId, appCredentials.clientSecret, controlId)
+        const exoNeeded = authCommands.length > 5 ? ' + Exchange Online' : ''
+        console.log(`🔐 Using app-only auth (${authCommands.length} auth commands${exoNeeded})`)
         scriptParts = [
           ...authCommands,
           ...commands
