@@ -1085,7 +1085,7 @@ function showControlDetails(parentEl, control, topic) {
               <div style="margin-bottom:12px">
                 <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">Verify with PowerShell</div>
                 <div style="padding:12px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #ff9800;font-family:monospace;font-size:9px;line-height:1.8;word-break:break-word;cursor:pointer;max-height:300px;overflow-y:auto;white-space:pre-wrap" title="Click to copy command">
-                  ${control.ps.split('\n').map(line => line || '').join('\n')}
+                  ${Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))}
                 </div>
               </div>
               ` : ''}
@@ -1119,7 +1119,7 @@ function showControlDetails(parentEl, control, topic) {
             <div style="padding:12px;background:#FFF3CD;border:0.5px solid #FFE69C;border-radius:var(--border-radius-md)">
               <strong>Expected:</strong> ${control.expected || 'Configure ' + control.title}<br>
               <strong>Current:</strong> ${control.current || 'Review required'}<br>
-              ${control.ps ? `<br><strong>PowerShell Commands:</strong><br><pre style="background:var(--color-background-primary);padding:8px;border-radius:4px;margin-top:8px;font-size:9px;line-height:1.6;overflow-x:auto;white-space:pre-wrap;word-wrap:break-word">${control.ps}</pre>` : ''}
+              ${control.ps ? `<br><strong>PowerShell Commands:</strong><br><pre style="background:var(--color-background-primary);padding:8px;border-radius:4px;margin-top:8px;font-size:9px;line-height:1.6;overflow-x:auto;white-space:pre-wrap;word-wrap:break-word">${Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))}</pre>` : ''}
             </div>
           </div>
         </div>
