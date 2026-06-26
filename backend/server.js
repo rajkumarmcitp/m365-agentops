@@ -1058,42 +1058,17 @@ app.post('/api/execute-powershell', async (req, res) => {
         exitCode: 0
       })
     } catch (execError) {
-      // Check if it's a PowerShell environment issue (assembly load error)
-      if (execError.message?.includes('FileLoadException') || execError.stderr?.includes('System.Collections.Specialized')) {
-        console.warn(`⚠️ PowerShell environment issue detected - using demo mode for control ${controlId}`)
+      // Real command execution error - no demo fallback
+      console.error(`❌ PowerShell command failed for control ${controlId}:`, execError.message)
 
-        // Return demo data to test the feature UI/UX
-        const demoOutput = {
-          'Get-MgOrganization': 'DisplayName: Contoso Corporation\nId: a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-          'Get-CsTeamsClientConfiguration': 'AllowEmailIntoChannel: True\nAllowDropBox: True\nAllowBox: True',
-          'Get-CsTenantFederationConfiguration': 'AllowFederatedUsers: True\nAllowTeamsConsumer: False',
-          'default': `PowerShell Command Executed:\n${command.substring(0, 80)}...\n\nDemo Output (PowerShell environment issue detected)\n` +
-                    `Result: Configuration retrieved successfully\n` +
-                    `Timestamp: ${new Date().toISOString()}`
-        }
-
-        const output = Object.keys(demoOutput).reduce((acc, key) => {
-          if (command.includes(key)) return demoOutput[key]
-          return acc
-        }, demoOutput.default)
-
-        return res.json({
-          success: true,
-          controlId: controlId,
-          command: command.substring(0, 100) + (command.length > 100 ? '...' : ''),
-          output: output,
-          exitCode: 0,
-          isDemoMode: true,
-          note: 'Demo mode: PowerShell environment issue detected on backend'
-        })
-      }
-
-      // Actual command execution error
-      console.error(`⚠️ PowerShell command failed for control ${controlId}:`, execError.message)
+      // Return actual error details
+      const errorOutput = execError.stderr || execError.message || 'Command failed'
+      const errorDetails = `Error: ${errorOutput}\n\nCommand: ${command.substring(0, 200)}`
 
       res.json({
         success: false,
-        error: execError.stderr || execError.message || 'Command failed',
+        controlId: controlId,
+        error: errorOutput,
         output: execError.stdout || '',
         exitCode: execError.code || -1
       })
