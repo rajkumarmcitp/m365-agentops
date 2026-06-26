@@ -350,60 +350,8 @@ async function renderProductionTopic(el, topic) {
     initM365Config()
   })
 
-  // Fetch real data in background and update status badges
-  console.log(`⏳ Fetching real-time validation data in background...`)
-  try {
-    const result = await getCISControls()
-    console.log(`📦 API response received:`, result)
-
-    if (!result.success || !result.data) {
-      console.warn(`⚠️ API failed or no data. Success: ${result.success}`)
-      loadingDiv.innerHTML = `<span style="color:var(--color-text-tertiary);font-size:10px">⚠️ Could not fetch real-time data - showing cached values</span>`
-      return
-    }
-
-    console.log(`✅ API returned ${result.data.length} topics with real validation data`)
-
-    // Find the topic in real data
-    const realTopic = result.data.find(t => t.id === topic.id)
-    if (!realTopic) {
-      loadingDiv.innerHTML = `<span style="color:var(--color-text-tertiary);font-size:10px">✅ Real-time data loaded</span>`
-      return
-    }
-
-    // Update control status badges with real data
-    console.log(`🔄 Updating status badges for topic ${topic.id}`)
-    realTopic.subsections?.forEach(realSubsection => {
-      realSubsection.controls?.forEach(realControl => {
-        // Find the corresponding row in the DOM
-        const row = el.querySelector(`[data-control-id="${realControl.id}"]`)
-        if (row) {
-          // Update the status cell (4th td)
-          const statusCell = row.querySelectorAll('td')[3]
-          if (statusCell) {
-            const realStatus = getEffectiveStatus(realControl)
-            statusCell.innerHTML = statusBadge(realStatus)
-          }
-        }
-      })
-    })
-
-    // Update KPI tiles with real stats
-    const realStats = getTopicStats(realTopic)
-    const realCls = scoreClass(realStats.score)
-    const kpis = el.querySelectorAll('.kpi-tile')
-    if (kpis.length >= 4) {
-      kpis[0].innerHTML = `<div class="kpi-value ${realCls}">${realStats.score}%</div><div class="kpi-label">Score</div>`
-      kpis[1].innerHTML = `<div class="kpi-value success">${realStats.pass}</div><div class="kpi-label">Passed</div>`
-      kpis[2].innerHTML = `<div class="kpi-value danger">${realStats.fail}</div><div class="kpi-label">Failed</div>`
-      kpis[3].innerHTML = `<div class="kpi-value warning">${realStats.warn}</div><div class="kpi-label">Warning</div>`
-    }
-
-    loadingDiv.innerHTML = `<span style="color:var(--color-text-tertiary);font-size:10px">✅ Real-time validation data loaded</span>`
-  } catch (error) {
-    console.error(`❌ Error fetching real-time data:`, error)
-    loadingDiv.innerHTML = `<span style="color:var(--color-text-tertiary);font-size:10px">⚠️ Error loading real-time data</span>`
-  }
+  // Hide loading indicator - data is cached and ready
+  loadingDiv.style.display = 'none'
 }
 
 function renderDemoTopic(el, topic) {
@@ -652,152 +600,28 @@ function renderProductionTopicCards(el) {
 }
 
 async function renderProductionMain(el) {
-  // Show skeleton immediately
-  el.innerHTML = `
-    <div>
-      ${skeletonLoader.renderPageHeader('Microsoft 365 Configuration', 'Loading compliance summary...', true)}
-      ${skeletonLoader.renderMetricsRowSkeleton(4)}
-      ${skeletonLoader.renderCardGridSkeleton(3, 9)}
-    </div>
-  `
-
   try {
-    console.log('📊 Loading topic summaries (no detailed controls yet)...')
+    console.log('📊 Loading M365 Configuration from cached data...')
 
-    // Render topic cards immediately with skeleton for each
+    // Render topic cards immediately with cached data (no backend call)
     renderProductionTopicCards(el)
 
-    // Fetch full data in background for quick access
-    const result = await getCISControls()
-    console.log('📊 CIS Controls result:', result)
-
-    if (!result.success || !result.data || result.data.length === 0) {
-      console.warn('⚠️ No data returned from CIS Controls API:', result)
-      renderBlankProductionState(el)
-      return
-    }
-
-    console.log('✅ Successfully loaded', result.data.length, 'topics')
-
-    // Calculate stats from real data
-    const allControls = result.data.flatMap(t => t.subsections.flatMap(s => s.controls))
-    const totalReal = allControls.length
-    let passReal = 0, failReal = 0, warnReal = 0, manualReal = 0
-    allControls.forEach(c => {
-      const eff = getEffectiveStatus(c)
-      if (eff === 'pass') passReal++
-      else if (eff === 'fail') failReal++
-      else if (eff === 'warn') warnReal++
-      if (c.type === 'manual') manualReal++
-    })
-    const scoreReal = totalReal > 0 ? Math.round((passReal / totalReal) * 100) : 0
-    const stats = { total: totalReal, pass: passReal, fail: failReal, warn: warnReal, manual: manualReal, score: scoreReal }
-    const cls = scoreClass(stats.score)
-
-    el.innerHTML = `
-      <div class="page-header">
-        <div>
-          <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
-          <div class="page-subtitle">CIS Benchmark Compliance · ${stats.total} controls from Graph API</div>
-        </div>
-        <div class="page-actions">
-          <button class="btn" id="cfg-validation-btn"><i class="ti ti-checklist"></i> Validation Report</button>
-          <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Re-scan</button>
-          <button class="btn btn-primary" id="cfg-agent-btn"><i class="ti ti-robot"></i> Config Agent</button>
-        </div>
-      </div>
-
-      <div class="kpi-row">
-        <div class="kpi-tile">
-          <div class="kpi-value ${cls}">${stats.score}%</div>
-          <div class="kpi-label">Overall Score</div>
-        </div>
-        <div class="kpi-tile">
-          <div class="kpi-value success">${stats.pass}</div>
-          <div class="kpi-label">Passed</div>
-        </div>
-        <div class="kpi-tile">
-          <div class="kpi-value danger">${stats.fail}</div>
-          <div class="kpi-label">Failed</div>
-        </div>
-        <div class="kpi-tile">
-          <div class="kpi-value warning">${stats.warn}</div>
-          <div class="kpi-label">Warnings</div>
-        </div>
-        <div class="kpi-tile">
-          <div class="kpi-value purple">${stats.manual}</div>
-          <div class="kpi-label">Manual</div>
-        </div>
-      </div>
-
-      <div class="card mb-3">
-        <div class="card-header">
-          <span class="card-title">Overall Compliance Posture</span>
-          <span class="badge ${cls}">${stats.score}% compliant</span>
-        </div>
-        <div class="seg-bar" style="height:12px;border-radius:6px">
-          <div class="seg pass" style="width:${(stats.pass/stats.total*100).toFixed(1)}%"></div>
-          <div class="seg warn" style="width:${(stats.warn/stats.total*100).toFixed(1)}%"></div>
-          <div class="seg fail" style="width:${(stats.fail/stats.total*100).toFixed(1)}%"></div>
-        </div>
-        <div style="display:flex;gap:20px;margin-top:8px">
-          <span style="font-size:10px;color:var(--clr-success-text)">● ${stats.pass} Passed</span>
-          <span style="font-size:10px;color:var(--clr-warning-text)">● ${stats.warn} Warnings</span>
-          <span style="font-size:10px;color:var(--clr-danger-text)">● ${stats.fail} Failed</span>
-          <span style="font-size:10px;color:var(--clr-purple-text)">● ${stats.manual} Manual</span>
-        </div>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
-        <span class="status-dot active pulse"></span>
-        <span><strong style="color:var(--color-text-secondary)">Production Mode</strong> · Real tenant configuration from Graph API</span>
-      </div>
-
-      <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary);text-transform:uppercase;letter-spacing:0.5px">Configuration Areas</div>
-      <div class="cfg-topic-grid" id="cfg-topic-grid"></div>
-    `
-
-    const grid = el.querySelector('#cfg-topic-grid')
-    result.data.forEach(topic => {
-      const s = getTopicStats(topic)
-      const tCls = scoreClass(s.score)
-      const card = document.createElement('div')
-      card.className = 'cfg-topic-card'
-      const tc = TOPIC_COLOURS[topic.id] || { bg: '#f0f0f0', color: '#555' }
-      card.innerHTML = `
-        <!-- Header with Icon and Name -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border-secondary)">
-          <div style="background:${tc.bg};color:${tc.color};width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <i class="ti ${topic.icon}" style="font-size:20px"></i>
-          </div>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);line-height:1.3">${topic.name}</div>
-          </div>
-          <div style="font-size:16px;font-weight:700;color:${tc.color}">${s.score}%</div>
-        </div>
-
-        <!-- Stats Row -->
-        <div style="display:flex;gap:12px;margin-bottom:12px">
-          ${s.fail > 0 ? `<span style="padding:4px 8px;background:var(--clr-danger-bg);color:var(--clr-danger-text);border-radius:4px;font-size:11px;font-weight:600">${s.fail} Failed</span>` : ''}
-          ${s.warn > 0 ? `<span style="padding:4px 8px;background:var(--clr-warning-bg);color:var(--clr-warning-text);border-radius:4px;font-size:11px;font-weight:600">${s.warn} Warnings</span>` : ''}
-          ${s.pass > 0 ? `<span style="padding:4px 8px;background:var(--clr-success-bg);color:var(--clr-success-text);border-radius:4px;font-size:11px;font-weight:600">${s.pass} Passed</span>` : ''}
-        </div>
-
-        <!-- Progress Bar -->
-        <div style="background:var(--color-background-secondary);height:6px;border-radius:3px;overflow:hidden">
-          <div style="background:${tc.color};height:100%;width:${s.score}%;transition:width 0.3s ease"></div>
-        </div>
-      `
-      card.addEventListener('click', async () => {
-        activeTopic = topic
-        cfgView = 'topic'
-        if (isDemoAccount()) {
-          renderDemoTopic(el, topic)
-        } else {
-          await renderProductionTopic(el, topic)
-        }
-      })
-      grid.appendChild(card)
+    // Add click handlers to topic cards
+    const topicCards = el.querySelectorAll('.cfg-topic-card')
+    topicCards.forEach(card => {
+      const topicName = card.querySelector('[style*="font-weight:600"]')?.textContent
+      const topic = CFG_TOPICS.find(t => t.name === topicName)
+      if (topic) {
+        card.addEventListener('click', async () => {
+          activeTopic = topic
+          cfgView = 'topic'
+          if (isDemoAccount()) {
+            renderDemoTopic(el, topic)
+          } else {
+            await renderProductionTopic(el, topic)
+          }
+        })
+      }
     })
 
     el.querySelector('#cfg-validation-btn')?.addEventListener('click', () => {
