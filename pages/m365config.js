@@ -1,7 +1,7 @@
 import { state, saveState } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
-import { getCISControls } from '../lib/api-client.js'
+import { getCISControls, api } from '../lib/api-client.js'
 import { CFG_TOPICS } from '../data/cis-controls.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
 import { getValidationSummary, validateAllTopics, getFailedControls, getWarningControls, getRiskScore } from '../lib/config-validator.js'
@@ -233,39 +233,15 @@ async function renderProductionTopic(el, topic) {
 
   console.log(`📂 Loading topic ${topic.id}: ${topic.name}`)
 
-  // Fetch real data from backend
-  console.log(`⏳ Fetching CIS controls from API...`)
-  const result = await getCISControls()
-  console.log(`📦 API response received:`, result)
-
-  if (!result.success || !result.data) {
-    console.warn(`⚠️ API failed or no data. Success: ${result.success}, Data length: ${result.data?.length || 0}`)
-    console.log(`⚠️ Using demo data for topic (API unavailable)`)
-    renderDemoTopic(el, topic)
-    return
-  }
-
-  console.log(`✅ API returned ${result.data.length} topics`)
-
-  // Find the topic in the real data
-  const realTopic = result.data.find(t => t.id === topic.id)
-  const displayTopic = realTopic || topic
-
-  if (!displayTopic.subsections) {
-    console.error('❌ Topic missing subsections:', displayTopic)
-    showToast('Error: Topic data incomplete', 'error')
-    return
-  }
-
-  const stats = getTopicStats(displayTopic)
-  console.log(`✅ Loaded topic ${topic.id} with ${displayTopic.subsections.length} subsections`)
+  // Render topic immediately with cached data (no wait for API)
+  const stats = getTopicStats(topic)
   const cls = scoreClass(stats.score)
 
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-settings-2"></i> ${displayTopic.name}</div>
-        <div class="page-subtitle">Microsoft 365 Admin Center · ${stats.total} controls from Graph API</div>
+        <div class="page-title"><i class="ti ti-settings-2"></i> ${topic.name}</div>
+        <div class="page-subtitle">Microsoft 365 Admin Center · ${stats.total} controls</div>
       </div>
       <div class="page-actions">
         <button class="btn" id="cfg-back"><i class="ti ti-arrow-left"></i> Back</button>
@@ -292,15 +268,25 @@ async function renderProductionTopic(el, topic) {
     </div>
 
     <div id="cfg-controls"></div>
+    <div id="cfg-loading-indicator" style="padding:16px;color:var(--color-text-tertiary);font-size:10px">
+      <span class="spinner dark" style="width:12px;height:12px;margin-right:8px;display:inline-block"></span>
+      Fetching real-time validation data...
+    </div>
   `
 
   const controlsDiv = el.querySelector('#cfg-controls')
-  displayTopic.subsections.forEach(subsection => {
+  const loadingDiv = el.querySelector('#cfg-loading-indicator')
+
+  // Render controls table immediately with cached data
+  topic.subsections.forEach((subsection, subsectionIndex) => {
     const subsectionDiv = document.createElement('div')
     subsectionDiv.className = 'card mb-3'
+    const autoControls = subsection.controls.filter(c => c.type === 'auto')
+    const sectionId = `execute-section-${topic.id}-${subsectionIndex}`
     subsectionDiv.innerHTML = `
-      <div class="card-header" style="background:var(--color-background-secondary)">
+      <div class="card-header" style="background:var(--color-background-secondary);display:flex;justify-content:space-between;align-items:center">
         <span class="card-title" style="font-size:12px;font-weight:600">${subsection.name}</span>
+        ${autoControls.length > 0 ? `<button class="btn btn-sm" id="${sectionId}" style="font-size:11px"><i class="ti ti-play"></i> Execute AutoValidation (${autoControls.length})</button>` : ''}
       </div>
       <table style="width:100%">
         <thead style="background:var(--color-background-secondary)">
@@ -326,7 +312,7 @@ async function renderProductionTopic(el, topic) {
       </table>
     `
 
-    // Add row hover effect
+    // Add row hover effect and click handlers
     const rows = subsectionDiv.querySelectorAll('.control-row')
     rows.forEach(row => {
       row.addEventListener('mouseenter', () => {
@@ -335,19 +321,25 @@ async function renderProductionTopic(el, topic) {
       row.addEventListener('mouseleave', () => {
         row.style.background = ''
       })
-      row.addEventListener('click', (e) => {
-        e.stopPropagation()
+      row.addEventListener('click', () => {
         const controlId = row.dataset.controlId
-        console.log(`🔍 Control row clicked: ${controlId}`)
         const control = subsection.controls.find(c => c.id === controlId)
         if (control) {
-          console.log(`📋 Opening details for control ${controlId}:`, control)
-          showControlDetails(el, control, displayTopic)
-        } else {
-          console.error(`❌ Control ${controlId} not found in subsection:`, subsection)
+          showControlDetails(el, control, topic)
         }
       })
     })
+
+    // Add execute section handler if there are AUTO controls
+    if (autoControls.length > 0) {
+      const executeBtn = subsectionDiv.querySelector(`#${sectionId}`)
+      if (executeBtn) {
+        executeBtn.addEventListener('click', (e) => {
+          e.stopPropagation()
+          showSectionExecutionModal(el, subsection, autoControls, topic)
+        })
+      }
+    }
 
     controlsDiv.appendChild(subsectionDiv)
   })
@@ -357,6 +349,61 @@ async function renderProductionTopic(el, topic) {
     activeTopic = null
     initM365Config()
   })
+
+  // Fetch real data in background and update status badges
+  console.log(`⏳ Fetching real-time validation data in background...`)
+  try {
+    const result = await getCISControls()
+    console.log(`📦 API response received:`, result)
+
+    if (!result.success || !result.data) {
+      console.warn(`⚠️ API failed or no data. Success: ${result.success}`)
+      loadingDiv.innerHTML = `<span style="color:var(--color-text-tertiary);font-size:10px">⚠️ Could not fetch real-time data - showing cached values</span>`
+      return
+    }
+
+    console.log(`✅ API returned ${result.data.length} topics with real validation data`)
+
+    // Find the topic in real data
+    const realTopic = result.data.find(t => t.id === topic.id)
+    if (!realTopic) {
+      loadingDiv.innerHTML = `<span style="color:var(--color-text-tertiary);font-size:10px">✅ Real-time data loaded</span>`
+      return
+    }
+
+    // Update control status badges with real data
+    console.log(`🔄 Updating status badges for topic ${topic.id}`)
+    realTopic.subsections?.forEach(realSubsection => {
+      realSubsection.controls?.forEach(realControl => {
+        // Find the corresponding row in the DOM
+        const row = el.querySelector(`[data-control-id="${realControl.id}"]`)
+        if (row) {
+          // Update the status cell (4th td)
+          const statusCell = row.querySelectorAll('td')[3]
+          if (statusCell) {
+            const realStatus = getEffectiveStatus(realControl)
+            statusCell.innerHTML = statusBadge(realStatus)
+          }
+        }
+      })
+    })
+
+    // Update KPI tiles with real stats
+    const realStats = getTopicStats(realTopic)
+    const realCls = scoreClass(realStats.score)
+    const kpis = el.querySelectorAll('.kpi-tile')
+    if (kpis.length >= 4) {
+      kpis[0].innerHTML = `<div class="kpi-value ${realCls}">${realStats.score}%</div><div class="kpi-label">Score</div>`
+      kpis[1].innerHTML = `<div class="kpi-value success">${realStats.pass}</div><div class="kpi-label">Passed</div>`
+      kpis[2].innerHTML = `<div class="kpi-value danger">${realStats.fail}</div><div class="kpi-label">Failed</div>`
+      kpis[3].innerHTML = `<div class="kpi-value warning">${realStats.warn}</div><div class="kpi-label">Warning</div>`
+    }
+
+    loadingDiv.innerHTML = `<span style="color:var(--color-text-tertiary);font-size:10px">✅ Real-time validation data loaded</span>`
+  } catch (error) {
+    console.error(`❌ Error fetching real-time data:`, error)
+    loadingDiv.innerHTML = `<span style="color:var(--color-text-tertiary);font-size:10px">⚠️ Error loading real-time data</span>`
+  }
 }
 
 function renderDemoTopic(el, topic) {
@@ -980,6 +1027,151 @@ function renderValidationView(el) {
   })
 }
 
+async function showSectionExecutionModal(parentEl, subsection, autoControls, topic) {
+  const modal = document.createElement('div')
+  modal.className = 'control-details-modal'
+  modal.id = `section-exec-modal-${subsection.name.replace(/\s+/g, '-')}`
+  modal.style.zIndex = '10001'
+
+  modal.innerHTML = `
+    <div class="control-details-content" style="max-width:900px;max-height:90vh;display:flex;flex-direction:column">
+      <div class="control-details-header">
+        <div>
+          <div class="control-details-title" style="font-size:16px">${subsection.name}</div>
+          <div class="control-details-meta">${autoControls.length} AutoValidation controls · Executing PowerShell commands</div>
+        </div>
+        <button class="btn btn-sm" id="close-exec-modal" style="background:transparent;border:none;cursor:pointer;color:var(--color-text-secondary)">
+          <i class="ti ti-x" style="font-size:20px"></i>
+        </button>
+      </div>
+
+      <div id="exec-progress-container" style="padding:12px;background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-secondary)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <span style="font-weight:600;font-size:12px">Progress</span>
+          <span id="progress-count" style="font-size:11px;color:var(--color-text-tertiary)">0 / ${autoControls.length}</span>
+        </div>
+        <div id="progress-bar" style="background:var(--color-background-primary);height:8px;border-radius:4px;overflow:hidden">
+          <div id="progress-fill" style="background:#4caf50;height:100%;width:0%;transition:width 0.3s ease"></div>
+        </div>
+      </div>
+
+      <div id="exec-output-container" style="flex:1;overflow-y:auto;padding:16px;background:var(--color-background-primary)">
+        <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--color-text-tertiary);font-size:12px">
+          <div style="text-align:center">
+            <div class="spinner" style="margin-bottom:12px;width:32px;height:32px;border-color:var(--color-text-tertiary)"></div>
+            Executing commands...
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:12px;border-top:1px solid var(--color-border-secondary);display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-sm" id="export-exec-results"><i class="ti ti-download"></i> Export Results</button>
+        <button class="btn btn-sm" id="close-exec-modal-btn"><i class="ti ti-x"></i> Close</button>
+      </div>
+    </div>
+  `
+
+  document.body.appendChild(modal)
+
+  const closeBtn = modal.querySelector('#close-exec-modal')
+  const closeBtnFooter = modal.querySelector('#close-exec-modal-btn')
+  const outputContainer = modal.querySelector('#exec-output-container')
+  const progressFill = modal.querySelector('#progress-fill')
+  const progressCount = modal.querySelector('#progress-count')
+  const exportBtn = modal.querySelector('#export-exec-results')
+
+  closeBtn.addEventListener('click', () => modal.remove())
+  closeBtnFooter.addEventListener('click', () => modal.remove())
+
+  const results = []
+
+  // Execute all commands
+  for (let i = 0; i < autoControls.length; i++) {
+    const control = autoControls[i]
+    const percentage = ((i + 1) / autoControls.length * 100).toFixed(0)
+
+    // Update progress
+    progressFill.style.width = `${percentage}%`
+    progressCount.textContent = `${i + 1} / ${autoControls.length}`
+
+    // Add control result container
+    const resultDiv = document.createElement('div')
+    resultDiv.style.marginBottom = '16px'
+    resultDiv.innerHTML = `
+      <div style="font-weight:600;font-size:12px;margin-bottom:8px;display:flex;align-items:center;gap:8px">
+        <span style="color:var(--color-text-secondary)">${control.id}</span>
+        <span style="font-size:10px;color:var(--color-text-tertiary)">${control.title || control.name}</span>
+        <span class="spinner dark" style="width:12px;height:12px;margin-left:auto"></span>
+      </div>
+      <div style="background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:4px;padding:10px;font-family:monospace;font-size:9px;line-height:1.6;color:var(--color-text-secondary);max-height:200px;overflow-y:auto">
+        ⏳ Executing...
+      </div>
+    `
+
+    if (i === 0) {
+      outputContainer.innerHTML = ''
+      outputContainer.appendChild(resultDiv)
+    } else {
+      outputContainer.appendChild(resultDiv)
+    }
+
+    // Get references to the elements we just created
+    const outputEl = resultDiv.querySelector('div:last-child')
+    const resultRow = resultDiv.querySelector('div:first-child')
+
+    // Execute the command
+    try {
+      const psCommand = Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))
+
+      const response = await fetch(`${api}/execute-powershell`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: psCommand, controlId: control.id })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        outputEl.innerHTML = `<span style="color:#4caf50">✅ SUCCESS</span>\n\n${(result.output || 'No output').replace(/</g, '&lt;').replace(/>/g, '&gt;')}`
+        resultRow.querySelector('.spinner').style.display = 'none'
+        resultRow.querySelector('span:first-child').insertAdjacentHTML('afterend', '<span style="color:#4caf50;font-size:10px">✅</span>')
+        results.push({ controlId: control.id, status: 'success', output: result.output })
+      } else {
+        outputEl.innerHTML = `<span style="color:#f44">❌ ERROR</span>\n\n${(result.error || result.output || 'Unknown error').replace(/</g, '&lt;').replace(/>/g, '&gt;')}`
+        resultRow.querySelector('.spinner').style.display = 'none'
+        resultRow.querySelector('span:first-child').insertAdjacentHTML('afterend', '<span style="color:#f44;font-size:10px">❌</span>')
+        results.push({ controlId: control.id, status: 'error', output: result.error || result.output })
+      }
+    } catch (error) {
+      outputEl.innerHTML = `<span style="color:#f44">❌ CONNECTION ERROR</span>\n\n${error.message}`
+      resultRow.querySelector('.spinner').style.display = 'none'
+      resultRow.querySelector('span:first-child').insertAdjacentHTML('afterend', '<span style="color:#f44;font-size:10px">❌</span>')
+      results.push({ controlId: control.id, status: 'error', output: error.message })
+    }
+  }
+
+  // Export function
+  exportBtn.addEventListener('click', () => {
+    const timestamp = new Date().toISOString().split('T')[0]
+    const filename = `${subsection.name.replace(/\s+/g, '-')}-validation-${timestamp}.json`
+    const json = JSON.stringify({
+      subsection: subsection.name,
+      topic: topic.name,
+      controls: autoControls.length,
+      results: results,
+      executedAt: new Date().toISOString()
+    }, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+    showToast(`Results exported as ${filename}`, 'success')
+  })
+}
+
 function showControlDetails(parentEl, control, topic) {
   console.log(`🎯 Creating modal for control ${control.id}`)
 
@@ -1124,8 +1316,8 @@ function showControlDetails(parentEl, control, topic) {
 
               ${control.ps ? `
               <div style="margin-bottom:12px">
-                <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">Verify with PowerShell</div>
-                <div style="padding:12px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #ff9800;font-family:monospace;font-size:9px;line-height:1.8;cursor:pointer;max-height:300px;overflow-y:auto;text-align:left !important">
+                <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">PowerShell Validation Command</div>
+                <div style="padding:12px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #ff9800;font-family:monospace;font-size:9px;line-height:1.8;cursor:pointer;max-height:300px;overflow-y:auto;text-align:left !important;margin-bottom:12px">
                   ${(() => {
                     const psText = Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))
                     return psText.split('\n').map(line => {
@@ -1133,6 +1325,12 @@ function showControlDetails(parentEl, control, topic) {
                       return `<div style="white-space:pre-wrap;word-break:break-word;text-align:left !important">${trimmedLine || '&nbsp;'}</div>`
                     }).join('')
                   })()}
+                </div>
+                <button class="btn btn-primary btn-sm" id="execute-ps-btn-${control.id}" style="width:100%;margin-bottom:12px">
+                  <i class="ti ti-play"></i> Execute PowerShell Command
+                </button>
+                <div id="ps-output-${control.id}" style="display:none;padding:12px;background:#f5f5f5;border-radius:4px;border-left:3px solid #0066cc;font-family:monospace;font-size:8px;line-height:1.6;max-height:400px;overflow-y:auto;word-break:break-word;white-space:pre-wrap;color:#333">
+                  <!-- PowerShell output will be displayed here -->
                 </div>
               </div>
               ` : ''}
@@ -1252,6 +1450,48 @@ function showControlDetails(parentEl, control, topic) {
       btn.target.textContent = 'Expand Steps'
     }
   })
+
+  // PowerShell execution handler
+  const escapedId = control.id.replace(/\./g, '\\.')
+  const executePsBtn = modal.querySelector(`#execute-ps-btn-${escapedId}`)
+  if (executePsBtn && control.ps) {
+    executePsBtn.addEventListener('click', async () => {
+      const outputDiv = modal.querySelector(`#ps-output-${escapedId}`)
+      const psCommand = Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))
+
+      // Show output div and indicate loading
+      outputDiv.style.display = 'block'
+      outputDiv.innerHTML = '<div style="color:#666">⏳ Executing PowerShell command...</div>'
+      executePsBtn.disabled = true
+      executePsBtn.innerHTML = '<span class="spinner dark" style="width:12px;height:12px;margin-right:6px;display:inline-block"></span> Executing...'
+
+      try {
+        // Call backend API to execute PowerShell
+        const response = await fetch(`${api}/execute-powershell`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: psCommand, controlId: control.id })
+        })
+
+        const result = await response.json()
+
+        if (result.success) {
+          outputDiv.innerHTML = `<div style="color:#4caf50;font-weight:600;margin-bottom:8px">✅ Command executed successfully</div><div style="white-space:pre-wrap;word-break:break-word;color:#333">${(result.output || 'No output').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`
+          showToast(`PowerShell validation completed for ${control.id}`, 'success')
+        } else {
+          outputDiv.innerHTML = `<div style="color:#f44;font-weight:600;margin-bottom:8px">❌ Error executing command</div><div style="white-space:pre-wrap;word-break:break-word;color:#c33">${(result.error || result.output || 'Unknown error').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`
+          showToast(`Error executing PowerShell for ${control.id}`, 'error')
+        }
+      } catch (error) {
+        outputDiv.innerHTML = `<div style="color:#f44;font-weight:600;margin-bottom:8px">❌ Connection Error</div><div style="white-space:pre-wrap;word-break:break-word;color:#c33">Could not execute command. Ensure backend is running.</div>`
+        console.error('PowerShell execution error:', error)
+        showToast('Failed to execute PowerShell command', 'error')
+      } finally {
+        executePsBtn.disabled = false
+        executePsBtn.innerHTML = '<i class="ti ti-play"></i> Execute PowerShell Command'
+      }
+    })
+  }
 
   // Manual validation override buttons
   modal.querySelectorAll('.manual-override-btn').forEach(btn => {
