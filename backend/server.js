@@ -1035,7 +1035,8 @@ app.post('/api/execute-powershell', async (req, res) => {
 
     try {
       // Execute PowerShell command using execFile (more reliable)
-      const { stdout, stderr } = await execFileAsync('pwsh', [
+      const pwshPath = process.platform === 'darwin' ? '/opt/homebrew/bin/pwsh' : 'pwsh'
+      const { stdout, stderr } = await execFileAsync(pwshPath, [
         '-NoProfile',
         '-NoLogo',
         '-NonInteractive',
