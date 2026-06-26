@@ -1,0 +1,131 @@
+{
+  "portalUrl": "https://app.powerbi.com/admin-portal",
+  "totalControls": 12,
+  "section": "9",
+  "name": "Microsoft Fabric Analytics Security",
+  "reviewRequired": 12,
+  "approach": "Portal Verification Checklist",
+  "timestamp": "2026-06-26 16:06:31",
+  "results": [
+    {
+      "compliant": "Disabled OR Enabled with Specific security groups",
+      "title": "Ensure guest user access is restricted",
+      "setting": "Guest users can access Microsoft Fabric",
+      "status": "REVIEW",
+      "expectation": "enabled=false OR (enabled=true AND enabledSecurityGroups not empty)",
+      "location": "Tenant settings > Export and Sharing",
+      "id": "9.1.1",
+      "category": "Guest Access"
+    },
+    {
+      "compliant": "Disabled OR Enabled with Specific security groups",
+      "title": "Ensure external user invitations are restricted",
+      "setting": "External user invitations",
+      "status": "REVIEW",
+      "expectation": "enabled=false OR (enabled=true AND enabledSecurityGroups not empty)",
+      "location": "Tenant settings > Export and Sharing",
+      "id": "9.1.2",
+      "category": "External Access"
+    },
+    {
+      "compliant": "Disabled OR Limited to specific workspaces",
+      "title": "Ensure guest access to content is restricted",
+      "setting": "Guest access to Fabric content",
+      "status": "REVIEW",
+      "expectation": "enabled=false OR (enabled=true AND enabledSecurityGroups not empty)",
+      "location": "Tenant settings > Export and Sharing",
+      "id": "9.1.3",
+      "category": "Guest Content Access"
+    },
+    {
+      "compliant": "Disabled",
+      "title": "Ensure 'Publish to web' is restricted",
+      "setting": "Publish to web",
+      "status": "REVIEW",
+      "expectation": "enabled=false OR restricted via security groups",
+      "location": "Tenant settings > Export and Sharing",
+      "id": "9.1.4",
+      "category": "Public Sharing"
+    },
+    {
+      "compliant": "Disabled",
+      "title": "Ensure 'Interact with and share R and Python' visuals is 'Disabled'",
+      "setting": "R visual",
+      "status": "REVIEW",
+      "expectation": "enabled=false",
+      "location": "Tenant settings > R and Python visuals",
+      "id": "9.1.5",
+      "category": "Code Execution"
+    },
+    {
+      "compliant": "Enabled",
+      "title": "Ensure 'Allow users to apply sensitivity labels for content' is 'Enabled'",
+      "setting": "Sensitivity labels for content",
+      "status": "REVIEW",
+      "expectation": "enabled=true",
+      "location": "Tenant settings > Information protection",
+      "id": "9.1.6",
+      "category": "Data Governance"
+    },
+    {
+      "compliant": "Disabled OR Enabled with security groups",
+      "title": "Ensure shareable links are restricted",
+      "setting": "Share links to entire organization",
+      "status": "REVIEW",
+      "expectation": "enabled=false OR (enabled=true AND enabledSecurityGroups not empty)",
+      "location": "Tenant settings > Export and Sharing",
+      "id": "9.1.7",
+      "category": "Link Sharing"
+    },
+    {
+      "compliant": "Disabled OR Enabled with security groups",
+      "title": "Ensure enabling of external data sharing is restricted",
+      "setting": "Allow external data sharing",
+      "status": "REVIEW",
+      "expectation": "enabled=false OR (enabled=true AND enabledSecurityGroups not empty)",
+      "location": "Tenant settings > Export and Sharing",
+      "id": "9.1.8",
+      "category": "Data Sharing"
+    },
+    {
+      "compliant": "Enabled",
+      "title": "Ensure 'Block ResourceKey Authentication' is 'Enabled'",
+      "setting": "Block ResourceKey authentication",
+      "status": "REVIEW",
+      "expectation": "enabled=true",
+      "location": "Tenant settings > Developer settings",
+      "id": "9.1.9",
+      "category": "Authentication"
+    },
+    {
+      "compliant": "Restricted or Disabled",
+      "title": "Ensure access to APIs by service principals is restricted",
+      "setting": "Service principal access APIs",
+      "status": "REVIEW",
+      "expectation": "enabled=false OR restricted to allow list",
+      "location": "Tenant settings > Developer settings",
+      "id": "9.1.10",
+      "category": "Service Principals"
+    },
+    {
+      "compliant": "Disabled",
+      "title": "Ensure service principals cannot create and use profiles",
+      "setting": "Service principals can create and use profiles",
+      "status": "REVIEW",
+      "expectation": "enabled=false",
+      "location": "Tenant settings > Developer settings",
+      "id": "9.1.11",
+      "category": "Service Principals"
+    },
+    {
+      "compliant": "Disabled or Restricted",
+      "title": "Ensure service principals ability to create workspaces, connections and deployment pipelines is restricted",
+      "setting": "Service principal global APIs",
+      "status": "REVIEW",
+      "expectation": "enabled=false OR restricted to allow list",
+      "location": "Tenant settings > Developer settings",
+      "id": "9.1.12",
+      "category": "Service Principals"
+    }
+  ]
+}

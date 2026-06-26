@@ -5423,17 +5423,20 @@ async function buildCISTopics(validationResults) {
                   success: true,
                   executionTime: Date.now() - validationStartTime
                 })
-              } else if (currentValidationMethod === 'hybrid') {
-                // Fallback to Graph API if PowerShell fails in hybrid mode
-                console.log(`⚠️ PowerShell failed for ${control.id}, falling back to Graph API`)
+              } else if (currentValidationMethod === 'hybrid' || psResult.isSystemError) {
+                // Fallback to Graph API if PowerShell fails in hybrid mode or if system error detected
+                const fallbackReason = psResult.isSystemError
+                  ? 'PowerShell system configuration issue - using Graph API'
+                  : 'PowerShell command failed - using Graph API'
+                console.log(`⚠️ ${fallbackReason} for ${control.id}`)
                 status = control.validator ? control.validator(validationData) : 'pass'
                 // Store the PowerShell error for display
-                psOutput = { raw: `PowerShell command failed (falling back to Graph API):\n${psResult.error}`, error: true }
+                psOutput = { raw: `${fallbackReason}:\n${psResult.error}`, error: true, fallback: true }
                 recordValidationAttempt({
                   controlId: control.id,
                   method: 'graphAPI',
                   fallback: true,
-                  fallbackReason: psResult.error || 'PowerShell command failed',
+                  fallbackReason: fallbackReason,
                   executionTime: Date.now() - validationStartTime
                 })
               } else {

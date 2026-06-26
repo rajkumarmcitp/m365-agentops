@@ -63,7 +63,7 @@ export const CIS_CONTROLS_DATA = [
         controls: [
           {
             id: '1.2.1',
-            title: 'Ensure that only organizationally managed/approved public groups exist . 39',
+            title: 'Ensure that only organizationally managed/approved public groups exist',
             type: 'auto',
             profile: 'E3 L1',
             graphQuery: 'groupCreationPolicy',
@@ -464,25 +464,31 @@ export const CIS_CONTROLS_DATA = [
     subsections: [
       {
         id: 't4s41',
-        name: '4.1 Device Management',
+        name: '4.1 Device Compliance',
         controls: [
           {
-            id: '4.1.1',
+            id: '4.1',
             title: 'Ensure devices without a compliance policy are marked not compliant',
             type: 'auto',
             profile: 'E3 L1',
             graphQuery: 'deviceCompliance',
             validator: (data) => data?.totalPolicies > 0 ? 'pass' : 'warn',
-            description: 'CIS Control 4.1.1 - Device compliance enforcement'
-          },
+            description: 'Devices that don\'t meet compliance policies should be marked as non-compliant to enforce organizational security standards.'
+          }
+        ]
+      },
+      {
+        id: 't4s42',
+        name: '4.2 Device Enrollment',
+        controls: [
           {
-            id: '4.2.1',
+            id: '4.2',
             title: 'Ensure device enrollment for personally owned devices is blocked by default',
             type: 'auto',
             profile: 'E3 L1',
             graphQuery: 'deviceEnrollmentRestrictions',
             validator: (data) => (data?.iosPersonalBlocked && data?.androidPersonalBlocked) ? 'pass' : 'warn',
-            description: 'CIS Control 4.2.1 - BYOD enrollment restriction'
+            description: 'BYOD (Bring Your Own Device) enrollment should be blocked by default to prevent personally owned devices from accessing organizational resources without proper controls.'
           }
         ]
       }
@@ -500,75 +506,165 @@ export const CIS_CONTROLS_DATA = [
         controls: [
           {
             id: '5.1.1',
-            title: 'Overview 5.1.2.1 Ensure \'Per-user MFA\' is disabled',
+            title: 'Overview - Users and Groups Configuration',
             type: 'manual',
             profile: 'E3 L1',
             graphQuery: 'mfaPolicies',
             validator: () => 'pass',
-            description: 'CIS Control 5.1.1'
+            description: 'Review and configure all User and Group policies in Microsoft Entra ID to enforce security controls across user identities and group management.'
           },
           {
-            id: '5.1.2',
-            title: 'Users 5.1.2.1 Ensure \'Per-user MFA\' is disabled',
+            id: '5.1.2.1',
+            title: 'Ensure Per-user MFA is disabled',
             type: 'auto',
             profile: 'E3 L1',
             graphQuery: 'perUserMFADisabled',
             validator: () => 'warn',
-            description: 'CIS Control 5.1.2'
+            description: 'Per-user MFA should be disabled in favor of Conditional Access policies which provide more granular and centralized MFA control.'
           },
           {
-            id: '5.1.3',
-            title: 'Groups 5.1.3.1 Ensure users cannot create security groups',
+            id: '5.1.2.2',
+            title: 'Ensure users cannot register applications',
             type: 'auto',
             profile: 'E3 L1',
-            graphQuery: 'groupCreationRestriction',
+            graphQuery: 'applicationRegistrationRestriction',
             validator: () => 'warn',
-            description: 'CIS Control 5.1.3'
+            description: 'Non-admin users should not be allowed to register applications to prevent unauthorized application registrations that could be used for privilege escalation.'
           },
           {
-            id: '5.1.4',
-            title: 'Devices 5.1.4.1 Ensure the ability to join devices to Entra is restricted',
+            id: '5.1.2.3',
+            title: 'Ensure non-admin users cannot create tenants',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'tenantCreationRestriction',
+            validator: () => 'warn',
+            description: 'Restrict non-admin users from creating new tenants to maintain organizational control over tenant provisioning.'
+          },
+          {
+            id: '5.1.3.1',
+            title: 'Ensure users cannot create security groups',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'securityGroupCreationRestriction',
+            validator: () => 'warn',
+            description: 'Users should not be allowed to create security groups to maintain control over group-based access management.'
+          },
+          {
+            id: '5.1.3.4',
+            title: 'Ensure users cannot create Microsoft 365 groups',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'm365GroupCreationRestriction',
+            validator: () => 'warn',
+            description: 'Users should not be able to create Microsoft 365 groups in Azure portals, APIs, or PowerShell without administrative approval.'
+          },
+          {
+            id: '5.1.4.1',
+            title: 'Ensure the ability to join devices to Entra is restricted',
             type: 'auto',
             profile: 'E3 L1',
             graphQuery: 'deviceJoinRestriction',
             validator: () => 'warn',
-            description: 'CIS Control 5.1.4'
+            description: 'Device registration in Entra ID should be restricted to prevent unauthorized device registration.'
           },
           {
-            id: '5.1.5',
-            title: 'Enterprise apps',
+            id: '5.1.4.2',
+            title: 'Ensure the maximum number of devices per user is limited',
             type: 'auto',
             profile: 'E3 L1',
-            graphQuery: 'enterpriseAppsGovernance',
+            graphQuery: 'maxDevicesPerUser',
             validator: () => 'warn',
-            description: 'CIS Control 5.1.5'
+            description: 'Limit the number of devices each user can register to reduce the attack surface from lost or compromised devices.'
           },
           {
-            id: '5.1.6',
-            title: 'External Identities 5.1.6.1 Ensure that collaboration invitations are sent to al',
+            id: '5.1.4.3',
+            title: 'Ensure the GA role is not added as a local administrator during Entra join',
             type: 'auto',
             profile: 'E3 L1',
-            graphQuery: 'collaborationInvitationRestriction',
+            graphQuery: 'gaLocalAdminRestriction',
             validator: () => 'warn',
-            description: 'CIS Control 5.1.6'
+            description: 'Global Administrators should not be added as local administrators during Entra join to limit privilege escalation opportunities.'
           },
           {
-            id: '5.1.7',
-            title: 'User experiences................................................................',
+            id: '5.1.4.4',
+            title: 'Ensure local administrator assignment is limited during Entra join',
             type: 'auto',
             profile: 'E3 L1',
-            graphQuery: 'userExperienceConfiguration',
+            graphQuery: 'localAdminLimitation',
             validator: () => 'warn',
-            description: 'CIS Control 5.1.7'
+            description: 'Restrict which users can be assigned as local administrators during Entra join operations.'
           },
           {
-            id: '5.1.8',
-            title: 'Hybrid management 5.1.8.1 Ensure that password hash sync is enabled for hybrid d',
+            id: '5.1.4.5',
+            title: 'Ensure Local Administrator Password Solution is enabled',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'lapsEnabled',
+            validator: () => 'warn',
+            description: 'Enable Local Administrator Password Solution (LAPS) to manage and rotate local administrator passwords on Entra-joined devices.'
+          },
+          {
+            id: '5.1.4.6',
+            title: 'Ensure users are restricted from recovering BitLocker keys',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'bitLockerKeyRecoveryRestriction',
+            validator: () => 'warn',
+            description: 'Users should not be allowed to recover their own BitLocker keys to prevent unauthorized access to encrypted device data.'
+          },
+          {
+            id: '5.1.5.1',
+            title: 'Ensure user consent to apps accessing company data is not allowed',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'userConsentRestriction',
+            validator: () => 'warn',
+            description: 'Users should not be allowed to consent to apps accessing company data on their behalf. Admin consent should be required instead.'
+          },
+          {
+            id: '5.1.5.2',
+            title: 'Ensure the admin consent workflow is enabled',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'adminConsentWorkflow',
+            validator: () => 'warn',
+            description: 'Enable admin consent workflow to review and approve app consent requests for applications that require access to organizational data.'
+          },
+          {
+            id: '5.1.5.3',
+            title: 'Ensure enterprise app password and certificate management is configured',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'appPasswordManagement',
+            validator: () => 'warn',
+            description: 'Configure password and certificate expiration policies for enterprise applications to ensure credentials are rotated regularly.'
+          },
+          {
+            id: '5.1.6.2',
+            title: 'Ensure that guest user access is restricted',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'guestAccessRestriction',
+            validator: () => 'warn',
+            description: 'Guest user access should be restricted to appropriate permission levels to minimize external user privileges.'
+          },
+          {
+            id: '5.1.6.3',
+            title: 'Ensure guest user invitations are limited',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'guestInvitationRestriction',
+            validator: () => 'warn',
+            description: 'Restrict who can invite guests to the organization to prevent unauthorized external user access.'
+          },
+          {
+            id: '5.1.8.1',
+            title: 'Ensure password hash sync is enabled for hybrid deployments',
             type: 'auto',
             profile: 'E3 L1',
             graphQuery: 'passwordHashSync',
             validator: () => 'warn',
-            description: 'CIS Control 5.1.8'
+            description: 'For hybrid environments, enable password hash synchronization to ensure consistent authentication across on-premises and cloud identities.'
           }
         ]
       },
@@ -577,31 +673,103 @@ export const CIS_CONTROLS_DATA = [
         name: '5.2 Authentication',
         controls: [
           {
-            id: '5.2.2',
-            title: 'Conditional Access',
+            id: '5.2.2.1',
+            title: 'Ensure Conditional Access policies are configured',
             type: 'auto',
             profile: 'E3 L1',
             graphQuery: 'conditionalAccessPolicies',
             validator: () => 'warn',
-            description: 'CIS Control 5.2.2'
+            description: 'Implement Conditional Access policies to enforce MFA, device compliance, and risk-based access controls for organizational users and applications.'
           },
           {
-            id: '5.2.3',
-            title: 'Authentication Methods',
+            id: '5.2.3.2',
+            title: 'Ensure custom banned passwords lists are used',
             type: 'auto',
             profile: 'E3 L1',
-            graphQuery: 'authenticationMethods',
+            graphQuery: 'customBannedPasswords',
             validator: () => 'warn',
-            description: 'CIS Control 5.2.3'
+            description: 'Configure custom banned password lists to prevent users from choosing passwords containing organizational terms, brand names, or common patterns.'
+          },
+          {
+            id: '5.2.3.3',
+            title: 'Ensure password protection is enabled for on-prem Active Directory',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'onPremPasswordProtection',
+            validator: () => 'warn',
+            description: 'Enable password protection in on-premises Active Directory to enforce cloud-based password policies for hybrid environments.'
+          },
+          {
+            id: '5.2.3.4',
+            title: 'Ensure all member users are MFA capable',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'mfaCapability',
+            validator: () => 'warn',
+            description: 'All member users should be registered for and capable of using Multi-Factor Authentication.'
+          },
+          {
+            id: '5.2.3.5',
+            title: 'Ensure weak authentication methods are disabled',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'weakAuthMethodsDisabled',
+            validator: () => 'warn',
+            description: 'Disable weak authentication methods such as SMS and voice to enforce stronger authentication mechanisms.'
+          },
+          {
+            id: '5.2.3.6',
+            title: 'Ensure system-preferred multifactor authentication is enabled',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'systemPreferredMfa',
+            validator: () => 'warn',
+            description: 'Configure system-preferred MFA settings to encourage users to adopt the most secure authentication methods.'
+          },
+          {
+            id: '5.2.3.7',
+            title: 'Ensure the email OTP authentication method is disabled',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'emailOtpDisabled',
+            validator: () => 'warn',
+            description: 'Email OTP should be disabled as it provides weaker authentication security compared to other MFA methods.'
+          },
+          {
+            id: '5.2.3.8',
+            title: 'Ensure account lockout threshold is 10 or less',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'accountLockoutThreshold',
+            validator: () => 'warn',
+            description: 'Set account lockout threshold to 10 or fewer failed attempts to protect against brute force attacks.'
+          },
+          {
+            id: '5.2.3.9',
+            title: 'Ensure account lockout duration is at least 60 seconds',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'accountLockoutDuration',
+            validator: () => 'warn',
+            description: 'Configure account lockout duration to at least 60 seconds to provide protection while allowing legitimate users time to retry.'
+          },
+          {
+            id: '5.2.3.10',
+            title: 'Ensure Microsoft Authenticator companion app is disabled',
+            type: 'auto',
+            profile: 'E3 L1',
+            graphQuery: 'msAuthenticatorCompanionDisabled',
+            validator: () => 'warn',
+            description: 'Disable companion app approval methods on Microsoft Authenticator to enforce stronger authentication via pushbutton or biometric methods.'
           },
           {
             id: '5.2.4',
-            title: 'Password reset 5.2.4.1 Ensure \'Self service password reset enabled\' is set to \'A',
+            title: 'Ensure Self-service password reset is enabled for all users',
             type: 'auto',
             profile: 'E3 L1',
             graphQuery: 'sspreEnabled',
             validator: () => 'warn',
-            description: 'CIS Control 5.2.4'
+            description: 'Enable Self-service Password Reset (SSPR) for all users to reduce helpdesk burden and allow users to regain access to their accounts securely.'
           }
         ]
       },
@@ -647,7 +815,7 @@ export const CIS_CONTROLS_DATA = [
           },
           {
             id: '5.3.5',
-            title: 'Ensure approval is required for Privileged Role Administrator activation  . 412',
+            title: 'Ensure approval is required for Privileged Role Administrator activation ',
             type: 'auto',
             profile: 'E3 L1',
             graphQuery: 'privilegedRoleAdminApprovalRequired',

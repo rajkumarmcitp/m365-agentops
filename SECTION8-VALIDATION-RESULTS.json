@@ -1,0 +1,133 @@
+{
+  "complianceRate": 17.6,
+  "results": [
+    {
+      "title": "Ensure external file sharing in Teams is enabled for only approved cloud storage services",
+      "id": "8.1.1",
+      "type": "auto",
+      "details": "All cloud storage providers enabled (should be restricted)",
+      "status": "FAIL"
+    },
+    {
+      "title": "Ensure users can't send emails to a channel email address",
+      "id": "8.1.2",
+      "type": "auto",
+      "details": "Email into channel: Enabled (should be disabled)",
+      "status": "FAIL"
+    },
+    {
+      "title": "Ensure external domains are restricted in the Teams admin center",
+      "id": "8.2.1",
+      "type": "auto",
+      "details": "Federation restricted",
+      "status": "PASS"
+    },
+    {
+      "title": "Ensure communication with unmanaged Teams users is disabled",
+      "id": "8.2.2",
+      "type": "auto",
+      "details": "Consumer Teams communication: Enabled (should be disabled)",
+      "status": "FAIL"
+    },
+    {
+      "title": "Ensure external Teams users cannot initiate conversations",
+      "id": "8.2.3",
+      "type": "auto",
+      "details": "Inbound consumer Teams: Enabled (should be disabled)",
+      "status": "FAIL"
+    },
+    {
+      "title": "Ensure the organization cannot communicate with accounts in trial Teams tenants",
+      "id": "8.2.4",
+      "type": "auto",
+      "details": "No blocked domains configured",
+      "status": "WARN"
+    },
+    {
+      "title": "Ensure app permission policies are configured",
+      "id": "8.4.1",
+      "type": "manual",
+      "details": "Manual control - verify in Teams admin center",
+      "status": "REVIEW"
+    },
+    {
+      "title": "Ensure anonymous users can't join a meeting",
+      "id": "8.5.1",
+      "type": "auto",
+      "details": "Anonymous meeting join: Enabled (should be disabled)",
+      "status": "FAIL"
+    },
+    {
+      "title": "Ensure anonymous users and dial-in callers can't start a meeting",
+      "id": "8.5.2",
+      "type": "auto",
+      "details": "Anonymous meeting start: Disabled",
+      "status": "PASS"
+    },
+    {
+      "title": "Ensure only people in my org can bypass the lobby",
+      "id": "8.5.3",
+      "type": "auto",
+      "details": "Lobby bypass: ",
+      "status": "WARN"
+    },
+    {
+      "title": "Ensure users dialing in can't bypass the lobby",
+      "id": "8.5.4",
+      "type": "auto",
+      "details": "Dial-in bypass: Enabled (should be disabled)",
+      "status": "FAIL"
+    },
+    {
+      "title": "Ensure meeting chat does not allow anonymous users",
+      "id": "8.5.5",
+      "type": "auto",
+      "details": "Meeting chat: Enabled (should be restricted)",
+      "status": "FAIL"
+    },
+    {
+      "title": "Ensure only organizers and co-organizers can present",
+      "id": "8.5.6",
+      "type": "auto",
+      "details": "Presenter role:  (should be restricted)",
+      "status": "FAIL"
+    },
+    {
+      "title": "Ensure external participants can't give or request control",
+      "id": "8.5.7",
+      "type": "auto",
+      "details": "External control: Disabled",
+      "status": "PASS"
+    },
+    {
+      "title": "Ensure external meeting chat is off",
+      "id": "8.5.8",
+      "type": "auto",
+      "details": "External chat: Enabled (should be disabled)",
+      "status": "FAIL"
+    },
+    {
+      "title": "Ensure meeting recording is off by default",
+      "id": "8.5.9",
+      "type": "auto",
+      "details": "Meeting recording: Enabled by default (should be disabled)",
+      "status": "FAIL"
+    },
+    {
+      "title": "Ensure users can report security concerns in Teams",
+      "id": "8.6.1",
+      "type": "auto",
+      "details": "Security reporting: Disabled (should be enabled)",
+      "status": "FAIL"
+    }
+  ],
+  "errorCount": 0,
+  "passCount": 3,
+  "name": "Microsoft Teams Admin Center",
+  "failCount": 11,
+  "reviewCount": 1,
+  "section": "8",
+  "warnCount": 2,
+  "totalControls": 17,
+  "timestamp": "2026-06-26 15:22:27"
+}

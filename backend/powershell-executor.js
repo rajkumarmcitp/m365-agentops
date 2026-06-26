@@ -54,12 +54,9 @@ function buildAuthCommands(tenantId, clientId, clientSecret, controlId = null) {
     `Connect-MgGraph -TenantId '${tenantId}' -ClientSecretCredential $AppCredential -NoWelcome 2>&1 | Out-Null`
   ]
 
-  // Add Exchange Online connection only if needed (using delegated auth, same credentials)
-  if (needsExchangeOnline) {
-    commands.push(
-      `Connect-ExchangeOnline -Credential $AppCredential -Organization '${tenantId}' -ShowBanner:$false 2>&1 | Out-Null`
-    )
-  }
+  // For Exchange Online, use app-only auth via Graph API
+  // (app-only Exchange Online requires certificate, which we don't have)
+  // Instead, we'll query via Graph API which is already authenticated above
 
   return commands
 }
@@ -131,13 +128,27 @@ export async function executePowerShellCommands(commands, controlId, appCredenti
             executedAt: new Date().toISOString()
           })
         } else {
-          resolve({
-            success: false,
-            error: stderr.trim() || stdout.trim(),
-            controlId: controlId,
-            exitCode: code,
-            executedAt: new Date().toISOString()
-          })
+          const errorMsg = stderr.trim() || stdout.trim()
+
+          // Check for PowerShell system configuration error
+          if (errorMsg.includes('System.Collections.Specialized') || errorMsg.includes('System.IO.FileLoadException')) {
+            resolve({
+              success: false,
+              error: 'PowerShell environment issue detected: System assemblies cannot be loaded. PowerShell validation temporarily unavailable.',
+              controlId: controlId,
+              exitCode: code,
+              isSystemError: true,
+              executedAt: new Date().toISOString()
+            })
+          } else {
+            resolve({
+              success: false,
+              error: errorMsg,
+              controlId: controlId,
+              exitCode: code,
+              executedAt: new Date().toISOString()
+            })
+          }
         }
       })
 

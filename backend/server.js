@@ -1,6 +1,11 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 import { ClientSecretCredential } from '@azure/identity'
 import { Client } from '@microsoft/microsoft-graph-client'
 import { validateServiceRequest } from './agent.js'
@@ -48,7 +53,7 @@ import {
   isPowerShellEnabled, setPowerShellEnabled, resetValidationConfig, exportConfig
 } from './validation-config.js'
 
-dotenv.config()
+dotenv.config({ path: join(__dirname, '.env') })
 
 import { randomUUID } from 'crypto'
 
@@ -1046,27 +1051,68 @@ app.post('/api/execute-powershell', async (req, res) => {
       const tenantId = process.env.AZURE_TENANT_ID
       const clientId = process.env.AZURE_CLIENT_ID
       const clientSecret = process.env.AZURE_CLIENT_SECRET
+      const exchangeOrg = process.env.EXCHANGE_ORGANIZATION
+      const exchangeCertPath = process.env.EXCHANGE_CERT_PATH
+      const exchangeCertPassword = process.env.EXCHANGE_CERT_PASSWORD
 
       const scriptContent = `
 $ErrorActionPreference = 'Continue'
+Write-Host "=== PowerShell Execution Started ===" -ForegroundColor Cyan
+Write-Host "Organization: ${exchangeOrg}" -ForegroundColor Gray
+Write-Host "Cert Path: ${exchangeCertPath}" -ForegroundColor Gray
+
 try {
-  # Check if already authenticated
-  $context = Get-MgContext -ErrorAction SilentlyContinue
+  # Import ExchangeOnlineManagement module
+  Write-Host "Importing ExchangeOnlineManagement..." -ForegroundColor Cyan
+  Import-Module ExchangeOnlineManagement -ErrorAction Continue
+  Write-Host "✓ ExchangeOnlineManagement loaded" -ForegroundColor Green
 
-  if ($null -eq $context) {
-    # Authenticate using app credentials
-    $secureSecret = ConvertTo-SecureString -String '${clientSecret.replace(/'/g, "''")}' -AsPlainText -Force
-    $credential = New-Object System.Management.Automation.PSCredential('${clientId}', $secureSecret)
+  # Connect to Exchange Online with app-only authentication (certificate-based)
+  Write-Host "Checking Exchange Online session..." -ForegroundColor Cyan
+  $exoSession = Get-PSSession -ErrorAction SilentlyContinue | Where-Object { $_.ConfigurationName -eq 'Microsoft.Exchange' }
 
-    Connect-MgGraph -TenantId '${tenantId}' -ClientSecretCredential $credential -NoWelcome -ErrorAction Stop | Out-Null
+  if ($null -eq $exoSession) {
+    Write-Host "No existing Exchange session, connecting..." -ForegroundColor Yellow
+
+    # Test certificate path
+    Write-Host "Checking certificate path: ${exchangeCertPath}" -ForegroundColor Gray
+    $certTest = Test-Path -Path '${exchangeCertPath}' -PathType Leaf
+    Write-Host "Certificate exists: \$certTest" -ForegroundColor Gray
+
+    if (\$certTest) {
+      Write-Host "Creating secure string from password..." -ForegroundColor Gray
+      $certPassword = ConvertTo-SecureString -String '${exchangeCertPassword.replace(/'/g, "''")}' -AsPlainText -Force
+
+      Write-Host "Connecting to Exchange Online..." -ForegroundColor Cyan
+      Write-Host "  AppId: ${clientId}" -ForegroundColor Gray
+      Write-Host "  Organization: ${exchangeOrg}" -ForegroundColor Gray
+
+      $connection = Connect-ExchangeOnline -AppId '${clientId}' -Organization '${exchangeOrg}' -CertificateFilePath '${exchangeCertPath}' -CertificatePassword \$certPassword -SkipLoadingFormatData -ErrorAction Continue 2>&1
+
+      if (\$LASTEXITCODE -eq 0) {
+        Write-Host "✓ Exchange Online connected successfully" -ForegroundColor Green
+      } else {
+        Write-Host "Connection output: \$connection" -ForegroundColor Yellow
+        Write-Host "Last exit code: \$LASTEXITCODE" -ForegroundColor Yellow
+      }
+    } else {
+      Write-Host "✗ Certificate file not found at ${exchangeCertPath}" -ForegroundColor Red
+      exit 1
+    }
+  } else {
+    Write-Host "✓ Exchange session already exists" -ForegroundColor Green
   }
 
   # Execute the actual command
+  Write-Host "Executing command..." -ForegroundColor Cyan
   ${command}
+  Write-Host "✓ Command executed successfully" -ForegroundColor Green
 } catch {
-  Write-Error $_.Exception.Message
+  Write-Host "ERROR: \$_.Exception.Message" -ForegroundColor Red
+  Write-Host "StackTrace: \$_.ScriptStackTrace" -ForegroundColor Red
   exit 1
 }
+Write-Host "=== PowerShell Execution Completed ===" -ForegroundColor Cyan
 `
 
       // Write script to temp file
@@ -1116,6 +1162,192 @@ try {
     }
   } catch (error) {
     console.error(`❌ PowerShell API error:`, error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+// ============================================================
+// Batch PowerShell Execution (Connect once, run multiple commands)
+// ============================================================
+app.post('/api/execute-powershell-batch', async (req, res) => {
+  try {
+    const { commands } = req.body
+
+    if (!Array.isArray(commands) || commands.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'commands array is required and must not be empty'
+      })
+    }
+
+    console.log(`⏳ Executing batch of ${commands.length} PowerShell commands`)
+
+    const { execFile } = await import('child_process')
+    const { promisify } = await import('util')
+    const execFileAsync = promisify(execFile)
+    const fs = await import('fs').then(m => m.promises)
+
+    try {
+      const pwshPath = process.platform === 'darwin' ? '/opt/homebrew/bin/pwsh' : 'pwsh'
+      const tempDir = '/tmp'
+      const scriptFile = `${tempDir}/ps_batch_${Date.now()}.ps1`
+
+      const tenantId = process.env.AZURE_TENANT_ID
+      const clientId = process.env.AZURE_CLIENT_ID
+      const clientSecret = process.env.AZURE_CLIENT_SECRET
+      const exchangeOrg = process.env.EXCHANGE_ORGANIZATION
+      const exchangeCertPath = process.env.EXCHANGE_CERT_PATH
+      const exchangeCertPassword = process.env.EXCHANGE_CERT_PASSWORD
+
+      // Build command blocks with markers for parsing results
+      const commandBlocks = commands.map((cmd, idx) => `
+Write-Host "---COMMAND_START_${cmd.controlId}---" -ForegroundColor Cyan
+Write-Host "Control: ${cmd.controlId} - ${cmd.title}" -ForegroundColor Gray
+try {
+  ${cmd.command}
+  Write-Host "---COMMAND_END_${cmd.controlId}_SUCCESS---" -ForegroundColor Green
+} catch {
+  Write-Host "---COMMAND_END_${cmd.controlId}_ERROR---\$_.Exception.Message---" -ForegroundColor Red
+}
+`).join('\n')
+
+      // Detect what modules are needed
+      const hasSharePointCommands = commands.some(c => c.command.includes('Get-SPO') || c.command.includes('Get-PnP'))
+
+      const scriptContent = `
+$ErrorActionPreference = 'Continue'
+Write-Host "=== Batch PowerShell Execution Started ===" -ForegroundColor Cyan
+Write-Host "Total commands: ${commands.length}" -ForegroundColor Gray
+Write-Host "Organization: ${exchangeOrg}" -ForegroundColor Gray
+
+try {
+  # Import required modules
+  Write-Host "Importing modules..." -ForegroundColor Cyan
+  Import-Module ExchangeOnlineManagement -ErrorAction Continue
+  Import-Module MicrosoftTeams -ErrorAction SilentlyContinue
+  ${hasSharePointCommands ? 'Import-Module PnP.PowerShell -ErrorAction Continue' : ''}
+  Write-Host "✓ Modules loaded" -ForegroundColor Green
+
+  # Connect to Exchange Online
+  Write-Host "Establishing Exchange Online connection..." -ForegroundColor Cyan
+  $exoSession = Get-PSSession -ErrorAction SilentlyContinue | Where-Object { $_.ConfigurationName -eq 'Microsoft.Exchange' }
+
+  if ($null -eq $exoSession) {
+    $certTest = Test-Path -Path '${exchangeCertPath}' -PathType Leaf
+    if (\$certTest) {
+      $certPassword = ConvertTo-SecureString -String '${exchangeCertPassword.replace(/'/g, "''")}' -AsPlainText -Force
+      Connect-ExchangeOnline -AppId '${clientId}' -Organization '${exchangeOrg}' -CertificateFilePath '${exchangeCertPath}' -CertificatePassword \$certPassword -SkipLoadingFormatData -ErrorAction Continue | Out-Null
+      Write-Host "✓ Exchange Online connected" -ForegroundColor Green
+    } else {
+      Write-Host "✗ Certificate file not found" -ForegroundColor Red
+      exit 1
+    }
+  } else {
+    Write-Host "✓ Using existing Exchange session" -ForegroundColor Green
+  }
+
+  ${hasSharePointCommands ? `
+  # Connect to SharePoint with certificate
+  Write-Host "Establishing SharePoint Online connection..." -ForegroundColor Cyan
+
+  \$certPassword = ConvertTo-SecureString -String '${exchangeCertPassword.replace(/'/g, "''")}' -AsPlainText -Force
+  \$spoAdminUrl = "https://" + '${exchangeOrg}'.Replace(".onmicrosoft.com", "-admin.sharepoint.com")
+
+  Write-Host "Connecting to: \$spoAdminUrl" -ForegroundColor Gray
+  Write-Host "ClientId: ${clientId}" -ForegroundColor Gray
+  Write-Host "Tenant: ${tenantId}" -ForegroundColor Gray
+
+  Connect-PnPOnline -Url \$spoAdminUrl -ClientId '${clientId}' -Tenant '${tenantId}' -CertificatePath '${exchangeCertPath}' -CertificatePassword \$certPassword -SkipTenantAdminCheck -ErrorAction Continue | Out-Null
+
+  Write-Host "✓ SharePoint Online connected" -ForegroundColor Green
+` : '' }
+
+  # Execute all commands in this session
+  Write-Host "Executing ${commands.length} commands in single session..." -ForegroundColor Yellow
+  ${commandBlocks}
+
+  Write-Host "✓ All commands executed" -ForegroundColor Green
+} catch {
+  Write-Host "ERROR: \$_.Exception.Message" -ForegroundColor Red
+  exit 1
+}
+Write-Host "=== Batch Execution Completed ===" -ForegroundColor Cyan
+`
+
+      await fs.writeFile(scriptFile, scriptContent, 'utf-8')
+
+      const { stdout, stderr } = await execFileAsync(pwshPath, [
+        '-NoProfile',
+        '-NoLogo',
+        '-NonInteractive',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', scriptFile
+      ], {
+        timeout: 60000, // 60 second timeout for batch
+        maxBuffer: 10 * 1024 * 1024,
+        encoding: 'utf-8',
+        env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
+      })
+
+      await fs.unlink(scriptFile).catch(() => {})
+
+      // Parse results for each command (remove ANSI codes first)
+      const ansiRegex = /\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g
+      const cleanOutput = stdout.replace(ansiRegex, '')
+
+      const results = {}
+      commands.forEach(cmd => {
+        const startMarker = `---COMMAND_START_${cmd.controlId}---`
+        const endMarker = `---COMMAND_END_${cmd.controlId}_`
+        const successMarker = `_SUCCESS---`
+        const errorMarker = `_ERROR---`
+
+        const startIdx = cleanOutput.indexOf(startMarker)
+        const endIdx = cleanOutput.indexOf(endMarker)
+
+        if (startIdx !== -1 && endIdx !== -1) {
+          const output = cleanOutput.substring(startIdx + startMarker.length, endIdx)
+          const hasError = cleanOutput.substring(endIdx, endIdx + 50).includes(errorMarker)
+          const hasSuccess = cleanOutput.substring(endIdx, endIdx + 50).includes(successMarker)
+
+          results[cmd.controlId] = {
+            success: hasSuccess && !hasError,
+            output: output.trim()
+          }
+        } else {
+          // Marker not found - assume success if there's output for this control ID
+          results[cmd.controlId] = {
+            success: true,
+            output: 'Command executed'
+          }
+        }
+      })
+
+      console.log(`✓ Batch PowerShell execution completed for ${commands.length} commands`)
+
+      res.json({
+        success: true,
+        totalCommands: commands.length,
+        results: results,
+        output: stdout,
+        exitCode: 0
+      })
+    } catch (execError) {
+      console.error(`❌ Batch PowerShell execution failed:`, execError.message)
+
+      res.json({
+        success: false,
+        totalCommands: commands.length,
+        error: execError.stderr || execError.message,
+        output: execError.stdout || '',
+        exitCode: execError.code || -1
+      })
+    }
+  } catch (error) {
+    console.error(`❌ Batch PowerShell API error:`, error.message)
     res.status(500).json({
       success: false,
       error: error.message

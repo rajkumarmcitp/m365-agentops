@@ -908,17 +908,11 @@ async function showSectionExecutionModal(parentEl, subsection, autoControls, top
   closeBtnFooter.addEventListener('click', () => modal.remove())
 
   const results = []
+  const resultDivs = {}
 
-  // Execute all commands
-  for (let i = 0; i < autoControls.length; i++) {
-    const control = autoControls[i]
-    const percentage = ((i + 1) / autoControls.length * 100).toFixed(0)
-
-    // Update progress
-    progressFill.style.width = `${percentage}%`
-    progressCount.textContent = `${i + 1} / ${autoControls.length}`
-
-    // Add control result container
+  // Render all result containers first
+  outputContainer.innerHTML = ''
+  autoControls.forEach((control) => {
     const resultDiv = document.createElement('div')
     resultDiv.style.marginBottom = '16px'
     resultDiv.innerHTML = `
@@ -931,47 +925,93 @@ async function showSectionExecutionModal(parentEl, subsection, autoControls, top
         ⏳ Executing...
       </div>
     `
+    outputContainer.appendChild(resultDiv)
+    resultDivs[control.id] = resultDiv
+  })
 
-    if (i === 0) {
-      outputContainer.innerHTML = ''
-      outputContainer.appendChild(resultDiv)
-    } else {
-      outputContainer.appendChild(resultDiv)
+  // Prepare batch commands
+  const batchCommands = autoControls.map(control => {
+    const psCommand = Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))
+    return {
+      controlId: control.id,
+      title: control.title || control.name,
+      command: psCommand
     }
+  })
 
-    // Get references to the elements we just created
-    const outputEl = resultDiv.querySelector('div:last-child')
-    const resultRow = resultDiv.querySelector('div:first-child')
+  // Execute all commands in batch (connect once)
+  try {
+    const response = await fetch(`${api}/execute-powershell-batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ commands: batchCommands })
+    })
 
-    // Execute the command
-    try {
-      const psCommand = Array.isArray(control.ps) ? control.ps.join('\n') : (typeof control.ps === 'string' ? control.ps : JSON.stringify(control.ps))
+    const batchResult = await response.json()
 
-      const response = await fetch(`${api}/execute-powershell`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: psCommand, controlId: control.id })
-      })
+    // Process results
+    let successCount = 0
+    autoControls.forEach((control, idx) => {
+      const percentage = ((idx + 1) / autoControls.length * 100).toFixed(0)
+      progressFill.style.width = `${percentage}%`
+      progressCount.textContent = `${idx + 1} / ${autoControls.length}`
 
-      const result = await response.json()
+      const resultDiv = resultDivs[control.id]
+      const outputEl = resultDiv.querySelector('div:last-child')
+      const resultRow = resultDiv.querySelector('div:first-child')
 
-      if (result.success) {
-        outputEl.innerHTML = `<span style="color:#4caf50">✅ SUCCESS</span>\n\n${(result.output || 'No output').replace(/</g, '&lt;').replace(/>/g, '&gt;')}`
-        resultRow.querySelector('.spinner').style.display = 'none'
-        resultRow.querySelector('span:first-child').insertAdjacentHTML('afterend', '<span style="color:#4caf50;font-size:10px">✅</span>')
-        results.push({ controlId: control.id, status: 'success', output: result.output })
+      if (batchResult.success && batchResult.results[control.id]) {
+        const cmdResult = batchResult.results[control.id]
+        if (cmdResult.success) {
+          outputEl.innerHTML = `<span style="color:#4caf50">✅ SUCCESS</span>\n\n${(cmdResult.output || 'No output').replace(/</g, '&lt;').replace(/>/g, '&gt;')}`
+          resultRow.querySelector('.spinner').style.display = 'none'
+          resultRow.querySelector('span:first-child').insertAdjacentHTML('afterend', '<span style="color:#4caf50;font-size:10px">✅</span>')
+          successCount++
+          results.push({ controlId: control.id, status: 'success', output: cmdResult.output })
+        } else {
+          outputEl.innerHTML = `<span style="color:#f44">❌ ERROR</span>\n\n${(cmdResult.output || 'Unknown error').replace(/</g, '&lt;').replace(/>/g, '&gt;')}`
+          resultRow.querySelector('.spinner').style.display = 'none'
+          resultRow.querySelector('span:first-child').insertAdjacentHTML('afterend', '<span style="color:#f44;font-size:10px">❌</span>')
+          results.push({ controlId: control.id, status: 'error', output: cmdResult.output })
+        }
+      } else if (batchResult.success) {
+        // Command executed but no specific result - check raw output
+        const cmdOutput = batchResult.output || ''
+        const successMarker = `_SUCCESS---`
+        const errorMarker = `_ERROR---`
+
+        if (cmdOutput.includes(`COMMAND_END_${control.id}_SUCCESS`)) {
+          outputEl.innerHTML = `<span style="color:#4caf50">✅ SUCCESS</span>\n\n${cmdOutput.substring(cmdOutput.indexOf(control.id)).substring(0, 500)}`
+          resultRow.querySelector('.spinner').style.display = 'none'
+          resultRow.querySelector('span:first-child').insertAdjacentHTML('afterend', '<span style="color:#4caf50;font-size:10px">✅</span>')
+          successCount++
+          results.push({ controlId: control.id, status: 'success', output: 'Executed' })
+        } else {
+          outputEl.innerHTML = `<span style="color:#f44">❌ ERROR</span>\n\n${cmdOutput.substring(cmdOutput.lastIndexOf(control.id)).substring(0, 500)}`
+          resultRow.querySelector('.spinner').style.display = 'none'
+          resultRow.querySelector('span:first-child').insertAdjacentHTML('afterend', '<span style="color:#f44;font-size:10px">❌</span>')
+          results.push({ controlId: control.id, status: 'error', output: 'Check output' })
+        }
       } else {
-        outputEl.innerHTML = `<span style="color:#f44">❌ ERROR</span>\n\n${(result.error || result.output || 'Unknown error').replace(/</g, '&lt;').replace(/>/g, '&gt;')}`
+        outputEl.innerHTML = `<span style="color:#f44">❌ BATCH ERROR</span>\n\n${(batchResult.error || 'Batch execution failed').replace(/</g, '&lt;').replace(/>/g, '&gt;')}`
         resultRow.querySelector('.spinner').style.display = 'none'
         resultRow.querySelector('span:first-child').insertAdjacentHTML('afterend', '<span style="color:#f44;font-size:10px">❌</span>')
-        results.push({ controlId: control.id, status: 'error', output: result.error || result.output })
+        results.push({ controlId: control.id, status: 'error', output: batchResult.error })
       }
-    } catch (error) {
+    })
+
+    console.log(`✅ Batch execution completed: ${successCount}/${autoControls.length} successful`)
+  } catch (error) {
+    console.error(`❌ Batch execution error:`, error)
+    autoControls.forEach((control) => {
+      const resultDiv = resultDivs[control.id]
+      const outputEl = resultDiv.querySelector('div:last-child')
+      const resultRow = resultDiv.querySelector('div:first-child')
       outputEl.innerHTML = `<span style="color:#f44">❌ CONNECTION ERROR</span>\n\n${error.message}`
       resultRow.querySelector('.spinner').style.display = 'none'
       resultRow.querySelector('span:first-child').insertAdjacentHTML('afterend', '<span style="color:#f44;font-size:10px">❌</span>')
       results.push({ controlId: control.id, status: 'error', output: error.message })
-    }
+    })
   }
 
   // Export function
