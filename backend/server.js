@@ -1036,18 +1036,58 @@ app.post('/api/execute-powershell', async (req, res) => {
     try {
       // Execute PowerShell command using execFile (more reliable)
       const pwshPath = process.platform === 'darwin' ? '/opt/homebrew/bin/pwsh' : 'pwsh'
+      const fs = await import('fs').then(m => m.promises)
+      const path = await import('path')
+
+      // Create temporary PowerShell script file to avoid escaping issues
+      const tempDir = '/tmp'
+      const scriptFile = `${tempDir}/ps_${controlId.replace(/\./g, '_')}_${Date.now()}.ps1`
+
+      const tenantId = process.env.AZURE_TENANT_ID
+      const clientId = process.env.AZURE_CLIENT_ID
+      const clientSecret = process.env.AZURE_CLIENT_SECRET
+
+      const scriptContent = `
+$ErrorActionPreference = 'Continue'
+try {
+  # Check if already authenticated
+  $context = Get-MgContext -ErrorAction SilentlyContinue
+
+  if ($null -eq $context) {
+    # Authenticate using app credentials
+    $secureSecret = ConvertTo-SecureString -String '${clientSecret.replace(/'/g, "''")}' -AsPlainText -Force
+    $credential = New-Object System.Management.Automation.PSCredential('${clientId}', $secureSecret)
+
+    Connect-MgGraph -TenantId '${tenantId}' -ClientSecretCredential $credential -NoWelcome -ErrorAction Stop | Out-Null
+  }
+
+  # Execute the actual command
+  ${command}
+} catch {
+  Write-Error $_.Exception.Message
+  exit 1
+}
+`
+
+      // Write script to temp file
+      await fs.writeFile(scriptFile, scriptContent, 'utf-8')
+
+      // Execute the script
       const { stdout, stderr } = await execFileAsync(pwshPath, [
         '-NoProfile',
         '-NoLogo',
         '-NonInteractive',
-        '-Command',
-        command
+        '-ExecutionPolicy', 'Bypass',
+        '-File', scriptFile
       ], {
         timeout: 30000, // 30 second timeout
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer
         encoding: 'utf-8',
         env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
       })
+
+      // Clean up temp file
+      await fs.unlink(scriptFile).catch(() => {})
 
       console.log(`✓ PowerShell command completed successfully for control ${controlId}`)
 
