@@ -241,6 +241,13 @@ function renderLanding(el) {
       <span>Signed in as <strong>${u?.name}</strong> (${roleDesc[u?.role] || u?.role}). All requests are logged and validated by our AI Agent before provisioning.</span>
     </div>
 
+    <div style="margin-bottom:24px">
+      <div class="section-label">
+        <i class="ti ti-route"></i>
+        Request Approval & Provisioning Workflow
+      </div>
+    </div>
+
     <div class="portal-workflow-banner">
       ${WORKFLOW_STEPS.map((s, i) => `
         <div class="pwf-step">
