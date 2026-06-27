@@ -53,10 +53,6 @@ import {
   validateAddGroupMember, executeAddGroupMember,
   validateSetDelegateAccess, executeSetDelegateAccess,
   validateGrantSharePointAccess, executeGrantSharePointAccess,
-  validateInviteGuest, executeInviteGuest,
-  validateRemoveGuest, executeRemoveGuest,
-  validateGrantGuestPermissions, executeGrantGuestPermissions,
-  validateReviewGuestAccess, executeReviewGuestAccess,
   validateRetireDevice, executeRetireDevice,
   validateWipeDevice, executeWipeDevice,
   validateGrantComplianceException, executeGrantComplianceException,
@@ -70,7 +66,11 @@ import {
   validateCreateEnvironment, executeCreateEnvironment,
   validatePremiumConnector, executePremiumConnector,
   validateDLPException, executeDLPException,
-  validatePowerAutomate, executePowerAutomate
+  validatePowerAutomate, executePowerAutomate,
+  validateInviteGuest, executeInviteGuest,
+  validateExtendGuestAccess, executeExtendGuestAccess,
+  validateRemoveGuest, executeRemoveGuest,
+  validateQuarterlyReview, executeQuarterlyReview
 } from './self-service-executor.js'
 import {
   startProvisioningJob, setProvisioningJobGraphClient
@@ -12568,120 +12568,6 @@ app.post('/api/self-service/operations/user-access/execute', async (req, res) =>
 })
 
 /**
- * POST /api/self-service/operations/guest-mgmt/validate-invite
- */
-app.post('/api/self-service/operations/guest-mgmt/validate-invite', async (req, res) => {
-  try {
-    const { formData } = req.body
-    const validation = await validateInviteGuest(formData)
-    res.json({
-      success: true,
-      operation: 'invite-guest',
-      validation
-    })
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message })
-  }
-})
-
-/**
- * POST /api/self-service/operations/guest-mgmt/validate-remove
- */
-app.post('/api/self-service/operations/guest-mgmt/validate-remove', async (req, res) => {
-  try {
-    const { formData } = req.body
-    const validation = await validateRemoveGuest(formData)
-    res.json({
-      success: true,
-      operation: 'remove-guest',
-      validation
-    })
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message })
-  }
-})
-
-/**
- * POST /api/self-service/operations/guest-mgmt/validate-permissions
- */
-app.post('/api/self-service/operations/guest-mgmt/validate-permissions', async (req, res) => {
-  try {
-    const { formData } = req.body
-    const validation = await validateGrantGuestPermissions(formData)
-    res.json({
-      success: true,
-      operation: 'grant-guest-permissions',
-      validation
-    })
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message })
-  }
-})
-
-/**
- * POST /api/self-service/operations/guest-mgmt/validate-review
- */
-app.post('/api/self-service/operations/guest-mgmt/validate-review', async (req, res) => {
-  try {
-    const { formData } = req.body
-    const validation = await validateReviewGuestAccess(formData)
-    res.json({
-      success: true,
-      operation: 'review-guest-access',
-      validation
-    })
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message })
-  }
-})
-
-/**
- * POST /api/self-service/operations/guest-mgmt/execute
- */
-app.post('/api/self-service/operations/guest-mgmt/execute', async (req, res) => {
-  try {
-    const { operationType, formData, requestId } = req.body
-    console.log(`🔧 Executing ${operationType} for request ${requestId}`)
-
-    let executionDef
-
-    switch (operationType) {
-      case 'invite-guest':
-        executionDef = await executeInviteGuest(formData)
-        break
-      case 'remove-guest':
-        executionDef = await executeRemoveGuest(formData)
-        break
-      case 'grant-guest-permissions':
-        executionDef = await executeGrantGuestPermissions(formData)
-        break
-      case 'review-guest-access':
-        executionDef = await executeReviewGuestAccess(formData)
-        break
-      default:
-        return res.status(400).json({
-          success: false,
-          error: `Unknown operation type: ${operationType}`
-        })
-    }
-
-    res.json({
-      success: true,
-      operationType: operationType,
-      execution: executionDef,
-      requestId: requestId,
-      timestamp: new Date().toISOString()
-    })
-  } catch (error) {
-    console.error('Execution error:', error.message)
-    res.status(500).json({
-      success: false,
-      error: error.message
-    })
-  }
-})
-
-/**
  * POST /api/self-service/operations/intune/validate-retire
  */
 app.post('/api/self-service/operations/intune/validate-retire', async (req, res) => {
@@ -13005,6 +12891,120 @@ app.post('/api/self-service/operations/power-platform/execute', async (req, res)
         break
       case 'power-automate-license':
         executionDef = await executePowerAutomate(formData)
+        break
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown operation type: ${operationType}`
+        })
+    }
+
+    res.json({
+      success: true,
+      operationType: operationType,
+      execution: executionDef,
+      requestId: requestId,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Execution error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/guest-lifecycle/validate-invite
+ */
+app.post('/api/self-service/operations/guest-lifecycle/validate-invite', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateInviteGuest(formData)
+    res.json({
+      success: true,
+      operation: 'invite-guest',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/guest-lifecycle/validate-extend
+ */
+app.post('/api/self-service/operations/guest-lifecycle/validate-extend', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateExtendGuestAccess(formData)
+    res.json({
+      success: true,
+      operation: 'extend-guest',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/guest-lifecycle/validate-remove
+ */
+app.post('/api/self-service/operations/guest-lifecycle/validate-remove', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateRemoveGuest(formData)
+    res.json({
+      success: true,
+      operation: 'remove-guest',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/guest-lifecycle/validate-review
+ */
+app.post('/api/self-service/operations/guest-lifecycle/validate-review', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateQuarterlyReview(formData)
+    res.json({
+      success: true,
+      operation: 'quarterly-review',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/guest-lifecycle/execute
+ */
+app.post('/api/self-service/operations/guest-lifecycle/execute', async (req, res) => {
+  try {
+    const { operationType, formData, requestId } = req.body
+    console.log(`🔧 Executing ${operationType} for request ${requestId}`)
+
+    let executionDef
+
+    switch (operationType) {
+      case 'invite-guest':
+        executionDef = await executeInviteGuest(formData)
+        break
+      case 'extend-guest':
+        executionDef = await executeExtendGuestAccess(formData)
+        break
+      case 'remove-guest':
+        executionDef = await executeRemoveGuest(formData)
+        break
+      case 'quarterly-review':
+        executionDef = await executeQuarterlyReview(formData)
         break
       default:
         return res.status(400).json({

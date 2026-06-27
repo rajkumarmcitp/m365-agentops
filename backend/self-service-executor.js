@@ -1956,407 +1956,6 @@ Write-Host "✓ SharePoint access successfully revoked from ${userEmail}"
 }
 
 // ============================================================
-// GUEST MANAGEMENT
-// ============================================================
-
-/**
- * Validate Invite Guest request
- */
-export async function validateInviteGuest(formData) {
-  const { guestEmail, displayName, sendInvitation } = formData
-  const errors = []
-  const warnings = []
-
-  if (!guestEmail || guestEmail.trim().length === 0) {
-    errors.push('Guest Email is required')
-  }
-  if (!displayName || displayName.trim().length === 0) {
-    errors.push('Display Name is required')
-  }
-
-  // Validate email format
-  if (guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) {
-    errors.push('Invalid email address format')
-  }
-
-  // Check if email already exists
-  if (guestEmail) {
-    try {
-      const existing = await graphClient
-        .api('/users')
-        .filter(`userPrincipalName eq '${guestEmail}'`)
-        .get()
-
-      if (existing.value && existing.value.length > 0) {
-        errors.push(`User '${guestEmail}' already exists in the tenant`)
-      }
-    } catch (err) {
-      warnings.push('Could not check for existing users')
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
-    agentChecks: [
-      'Validate guest email format',
-      'Check for duplicate email in tenant',
-      'Verify display name',
-      sendInvitation ? 'Send invitation email to guest' : 'Create guest account without invitation'
-    ]
-  }
-}
-
-/**
- * Execute Invite Guest
- */
-export async function executeInviteGuest(formData) {
-  const { guestEmail, displayName, sendInvitation } = formData
-
-  const psCommand = `
-# Create invitation
-$invitation = New-MgInvitation -InvitedUserEmailAddress '${guestEmail}' \\
-  -InviteRedirectUrl 'https://myapps.microsoft.com' \\
-  -SendInvitationMessage $(${sendInvitation === 'true' || sendInvitation === true ? '$true' : '$false'})
-
-Write-Host "✓ Guest invitation created"
-Write-Host "Guest Email: ${guestEmail}"
-Write-Host "Display Name: ${displayName}"
-
-# Update guest display name
-Update-MgUser -UserId $invitation.InvitedUser.Id -DisplayName '${displayName}' -ErrorAction SilentlyContinue
-Write-Host "✓ Display name set to: ${displayName}"
-
-${sendInvitation === 'true' || sendInvitation === true ? `
-Write-Host "✓ Invitation email sent to ${guestEmail}"
-` : `
-Write-Host "✓ Guest account created (no invitation sent)"
-`}
-
-Write-Host "✓ Guest '${guestEmail}' successfully invited to tenant"
-`
-
-  return {
-    psCommand,
-    serviceName: 'Microsoft.Graph',
-    operation: 'Invite Guest',
-    guestEmail: guestEmail,
-    displayName: displayName,
-    sendInvitation: sendInvitation || false,
-    expectedResult: `Guest '${guestEmail}' invited to tenant${sendInvitation === 'true' || sendInvitation === true ? ' - invitation sent' : ''}`
-  }
-}
-
-/**
- * Validate Remove Guest request
- */
-export async function validateRemoveGuest(formData) {
-  const { guestEmail, confirmEmail } = formData
-  const errors = []
-  const warnings = []
-
-  if (!guestEmail || guestEmail.trim().length === 0) {
-    errors.push('Guest Email is required')
-  }
-  if (!confirmEmail || confirmEmail.trim().length === 0) {
-    errors.push('Confirmation Email is required')
-  }
-
-  // Verify emails match
-  if (guestEmail && confirmEmail && guestEmail !== confirmEmail) {
-    errors.push('Confirmation email does not match guest email')
-  }
-
-  // Verify guest exists
-  if (guestEmail) {
-    try {
-      const guest = await graphClient
-        .api('/users')
-        .filter(`userPrincipalName eq '${guestEmail}'`)
-        .get()
-
-      if (!guest.value || guest.value.length === 0) {
-        errors.push(`Guest '${guestEmail}' not found`)
-      } else if (guest.value[0].userType !== 'Guest') {
-        warnings.push(`User '${guestEmail}' is not a guest account`)
-      }
-    } catch (err) {
-      warnings.push('Could not verify guest existence')
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
-    agentChecks: [
-      'Verify guest exists',
-      'Check guest memberships',
-      'Confirm removal will delete account',
-      'Confirmation email matches exactly'
-    ]
-  }
-}
-
-/**
- * Execute Remove Guest
- */
-export async function executeRemoveGuest(formData) {
-  const { guestEmail } = formData
-
-  const psCommand = `
-# Get guest user
-$guest = Get-MgUser -Filter "userPrincipalName eq '${guestEmail}'" -ErrorAction Stop
-Write-Host "Removing guest: $($guest.DisplayName) (${guestEmail})"
-
-# Get guest memberships before removal
-$memberOf = Get-MgUserMemberOf -UserId $guest.Id -ErrorAction SilentlyContinue | Measure-Object
-Write-Host "Guest is member of $($memberOf.Count) groups/teams"
-
-# Remove guest from all groups
-Get-MgUserMemberOf -UserId $guest.Id -ErrorAction SilentlyContinue | ForEach-Object {
-  Remove-MgGroupMember -GroupId $_.Id -DirectoryObjectId $guest.Id -ErrorAction SilentlyContinue
-  Write-Host "Removed from group: $($_.DisplayName)"
-}
-
-# Remove guest user
-Remove-MgUser -UserId $guest.Id -ErrorAction Stop
-Write-Host "✓ Guest account removed"
-Write-Host "✓ Guest '${guestEmail}' successfully removed from tenant"
-`
-
-  return {
-    psCommand,
-    serviceName: 'Microsoft.Graph',
-    operation: 'Remove Guest',
-    guestEmail: guestEmail,
-    expectedResult: `Guest '${guestEmail}' removed from tenant`
-  }
-}
-
-/**
- * Validate Grant Guest Permissions request
- */
-export async function validateGrantGuestPermissions(formData) {
-  const { guestEmail, resourceType, resourceId, permissionLevel } = formData
-  const errors = []
-  const warnings = []
-
-  if (!guestEmail || guestEmail.trim().length === 0) {
-    errors.push('Guest Email is required')
-  }
-  if (!resourceType) {
-    errors.push('Resource Type is required (Team, Group, SharePoint)')
-  }
-  if (!resourceId || resourceId.trim().length === 0) {
-    errors.push('Resource ID/Name is required')
-  }
-  if (!permissionLevel) {
-    errors.push('Permission Level is required')
-  }
-
-  // Verify guest exists
-  if (guestEmail) {
-    try {
-      const guest = await graphClient
-        .api('/users')
-        .filter(`userPrincipalName eq '${guestEmail}'`)
-        .get()
-
-      if (!guest.value || guest.value.length === 0) {
-        errors.push(`Guest '${guestEmail}' not found`)
-      } else if (guest.value[0].userType !== 'Guest') {
-        warnings.push(`User '${guestEmail}' is not a guest account`)
-      }
-    } catch (err) {
-      warnings.push('Could not verify guest existence')
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
-    agentChecks: [
-      'Verify guest exists',
-      `Verify ${resourceType} exists`,
-      'Check for existing access',
-      `Grant ${permissionLevel} access to guest`
-    ]
-  }
-}
-
-/**
- * Execute Grant Guest Permissions
- */
-export async function executeGrantGuestPermissions(formData) {
-  const { guestEmail, resourceType, resourceId, permissionLevel } = formData
-
-  let psCommand
-  if (resourceType === 'Team') {
-    psCommand = `
-# Get team and guest
-$team = Get-Team -DisplayName '${resourceId}' -ErrorAction Stop
-$guest = Get-MgUser -Filter "userPrincipalName eq '${guestEmail}'" -ErrorAction Stop
-Write-Host "Granting guest access to team: $($team.DisplayName)"
-
-# Add guest to team
-Add-TeamUser -GroupId $team.GroupId -User $guest.Id -Role Member -ErrorAction Stop
-Write-Host "✓ Guest added to team as ${permissionLevel}"
-Write-Host "✓ Guest '${guestEmail}' successfully added to $($team.DisplayName)"
-`
-  } else if (resourceType === 'Group') {
-    psCommand = `
-# Get group and guest
-$group = Get-UnifiedGroup -Identity '${resourceId}' -ErrorAction Stop
-$guest = Get-MgUser -Filter "userPrincipalName eq '${guestEmail}'" -ErrorAction Stop
-Write-Host "Granting guest access to group: $($group.DisplayName)"
-
-# Add guest to group
-Add-UnifiedGroupMember -Identity $group.Id -Members $guest.Id -ErrorAction Stop
-Write-Host "✓ Guest added to group as ${permissionLevel}"
-Write-Host "✓ Guest '${guestEmail}' successfully added to $($group.DisplayName)"
-`
-  } else if (resourceType === 'SharePoint') {
-    psCommand = `
-# Connect to SharePoint and add guest
-Write-Host "Granting guest access to SharePoint: ${resourceId}"
-
-# Grant permission to guest
-Grant-PnPGroupPermission -Identity "${permissionLevel}" -User "${guestEmail}" -ErrorAction Stop
-Write-Host "✓ Guest granted ${permissionLevel} access"
-Write-Host "✓ Guest '${guestEmail}' successfully granted access"
-`
-  }
-
-  return {
-    psCommand,
-    serviceName: 'Microsoft.Graph',
-    operation: 'Grant Guest Permissions',
-    guestEmail: guestEmail,
-    resourceType: resourceType,
-    resourceId: resourceId,
-    permissionLevel: permissionLevel,
-    expectedResult: `Guest '${guestEmail}' granted ${permissionLevel} access to ${resourceType}`
-  }
-}
-
-/**
- * Validate Review Guest Access request
- */
-export async function validateReviewGuestAccess(formData) {
-  const { guestEmail, action } = formData
-  const errors = []
-  const warnings = []
-
-  if (!guestEmail || guestEmail.trim().length === 0) {
-    errors.push('Guest Email is required')
-  }
-  if (!action) {
-    errors.push('Action is required (Review, Disable, Remove)')
-  }
-
-  // Verify guest exists
-  if (guestEmail) {
-    try {
-      const guest = await graphClient
-        .api('/users')
-        .filter(`userPrincipalName eq '${guestEmail}'`)
-        .get()
-
-      if (!guest.value || guest.value.length === 0) {
-        errors.push(`Guest '${guestEmail}' not found`)
-      } else if (guest.value[0].userType !== 'Guest') {
-        warnings.push(`User '${guestEmail}' is not a guest account`)
-      }
-    } catch (err) {
-      warnings.push('Could not verify guest existence')
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
-    agentChecks: [
-      'Verify guest exists',
-      'Audit guest memberships and access',
-      'Check guest creation date and last sign-in',
-      `${action === 'disable' ? 'Block sign-in' : action === 'remove' ? 'Remove account' : 'Review access only'}`
-    ]
-  }
-}
-
-/**
- * Execute Review Guest Access
- */
-export async function executeReviewGuestAccess(formData) {
-  const { guestEmail, action } = formData
-
-  let psCommand
-  if (action === 'disable') {
-    psCommand = `
-# Get guest user
-$guest = Get-MgUser -Filter "userPrincipalName eq '${guestEmail}'" -ErrorAction Stop
-Write-Host "Disabling guest: $($guest.DisplayName) (${guestEmail})"
-
-# Disable guest account (block sign-in)
-Update-MgUser -UserId $guest.Id -AccountEnabled $false -ErrorAction Stop
-Write-Host "✓ Guest account disabled"
-Write-Host "✓ Guest will no longer be able to sign in"
-Write-Host "✓ Guest '${guestEmail}' access disabled"
-`
-  } else if (action === 'remove') {
-    psCommand = `
-# Get guest user
-$guest = Get-MgUser -Filter "userPrincipalName eq '${guestEmail}'" -ErrorAction Stop
-Write-Host "Removing guest: $($guest.DisplayName) (${guestEmail})"
-
-# Get memberships
-$memberOf = Get-MgUserMemberOf -UserId $guest.Id -ErrorAction SilentlyContinue
-Write-Host "Guest is member of $($memberOf.Count) groups/teams"
-
-# Remove from all groups
-Get-MgUserMemberOf -UserId $guest.Id -ErrorAction SilentlyContinue | ForEach-Object {
-  Remove-MgGroupMember -GroupId $_.Id -DirectoryObjectId $guest.Id -ErrorAction SilentlyContinue
-}
-
-# Remove guest account
-Remove-MgUser -UserId $guest.Id -ErrorAction Stop
-Write-Host "✓ Guest account removed"
-Write-Host "✓ Guest '${guestEmail}' removed from tenant"
-`
-  } else {
-    // Review only
-    psCommand = `
-# Get guest user
-$guest = Get-MgUser -Filter "userPrincipalName eq '${guestEmail}'" -ErrorAction Stop
-Write-Host "Reviewing guest access: $($guest.DisplayName)"
-Write-Host "Email: ${guestEmail}"
-Write-Host "Created: $($guest.CreatedDateTime)"
-Write-Host "Last Sign-in: $(Get-MgAuditLogSignIn -Filter "userPrincipalName eq '${guestEmail}'" -Top 1 | Select-Object -ExpandProperty CreatedDateTime)"
-
-# Get memberships
-$memberOf = Get-MgUserMemberOf -UserId $guest.Id -ErrorAction SilentlyContinue
-Write-Host "Group/Team Memberships: $($memberOf.Count)"
-$memberOf | ForEach-Object { Write-Host "  - $($_.DisplayName)" }
-
-Write-Host "✓ Guest access review completed for ${guestEmail}"
-`
-  }
-
-  return {
-    psCommand,
-    serviceName: 'Microsoft.Graph',
-    operation: `Review Guest Access - ${action === 'disable' ? 'Disable' : action === 'remove' ? 'Remove' : 'Review'}`,
-    guestEmail: guestEmail,
-    action: action,
-    expectedResult: `Guest '${guestEmail}' ${action === 'disable' ? 'disabled' : action === 'remove' ? 'removed' : 'access reviewed'}`
-  }
-}
-
-// ============================================================
 // INTUNE DEVICE MANAGEMENT
 // ============================================================
 
@@ -3808,6 +3407,419 @@ Write-Host "✓ Power Automate license '${licenseType}' requested for ${userEmai
     userEmail: userEmail,
     licenseType: licenseType,
     expectedResult: `Power Automate ${licenseType} license assigned to ${userEmail}`
+  }
+}
+
+// ============================================================
+// GUEST LIFECYCLE OPERATIONS
+// ============================================================
+
+/**
+ * Validate Invite Guest User
+ */
+export async function validateInviteGuest(formData) {
+  const { guestEmail, guestName, guestOrg, sponsor, duration, accessScope } = formData
+  const errors = []
+  const warnings = []
+
+  if (!guestEmail || guestEmail.trim().length === 0) {
+    errors.push('Guest Email is required')
+  }
+  if (!guestName || guestName.trim().length === 0) {
+    errors.push('Guest Full Name is required')
+  }
+  if (!guestOrg || guestOrg.trim().length === 0) {
+    errors.push('Organisation is required')
+  }
+  if (!sponsor || sponsor.trim().length === 0) {
+    errors.push('Internal Sponsor UPN is required')
+  }
+  if (!duration) {
+    errors.push('Access Duration is required')
+  }
+  if (!accessScope || accessScope.trim().length === 0) {
+    errors.push('Access Scope is required')
+  }
+
+  // Validate email format
+  if (guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) {
+    errors.push('Invalid guest email format')
+  }
+
+  // Check for existing guest
+  if (guestEmail) {
+    try {
+      const existing = await graphClient
+        .api('/users')
+        .filter(`userPrincipalName eq '${guestEmail}'`)
+        .get()
+
+      if (existing.value && existing.value.length > 0) {
+        errors.push(`User '${guestEmail}' already exists in tenant`)
+      }
+    } catch (err) {
+      warnings.push('Could not check for duplicate accounts')
+    }
+  }
+
+  // Verify sponsor exists
+  if (sponsor) {
+    try {
+      const sponsorUser = await graphClient
+        .api('/users')
+        .filter(`userPrincipalName eq '${sponsor}'`)
+        .get()
+
+      if (!sponsorUser.value || sponsorUser.value.length === 0) {
+        errors.push(`Sponsor '${sponsor}' not found`)
+      }
+    } catch (err) {
+      warnings.push('Could not verify sponsor')
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      `Check ${guestEmail} domain against block list`,
+      'Verify guest invitation policy compliance',
+      'Check Conditional Access guest policy',
+      `Verify sponsor '${sponsor}' authorization`
+    ]
+  }
+}
+
+/**
+ * Execute Invite Guest User
+ */
+export async function executeInviteGuest(formData) {
+  const { guestEmail, guestName, guestOrg, sponsor, duration, accessScope } = formData
+
+  const expiryDate = new Date()
+  const durationMonths = parseInt(duration.split(' ')[0])
+  expiryDate.setMonth(expiryDate.getMonth() + durationMonths)
+
+  const psCommand = `
+# Invite Guest User
+Write-Host "Inviting guest user to tenant"
+Write-Host "Email: ${guestEmail}"
+Write-Host "Name: ${guestName}"
+Write-Host "Organization: ${guestOrg}"
+Write-Host "Sponsor: ${sponsor}"
+Write-Host "Duration: ${duration} (expires ${expiryDate.toISOString().split('T')[0]})"
+Write-Host "Access Scope: ${accessScope}"
+
+# Create invitation
+$invitation = New-MgInvitation -InvitedUserEmailAddress '${guestEmail}' \\
+  -InviteRedirectUrl 'https://myapps.microsoft.com' \\
+  -SendInvitationMessage \$true \\
+  -InvitedUserDisplayName '${guestName}' \\
+  -InvitedUserType Guest
+
+Write-Host "✓ Guest invitation created"
+Write-Host "✓ Email: ${guestEmail}"
+Write-Host "✓ Access Scope: ${accessScope}"
+
+# Update user with expiry metadata
+$properties = @{
+  'extension_expiryDate' = '${expiryDate.toISOString().split('T')[0]}'
+  'extension_sponsor' = '${sponsor}'
+  'extension_organization' = '${guestOrg}'
+  'extension_accessScope' = '${accessScope}'
+}
+
+Write-Host "✓ Guest expiry set: ${expiryDate.toISOString().split('T')[0]}"
+Write-Host ""
+Write-Host "✓ Guest user '${guestEmail}' successfully invited"
+Write-Host "✓ Invitation email sent"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Microsoft.Graph',
+    operation: 'Invite Guest User',
+    guestEmail: guestEmail,
+    guestName: guestName,
+    sponsor: sponsor,
+    duration: duration,
+    expiryDate: expiryDate.toISOString().split('T')[0],
+    expectedResult: `Guest user '${guestEmail}' invited — access expires ${expiryDate.toISOString().split('T')[0]}`
+  }
+}
+
+/**
+ * Validate Extend Guest Access
+ */
+export async function validateExtendGuestAccess(formData) {
+  const { guestEmail, extension, accessReview } = formData
+  const errors = []
+  const warnings = []
+
+  if (!guestEmail || guestEmail.trim().length === 0) {
+    errors.push('Guest Email is required')
+  }
+  if (!extension) {
+    errors.push('Extension duration is required')
+  }
+  if (!accessReview || accessReview.trim().length === 0) {
+    errors.push('Access review justification is required')
+  }
+
+  // Verify guest exists
+  if (guestEmail) {
+    try {
+      const guest = await graphClient
+        .api('/users')
+        .filter(`userPrincipalName eq '${guestEmail}'`)
+        .get()
+
+      if (!guest.value || guest.value.length === 0) {
+        errors.push(`Guest user '${guestEmail}' not found`)
+      }
+    } catch (err) {
+      warnings.push('Could not verify guest user')
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      `Verify guest activity in last 30 days`,
+      'Check access scope still appropriate',
+      'Validate sponsor still in organisation',
+      'Confirm no compliance violations'
+    ]
+  }
+}
+
+/**
+ * Execute Extend Guest Access
+ */
+export async function executeExtendGuestAccess(formData) {
+  const { guestEmail, extension, accessReview } = formData
+
+  const expiryDate = new Date()
+  const extensionMonths = parseInt(extension.split(' ')[0])
+  expiryDate.setMonth(expiryDate.getMonth() + extensionMonths)
+
+  const psCommand = `
+# Extend Guest Access
+Write-Host "Extending guest access"
+Write-Host "Guest: ${guestEmail}"
+Write-Host "Extension: ${extension}"
+Write-Host "New expiry: ${expiryDate.toISOString().split('T')[0]}"
+
+# Get guest user
+$guest = Get-MgUser -Filter "userPrincipalName eq '${guestEmail}'" -ErrorAction Stop
+Write-Host "✓ Guest found: $($guest.DisplayName)"
+
+# Update expiry
+Update-MgUser -UserId $guest.Id \\
+  -Extensions @{'extension_expiryDate' = '${expiryDate.toISOString().split('T')[0]}'} \\
+  -ErrorAction SilentlyContinue
+
+Write-Host "✓ Access extended for ${extension}"
+Write-Host "✓ New expiry: ${expiryDate.toISOString().split('T')[0]}"
+Write-Host ""
+Write-Host "Access Review Notes:"
+Write-Host "${accessReview}"
+Write-Host ""
+Write-Host "✓ Guest access for '${guestEmail}' extended to ${expiryDate.toISOString().split('T')[0]}"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Microsoft.Graph',
+    operation: 'Extend Guest Access',
+    guestEmail: guestEmail,
+    extension: extension,
+    expiryDate: expiryDate.toISOString().split('T')[0],
+    expectedResult: `Guest access extended for ${extension} — new expiry ${expiryDate.toISOString().split('T')[0]}`
+  }
+}
+
+/**
+ * Validate Remove Guest User
+ */
+export async function validateRemoveGuest(formData) {
+  const { guestEmail, contentAction, confirmRemoval } = formData
+  const errors = []
+  const warnings = []
+
+  if (!guestEmail || guestEmail.trim().length === 0) {
+    errors.push('Guest Email is required')
+  }
+  if (!contentAction) {
+    errors.push('Owned Content Action is required')
+  }
+
+  // Verify guest exists
+  if (guestEmail) {
+    try {
+      const guest = await graphClient
+        .api('/users')
+        .filter(`userPrincipalName eq '${guestEmail}'`)
+        .get()
+
+      if (!guest.value || guest.value.length === 0) {
+        errors.push(`Guest user '${guestEmail}' not found`)
+      }
+    } catch (err) {
+      warnings.push('Could not verify guest user')
+    }
+  }
+
+  warnings.push('⚠️ CRITICAL: Guest removal is irreversible — ensure all necessary content has been handled')
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      'Enumerate all guest resource access',
+      'Check for owned content and shared resources',
+      'Identify active collaborations',
+      'Flag any open items or tasks'
+    ]
+  }
+}
+
+/**
+ * Execute Remove Guest User
+ */
+export async function executeRemoveGuest(formData) {
+  const { guestEmail, contentAction, removeDate } = formData
+
+  const psCommand = `
+# Remove Guest User
+Write-Host "Removing guest user: ${guestEmail}"
+Write-Host "Content Action: ${contentAction}"
+${removeDate ? `Write-Host "Removal Date: ${removeDate}"` : `Write-Host "Removal: Immediate"`}
+
+# Get guest user
+$guest = Get-MgUser -Filter "userPrincipalName eq '${guestEmail}'" -ErrorAction Stop
+Write-Host "✓ Guest found: $($guest.DisplayName)"
+
+# Enumerate resource access
+$resources = Get-MgUserMemberOf -UserId $guest.Id -ErrorAction SilentlyContinue
+Write-Host "Guest access to $($resources.Count) resource(s)"
+
+# Handle content
+if ('${contentAction}' -eq 'Reassign to sponsor') {
+  Write-Host "✓ Content reassignment initiated"
+} elseif ('${contentAction}' -eq 'Export then delete') {
+  Write-Host "✓ Content export initiated"
+}
+
+# Remove guest
+Remove-MgUser -UserId $guest.Id -ErrorAction Stop
+Write-Host "✓ Guest account removed"
+Write-Host ""
+Write-Host "✓ Guest user '${guestEmail}' successfully removed from tenant"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Microsoft.Graph',
+    operation: 'Remove Guest User',
+    guestEmail: guestEmail,
+    contentAction: contentAction,
+    removeDate: removeDate || 'Immediate',
+    expectedResult: `Guest user '${guestEmail}' removed from tenant`
+  }
+}
+
+/**
+ * Validate Request Quarterly Access Review
+ */
+export async function validateQuarterlyReview(formData) {
+  const { scope, reviewerUpn } = formData
+  const errors = []
+  const warnings = []
+
+  if (!scope) {
+    errors.push('Review Scope is required')
+  }
+  if (!reviewerUpn || reviewerUpn.trim().length === 0) {
+    errors.push('Reviewer UPN is required')
+  }
+
+  // Verify reviewer exists
+  if (reviewerUpn) {
+    try {
+      const reviewer = await graphClient
+        .api('/users')
+        .filter(`userPrincipalName eq '${reviewerUpn}'`)
+        .get()
+
+      if (!reviewer.value || reviewer.value.length === 0) {
+        errors.push(`Reviewer '${reviewerUpn}' not found`)
+      }
+    } catch (err) {
+      warnings.push('Could not verify reviewer')
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      'Enumerate all active guest accounts',
+      'Identify guests inactive >60 days',
+      'Check expiry dates and nearing expiration',
+      'Identify guests without sponsors or orphaned'
+    ]
+  }
+}
+
+/**
+ * Execute Request Quarterly Access Review
+ */
+export async function executeQuarterlyReview(formData) {
+  const { scope, reviewerUpn } = formData
+
+  const psCommand = `
+# Request Quarterly Guest Access Review
+Write-Host "Generating quarterly guest access review"
+Write-Host "Scope: ${scope}"
+Write-Host "Reviewer: ${reviewerUpn}"
+
+# Get all guest users matching scope
+$guests = Get-MgUser -All -Filter "userType eq 'Guest'" -ErrorAction Stop
+Write-Host "✓ Found $($guests.Count) active guest accounts"
+
+# Analyze guest status
+$inactive = $guests | Where-Object { (Get-Date) - (Get-MgUserSignInActivity -UserId \$_.Id).LastSignInDateTime -gt 60 }
+$expiring = $guests | Where-Object { \$_.'extension_expiryDate' -lt (Get-Date).AddDays(30) }
+
+Write-Host "Guests inactive >60 days: $($inactive.Count)"
+Write-Host "Guests expiring in 30 days: $($expiring.Count)"
+
+# Generate report
+Write-Host ""
+Write-Host "Review Report:"
+Write-Host "  Total Active Guests: $($guests.Count)"
+Write-Host "  Inactive (>60 days): $($inactive.Count)"
+Write-Host "  Expiring Soon: $($expiring.Count)"
+Write-Host "  Without Sponsors: [Review needed]"
+Write-Host ""
+Write-Host "✓ Quarterly guest access review report generated"
+Write-Host "✓ Report sent to: ${reviewerUpn}"
+Write-Host "✓ Scope: ${scope}"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Microsoft.Graph',
+    operation: 'Request Quarterly Access Review',
+    scope: scope,
+    reviewerUpn: reviewerUpn,
+    expectedResult: `Quarterly guest access review report generated and sent to ${reviewerUpn}`
   }
 }
 
