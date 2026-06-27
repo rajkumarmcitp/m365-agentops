@@ -3602,6 +3602,10 @@ export async function validateExtendGuestAccess(formData) {
 export async function executeExtendGuestAccess(formData) {
   const { guestEmail, extension, accessReview } = formData
 
+  if (!extension) {
+    throw new Error('Extension duration is required')
+  }
+
   const expiryDate = new Date()
   const extensionMonths = parseInt(extension.split(' ')[0])
   expiryDate.setMonth(expiryDate.getMonth() + extensionMonths)
