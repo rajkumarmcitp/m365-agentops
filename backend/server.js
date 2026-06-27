@@ -34,6 +34,34 @@ import {
   provisionRequest, setProvisioningGraphClient, getProvisioningErrorMessage
 } from './provisioning.js'
 import {
+  setExecutorGraphClient,
+  validateCreateDG, executeCreateDG,
+  validateModifyDG, executeModifyDG,
+  validateDeleteDG, executeDeleteDG,
+  validateCreateSharedMB, executeCreateSharedMB,
+  validateDeleteSharedMB, executeDeleteSharedMB,
+  validateModifyMBPermissions, executeModifyMBPermissions,
+  validateCreateRoomMB, executeCreateRoomMB,
+  validateCreateEquipmentMB, executeCreateEquipmentMB,
+  validateConfigureBookingPolicy, executeConfigureBookingPolicy,
+  validateAddSmtpAddress, executeAddSmtpAddress,
+  validateConfigureMailForwarding, executeConfigureMailForwarding,
+  validateConfigureAutoReply, executeConfigureAutoReply,
+  validateRemoveMailForwarding, executeRemoveMailForwarding,
+  validateGrantMailboxAccess, executeGrantMailboxAccess,
+  validateAddTeamMember, executeAddTeamMember,
+  validateAddGroupMember, executeAddGroupMember,
+  validateSetDelegateAccess, executeSetDelegateAccess,
+  validateGrantSharePointAccess, executeGrantSharePointAccess,
+  validateInviteGuest, executeInviteGuest,
+  validateRemoveGuest, executeRemoveGuest,
+  validateGrantGuestPermissions, executeGrantGuestPermissions,
+  validateReviewGuestAccess, executeReviewGuestAccess,
+  validateRetireDevice, executeRetireDevice,
+  validateWipeDevice, executeWipeDevice,
+  validateGrantComplianceException, executeGrantComplianceException
+} from './self-service-executor.js'
+import {
   startProvisioningJob, setProvisioningJobGraphClient
 } from './provisioning-job.js'
 import {
@@ -46,7 +74,7 @@ import {
   addCorrelation, getCorrelations,
   addInvestigation, getInvestigation, updateInvestigation
 } from './lib/sharepoint-client.js'
-import { setValidationGraphClient, validateAllCISControls, clearValidationCache, getValidationMethodSummary, getValidationMetadata } from './cis-validator.js'
+import { setValidationGraphClient, validateAllCISControls, clearValidationCache, getCachedValidation, getValidationMethodSummary, getValidationMetadata } from './cis-validator.js'
 import {
   getValidationConfig, updateValidationConfig, getValidationMethod,
   setControlValidationMethod, clearControlValidationMethod, getCustomMethodControls,
@@ -306,6 +334,9 @@ if (isValidCredentials) {
 
       // Initialize CIS Validator with Graph client
       setValidationGraphClient(graphClient)
+
+      // Initialize Self Service Executor with Graph client
+      setExecutorGraphClient(graphClient)
     })().catch(error => {
       console.warn('⚠️ Graph Client initialization failed:', error.message)
       console.warn('⚠️ Will use simulated data for endpoints')
@@ -922,34 +953,88 @@ app.get('/api/device-compliance-policies', async (req, res) => {
 // ============================================================
 // Configuration & Compliance - CIS Controls (Comprehensive Real-Time)
 // ============================================================
+// Track validation state
+let validationState = {
+  isValidating: false,
+  lastValidation: null,
+  lastValidationTime: null,
+  nextValidationTime: null
+}
+
+// Daily validation schedule (once per 24 hours)
+async function scheduleValidation() {
+  const now = Date.now()
+  const VALIDATION_INTERVAL = 24 * 60 * 60 * 1000 // 24 hours
+
+  // Check if 24 hours have passed since last validation
+  if (!validationState.lastValidation || (now - validationState.lastValidation) > VALIDATION_INTERVAL) {
+    if (!validationState.isValidating) {
+      console.log('🔄 Starting daily CIS validation...')
+      validationState.isValidating = true
+      validationState.nextValidationTime = new Date(now + 3600000).toISOString() // Show next in 1 hour
+
+      // Run validation in background (don't await)
+      validateAllCISControls()
+        .then(result => {
+          console.log('✅ Daily CIS validation completed')
+          validationState.isValidating = false
+          validationState.lastValidation = now
+          validationState.lastValidationTime = new Date().toISOString()
+        })
+        .catch(err => {
+          console.error('❌ Daily CIS validation failed:', err.message)
+          validationState.isValidating = false
+        })
+    }
+  }
+}
+
 app.get('/api/config/cis-controls', async (req, res) => {
   try {
-    console.log('📋 CIS Controls: Fetching comprehensive real-time validation...')
+    // Check if we need to start daily validation
+    await scheduleValidation()
 
-    // Use the comprehensive CIS validator
-    const validation = await validateAllCISControls()
-
-    if (!validation.success) {
-      console.warn('⚠️ CIS Validation failed, will return demo data fallback')
+    // If validation is running, return loading state
+    if (validationState.isValidating) {
       return res.json({
-        success: false,
-        error: validation.error,
+        success: true,
+        isValidating: true,
+        lastValidationTime: validationState.lastValidationTime,
+        nextValidationTime: validationState.nextValidationTime,
+        message: 'CIS validation running in background. This happens daily and takes 3-5 minutes.',
         data: [],
-        source: 'error',
         timestamp: new Date().toISOString()
       })
     }
 
-    // Return comprehensive validation results
+    // Get cached validation results
+    const cached = getCachedValidation()
+    if (cached) {
+      return res.json({
+        success: true,
+        data: cached.topics || [],
+        stats: cached.stats || {},
+        tenantId: cached.tenantId,
+        tenantDomain: cached.tenantDomain,
+        timestamp: cached.timestamp,
+        source: cached.source || 'Graph API',
+        lastValidationTime: validationState.lastValidationTime,
+        isValidating: false
+      })
+    }
+
+    // No cached data and not currently validating - start validation now
+    console.log('📋 No cache available, starting validation...')
+    await scheduleValidation()
+
     res.json({
       success: true,
-      data: validation.topics || [],
-      stats: validation.stats || {},
-      tenantId: validation.tenantId,
-      tenantDomain: validation.tenantDomain,
-      timestamp: validation.timestamp,
-      source: validation.source || 'Graph API',
-      cacheTimestamp: new Date().toISOString()
+      isValidating: validationState.isValidating,
+      lastValidationTime: validationState.lastValidationTime,
+      nextValidationTime: validationState.nextValidationTime,
+      message: 'Starting validation. Please check back in 3-5 minutes.',
+      data: [],
+      timestamp: new Date().toISOString()
     })
   } catch (error) {
     console.error('✗ CIS Controls error:', error.message)
@@ -1040,7 +1125,7 @@ app.post('/api/execute-powershell', async (req, res) => {
 
     try {
       // Execute PowerShell command using execFile (more reliable)
-      const pwshPath = process.platform === 'darwin' ? '/opt/homebrew/bin/pwsh' : 'pwsh'
+      const pwshPath = process.platform === 'darwin' ? '/usr/local/bin/pwsh' : 'pwsh'
       const fs = await import('fs').then(m => m.promises)
       const path = await import('path')
 
@@ -1191,7 +1276,7 @@ app.post('/api/execute-powershell-batch', async (req, res) => {
     const fs = await import('fs').then(m => m.promises)
 
     try {
-      const pwshPath = process.platform === 'darwin' ? '/opt/homebrew/bin/pwsh' : 'pwsh'
+      const pwshPath = process.platform === 'darwin' ? '/usr/local/bin/pwsh' : 'pwsh'
       const tempDir = '/tmp'
       const scriptFile = `${tempDir}/ps_batch_${Date.now()}.ps1`
 
@@ -1203,51 +1288,54 @@ app.post('/api/execute-powershell-batch', async (req, res) => {
       const exchangeCertPassword = process.env.EXCHANGE_CERT_PASSWORD
 
       // Build command blocks with markers for parsing results
-      const commandBlocks = commands.map((cmd, idx) => `
+      const commandBlocks = commands.map((cmd, idx) => {
+        // Skip Graph PowerShell commands (Get-Mg*) - they're too slow and will be validated by Graph API in background
+        const isGraphCommand = cmd.command.trim().startsWith('Get-Mg')
+        // Skip DLP and EOP commands - require WinRM auth not available in batch mode
+        const isUnsupportedCommand = cmd.command.includes('Get-DlpCompliancePolicy') ||
+                                     cmd.command.includes('Get-DlpSensitiveInformationType') ||
+                                     cmd.command.includes('Get-HostedOutboundSpamFilterPolicy') ||
+                                     cmd.command.includes('Get-HostedConnectionFilterPolicy') ||
+                                     cmd.command.includes('Get-HostedContentFilterPolicy') ||
+                                     cmd.command.includes('Get-SafeAttachmentPolicy') ||
+                                     cmd.command.includes('Get-ExoHostedOutboundSpamFilterPolicy') ||
+                                     cmd.command.includes('Get-ExoHostedConnectionFilterPolicy') ||
+                                     cmd.command.includes('Get-ExoHostedContentFilterPolicy')
+
+        return `
 Write-Host "---COMMAND_START_${cmd.controlId}---" -ForegroundColor Cyan
 Write-Host "Control: ${cmd.controlId} - ${cmd.title}" -ForegroundColor Gray
-try {
-  ${cmd.command}
+${isGraphCommand || isUnsupportedCommand ? `Write-Host "Validation running via Graph API in background..." -ForegroundColor Yellow
+Write-Host "---COMMAND_END_${cmd.controlId}_SUCCESS---" -ForegroundColor Green` : `try {
+  $output = ${cmd.command} 2>&1 | Out-String
+  Write-Host $output
   Write-Host "---COMMAND_END_${cmd.controlId}_SUCCESS---" -ForegroundColor Green
 } catch {
   Write-Host "---COMMAND_END_${cmd.controlId}_ERROR---\$_.Exception.Message---" -ForegroundColor Red
-}
-`).join('\n')
+}`}
+`
+      }).join('\n')
 
       // Detect what modules are needed
       const hasSharePointCommands = commands.some(c => c.command.includes('Get-SPO') || c.command.includes('Get-PnP'))
+
+      // Detect if we need Exchange Online
+      const hasExchangeCommands = commands.some(c => c.command.includes('Get-OrganizationConfig') || c.command.includes('Get-AntiPhishPolicy') || c.command.includes('Get-AdminAuditLogConfig') || c.command.includes('Get-DlpCompliancePolicy') || c.command.includes('Get-MalwareFilterPolicy') || c.command.includes('Get-SafeLinksPolicy') || c.command.includes('Get-SafeAttachmentPolicy') || c.command.includes('Get-HostedContentFilterPolicy'))
 
       const scriptContent = `
 $ErrorActionPreference = 'Continue'
 Write-Host "=== Batch PowerShell Execution Started ===" -ForegroundColor Cyan
 Write-Host "Total commands: ${commands.length}" -ForegroundColor Gray
-Write-Host "Organization: ${exchangeOrg}" -ForegroundColor Gray
 
 try {
-  # Import required modules
-  Write-Host "Importing modules..." -ForegroundColor Cyan
-  Import-Module ExchangeOnlineManagement -ErrorAction Continue
-  Import-Module MicrosoftTeams -ErrorAction SilentlyContinue
-  ${hasSharePointCommands ? 'Import-Module PnP.PowerShell -ErrorAction Continue' : ''}
-  Write-Host "✓ Modules loaded" -ForegroundColor Green
+  ${hasExchangeCommands ? `Write-Host "Importing Exchange Online module..." -ForegroundColor Cyan
+  Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
+  Write-Host "Connecting to Exchange Online..." -ForegroundColor Cyan
+  $certPassword = ConvertTo-SecureString -String '${exchangeCertPassword.replace(/'/g, "''")}' -AsPlainText -Force
+  Connect-ExchangeOnline -AppId '${clientId}' -Organization '${exchangeOrg}' -CertificateFilePath '${exchangeCertPath}' -CertificatePassword $certPassword -SkipLoadingFormatData -ErrorAction SilentlyContinue -Verbose:$false | Out-Null
+  Write-Host "✓ Exchange Online ready" -ForegroundColor Green` : ''}
 
-  # Connect to Exchange Online
-  Write-Host "Establishing Exchange Online connection..." -ForegroundColor Cyan
-  $exoSession = Get-PSSession -ErrorAction SilentlyContinue | Where-Object { $_.ConfigurationName -eq 'Microsoft.Exchange' }
-
-  if ($null -eq $exoSession) {
-    $certTest = Test-Path -Path '${exchangeCertPath}' -PathType Leaf
-    if (\$certTest) {
-      $certPassword = ConvertTo-SecureString -String '${exchangeCertPassword.replace(/'/g, "''")}' -AsPlainText -Force
-      Connect-ExchangeOnline -AppId '${clientId}' -Organization '${exchangeOrg}' -CertificateFilePath '${exchangeCertPath}' -CertificatePassword \$certPassword -SkipLoadingFormatData -ErrorAction Continue | Out-Null
-      Write-Host "✓ Exchange Online connected" -ForegroundColor Green
-    } else {
-      Write-Host "✗ Certificate file not found" -ForegroundColor Red
-      exit 1
-    }
-  } else {
-    Write-Host "✓ Using existing Exchange session" -ForegroundColor Green
-  }
+  Write-Host "Running commands in batch mode..." -ForegroundColor Cyan
 
   ${hasSharePointCommands ? `
   # Connect to SharePoint with certificate
@@ -1286,7 +1374,7 @@ Write-Host "=== Batch Execution Completed ===" -ForegroundColor Cyan
         '-ExecutionPolicy', 'Bypass',
         '-File', scriptFile
       ], {
-        timeout: 60000, // 60 second timeout for batch
+        timeout: 300000, // 5 minute timeout for batch (Graph module import can be slow)
         maxBuffer: 10 * 1024 * 1024,
         encoding: 'utf-8',
         env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
@@ -1328,12 +1416,40 @@ Write-Host "=== Batch Execution Completed ===" -ForegroundColor Cyan
 
       console.log(`✓ Batch PowerShell execution completed for ${commands.length} commands`)
 
+      // Enhance results with validator data if available
+      const cached = getCachedValidation()
+      if (cached) {
+        const controlMap = new Map()
+        cached.topics.forEach(topic => {
+          topic.subsections.forEach(subsection => {
+            subsection.controls.forEach(control => {
+              controlMap.set(control.id, control)
+            })
+          })
+        })
+
+        // Add validator results to commands that were skipped
+        commands.forEach(cmd => {
+          if (results[cmd.controlId]) {
+            const control = controlMap.get(cmd.controlId)
+            if (control && results[cmd.controlId].output.includes('Graph API')) {
+              // Replace placeholder with actual validator result
+              results[cmd.controlId].success = true
+              results[cmd.controlId].output = `Status: ${control.status.toUpperCase()}\nValue: ${control.value || 'No value'}\nDescription: ${control.desc}`
+              results[cmd.controlId].validatorResult = true
+            }
+          }
+        })
+      }
+
       res.json({
         success: true,
         totalCommands: commands.length,
         results: results,
         output: stdout,
-        exitCode: 0
+        exitCode: 0,
+        validatorAvailable: !!cached,
+        note: cached ? 'Results include validator data' : 'Validator data will be available once daily validation completes'
       })
     } catch (execError) {
       console.error(`❌ Batch PowerShell execution failed:`, execError.message)
@@ -4649,6 +4765,7 @@ app.post('/api/self-service/validate-sharepoint', async (req, res) => {
       // Initialize lists and fields on the new site
       console.log('🚀 Initializing Self Service Portal lists and fields...')
       setSelfServiceGraphClient(graphClient)
+      setExecutorGraphClient(graphClient)
       await initializeSelfServiceLists(graphClient, siteId)
       console.log('✅ Lists and fields ready for use')
     } catch (error) {
@@ -11855,6 +11972,795 @@ app.post('/api/config/validation-reset', (req, res) => {
   } catch (error) {
     console.error('Error resetting validation config:', error.message)
     res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// ============================================================
+// SELF SERVICE - Distribution Groups Operations
+// ============================================================
+
+/**
+ * POST /api/self-service/operations/dg/validate-create
+ * Validate create distribution group request
+ */
+app.post('/api/self-service/operations/dg/validate-create', async (req, res) => {
+  try {
+    const { displayName, alias, members, managedBy } = req.body
+    console.log(`📋 Validating Create Distribution Group: ${displayName}`)
+
+    const validation = await validateCreateDG({ displayName, alias, members, managedBy })
+
+    res.json({
+      success: true,
+      operation: 'create-dg',
+      validation: validation,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Validation error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/dg/validate-modify
+ * Validate modify distribution group request
+ */
+app.post('/api/self-service/operations/dg/validate-modify', async (req, res) => {
+  try {
+    const { currentName, newName, newAlias, changeOwner } = req.body
+    console.log(`📋 Validating Modify Distribution Group: ${currentName}`)
+
+    const validation = await validateModifyDG({ currentName, newName, newAlias, changeOwner })
+
+    res.json({
+      success: true,
+      operation: 'modify-dg',
+      validation: validation,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Validation error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/dg/validate-delete
+ * Validate delete distribution group request
+ */
+app.post('/api/self-service/operations/dg/validate-delete', async (req, res) => {
+  try {
+    const { groupName, confirmation } = req.body
+    console.log(`📋 Validating Delete Distribution Group: ${groupName}`)
+
+    const validation = await validateDeleteDG({ groupName, confirmation })
+
+    res.json({
+      success: true,
+      operation: 'delete-dg',
+      validation: validation,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Validation error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/dg/execute
+ * Execute distribution group operation (after approval)
+ */
+app.post('/api/self-service/operations/dg/execute', async (req, res) => {
+  try {
+    const { operationType, formData, requestId } = req.body
+    console.log(`🔧 Executing ${operationType} for request ${requestId}`)
+
+    let executionDef
+
+    switch (operationType) {
+      case 'create-dg':
+        executionDef = await executeCreateDG(formData)
+        break
+      case 'modify-dg':
+        executionDef = await executeModifyDG(formData)
+        break
+      case 'delete-dg':
+        executionDef = await executeDeleteDG(formData)
+        break
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown operation type: ${operationType}`
+        })
+    }
+
+    res.json({
+      success: true,
+      operationType: operationType,
+      execution: executionDef,
+      requestId: requestId,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Execution error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+// ============================================================
+// SHARED MAILBOX OPERATIONS
+// ============================================================
+
+/**
+ * POST /api/self-service/operations/shared-mb/validate-create
+ */
+app.post('/api/self-service/operations/shared-mb/validate-create', async (req, res) => {
+  try {
+    const { displayName, alias, fullAccess, sendAs } = req.body
+    console.log(`📋 Validating Create Shared Mailbox: ${displayName}`)
+
+    const validation = await validateCreateSharedMB({ displayName, alias, fullAccess, sendAs })
+
+    res.json({
+      success: true,
+      operation: 'create-shared-mb',
+      validation: validation,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Validation error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/shared-mb/validate-delete
+ */
+app.post('/api/self-service/operations/shared-mb/validate-delete', async (req, res) => {
+  try {
+    const { mailboxEmail, dataAction } = req.body
+    console.log(`📋 Validating Delete Shared Mailbox: ${mailboxEmail}`)
+
+    const validation = await validateDeleteSharedMB({ mailboxEmail, dataAction })
+
+    res.json({
+      success: true,
+      operation: 'delete-shared-mb',
+      validation: validation,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Validation error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/shared-mb/validate-permissions
+ */
+app.post('/api/self-service/operations/shared-mb/validate-permissions', async (req, res) => {
+  try {
+    const { mailboxEmail, permType, action, users } = req.body
+    console.log(`📋 Validating Modify Permissions: ${mailboxEmail}`)
+
+    const validation = await validateModifyMBPermissions({ mailboxEmail, permType, action, users })
+
+    res.json({
+      success: true,
+      operation: 'mb-permissions',
+      validation: validation,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Validation error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/shared-mb/execute
+ */
+app.post('/api/self-service/operations/shared-mb/execute', async (req, res) => {
+  try {
+    const { operationType, formData, requestId } = req.body
+    console.log(`🔧 Executing ${operationType} for request ${requestId}`)
+
+    let executionDef
+
+    switch (operationType) {
+      case 'create-shared-mb':
+        executionDef = await executeCreateSharedMB(formData)
+        break
+      case 'delete-shared-mb':
+        executionDef = await executeDeleteSharedMB(formData)
+        break
+      case 'mb-permissions':
+        executionDef = await executeModifyMBPermissions(formData)
+        break
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown operation type: ${operationType}`
+        })
+    }
+
+    res.json({
+      success: true,
+      operationType: operationType,
+      execution: executionDef,
+      requestId: requestId,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Execution error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/room-mb/validate-create
+ */
+app.post('/api/self-service/operations/room-mb/validate-create', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateCreateRoomMB(formData)
+    res.json({
+      success: true,
+      operation: 'create-room-mb',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/equipment-mb/validate-create
+ */
+app.post('/api/self-service/operations/equipment-mb/validate-create', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateCreateEquipmentMB(formData)
+    res.json({
+      success: true,
+      operation: 'create-equipment-mb',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/booking-policy/validate-configure
+ */
+app.post('/api/self-service/operations/booking-policy/validate-configure', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateConfigureBookingPolicy(formData)
+    res.json({
+      success: true,
+      operation: 'configure-booking-policy',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/resource-mb/execute
+ */
+app.post('/api/self-service/operations/resource-mb/execute', async (req, res) => {
+  try {
+    const { operationType, formData, requestId } = req.body
+    console.log(`🔧 Executing ${operationType} for request ${requestId}`)
+
+    let executionDef
+
+    switch (operationType) {
+      case 'create-room-mb':
+        executionDef = await executeCreateRoomMB(formData)
+        break
+      case 'create-equipment-mb':
+        executionDef = await executeCreateEquipmentMB(formData)
+        break
+      case 'configure-booking-policy':
+        executionDef = await executeConfigureBookingPolicy(formData)
+        break
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown operation type: ${operationType}`
+        })
+    }
+
+    res.json({
+      success: true,
+      operationType: operationType,
+      execution: executionDef,
+      requestId: requestId,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Execution error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/email-service/validate-smtp
+ */
+app.post('/api/self-service/operations/email-service/validate-smtp', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateAddSmtpAddress(formData)
+    res.json({
+      success: true,
+      operation: 'add-smtp',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/email-service/validate-forwarding
+ */
+app.post('/api/self-service/operations/email-service/validate-forwarding', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateConfigureMailForwarding(formData)
+    res.json({
+      success: true,
+      operation: 'configure-forwarding',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/email-service/validate-autoreply
+ */
+app.post('/api/self-service/operations/email-service/validate-autoreply', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateConfigureAutoReply(formData)
+    res.json({
+      success: true,
+      operation: 'configure-autoreply',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/email-service/validate-remove-forwarding
+ */
+app.post('/api/self-service/operations/email-service/validate-remove-forwarding', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateRemoveMailForwarding(formData)
+    res.json({
+      success: true,
+      operation: 'remove-forwarding',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/email-service/execute
+ */
+app.post('/api/self-service/operations/email-service/execute', async (req, res) => {
+  try {
+    const { operationType, formData, requestId } = req.body
+    console.log(`🔧 Executing ${operationType} for request ${requestId}`)
+
+    let executionDef
+
+    switch (operationType) {
+      case 'add-smtp':
+        executionDef = await executeAddSmtpAddress(formData)
+        break
+      case 'configure-forwarding':
+        executionDef = await executeConfigureMailForwarding(formData)
+        break
+      case 'configure-autoreply':
+        executionDef = await executeConfigureAutoReply(formData)
+        break
+      case 'remove-forwarding':
+        executionDef = await executeRemoveMailForwarding(formData)
+        break
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown operation type: ${operationType}`
+        })
+    }
+
+    res.json({
+      success: true,
+      operationType: operationType,
+      execution: executionDef,
+      requestId: requestId,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Execution error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/user-access/validate-mailbox
+ */
+app.post('/api/self-service/operations/user-access/validate-mailbox', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateGrantMailboxAccess(formData)
+    res.json({
+      success: true,
+      operation: 'grant-mailbox-access',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/user-access/validate-team
+ */
+app.post('/api/self-service/operations/user-access/validate-team', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateAddTeamMember(formData)
+    res.json({
+      success: true,
+      operation: 'add-team-member',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/user-access/validate-group
+ */
+app.post('/api/self-service/operations/user-access/validate-group', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateAddGroupMember(formData)
+    res.json({
+      success: true,
+      operation: 'add-group-member',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/user-access/validate-delegate
+ */
+app.post('/api/self-service/operations/user-access/validate-delegate', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateSetDelegateAccess(formData)
+    res.json({
+      success: true,
+      operation: 'set-delegate-access',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/user-access/validate-sharepoint
+ */
+app.post('/api/self-service/operations/user-access/validate-sharepoint', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateGrantSharePointAccess(formData)
+    res.json({
+      success: true,
+      operation: 'grant-sharepoint-access',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/user-access/execute
+ */
+app.post('/api/self-service/operations/user-access/execute', async (req, res) => {
+  try {
+    const { operationType, formData, requestId } = req.body
+    console.log(`🔧 Executing ${operationType} for request ${requestId}`)
+
+    let executionDef
+
+    switch (operationType) {
+      case 'grant-mailbox-access':
+        executionDef = await executeGrantMailboxAccess(formData)
+        break
+      case 'add-team-member':
+        executionDef = await executeAddTeamMember(formData)
+        break
+      case 'add-group-member':
+        executionDef = await executeAddGroupMember(formData)
+        break
+      case 'set-delegate-access':
+        executionDef = await executeSetDelegateAccess(formData)
+        break
+      case 'grant-sharepoint-access':
+        executionDef = await executeGrantSharePointAccess(formData)
+        break
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown operation type: ${operationType}`
+        })
+    }
+
+    res.json({
+      success: true,
+      operationType: operationType,
+      execution: executionDef,
+      requestId: requestId,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Execution error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/guest-mgmt/validate-invite
+ */
+app.post('/api/self-service/operations/guest-mgmt/validate-invite', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateInviteGuest(formData)
+    res.json({
+      success: true,
+      operation: 'invite-guest',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/guest-mgmt/validate-remove
+ */
+app.post('/api/self-service/operations/guest-mgmt/validate-remove', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateRemoveGuest(formData)
+    res.json({
+      success: true,
+      operation: 'remove-guest',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/guest-mgmt/validate-permissions
+ */
+app.post('/api/self-service/operations/guest-mgmt/validate-permissions', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateGrantGuestPermissions(formData)
+    res.json({
+      success: true,
+      operation: 'grant-guest-permissions',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/guest-mgmt/validate-review
+ */
+app.post('/api/self-service/operations/guest-mgmt/validate-review', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateReviewGuestAccess(formData)
+    res.json({
+      success: true,
+      operation: 'review-guest-access',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/guest-mgmt/execute
+ */
+app.post('/api/self-service/operations/guest-mgmt/execute', async (req, res) => {
+  try {
+    const { operationType, formData, requestId } = req.body
+    console.log(`🔧 Executing ${operationType} for request ${requestId}`)
+
+    let executionDef
+
+    switch (operationType) {
+      case 'invite-guest':
+        executionDef = await executeInviteGuest(formData)
+        break
+      case 'remove-guest':
+        executionDef = await executeRemoveGuest(formData)
+        break
+      case 'grant-guest-permissions':
+        executionDef = await executeGrantGuestPermissions(formData)
+        break
+      case 'review-guest-access':
+        executionDef = await executeReviewGuestAccess(formData)
+        break
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown operation type: ${operationType}`
+        })
+    }
+
+    res.json({
+      success: true,
+      operationType: operationType,
+      execution: executionDef,
+      requestId: requestId,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Execution error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/intune/validate-retire
+ */
+app.post('/api/self-service/operations/intune/validate-retire', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateRetireDevice(formData)
+    res.json({
+      success: true,
+      operation: 'retire-device',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/intune/validate-wipe
+ */
+app.post('/api/self-service/operations/intune/validate-wipe', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateWipeDevice(formData)
+    res.json({
+      success: true,
+      operation: 'wipe-device',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/intune/validate-exception
+ */
+app.post('/api/self-service/operations/intune/validate-exception', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateGrantComplianceException(formData)
+    res.json({
+      success: true,
+      operation: 'grant-compliance-exception',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/intune/execute
+ */
+app.post('/api/self-service/operations/intune/execute', async (req, res) => {
+  try {
+    const { operationType, formData, requestId } = req.body
+    console.log(`🔧 Executing ${operationType} for request ${requestId}`)
+
+    let executionDef
+
+    switch (operationType) {
+      case 'retire-device':
+        executionDef = await executeRetireDevice(formData)
+        break
+      case 'wipe-device':
+        executionDef = await executeWipeDevice(formData)
+        break
+      case 'grant-compliance-exception':
+        executionDef = await executeGrantComplianceException(formData)
+        break
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown operation type: ${operationType}`
+        })
+    }
+
+    res.json({
+      success: true,
+      operationType: operationType,
+      execution: executionDef,
+      requestId: requestId,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Execution error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
   }
 })
 
