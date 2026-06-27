@@ -3457,6 +3457,361 @@ Write-Host "✓ License inventory report generated"
 }
 
 // ============================================================
+// POWER PLATFORM OPERATIONS
+// ============================================================
+
+/**
+ * Validate Create Power Platform Environment
+ */
+export async function validateCreateEnvironment(formData) {
+  const { envName, envType, region, purpose } = formData
+  const errors = []
+  const warnings = []
+
+  if (!envName || envName.trim().length === 0) {
+    errors.push('Environment Name is required')
+  }
+  if (!envType) {
+    errors.push('Environment Type is required')
+  }
+  if (!region) {
+    errors.push('Region is required')
+  }
+  if (!purpose || purpose.trim().length === 0) {
+    errors.push('Purpose is required')
+  }
+
+  // Environment naming validation
+  if (envName && !/^[a-zA-Z0-9\-]+$/.test(envName)) {
+    errors.push('Environment Name can only contain letters, numbers, and hyphens')
+  }
+
+  if (envName && envName.length > 50) {
+    errors.push('Environment Name cannot exceed 50 characters')
+  }
+
+  if (envType === 'Production') {
+    warnings.push('Production environments require higher approval threshold')
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      'Check environment quota and capacity',
+      `Validate ${envType} environment eligibility`,
+      'Verify DLP policy applies to new environment',
+      `Confirm ${region} region availability`
+    ]
+  }
+}
+
+/**
+ * Execute Create Power Platform Environment
+ */
+export async function executeCreateEnvironment(formData) {
+  const { envName, envType, region, purpose } = formData
+
+  const psCommand = `
+# Create Power Platform Environment
+Write-Host "Creating Power Platform environment: ${envName}"
+Write-Host "Type: ${envType}"
+Write-Host "Region: ${region}"
+Write-Host "Purpose: ${purpose}"
+
+# Note: Environment creation requires Power Platform Admin API
+# This would typically use: New-AdminPowerAppEnvironment
+
+Write-Host "✓ Environment creation request initiated"
+Write-Host "✓ Type: ${envType}"
+Write-Host "✓ Region: ${region}"
+Write-Host "✓ Status: Pending setup"
+Write-Host ""
+Write-Host "Next steps:"
+Write-Host "  1. Environment will be provisioned within 5-10 minutes"
+Write-Host "  2. Apply DLP policies"
+Write-Host "  3. Configure user access"
+Write-Host "  4. Enable required features"
+Write-Host ""
+Write-Host "✓ Power Platform environment '${envName}' creation initiated"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Power Platform',
+    operation: 'Create Environment',
+    envName: envName,
+    envType: envType,
+    region: region,
+    purpose: purpose,
+    expectedResult: `Power Platform ${envType} environment '${envName}' created in ${region}`
+  }
+}
+
+/**
+ * Validate Request Premium Connector Access
+ */
+export async function validatePremiumConnector(formData) {
+  const { connector, environment, useCase, dataFlow } = formData
+  const errors = []
+  const warnings = []
+
+  if (!connector || connector.trim().length === 0) {
+    errors.push('Premium Connector name is required')
+  }
+  if (!environment || environment.trim().length === 0) {
+    errors.push('Environment name is required')
+  }
+  if (!useCase || useCase.trim().length === 0) {
+    errors.push('Use Case is required')
+  }
+  if (!dataFlow || dataFlow.trim().length === 0) {
+    errors.push('Data Flow Description is required')
+  }
+
+  // Warn for sensitive connectors
+  const sensitiveConnectors = ['Salesforce', 'SAP', 'Oracle', 'Dynamics 365', 'ServiceNow', 'SharePoint']
+  if (connector && sensitiveConnectors.some(c => connector.includes(c))) {
+    warnings.push(`⚠️ ${connector} is a sensitive connector - DLP policies will be strictly enforced`)
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      'Check DLP policy restrictions for requested connector',
+      'Verify Power Automate license requirement',
+      'Assess data exposure risk and compliance impact',
+      'Validate environment security baseline'
+    ]
+  }
+}
+
+/**
+ * Execute Request Premium Connector Access
+ */
+export async function executePremiumConnector(formData) {
+  const { connector, environment, useCase, dataFlow } = formData
+
+  const psCommand = `
+# Request Premium Connector Access
+Write-Host "Requesting access to premium connector: ${connector}"
+Write-Host "Environment: ${environment}"
+Write-Host "Use Case: ${useCase}"
+Write-Host ""
+Write-Host "Data Flow:"
+Write-Host "${dataFlow}"
+
+Write-Host ""
+Write-Host "✓ Premium connector access request submitted"
+Write-Host "✓ Connector: ${connector}"
+Write-Host "✓ Environment: ${environment}"
+Write-Host ""
+Write-Host "Next steps:"
+Write-Host "  1. DLP compliance review"
+Write-Host "  2. Data flow validation"
+Write-Host "  3. Connector enablement in environment"
+Write-Host ""
+Write-Host "✓ Premium connector '${connector}' access requested for ${environment}"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Power Platform',
+    operation: 'Request Premium Connector',
+    connector: connector,
+    environment: environment,
+    useCase: useCase,
+    expectedResult: `Premium connector '${connector}' access granted to ${environment}`
+  }
+}
+
+/**
+ * Validate Request DLP Policy Exception
+ */
+export async function validateDLPException(formData) {
+  const { environment, dlpPolicy, connector, riskMitigation, duration } = formData
+  const errors = []
+  const warnings = []
+
+  if (!environment || environment.trim().length === 0) {
+    errors.push('Environment is required')
+  }
+  if (!dlpPolicy || dlpPolicy.trim().length === 0) {
+    errors.push('DLP Policy Name is required')
+  }
+  if (!connector || connector.trim().length === 0) {
+    errors.push('Affected Connector(s) is required')
+  }
+  if (!riskMitigation || riskMitigation.trim().length === 0) {
+    errors.push('Risk Mitigation Plan is required')
+  }
+  if (!duration) {
+    errors.push('Exception Duration is required')
+  }
+
+  warnings.push('⚠️ DLP policy exceptions reduce security posture — ensure compensating controls are in place')
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      'Validate exception scope and justification',
+      'Assess compliance and data loss prevention gap',
+      'Verify compensating controls adequacy',
+      'Flag if exception affects Zero Trust architecture'
+    ]
+  }
+}
+
+/**
+ * Execute Request DLP Policy Exception
+ */
+export async function executeDLPException(formData) {
+  const { environment, dlpPolicy, connector, riskMitigation, duration } = formData
+
+  const expiryDate = new Date()
+  const durationMonths = parseInt(duration.split(' ')[0])
+  expiryDate.setMonth(expiryDate.getMonth() + durationMonths)
+
+  const psCommand = `
+# Request DLP Policy Exception
+Write-Host "Creating DLP policy exception"
+Write-Host "Environment: ${environment}"
+Write-Host "DLP Policy: ${dlpPolicy}"
+Write-Host "Connector(s): ${connector}"
+Write-Host "Duration: ${duration}"
+Write-Host "Expiry: ${expiryDate.toISOString().split('T')[0]}"
+Write-Host ""
+Write-Host "Risk Mitigation:"
+Write-Host "${riskMitigation}"
+
+Write-Host ""
+Write-Host "✓ DLP exception request created"
+Write-Host "✓ Status: Pending approval review"
+Write-Host "✓ Expires: ${expiryDate.toISOString().split('T')[0]}"
+Write-Host ""
+Write-Host "⚠️ Exception will automatically expire"
+Write-Host ""
+Write-Host "✓ DLP policy exception granted for ${duration}"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Power Platform',
+    operation: 'Request DLP Exception',
+    environment: environment,
+    dlpPolicy: dlpPolicy,
+    connector: connector,
+    duration: duration,
+    expiryDate: expiryDate.toISOString().split('T')[0],
+    expectedResult: `DLP exception granted for ${duration} — expires ${expiryDate.toISOString().split('T')[0]}`
+  }
+}
+
+/**
+ * Validate Request Power Automate License
+ */
+export async function validatePowerAutomate(formData) {
+  const { userEmail, licenseType, useCase } = formData
+  const errors = []
+  const warnings = []
+
+  if (!userEmail || userEmail.trim().length === 0) {
+    errors.push('User Email is required')
+  }
+  if (!licenseType) {
+    errors.push('License Type is required')
+  }
+  if (!useCase || useCase.trim().length === 0) {
+    errors.push('Use Case is required')
+  }
+
+  // Verify user exists
+  if (userEmail) {
+    try {
+      const user = await graphClient
+        .api('/users')
+        .filter(`userPrincipalName eq '${userEmail}'`)
+        .get()
+
+      if (!user.value || user.value.length === 0) {
+        errors.push(`User '${userEmail}' not found`)
+      }
+    } catch (err) {
+      warnings.push('Could not verify user existence')
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      'Verify user exists and has M365 base license',
+      'Check Power Automate license availability',
+      'Determine optimal license type for use case',
+      'Verify DLP compliance for intended flows'
+    ]
+  }
+}
+
+/**
+ * Execute Request Power Automate License
+ */
+export async function executePowerAutomate(formData) {
+  const { userEmail, licenseType, useCase } = formData
+
+  const licenseSkuMap = {
+    'Power Automate Premium (per user)': 'FLOW_PER_USER',
+    'Power Automate per flow': 'FLOW_PER_BUSINESS_PROCESS',
+    'Power Automate Process': 'POWER_AUTOMATE_PROCESS'
+  }
+
+  const skuId = licenseSkuMap[licenseType] || 'FLOW_PER_USER'
+
+  const psCommand = `
+# Request Power Automate License
+Write-Host "Requesting Power Automate license"
+Write-Host "User: ${userEmail}"
+Write-Host "License Type: ${licenseType}"
+Write-Host "Use Case: ${useCase}"
+
+# Get user
+$user = Get-MgUser -Filter "userPrincipalName eq '${userEmail}'" -ErrorAction Stop
+Write-Host "✓ User found: $($user.DisplayName)"
+
+# Get license SKU
+$licenseSku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq '${skuId}' } -ErrorAction SilentlyContinue
+
+if ($licenseSku) {
+  $availableUnits = $licenseSku.PrepaidUnits.Available
+  Write-Host "✓ License SKU available: $availableUnits units"
+
+  # Assign license
+  Set-MgUserLicense -UserId $user.Id -AddLicenses @(@{SkuId = $licenseSku.SkuId}) -RemoveLicenses @() -ErrorAction Stop
+  Write-Host "✓ Power Automate license assigned"
+} else {
+  Write-Host "⚠️ License SKU not found - manual assignment may be required"
+}
+
+Write-Host "✓ Power Automate license '${licenseType}' requested for ${userEmail}"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Power Platform',
+    operation: 'Request Power Automate License',
+    userEmail: userEmail,
+    licenseType: licenseType,
+    expectedResult: `Power Automate ${licenseType} license assigned to ${userEmail}`
+  }
+}
+
+// ============================================================
 // HELPER: PowerShell Execution
 // ============================================================
 

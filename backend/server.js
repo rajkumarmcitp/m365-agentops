@@ -66,7 +66,11 @@ import {
   validateConvertSharedMailbox, executeConvertSharedMailbox,
   validateRequestCopilot, executeRequestCopilot,
   validateRemoveCopilot, executeRemoveCopilot,
-  validateGetLicenseInventory, executeGetLicenseInventory
+  validateGetLicenseInventory, executeGetLicenseInventory,
+  validateCreateEnvironment, executeCreateEnvironment,
+  validatePremiumConnector, executePremiumConnector,
+  validateDLPException, executeDLPException,
+  validatePowerAutomate, executePowerAutomate
 } from './self-service-executor.js'
 import {
   startProvisioningJob, setProvisioningJobGraphClient
@@ -12887,6 +12891,120 @@ app.post('/api/self-service/operations/license/execute', async (req, res) => {
         break
       case 'get-license-inventory':
         executionDef = await executeGetLicenseInventory(formData)
+        break
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown operation type: ${operationType}`
+        })
+    }
+
+    res.json({
+      success: true,
+      operationType: operationType,
+      execution: executionDef,
+      requestId: requestId,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Execution error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/power-platform/validate-environment
+ */
+app.post('/api/self-service/operations/power-platform/validate-environment', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateCreateEnvironment(formData)
+    res.json({
+      success: true,
+      operation: 'create-environment',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/power-platform/validate-connector
+ */
+app.post('/api/self-service/operations/power-platform/validate-connector', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validatePremiumConnector(formData)
+    res.json({
+      success: true,
+      operation: 'premium-connector',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/power-platform/validate-dlp
+ */
+app.post('/api/self-service/operations/power-platform/validate-dlp', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateDLPException(formData)
+    res.json({
+      success: true,
+      operation: 'dlp-exception',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/power-platform/validate-automate
+ */
+app.post('/api/self-service/operations/power-platform/validate-automate', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validatePowerAutomate(formData)
+    res.json({
+      success: true,
+      operation: 'power-automate-license',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/power-platform/execute
+ */
+app.post('/api/self-service/operations/power-platform/execute', async (req, res) => {
+  try {
+    const { operationType, formData, requestId } = req.body
+    console.log(`🔧 Executing ${operationType} for request ${requestId}`)
+
+    let executionDef
+
+    switch (operationType) {
+      case 'create-environment':
+        executionDef = await executeCreateEnvironment(formData)
+        break
+      case 'premium-connector':
+        executionDef = await executePremiumConnector(formData)
+        break
+      case 'dlp-exception':
+        executionDef = await executeDLPException(formData)
+        break
+      case 'power-automate-license':
+        executionDef = await executePowerAutomate(formData)
         break
       default:
         return res.status(400).json({
