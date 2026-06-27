@@ -580,7 +580,7 @@ function renderFormView(el) {
         </div>
       </div>
 
-      <!-- Workflow & Details Sidebar -->
+      <!-- Workflow Card -->
       <div class="form-preview-card">
         <div class="form-section-heading">Approval & Provisioning Workflow</div>
         <div class="workflow-timeline-h" style="margin-bottom:24px">
@@ -593,8 +593,19 @@ function renderFormView(el) {
           `).join('')}
         </div>
 
-        <div class="form-section-heading">System Action</div>
-        <div class="system-action-code">${op.systemAction}</div>
+        <div style="margin-top:20px;padding:16px;background:var(--clr-info-bg);border-radius:8px;border-left:3px solid var(--clr-info-text)">
+          <div style="font-size:12px;font-weight:600;color:var(--clr-info-text);margin-bottom:12px">
+            <i class="ti ti-info-circle" style="margin-right:8px"></i>Workflow Process
+          </div>
+          <ul style="margin:0;padding-left:20px;font-size:12px;color:var(--color-text-secondary);line-height:1.8">
+            <li><strong>Request Submitted:</strong> Your request is logged in the system</li>
+            <li><strong>Manager Approval:</strong> Your direct manager reviews and approves</li>
+            <li><strong>IT Review:</strong> IT team validates technical requirements</li>
+            <li><strong>AI Agent Validation:</strong> Automated checks ensure compliance</li>
+            <li><strong>System Provisioning:</strong> Resources are automatically created</li>
+            <li><strong>Completion:</strong> You're notified when everything is ready</li>
+          </ul>
+        </div>
       </div>
     </div>
   `
