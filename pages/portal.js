@@ -502,10 +502,6 @@ function renderFormPreview(area, catalog, opId) {
               </div>
             `).join('')}
           </div>
-          <div style="margin-top:16px">
-            <div class="form-section-heading">System Action</div>
-            <div class="system-action-code">${op.systemAction}</div>
-          </div>
         </div>
       </div>
     </div>
@@ -799,7 +795,7 @@ function wfStepDesc(stepId, op) {
   if (stepId === 'it') return `IT team validates technical feasibility and security`
   if (stepId === 'dataowner') return `Data/resource owner confirms access appropriateness`
   if (stepId === 'agent') return `AI Agent validates: ${op.agentChecks[0]}, and ${op.agentChecks.length - 1} more checks`
-  if (stepId === 'action') return `Provisioning via: ${op.systemAction}`
+  if (stepId === 'action') return `System automatically provisions the resource`
   if (stepId === 'done') return `Email notification sent. Check Self Service → My Requests to track status.`
   return ''
 }
