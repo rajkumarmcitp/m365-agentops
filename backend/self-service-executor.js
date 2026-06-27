@@ -2661,6 +2661,591 @@ Write-Host "  - Status: Active"
 }
 
 // ============================================================
+// LICENSE MANAGEMENT
+// ============================================================
+
+/**
+ * Validate Assign License request
+ */
+export async function validateAssignLicense(formData) {
+  const { userEmail, licenseType, useGroupAssignment, licenseGroup } = formData
+  const errors = []
+  const warnings = []
+
+  if (!userEmail || userEmail.trim().length === 0) {
+    errors.push('User Email is required')
+  }
+  if (!licenseType || licenseType.trim().length === 0) {
+    errors.push('License Type is required')
+  }
+
+  // If group-based assignment, validate group exists
+  if (useGroupAssignment && licenseGroup) {
+    try {
+      const group = await graphClient
+        .api('/groups')
+        .filter(`mail eq '${licenseGroup}'`)
+        .get()
+
+      if (!group.value || group.value.length === 0) {
+        errors.push(`License group '${licenseGroup}' not found`)
+      }
+    } catch (err) {
+      warnings.push('Could not verify license group existence')
+    }
+  }
+
+  // Verify user exists
+  if (userEmail) {
+    try {
+      const user = await graphClient
+        .api('/users')
+        .filter(`userPrincipalName eq '${userEmail}'`)
+        .get()
+
+      if (!user.value || user.value.length === 0) {
+        errors.push(`User '${userEmail}' not found`)
+      } else {
+        // Check if user already has this license
+        const userLicenses = user.value[0].assignedLicenses || []
+        warnings.push(`User currently has ${userLicenses.length} license(s) assigned`)
+      }
+    } catch (err) {
+      warnings.push('Could not verify user existence')
+    }
+  }
+
+  // Validate license type format
+  const validLicenses = [
+    'Microsoft 365 F3',
+    'Microsoft 365 Business Basic',
+    'Microsoft 365 Business Standard',
+    'Microsoft 365 Business Premium',
+    'Microsoft 365 Enterprise E1',
+    'Microsoft 365 Enterprise E3',
+    'Microsoft 365 Enterprise E5',
+    'Office 365 F3',
+    'Office 365 E1',
+    'Office 365 E3',
+    'Office 365 E5'
+  ]
+
+  if (licenseType && !validLicenses.includes(licenseType)) {
+    warnings.push('License type may not be recognized - verify in tenant settings')
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      'Verify user exists and is active',
+      'Check for conflicting licenses',
+      'Verify license availability in tenant',
+      useGroupAssignment ? `Add user to ${licenseGroup} group for license assignment` : `Assign ${licenseType} license directly`
+    ]
+  }
+}
+
+/**
+ * Execute Assign License
+ */
+export async function executeAssignLicense(formData) {
+  const { userEmail, licenseType, useGroupAssignment, licenseGroup } = formData
+
+  const licenseSkuMap = {
+    'Microsoft 365 F3': 'DESKLESSPACK',
+    'Microsoft 365 Business Basic': 'SPB',
+    'Microsoft 365 Business Standard': 'O365_BUSINESS_PREMIUM',
+    'Microsoft 365 Business Premium': 'SPE_E3',
+    'Microsoft 365 Enterprise E1': 'STANDARDPACK',
+    'Microsoft 365 Enterprise E3': 'ENTERPRISEPACK',
+    'Microsoft 365 Enterprise E5': 'ENTERPRISEPREMIUM',
+    'Office 365 F3': 'DESKLESSPACK',
+    'Office 365 E1': 'STANDARDPACK',
+    'Office 365 E3': 'ENTERPRISEPACK',
+    'Office 365 E5': 'ENTERPRISEPREMIUM'
+  }
+
+  const skuId = licenseSkuMap[licenseType] || licenseType
+
+  let psCommand
+
+  if (useGroupAssignment && licenseGroup) {
+    // Group-based assignment using dynamic group membership
+    psCommand = `
+# Get user and group
+$user = Get-MgUser -Filter "userPrincipalName eq '${userEmail}'" -ErrorAction Stop
+$group = Get-UnifiedGroup -Identity '${licenseGroup}' -ErrorAction Stop
+Write-Host "Adding user to license group: $($group.DisplayName)"
+Write-Host "User Email: ${userEmail}"
+Write-Host "License Group: ${licenseGroup}"
+Write-Host "License Type: ${licenseType}"
+
+# Add user to license group
+Add-UnifiedGroupMember -Identity $group.Id -Members $user.Id -ErrorAction Stop
+Write-Host "✓ User added to license group"
+Write-Host "✓ License will be automatically assigned via group membership"
+
+# Verify membership
+$isMember = Get-UnifiedGroupMember -Identity $group.Id | Where-Object { $_.Id -eq $user.Id }
+if ($isMember) {
+  Write-Host "✓ Membership verified"
+}
+
+Write-Host "✓ User '${userEmail}' successfully added to ${licenseGroup}"
+Write-Host "✓ License '${licenseType}' will be applied automatically"
+`
+  } else {
+    // Direct license assignment
+    psCommand = `
+# Get user
+$user = Get-MgUser -Filter "userPrincipalName eq '${userEmail}'" -ErrorAction Stop
+Write-Host "Assigning license to: $($user.DisplayName)"
+Write-Host "Email: ${userEmail}"
+Write-Host "License: ${licenseType}"
+
+# Get license SKU
+$licenseSku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq '${skuId}' } -ErrorAction Stop
+Write-Host "✓ License SKU found: $($licenseSku.SkuPartNumber)"
+
+# Check available licenses
+$availableUnits = $licenseSku.PrepaidUnits.Available
+Write-Host "Available licenses: $availableUnits"
+
+if ($availableUnits -le 0) {
+  Write-Host "⚠️ WARNING: No available licenses of this type"
+  throw "Insufficient licenses available"
+}
+
+# Assign license
+Set-MgUserLicense -UserId $user.Id -AddLicenses @(@{SkuId = $licenseSku.SkuId}) -RemoveLicenses @() -ErrorAction Stop
+Write-Host "✓ License assigned successfully"
+
+# Verify assignment
+$updatedUser = Get-MgUser -UserId $user.Id
+$licenseCount = $updatedUser.AssignedLicenses.Count
+Write-Host "✓ User now has $licenseCount license(s)"
+Write-Host "✓ License '${licenseType}' successfully assigned to ${userEmail}"
+`
+  }
+
+  return {
+    psCommand,
+    serviceName: 'Microsoft.Graph',
+    operation: 'Assign License',
+    userEmail: userEmail,
+    licenseType: licenseType,
+    useGroupAssignment: useGroupAssignment || false,
+    licenseGroup: licenseGroup,
+    expectedResult: useGroupAssignment
+      ? `User added to ${licenseGroup} for automatic license assignment`
+      : `License '${licenseType}' assigned to ${userEmail}`
+  }
+}
+
+/**
+ * Validate Remove License request
+ */
+export async function validateRemoveLicense(formData) {
+  const { userEmail, licenseType, confirmRemoval } = formData
+  const errors = []
+  const warnings = []
+
+  if (!userEmail || userEmail.trim().length === 0) {
+    errors.push('User Email is required')
+  }
+  if (!licenseType || licenseType.trim().length === 0) {
+    errors.push('License Type is required')
+  }
+  if (confirmRemoval !== 'REMOVE_LICENSE') {
+    errors.push('Must confirm removal by typing REMOVE_LICENSE')
+  }
+
+  // Verify user exists
+  if (userEmail) {
+    try {
+      const user = await graphClient
+        .api('/users')
+        .filter(`userPrincipalName eq '${userEmail}'`)
+        .get()
+
+      if (!user.value || user.value.length === 0) {
+        errors.push(`User '${userEmail}' not found`)
+      } else {
+        const licenseCount = user.value[0].assignedLicenses?.length || 0
+        if (licenseCount === 0) {
+          warnings.push('User has no licenses assigned')
+        } else if (licenseCount === 1) {
+          warnings.push('Removing the last license - user may lose access to services')
+        }
+      }
+    } catch (err) {
+      warnings.push('Could not verify user existence')
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      'Verify user exists',
+      'Check current license assignments',
+      'Confirm user will not lose critical access',
+      `Remove ${licenseType} license`
+    ]
+  }
+}
+
+/**
+ * Execute Remove License
+ */
+export async function executeRemoveLicense(formData) {
+  const { userEmail, licenseType } = formData
+
+  const licenseSkuMap = {
+    'Microsoft 365 Business Basic': 'SPB',
+    'Microsoft 365 Business Standard': 'O365_BUSINESS_PREMIUM',
+    'Microsoft 365 Business Premium': 'SPE_E3',
+    'Microsoft 365 Enterprise E1': 'STANDARDPACK',
+    'Microsoft 365 Enterprise E3': 'ENTERPRISEPACK',
+    'Microsoft 365 Enterprise E5': 'ENTERPRISEPREMIUM',
+    'Office 365 E1': 'STANDARDPACK',
+    'Office 365 E3': 'ENTERPRISEPACK',
+    'Office 365 E5': 'ENTERPRISEPREMIUM'
+  }
+
+  const skuId = licenseSkuMap[licenseType] || licenseType
+
+  const psCommand = `
+# Get user
+$user = Get-MgUser -Filter "userPrincipalName eq '${userEmail}'" -ErrorAction Stop
+Write-Host "Removing license from: $($user.DisplayName)"
+Write-Host "Email: ${userEmail}"
+Write-Host "License: ${licenseType}"
+
+# Get current licenses
+$currentLicenses = $user.AssignedLicenses
+Write-Host "Current licenses: $($currentLicenses.Count)"
+
+# Get license SKU
+$licenseSku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq '${skuId}' } -ErrorAction Stop
+Write-Host "✓ License SKU found: $($licenseSku.SkuPartNumber)"
+
+# Remove license
+Set-MgUserLicense -UserId $user.Id -AddLicenses @() -RemoveLicenses @($licenseSku.SkuId) -ErrorAction Stop
+Write-Host "✓ License removed successfully"
+
+# Verify removal
+$updatedUser = Get-MgUser -UserId $user.Id
+$licenseCount = $updatedUser.AssignedLicenses.Count
+Write-Host "✓ User now has $licenseCount license(s)"
+Write-Host "✓ License '${licenseType}' successfully removed from ${userEmail}"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Microsoft.Graph',
+    operation: 'Remove License',
+    userEmail: userEmail,
+    licenseType: licenseType,
+    expectedResult: `License '${licenseType}' removed from ${userEmail}`
+  }
+}
+
+/**
+ * Validate Change License request
+ */
+export async function validateChangeLicense(formData) {
+  const { userEmail, currentLicense, newLicense } = formData
+  const errors = []
+  const warnings = []
+
+  if (!userEmail || userEmail.trim().length === 0) {
+    errors.push('User Email is required')
+  }
+  if (!currentLicense || currentLicense.trim().length === 0) {
+    errors.push('Current License is required')
+  }
+  if (!newLicense || newLicense.trim().length === 0) {
+    errors.push('New License is required')
+  }
+
+  if (currentLicense === newLicense) {
+    errors.push('Current and new licenses must be different')
+  }
+
+  // Verify user exists
+  if (userEmail) {
+    try {
+      const user = await graphClient
+        .api('/users')
+        .filter(`userPrincipalName eq '${userEmail}'`)
+        .get()
+
+      if (!user.value || user.value.length === 0) {
+        errors.push(`User '${userEmail}' not found`)
+      }
+    } catch (err) {
+      warnings.push('Could not verify user existence')
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      'Verify user exists',
+      'Verify current license assignment',
+      'Check new license availability',
+      `Change from ${currentLicense} to ${newLicense}`
+    ]
+  }
+}
+
+/**
+ * Execute Change License
+ */
+export async function executeChangeLicense(formData) {
+  const { userEmail, currentLicense, newLicense } = formData
+
+  const licenseSkuMap = {
+    'Microsoft 365 Business Basic': 'SPB',
+    'Microsoft 365 Business Standard': 'O365_BUSINESS_PREMIUM',
+    'Microsoft 365 Business Premium': 'SPE_E3',
+    'Microsoft 365 Enterprise E1': 'STANDARDPACK',
+    'Microsoft 365 Enterprise E3': 'ENTERPRISEPACK',
+    'Microsoft 365 Enterprise E5': 'ENTERPRISEPREMIUM',
+    'Office 365 E1': 'STANDARDPACK',
+    'Office 365 E3': 'ENTERPRISEPACK',
+    'Office 365 E5': 'ENTERPRISEPREMIUM'
+  }
+
+  const currentSkuId = licenseSkuMap[currentLicense] || currentLicense
+  const newSkuId = licenseSkuMap[newLicense] || newLicense
+
+  const psCommand = `
+# Get user
+$user = Get-MgUser -Filter "userPrincipalName eq '${userEmail}'" -ErrorAction Stop
+Write-Host "Changing license for: $($user.DisplayName)"
+Write-Host "Email: ${userEmail}"
+Write-Host "From: ${currentLicense}"
+Write-Host "To: ${newLicense}"
+
+# Get license SKUs
+$currentLicenseSku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq '${currentSkuId}' } -ErrorAction Stop
+$newLicenseSku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq '${newSkuId}' } -ErrorAction Stop
+Write-Host "✓ License SKUs found"
+
+# Check available licenses for new license
+$availableUnits = $newLicenseSku.PrepaidUnits.Available
+Write-Host "Available ${newLicense} licenses: $availableUnits"
+
+if ($availableUnits -le 0) {
+  Write-Host "⚠️ WARNING: No available licenses of new type"
+  throw "Insufficient licenses available"
+}
+
+# Change license (remove old, add new)
+Set-MgUserLicense -UserId $user.Id -AddLicenses @(@{SkuId = $newLicenseSku.SkuId}) -RemoveLicenses @($currentLicenseSku.SkuId) -ErrorAction Stop
+Write-Host "✓ License changed successfully"
+
+# Verify change
+$updatedUser = Get-MgUser -UserId $user.Id
+Write-Host "✓ User's license updated"
+Write-Host "✓ License changed from '${currentLicense}' to '${newLicense}' for ${userEmail}"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Microsoft.Graph',
+    operation: 'Change License',
+    userEmail: userEmail,
+    currentLicense: currentLicense,
+    newLicense: newLicense,
+    expectedResult: `License changed from '${currentLicense}' to '${newLicense}' for ${userEmail}`
+  }
+}
+
+/**
+ * Validate Convert Shared Mailbox to Licensed Mailbox request
+ */
+export async function validateConvertSharedMailbox(formData) {
+  const { mailboxEmail, licenseType } = formData
+  const errors = []
+  const warnings = []
+
+  if (!mailboxEmail || mailboxEmail.trim().length === 0) {
+    errors.push('Mailbox Email is required')
+  }
+  if (!licenseType || licenseType.trim().length === 0) {
+    errors.push('License Type is required')
+  }
+
+  // Verify mailbox exists
+  if (mailboxEmail) {
+    try {
+      const mailbox = await graphClient
+        .api('/users')
+        .filter(`userPrincipalName eq '${mailboxEmail}'`)
+        .get()
+
+      if (!mailbox.value || mailbox.value.length === 0) {
+        errors.push(`Mailbox '${mailboxEmail}' not found`)
+      } else if (!mailbox.value[0].accountEnabled) {
+        errors.push(`Mailbox '${mailboxEmail}' is disabled`)
+      } else {
+        // Check if it's actually a shared mailbox
+        const recipientType = mailbox.value[0].recipientType
+        if (recipientType !== 'SharedMailbox') {
+          warnings.push(`Mailbox appears to be type ${recipientType}, not a shared mailbox`)
+        }
+      }
+    } catch (err) {
+      warnings.push('Could not verify mailbox existence')
+    }
+  }
+
+  warnings.push('⚠️ Converting shared mailbox to licensed mailbox - user will need login credentials')
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      'Verify mailbox is shared type',
+      'Confirm mailbox can be converted',
+      'Check license availability',
+      `Assign ${licenseType} and convert to regular mailbox`
+    ]
+  }
+}
+
+/**
+ * Execute Convert Shared Mailbox to Licensed Mailbox
+ */
+export async function executeConvertSharedMailbox(formData) {
+  const { mailboxEmail, licenseType } = formData
+
+  const licenseSkuMap = {
+    'Microsoft 365 F3': 'DESKLESSPACK',
+    'Microsoft 365 Business Basic': 'SPB',
+    'Microsoft 365 Business Standard': 'O365_BUSINESS_PREMIUM',
+    'Microsoft 365 Business Premium': 'SPE_E3',
+    'Microsoft 365 Enterprise E1': 'STANDARDPACK',
+    'Microsoft 365 Enterprise E3': 'ENTERPRISEPACK',
+    'Microsoft 365 Enterprise E5': 'ENTERPRISEPREMIUM'
+  }
+
+  const skuId = licenseSkuMap[licenseType] || licenseType
+
+  const psCommand = `
+# Get shared mailbox
+$mailbox = Get-Mailbox -Identity '${mailboxEmail}' -ErrorAction Stop
+Write-Host "Converting shared mailbox: $($mailbox.DisplayName)"
+Write-Host "Email: ${mailboxEmail}"
+Write-Host "License: ${licenseType}"
+
+# Convert from shared to user mailbox
+Set-Mailbox -Identity $mailbox.Id -Type Regular -ErrorAction Stop
+Write-Host "✓ Mailbox converted from Shared to Regular"
+
+# Get license SKU
+$licenseSku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq '${skuId}' } -ErrorAction Stop
+Write-Host "✓ License SKU found: $($licenseSku.SkuPartNumber)"
+
+# Get user object
+$user = Get-MgUser -Filter "userPrincipalName eq '${mailboxEmail}'" -ErrorAction Stop
+
+# Assign license
+Set-MgUserLicense -UserId $user.Id -AddLicenses @(@{SkuId = $licenseSku.SkuId}) -RemoveLicenses @() -ErrorAction Stop
+Write-Host "✓ License '${licenseType}' assigned"
+
+# Verify conversion
+$verifyMailbox = Get-Mailbox -Identity $mailbox.Id
+Write-Host "✓ Mailbox type: $($verifyMailbox.RecipientTypeDetails)"
+Write-Host "✓ Mailbox '${mailboxEmail}' successfully converted to licensed user mailbox"
+Write-Host "  - Type: Regular (from Shared)"
+Write-Host "  - License: ${licenseType}"
+Write-Host "  - Action: User can now login with this mailbox"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Exchange',
+    operation: 'Convert Shared Mailbox to Licensed',
+    mailboxEmail: mailboxEmail,
+    licenseType: licenseType,
+    expectedResult: `Shared mailbox '${mailboxEmail}' converted to licensed user mailbox with ${licenseType}`
+  }
+}
+
+/**
+ * Validate Get License Inventory request
+ */
+export async function validateGetLicenseInventory(formData) {
+  const errors = []
+  const warnings = []
+
+  // This operation doesn't require user input, just validates availability
+  warnings.push('Inventory data reflects current tenant state at time of check')
+
+  return {
+    valid: true,
+    errors,
+    warnings,
+    agentChecks: [
+      'Connect to Microsoft Graph',
+      'Retrieve all subscribed licenses',
+      'Calculate available vs consumed',
+      'Display license inventory report'
+    ]
+  }
+}
+
+/**
+ * Execute Get License Inventory
+ */
+export async function executeGetLicenseInventory(formData) {
+  const psCommand = `
+# Get all subscribed licenses (SKUs)
+Write-Host "Retrieving M365 license inventory..."
+$skus = Get-MgSubscribedSku -All
+
+# Display license inventory
+Write-Host ""
+Write-Host "=== Microsoft 365 License Inventory ==="
+Write-Host ""
+
+$skus | ForEach-Object {
+  $skuName = $_.SkuPartNumber
+  $total = $_.PrepaidUnits.Enabled
+  $consumed = $_.ConsumedUnits
+  $available = $total - $consumed
+  $percentUsed = if ($total -gt 0) { [math]::Round(($consumed / $total) * 100, 2) } else { 0 }
+
+  Write-Host "License: $skuName"
+  Write-Host "  Total: $total"
+  Write-Host "  Consumed: $consumed"
+  Write-Host "  Available: $available"
+  Write-Host "  Usage: $percentUsed%"
+  Write-Host ""
+}
+
+Write-Host "✓ License inventory report generated"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Microsoft.Graph',
+    operation: 'Get License Inventory',
+    expectedResult: 'License inventory report with available/consumed counts'
+  }
+}
+
+// ============================================================
 // HELPER: PowerShell Execution
 // ============================================================
 

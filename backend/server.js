@@ -59,7 +59,12 @@ import {
   validateReviewGuestAccess, executeReviewGuestAccess,
   validateRetireDevice, executeRetireDevice,
   validateWipeDevice, executeWipeDevice,
-  validateGrantComplianceException, executeGrantComplianceException
+  validateGrantComplianceException, executeGrantComplianceException,
+  validateAssignLicense, executeAssignLicense,
+  validateRemoveLicense, executeRemoveLicense,
+  validateChangeLicense, executeChangeLicense,
+  validateConvertSharedMailbox, executeConvertSharedMailbox,
+  validateGetLicenseInventory, executeGetLicenseInventory
 } from './self-service-executor.js'
 import {
   startProvisioningJob, setProvisioningJobGraphClient
@@ -12761,6 +12766,210 @@ app.post('/api/self-service/operations/intune/execute', async (req, res) => {
       success: false,
       error: error.message
     })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/license/validate-assign
+ */
+app.post('/api/self-service/operations/license/validate-assign', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateAssignLicense(formData)
+    res.json({
+      success: true,
+      operation: 'assign-license',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/license/validate-remove
+ */
+app.post('/api/self-service/operations/license/validate-remove', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateRemoveLicense(formData)
+    res.json({
+      success: true,
+      operation: 'remove-license',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/license/validate-change
+ */
+app.post('/api/self-service/operations/license/validate-change', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateChangeLicense(formData)
+    res.json({
+      success: true,
+      operation: 'change-license',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/license/validate-inventory
+ */
+app.post('/api/self-service/operations/license/validate-inventory', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateGetLicenseInventory(formData)
+    res.json({
+      success: true,
+      operation: 'get-license-inventory',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/license/validate-convert-shared
+ */
+app.post('/api/self-service/operations/license/validate-convert-shared', async (req, res) => {
+  try {
+    const { formData } = req.body
+    const validation = await validateConvertSharedMailbox(formData)
+    res.json({
+      success: true,
+      operation: 'convert-shared-mailbox',
+      validation
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/self-service/operations/license/execute
+ */
+app.post('/api/self-service/operations/license/execute', async (req, res) => {
+  try {
+    const { operationType, formData, requestId } = req.body
+    console.log(`🔧 Executing ${operationType} for request ${requestId}`)
+
+    let executionDef
+
+    switch (operationType) {
+      case 'assign-license':
+        executionDef = await executeAssignLicense(formData)
+        break
+      case 'remove-license':
+        executionDef = await executeRemoveLicense(formData)
+        break
+      case 'change-license':
+        executionDef = await executeChangeLicense(formData)
+        break
+      case 'convert-shared-mailbox':
+        executionDef = await executeConvertSharedMailbox(formData)
+        break
+      case 'get-license-inventory':
+        executionDef = await executeGetLicenseInventory(formData)
+        break
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown operation type: ${operationType}`
+        })
+    }
+
+    res.json({
+      success: true,
+      operationType: operationType,
+      execution: executionDef,
+      requestId: requestId,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Execution error:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/admin/license-config
+ * Get license-to-group mappings configuration
+ */
+app.get('/api/admin/license-config', (req, res) => {
+  try {
+    const db = getDatabase()
+    const licenseConfig = db.store.licenseConfig || {
+      'Microsoft 365 F3': null,
+      'Microsoft 365 Business Basic': null,
+      'Microsoft 365 Business Standard': null,
+      'Microsoft 365 Business Premium': null,
+      'Microsoft 365 Enterprise E1': null,
+      'Microsoft 365 Enterprise E3': null,
+      'Microsoft 365 Enterprise E5': null
+    }
+
+    res.json({
+      success: true,
+      licenseConfig,
+      message: 'License configuration retrieved'
+    })
+  } catch (error) {
+    console.error('Error fetching license config:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/admin/license-config
+ * Save license-to-group mappings configuration
+ */
+app.post('/api/admin/license-config', (req, res) => {
+  try {
+    const { licenseConfig } = req.body
+    const db = getDatabase()
+
+    if (!licenseConfig || typeof licenseConfig !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid license configuration format'
+      })
+    }
+
+    // Validate configuration
+    for (const [license, group] of Object.entries(licenseConfig)) {
+      if (group && typeof group !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid group value for license ${license}`
+        })
+      }
+    }
+
+    // Save configuration
+    db.store.licenseConfig = licenseConfig
+    console.log('✅ License configuration updated:', Object.keys(licenseConfig).filter(k => licenseConfig[k]).length, 'mappings')
+
+    res.json({
+      success: true,
+      licenseConfig,
+      message: 'License configuration saved successfully',
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('Error saving license config:', error.message)
+    res.status(500).json({ success: false, error: error.message })
   }
 })
 

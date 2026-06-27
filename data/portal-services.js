@@ -605,10 +605,21 @@ export const SERVICE_CATALOG = {
     parentGroup: null,
     operations: [
       {
+        id: 'req-f3', group: 'Microsoft 365', label: 'Request Microsoft 365 F3 License (Frontline Worker)',
+        approvalPath: ['manager', 'it'],
+        agentChecks: ['Check F3 license availability', 'Verify frontline worker eligibility', 'Check group-based assignment config'],
+        systemAction: 'Assign via group or direct — configurable in admin settings',
+        fields: [
+          { id: 'userUpn',      label: 'User UPN',              type: 'email',    required: true },
+          { id: 'costCenter',   label: 'Cost Center',           type: 'text',     required: true },
+          { id: 'justification',label: 'Business Justification',type: 'textarea', required: true },
+        ],
+      },
+      {
         id: 'req-e3', group: 'Microsoft 365', label: 'Request Microsoft 365 E3 License',
         approvalPath: ['manager', 'it'],
-        agentChecks: ['Check E3 license availability', 'Verify current license assignment', 'Validate user eligibility'],
-        systemAction: 'POST /v1.0/users/{id}/assignLicense',
+        agentChecks: ['Check E3 license availability', 'Verify current license assignment', 'Validate user eligibility', 'Apply group-based assignment if configured'],
+        systemAction: 'Assign via group or direct — configurable in admin settings',
         fields: [
           { id: 'userUpn',      label: 'User UPN',              type: 'email',    required: true },
           { id: 'startDate',    label: 'Required From Date',    type: 'date',     required: false },
@@ -619,14 +630,26 @@ export const SERVICE_CATALOG = {
       {
         id: 'req-e5', group: 'Microsoft 365', label: 'Request Microsoft 365 E5 License',
         approvalPath: ['manager', 'it'],
-        agentChecks: ['Check E5 license availability (CRITICAL — low stock)', 'Verify E5 features needed vs E3', 'Validate cost center approval'],
-        systemAction: 'POST /v1.0/users/{id}/assignLicense',
+        agentChecks: ['Check E5 license availability (CRITICAL — low stock)', 'Verify E5 features needed vs E3', 'Validate cost center approval', 'Apply group-based assignment if configured'],
+        systemAction: 'Assign via group or direct — configurable in admin settings',
         fields: [
           { id: 'userUpn',      label: 'User UPN',              type: 'email',    required: true },
           { id: 'featuresNeeded',label: 'E5 Features Required', type: 'select',   required: true,  options: ['Defender for Endpoint P2', 'Purview compliance', 'Advanced analytics', 'All E5 features'] },
           { id: 'costCenter',   label: 'Cost Center',           type: 'text',     required: true },
           { id: 'startDate',    label: 'Required From Date',    type: 'date',     required: false },
           { id: 'justification',label: 'Business Justification',type: 'textarea', required: true },
+        ],
+      },
+      {
+        id: 'convert-shared-mb', group: 'Mailbox Services', label: 'Convert Shared Mailbox to Licensed User Mailbox',
+        approvalPath: ['manager', 'it'],
+        agentChecks: ['Verify shared mailbox exists', 'Check license availability', 'Confirm mailbox conversion eligible', 'User will be able to login after conversion'],
+        systemAction: 'Convert shared → regular user mailbox + assign selected license',
+        fields: [
+          { id: 'mailboxEmail', label: 'Shared Mailbox Email',   type: 'email',    required: true },
+          { id: 'licenseType',  label: 'License to Assign',      type: 'select',   required: true,  options: ['Microsoft 365 F3', 'Microsoft 365 E3', 'Microsoft 365 E5'] },
+          { id: 'costCenter',   label: 'Cost Center',            type: 'text',     required: true },
+          { id: 'justification',label: 'Business Justification', type: 'textarea', required: true },
         ],
       },
       {

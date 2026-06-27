@@ -143,6 +143,16 @@ function renderSettings(el) {
       </div>
     </div>
 
+    <!-- License Management Configuration -->
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-license"></i> License Management — Group-Based Assignment</div>
+      <div style="background:#e3f2fd;border-left:4px solid #2196f3;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#1565c0">
+        <i class="ti ti-info-circle"></i>
+        <strong>Configure groups for license assignment:</strong> When a group is configured, approved license requests will add users to that group instead of direct assignment. The license will be assigned automatically via dynamic group licensing.
+      </div>
+      <div id="license-config-wrap"></div>
+    </div>
+
     <!-- Tenant Guard Enhanced SharePoint Configuration -->
     <div class="card mb-3">
       <div class="card-title mb-3"><i class="ti ti-alert-triangle"></i> Tenant Guard Enhanced — SharePoint Configuration</div>
@@ -839,6 +849,9 @@ SHAREPOINT_ENHANCED_INVESTIGATIONS_LIST_ID=${result.enhancedInvestigationsListId
   // ---- Claude API Configuration ----
   loadClaudeStatus(el)
 
+  // ---- License Management Configuration ----
+  loadLicenseConfig(el)
+
   el.querySelector('#claude-save-btn').addEventListener('click', async () => {
     const apiKey = el.querySelector('#settings-claude-key').value
     if (!apiKey || apiKey.trim() === '') {
@@ -909,5 +922,83 @@ async function loadClaudeStatus(el) {
     }
   } catch (error) {
     console.error('Failed to load Claude status:', error)
+  }
+}
+
+async function loadLicenseConfig(el) {
+  try {
+    const response = await fetch('/api/admin/license-config')
+    const result = await response.json()
+
+    if (result.success && result.licenseConfig) {
+      const wrap = el.querySelector('#license-config-wrap')
+      if (!wrap) return
+
+      const licenses = result.licenseConfig
+      const licenseTypes = Object.keys(licenses).sort()
+
+      let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+
+      licenseTypes.forEach(license => {
+        const group = licenses[license]
+        const inputId = `license-group-${license.replace(/\s+/g, '-').toLowerCase()}`
+        html += `
+          <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-sm)">
+            <div style="font-size:11px;font-weight:600;margin-bottom:6px;color:var(--color-text-primary)">${license}</div>
+            <input type="text" class="form-input" id="${inputId}" value="${group || ''}" placeholder="e.g., e3-users@contoso.com" style="font-size:10px;padding:6px">
+            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">Leave blank for direct assignment</div>
+          </div>
+        `
+      })
+
+      html += '</div>'
+      html += '<div style="margin-top:12px;display:flex;gap:8px">'
+      html += '<button class="btn btn-primary" id="license-config-save"><i class="ti ti-device-floppy"></i> Save Configuration</button>'
+      html += '<button class="btn btn-secondary" id="license-config-reload"><i class="ti ti-reload"></i> Reload</button>'
+      html += '</div>'
+
+      wrap.innerHTML = html
+
+      // Event listeners
+      el.querySelector('#license-config-save').addEventListener('click', async () => {
+        const config = {}
+        licenseTypes.forEach(license => {
+          const inputId = `license-group-${license.replace(/\s+/g, '-').toLowerCase()}`
+          const input = el.querySelector(`#${inputId}`)
+          config[license] = input.value.trim() || null
+        })
+
+        const btn = el.querySelector('#license-config-save')
+        btn.disabled = true
+        btn.innerHTML = '<i class="ti ti-loading"></i> Saving...'
+
+        try {
+          const response = await fetch('/api/admin/license-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ licenseConfig: config })
+          })
+          const result = await response.json()
+
+          if (result.success) {
+            showToast('License configuration saved successfully', 'success')
+          } else {
+            showToast('Failed to save: ' + result.error, 'error')
+          }
+        } catch (error) {
+          showToast('Error saving configuration: ' + error.message, 'error')
+        }
+
+        btn.disabled = false
+        btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save Configuration'
+      })
+
+      el.querySelector('#license-config-reload').addEventListener('click', () => {
+        loadLicenseConfig(el)
+        showToast('Configuration reloaded', 'info')
+      })
+    }
+  } catch (error) {
+    console.error('Failed to load license config:', error)
   }
 }
