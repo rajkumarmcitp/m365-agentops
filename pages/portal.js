@@ -284,8 +284,10 @@ function renderLanding(el) {
     const card = document.createElement('div')
     card.className = `portal-svc-card ${!enabled ? 'disabled' : ''}`
     card.innerHTML = `
-      <div class="psc-icon" style="background:${group.bg};color:${group.color}"><i class="ti ${group.icon}"></i></div>
-      <div class="psc-name">${group.name}</div>
+      <div class="psc-header">
+        <div class="psc-icon" style="background:${group.bg};color:${group.color}"><i class="ti ${group.icon}"></i></div>
+        <div class="psc-name">${group.name}</div>
+      </div>
       <div class="psc-desc">${group.desc}</div>
       <div class="psc-footer">
         <span class="badge ${enabled ? 'info' : 'neutral'}">${enabled ? opsCount + ' actions' : 'Disabled'}</span>

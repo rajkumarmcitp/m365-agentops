@@ -326,6 +326,12 @@
   background: var(--color-background-tertiary);
 }
 
+.psc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .psc-icon {
   width: 48px;
   height: 48px;
