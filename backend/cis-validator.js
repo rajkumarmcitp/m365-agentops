@@ -37,7 +37,7 @@ export function setValidationGraphClient(client) {
 /**
  * Get cached results if still valid
  */
-function getCachedValidation() {
+export function getCachedValidation() {
   if (validationCache && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_TTL) {
     console.log('✓ CIS Validator: Using cached results (TTL valid)')
     return validationCache

@@ -715,7 +715,58 @@ function renderBlankProductionState(el) {
   })
 }
 
-function renderValidationView(el) {
+async function renderValidationView(el) {
+  // Check validation status from backend
+  const statusResponse = await fetch(`${api}/config/cis-controls`)
+  const statusData = await statusResponse.json()
+
+  // If validation is running, show placeholder
+  if (statusData.isValidating) {
+    el.innerHTML = `
+      <div class="page-header">
+        <div>
+          <div class="page-title"><i class="ti ti-checklist"></i> Configuration Validation Report</div>
+          <div class="page-subtitle">Real-time validation of all 9 configuration areas against CIS benchmarks</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="validation-back"><i class="ti ti-arrow-left"></i> Back</button>
+        </div>
+      </div>
+
+      <div style="padding: 40px; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
+        <h2 style="margin: 20px 0; color: var(--clr-text-primary);">Validation in Progress</h2>
+        <p style="color: var(--clr-text-secondary); margin-bottom: 30px;">
+          CIS validation runs daily. This process typically takes 3-5 minutes to complete.
+        </p>
+
+        <div style="background: var(--clr-bg-secondary); padding: 20px; border-radius: 8px; margin: 30px auto; max-width: 600px;">
+          ${statusData.lastValidationTime ? `
+            <p style="margin: 10px 0; font-size: 14px;">
+              <strong>Last Validation:</strong> ${new Date(statusData.lastValidationTime).toLocaleString()}
+            </p>
+          ` : ''}
+          ${statusData.nextValidationTime ? `
+            <p style="margin: 10px 0; font-size: 14px;">
+              <strong>Next Check:</strong> ${new Date(statusData.nextValidationTime).toLocaleString()}
+            </p>
+          ` : ''}
+        </div>
+
+        <p style="color: var(--clr-text-secondary); font-size: 14px;">
+          Please check back in a few minutes for the latest results.
+        </p>
+      </div>
+    `
+
+    el.querySelector('#validation-back').addEventListener('click', () => {
+      cfgView = 'main'
+      activeTopic = null
+      initM365Config()
+    })
+    return
+  }
+
   const summary = getValidationSummary()
   const risk = getRiskScore(summary)
   const failed = getFailedControls()
@@ -726,6 +777,11 @@ function renderValidationView(el) {
       <div>
         <div class="page-title"><i class="ti ti-checklist"></i> Configuration Validation Report</div>
         <div class="page-subtitle">Real-time validation of all 9 configuration areas against CIS benchmarks</div>
+        ${statusData.lastValidationTime ? `
+          <div style="font-size: 12px; color: var(--clr-text-secondary); margin-top: 8px;">
+            Last validated: ${new Date(statusData.lastValidationTime).toLocaleString()}
+          </div>
+        ` : ''}
       </div>
       <div class="page-actions">
         <button class="btn" id="validation-back"><i class="ti ti-arrow-left"></i> Back</button>

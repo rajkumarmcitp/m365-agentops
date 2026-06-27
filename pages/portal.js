@@ -219,22 +219,29 @@ function renderLanding(el) {
   const available = SERVICE_GROUPS.filter(g => svcEnabled(groupSettingKey(g.id)))
 
   el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <div class="page-title"><i class="ti ti-grid-dots"></i> Self-Service Portal</div>
-        <div class="page-subtitle">Submit requests — automated approval and provisioning via AI Agent</div>
+    <div class="portal-hero">
+      <div class="portal-hero-content">
+        <div class="portal-hero-title">
+          <i class="ti ti-sparkles"></i>
+          M365 Self-Service Portal
+        </div>
+        <div class="portal-hero-subtitle">
+          Request Microsoft 365 resources with instant AI-powered validation, approval tracking, and automated provisioning.
+        </div>
+        <div class="portal-hero-actions">
+          <button class="btn" id="view-all-templates-btn">
+            <i class="ti ti-lightning-bolt"></i> Quick Start Templates
+          </button>
+        </div>
       </div>
     </div>
 
-    <div style="display:flex;gap:12px;margin-bottom:16px">
-      <div class="alert-banner info" style="flex:1">
-        <i class="ti ti-user-circle"></i>
-        <span>Signed in as <strong>${u?.name}</strong> (${roleDesc[u?.role] || u?.role}).
-        All requests are logged and subject to approval workflow and AI Agent validation before provisioning.</span>
-      </div>
+    <div class="portal-info-banner">
+      <i class="ti ti-user-circle"></i>
+      <span>Signed in as <strong>${u?.name}</strong> (${roleDesc[u?.role] || u?.role}). All requests are logged and validated by our AI Agent before provisioning.</span>
     </div>
 
-    <div class="portal-workflow-banner mb-3">
+    <div class="portal-workflow-banner">
       ${WORKFLOW_STEPS.map((s, i) => `
         <div class="pwf-step">
           <div class="pwf-circle pwf-${s.color}"><i class="ti ${s.icon}"></i></div>
@@ -244,21 +251,24 @@ function renderLanding(el) {
       `).join('')}
     </div>
 
-    <!-- Quick Templates Section -->
-    <div style="margin-bottom:24px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px">
-          ⚡ Quick Start Templates
+    <div class="portal-templates-section">
+      <div class="section-header">
+        <div class="section-label">
+          <i class="ti ti-lightning-bolt"></i>
+          Quick Start Templates
         </div>
-        <button id="view-all-templates" style="font-size:10px;color:var(--clr-info-text);background:transparent;border:none;cursor:pointer;text-decoration:underline">
-          View all (${REQUEST_TEMPLATES.length})
+        <button id="view-all-templates" class="view-all-btn">
+          View all (${REQUEST_TEMPLATES.length}) →
         </button>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px" id="templates-carousel"></div>
+      <div class="templates-grid" id="templates-carousel"></div>
     </div>
 
-    <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">
-      ${available.length} services available
+    <div style="margin-bottom:16px">
+      <div class="section-label">
+        <i class="ti ti-layout-grid"></i>
+        ${available.length} Services Available
+      </div>
     </div>
 
     <div class="portal-service-grid" id="portal-service-grid"></div>
@@ -304,20 +314,12 @@ function renderLanding(el) {
   const carousel = el.querySelector('#templates-carousel')
   REQUEST_TEMPLATES.slice(0, 6).forEach(template => {
     const card = document.createElement('div')
-    card.style.cssText = 'padding:12px;background:var(--color-background-secondary);border-radius:6px;cursor:pointer;transition:all 200ms;border:1px solid transparent;text-align:center'
+    card.className = 'template-card'
     card.innerHTML = `
-      <div style="font-size:24px;margin-bottom:6px">${template.thumbnail}</div>
-      <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:4px;line-height:1.3">${template.name}</div>
-      <div style="font-size:9px;color:var(--color-text-secondary)">${template.estimatedTime}</div>
+      <div class="template-icon">${template.thumbnail}</div>
+      <div class="template-name">${template.name}</div>
+      <div class="template-time"><i class="ti ti-clock" style="font-size:10px;margin-right:4px"></i>${template.estimatedTime}</div>
     `
-    card.addEventListener('mouseover', () => {
-      card.style.background = 'var(--color-border-secondary)'
-      card.style.borderColor = 'var(--color-text-tertiary)'
-    })
-    card.addEventListener('mouseout', () => {
-      card.style.background = 'var(--color-background-secondary)'
-      card.style.borderColor = 'transparent'
-    })
     card.addEventListener('click', () => {
       activeTemplateId = template.id
       activeGroupId = null
@@ -334,6 +336,15 @@ function renderLanding(el) {
     portalView = 'templates'
     render(el)
   })
+
+  // Quick start templates button
+  const quickStartBtn = el.querySelector('#view-all-templates-btn')
+  if (quickStartBtn) {
+    quickStartBtn.addEventListener('click', () => {
+      portalView = 'templates'
+      render(el)
+    })
+  }
 
 }
 
@@ -460,15 +471,15 @@ function renderFormPreview(area, catalog, opId) {
   const wfSteps = buildWorkflow(op)
 
   preview.innerHTML = `
-    <div class="card mt-3">
-      <div class="card-header">
-        <span class="card-title"><i class="ti ti-info-circle"></i> ${op.label}</span>
-        <button class="btn btn-primary" id="svc-start-form"><i class="ti ti-arrow-right"></i> Start Request</button>
+    <div class="form-preview-card">
+      <div class="form-preview-header">
+        <div class="form-preview-title"><i class="ti ti-sparkles"></i> ${op.label}</div>
+        <button class="btn-submit" id="svc-start-form"><i class="ti ti-arrow-right"></i> Start Request</button>
       </div>
 
-      <div class="grid-2" style="gap:16px">
+      <div class="form-preview-grid">
         <div>
-          <div class="section-heading">Approval & Provisioning Workflow</div>
+          <div class="form-section-heading">Approval & Provisioning Workflow</div>
           <div class="workflow-timeline-h">
             ${wfSteps.map((s, i) => `
               <div class="wfh-step">
@@ -480,18 +491,18 @@ function renderFormPreview(area, catalog, opId) {
           </div>
         </div>
         <div>
-          <div class="section-heading">AI Agent Validation Checks</div>
-          <div style="display:flex;flex-direction:column;gap:5px">
+          <div class="form-section-heading">AI Agent Validation Checks</div>
+          <div class="agent-checks-list">
             ${op.agentChecks.map(c => `
-              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--color-text-secondary)">
-                <i class="ti ti-robot" style="color:var(--clr-teal-text);font-size:12px;flex-shrink:0;margin-top:1px"></i>
-                ${c}
+              <div class="agent-check-item">
+                <i class="ti ti-robot agent-check-icon"></i>
+                <span>${c}</span>
               </div>
             `).join('')}
           </div>
-          <div style="margin-top:10px">
-            <div class="section-heading">System Action</div>
-            <code style="font-size:10px;font-family:var(--font-mono);color:var(--clr-info-text);background:var(--clr-info-bg);padding:4px 8px;border-radius:4px;display:block;word-break:break-all">${op.systemAction}</code>
+          <div style="margin-top:16px">
+            <div class="form-section-heading">System Action</div>
+            <div class="system-action-code">${op.systemAction}</div>
           </div>
         </div>
       </div>
@@ -518,76 +529,76 @@ function renderFormView(el) {
   const wfSteps = buildWorkflow(op)
 
   el.innerHTML = `
-    <div class="page-header">
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="btn" id="form-back"><i class="ti ti-arrow-left"></i> Back</button>
-        <div class="psc-icon sm" style="background:${group.bg};color:${group.color}"><i class="ti ${group.icon}"></i></div>
-        <div>
-          <div class="page-title">${op.label}</div>
-          <div class="page-subtitle">${group.name}${activeSubId ? ' — ' + (EXCHANGE_SUB.find(s => s.id === activeSubId)?.name || '') : ''}</div>
-        </div>
-      </div>
-    </div>
+    <div style="max-width:1000px;margin:0 auto">
+      <div style="margin-bottom:32px">
+        <button class="btn" id="form-back" style="margin-bottom:16px"><i class="ti ti-arrow-left"></i> Back to Services</button>
 
-    <div class="grid-2" style="gap:16px">
-      <!-- Form -->
-      <div>
-        <div class="card mb-3">
-          <div class="card-title mb-3"><i class="ti ti-forms"></i> Request Details</div>
-          <div id="dynamic-form">
-            ${op.fields.map(f => renderField(f)).join('')}
-          </div>
-        </div>
-
-        <div class="card" style="background:var(--clr-info-bg);border-color:var(--clr-info-border)">
-          <div style="display:flex;align-items:flex-start;gap:10px">
-            <i class="ti ti-robot" style="font-size:18px;color:var(--clr-teal-text);flex-shrink:0;margin-top:2px"></i>
-            <div>
-              <div style="font-size:12px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px">AI Agent will validate before provisioning:</div>
-              ${op.agentChecks.map(c => `<div style="font-size:11px;color:var(--color-text-secondary);padding:2px 0;display:flex;align-items:flex-start;gap:5px"><i class="ti ti-check" style="color:var(--clr-teal-text);font-size:10px;flex-shrink:0;margin-top:2px"></i>${c}</div>`).join('')}
+        <div class="form-container">
+          <div class="form-header">
+            <div class="form-title">
+              <i class="ti ti-edit"></i>
+              ${op.label}
+            </div>
+            <div class="form-subtitle">
+              ${group.name}${activeSubId ? ' — ' + (EXCHANGE_SUB.find(s => s.id === activeSubId)?.name || '') : ''}
             </div>
           </div>
+
+          <div class="form-fields">
+            ${op.fields.map(f => renderField(f)).join('')}
+          </div>
+
+          <div style="background:var(--clr-info-bg);border:1px solid var(--clr-info-border);border-radius:8px;padding:16px;margin-bottom:24px">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <i class="ti ti-robot" style="font-size:18px;color:var(--clr-teal-text);flex-shrink:0;margin-top:2px"></i>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px"><i class="ti ti-sparkles" style="margin-right:6px"></i>AI Agent Validation</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  ${op.agentChecks.map(c => `
+                    <div style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:flex-start;gap:6px">
+                      <i class="ti ti-check" style="color:var(--clr-teal-text);font-size:11px;flex-shrink:0;margin-top:2px"></i>
+                      <span>${c}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn-cancel" id="form-cancel">Cancel</button>
+            <button class="btn-submit" id="form-submit"><i class="ti ti-send"></i> Submit Request</button>
+          </div>
+
+          <div style="text-align:center;margin-top:16px">
+            <p style="font-size:11px;color:var(--color-text-secondary)">
+              By submitting, you acknowledge this request will be logged and routed for approval by the AI Agent.
+            </p>
+          </div>
         </div>
       </div>
 
-      <!-- Workflow sidebar -->
-      <div>
-        <div class="card mb-3">
-          <div class="card-title mb-3"><i class="ti ti-route"></i> Approval & Provisioning Flow</div>
-          <div class="workflow-timeline-v">
-            ${wfSteps.map((s, i) => `
-              <div class="wfv-step">
-                <div class="wfv-left">
-                  <div class="wfv-circle wfv-${s.color}"><i class="ti ${s.icon}"></i></div>
-                  ${i < wfSteps.length - 1 ? '<div class="wfv-line"></div>' : ''}
-                </div>
-                <div class="wfv-content">
-                  <div class="wfv-title">${s.label}</div>
-                  ${wfStepDesc(s.id, op) ? `<div class="wfv-desc">${wfStepDesc(s.id, op)}</div>` : ''}
-                </div>
-              </div>
-            `).join('')}
-          </div>
+      <!-- Workflow & Details Sidebar -->
+      <div class="form-preview-card">
+        <div class="form-section-heading">Approval & Provisioning Workflow</div>
+        <div class="workflow-timeline-h" style="margin-bottom:24px">
+          ${wfSteps.map((s, i) => `
+            <div class="wfh-step">
+              <div class="wfh-circle wfh-${s.color}"><i class="ti ${s.icon}"></i></div>
+              <div class="wfh-label">${s.label}</div>
+            </div>
+            ${i < wfSteps.length - 1 ? '<div class="wfh-arrow"></div>' : ''}
+          `).join('')}
         </div>
 
-        <div class="card">
-          <div class="card-title mb-2"><i class="ti ti-api"></i> System Action</div>
-          <code style="font-size:10px;font-family:var(--font-mono);color:var(--clr-info-text);word-break:break-all;line-height:1.6">${op.systemAction}</code>
-        </div>
-
-        <div style="margin-top:16px">
-          <button class="btn btn-primary w-full" id="form-submit" style="width:100%;justify-content:center;padding:10px">
-            <i class="ti ti-send"></i> Submit Request
-          </button>
-          <p style="font-size:10px;color:var(--color-text-tertiary);text-align:center;margin-top:8px">
-            By submitting, you acknowledge this request will be logged in the audit trail and routed for approval.
-          </p>
-        </div>
+        <div class="form-section-heading">System Action</div>
+        <div class="system-action-code">${op.systemAction}</div>
       </div>
     </div>
   `
 
   el.querySelector('#form-back').addEventListener('click', () => { portalView = 'service'; render(el) })
+  el.querySelector('#form-cancel').addEventListener('click', () => { portalView = 'service'; render(el) })
   el.querySelector('#form-submit').addEventListener('click', () => handleSubmit(el, op))
 
   // Wire conditional field visibility
@@ -599,10 +610,9 @@ function renderFormView(el) {
 
 function renderField(f) {
   const req = f.required ? ' *' : ''
-  const hint = f.hint ? `<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:3px">${f.hint}</div>` : ''
+  const hint = f.hint ? `<div class="form-field-hint">${f.hint}</div>` : ''
 
   if (f.type === 'text' || f.type === 'email') {
-    // Detect user selection fields across all request types
     const userFieldIds = ['members', 'owners', 'managedBy', 'delegates', 'fullAccess', 'sendAs', 'sponsor', 'changeOwner', 'userUpn', 'reassignContent']
     const groupFieldIds = ['groupName', 'group']
 
@@ -618,24 +628,30 @@ function renderField(f) {
     const autocompleteClass = (isUserField ? 'user-search-input' : '') + (isGroupField ? ' group-search-input' : '')
     const hasAutocomplete = isUserField || isGroupField
 
-    return `<div class="form-group" data-field="${f.id}" ${hasAutocomplete ? 'style="position:relative"' : ''}>
-      <label class="form-label" for="ff-${f.id}">${f.label}${req}</label>
-      <input type="${f.type}" class="form-input ${autocompleteClass.trim()}" id="ff-${f.id}" name="${f.id}" placeholder="${f.placeholder || ''}" ${f.required ? 'required' : ''} autocomplete="off">
+    return `<div class="form-field-group" data-field="${f.id}" ${hasAutocomplete ? 'style="position:relative"' : ''}>
+      <label class="form-field-label" for="ff-${f.id}">
+        ${f.label}${req ? '<span class="form-field-required">*</span>' : ''}
+      </label>
+      <input type="${f.type}" class="form-field-input ${autocompleteClass.trim()}" id="ff-${f.id}" name="${f.id}" placeholder="${f.placeholder || ''}" ${f.required ? 'required' : ''} autocomplete="off">
       ${hasAutocomplete ? '<div class="user-dropdown" id="dd-' + f.id + '" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ccc;border-radius:4px;max-height:200px;overflow-y:auto;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.1)"></div>' : ''}
       ${hint}
     </div>`
   }
   if (f.type === 'date') {
-    return `<div class="form-group" data-field="${f.id}">
-      <label class="form-label" for="ff-${f.id}">${f.label}${req}</label>
-      <input type="date" class="form-input" id="ff-${f.id}" name="${f.id}" ${f.required ? 'required' : ''}>
+    return `<div class="form-field-group" data-field="${f.id}">
+      <label class="form-field-label" for="ff-${f.id}">
+        ${f.label}${req ? '<span class="form-field-required">*</span>' : ''}
+      </label>
+      <input type="date" class="form-field-input" id="ff-${f.id}" name="${f.id}" ${f.required ? 'required' : ''}>
       ${hint}
     </div>`
   }
   if (f.type === 'select') {
-    return `<div class="form-group" data-field="${f.id}">
-      <label class="form-label" for="ff-${f.id}">${f.label}${req}</label>
-      <select class="form-select" id="ff-${f.id}" name="${f.id}" ${f.required ? 'required' : ''}>
+    return `<div class="form-field-group" data-field="${f.id}">
+      <label class="form-field-label" for="ff-${f.id}">
+        ${f.label}${req ? '<span class="form-field-required">*</span>' : ''}
+      </label>
+      <select class="form-field-input" id="ff-${f.id}" name="${f.id}" ${f.required ? 'required' : ''}>
         <option value="">— Select —</option>
         ${(f.options || []).map(o => `<option value="${o}">${o}</option>`).join('')}
       </select>
@@ -643,17 +659,19 @@ function renderField(f) {
     </div>`
   }
   if (f.type === 'textarea') {
-    return `<div class="form-group" data-field="${f.id}">
-      <label class="form-label" for="ff-${f.id}">${f.label}${req}</label>
-      <textarea class="form-textarea" id="ff-${f.id}" name="${f.id}" placeholder="${f.placeholder || ''}" ${f.required ? 'required' : ''}></textarea>
+    return `<div class="form-field-group" data-field="${f.id}">
+      <label class="form-field-label" for="ff-${f.id}">
+        ${f.label}${req ? '<span class="form-field-required">*</span>' : ''}
+      </label>
+      <textarea class="form-field-input" id="ff-${f.id}" name="${f.id}" placeholder="${f.placeholder || ''}" ${f.required ? 'required' : ''} style="min-height:100px;resize:vertical"></textarea>
       ${hint}
     </div>`
   }
   if (f.type === 'checkbox') {
-    return `<div class="form-group" data-field="${f.id}">
+    return `<div class="form-field-group" data-field="${f.id}">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <input type="checkbox" id="ff-${f.id}" name="${f.id}">
-        <span class="form-label" style="margin:0">${f.label}</span>
+        <span class="form-field-label" style="margin:0">${f.label}</span>
       </label>
       ${hint}
     </div>`
@@ -1034,63 +1052,89 @@ function renderSubmitted(el) {
   const reqNum = submittedRequestId || `REQ-${String(reqCounter).padStart(4, '0')}`
 
   el.innerHTML = `
-    <div class="page-header">
-      <div class="page-title"><i class="ti ti-circle-check" style="color:var(--clr-success-text)"></i> Request Submitted</div>
-    </div>
-
-    <div class="alert-banner success mb-3">
-      <i class="ti ti-circle-check"></i>
-      <strong>${reqNum}</strong> — ${op.label} request submitted successfully. You will be notified at each approval stage.
-    </div>
-
-    <div class="grid-2" style="gap:16px;margin-bottom:16px">
-      <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-receipt"></i> Request Summary</div>
-        <div style="display:grid;grid-template-columns:auto 1fr;gap:5px 16px;font-size:11px">
-          <span style="color:var(--color-text-tertiary)">Request ID</span>
-          <span class="monospace" style="font-weight:600;color:var(--clr-info-text)">${reqNum}</span>
-          <span style="color:var(--color-text-tertiary)">Service</span>
-          <span>${group.name}</span>
-          <span style="color:var(--color-text-tertiary)">Action</span>
-          <span>${op.label}</span>
-          <span style="color:var(--color-text-tertiary)">Submitted by</span>
-          <span>${state.currentUser?.name}</span>
-          <span style="color:var(--color-text-tertiary)">Time</span>
-          <span>${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} today</span>
-          <span style="color:var(--color-text-tertiary)">Status</span>
-          <span style="color:var(--clr-warning-text);font-weight:600">Submitted</span>
+    <div style="max-width:900px;margin:0 auto">
+      <div class="submission-success">
+        <div class="submission-success-icon"><i class="ti ti-circle-check"></i></div>
+        <div class="submission-success-title">Request Submitted Successfully</div>
+        <div class="submission-success-text">
+          Your ${op.label} request has been received and is now in the approval workflow.
+          <br>You will receive email notifications at each stage.
         </div>
+        <div class="submission-id">${reqNum}</div>
       </div>
 
-      <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-route"></i> Workflow Progress</div>
-        <div class="workflow-timeline-v compact">
+      <div class="form-preview-card">
+        <div class="form-section-heading" style="margin-bottom:20px">Request Details</div>
+
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:10px 24px;margin-bottom:24px;font-size:12px">
+          <div style="color:var(--color-text-secondary);font-weight:600">Request ID</div>
+          <div style="font-family:var(--font-mono);color:var(--clr-info-text);font-weight:600">${reqNum}</div>
+
+          <div style="color:var(--color-text-secondary);font-weight:600">Service</div>
+          <div>${group.name}</div>
+
+          <div style="color:var(--color-text-secondary);font-weight:600">Operation</div>
+          <div>${op.label}</div>
+
+          <div style="color:var(--color-text-secondary);font-weight:600">Submitted By</div>
+          <div>${state.currentUser?.name}</div>
+
+          <div style="color:var(--color-text-secondary);font-weight:600">Submitted At</div>
+          <div>${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} today</div>
+
+          <div style="color:var(--color-text-secondary);font-weight:600">Current Status</div>
+          <div style="color:var(--clr-warning-text);font-weight:600">In Review</div>
+        </div>
+
+        <div class="form-section-heading" style="margin-bottom:16px">Approval Workflow</div>
+        <div class="workflow-timeline-h">
           ${wfSteps.map((s, i) => `
-            <div class="wfv-step">
-              <div class="wfv-left">
-                <div class="wfv-circle ${i === 0 ? 'wfv-success' : 'wfv-neutral'}">
-                  ${i === 0 ? '<i class="ti ti-check"></i>' : `<span style="font-size:9px;font-weight:700">${i + 1}</span>`}
-                </div>
-                ${i < wfSteps.length - 1 ? '<div class="wfv-line"></div>' : ''}
+            <div class="wfh-step">
+              <div class="wfh-circle ${i === 0 ? 'wfh-success' : 'wfh-warning'}" style="background:${i === 0 ? 'var(--clr-success-bg)' : 'var(--color-background-secondary)'};color:${i === 0 ? 'var(--clr-success-text)' : 'var(--color-text-secondary)'}">
+                ${i === 0 ? '<i class="ti ti-check"></i>' : '<i class="ti ' + s.icon + '"></i>'}
               </div>
-              <div class="wfv-content">
-                <div class="wfv-title ${i === 0 ? 'done' : i === 1 ? 'active' : 'pending'}">${s.label}</div>
-                <div class="wfv-desc">${i === 0 ? 'Completed' : i === 1 ? 'In progress — awaiting response' : 'Pending'}</div>
-              </div>
+              <div class="wfh-label" style="color:${i === 0 ? 'var(--clr-success-text)' : 'var(--color-text-secondary)'}">${s.label}</div>
             </div>
+            ${i < wfSteps.length - 1 ? '<div class="wfh-arrow" style="background:${i === 0 ? 'var(--clr-success-text)' : 'var(--color-border-secondary)'}"></div>' : ''}
           `).join('')}
         </div>
-      </div>
-    </div>
 
-    <div style="display:flex;gap:12px;margin-top:20px">
-      <button class="btn btn-primary" id="submit-new" style="padding:10px 16px;font-size:12px;font-weight:600">
-        <i class="ti ti-plus"></i> Submit another request
-      </button>
+        <div style="margin-top:24px;padding:16px;background:var(--clr-info-bg);border-radius:8px;border-left:3px solid var(--clr-info-text)">
+          <div style="font-size:12px;font-weight:600;color:var(--clr-info-text);margin-bottom:8px">
+            <i class="ti ti-info-circle" style="margin-right:6px"></i>What happens next?
+          </div>
+          <ul style="margin:0;padding-left:20px;font-size:11px;color:var(--color-text-secondary);line-height:1.6">
+            <li>Your request will be reviewed by the AI Agent for validation</li>
+            <li>Approvers will receive notifications based on the approval path</li>
+            <li>Once approved, the system will automatically provision the resource</li>
+            <li>You'll be notified when your request is complete</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:24px;justify-content:center">
+        <button class="btn-cancel" id="back-to-portal" style="padding:10px 20px">
+          <i class="ti ti-home"></i> Back to Portal
+        </button>
+        <button class="btn-submit" id="submit-new" style="padding:10px 20px">
+          <i class="ti ti-plus"></i> Submit Another Request
+        </button>
+      </div>
     </div>
   `
 
   el.querySelector('#submit-new').addEventListener('click', () => {
+    portalView = 'landing'
+    activeGroupId = null
+    activeSubId = null
+    activeOpId = null
+    activeTemplateId = null
+    formValues = {}
+    submittedRequestId = null
+    render(el)
+  })
+
+  el.querySelector('#back-to-portal').addEventListener('click', () => {
     portalView = 'landing'
     activeGroupId = null
     activeSubId = null

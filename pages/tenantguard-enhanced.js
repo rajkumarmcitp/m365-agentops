@@ -252,7 +252,7 @@ async function refreshData() {
   try {
     // Fetch from backend dashboard endpoint (which aggregates everything)
     const isLocalDev = window.location.hostname === 'localhost'
-    const baseUrl = isLocalDev ? 'http://localhost:3000' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
+    const baseUrl = isLocalDev ? 'http://localhost:3001' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
 
     const dashboardResponse = await fetch(`${baseUrl}/api/tenantguard/dashboard`)
     if (!dashboardResponse.ok) throw new Error('Failed to fetch dashboard')
