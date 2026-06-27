@@ -1088,15 +1088,18 @@ function renderSubmitted(el) {
 
         <div class="form-section-heading" style="margin-bottom:16px">Approval Workflow</div>
         <div class="workflow-timeline-h">
-          ${wfSteps.map((s, i) => `
+          ${wfSteps.map((s, i) => {
+            const bgColor = i === 0 ? 'var(--clr-success-text)' : 'var(--color-border-secondary)'
+            return `
             <div class="wfh-step">
               <div class="wfh-circle ${i === 0 ? 'wfh-success' : 'wfh-warning'}" style="background:${i === 0 ? 'var(--clr-success-bg)' : 'var(--color-background-secondary)'};color:${i === 0 ? 'var(--clr-success-text)' : 'var(--color-text-secondary)'}">
                 ${i === 0 ? '<i class="ti ti-check"></i>' : '<i class="ti ' + s.icon + '"></i>'}
               </div>
               <div class="wfh-label" style="color:${i === 0 ? 'var(--clr-success-text)' : 'var(--color-text-secondary)'}">${s.label}</div>
             </div>
-            ${i < wfSteps.length - 1 ? '<div class="wfh-arrow" style="background:${i === 0 ? 'var(--clr-success-text)' : 'var(--color-border-secondary)'}"></div>' : ''}
-          `).join('')}
+            ${i < wfSteps.length - 1 ? `<div class="wfh-arrow" style="background:${bgColor}"></div>` : ''}
+          `
+          }).join('')}
         </div>
 
         <div style="margin-top:24px;padding:16px;background:var(--clr-info-bg);border-radius:8px;border-left:3px solid var(--clr-info-text)">
