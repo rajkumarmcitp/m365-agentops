@@ -3183,6 +3183,217 @@ Write-Host "  - Action: User can now login with this mailbox"
 }
 
 /**
+ * Validate Request Copilot License
+ */
+export async function validateRequestCopilot(formData) {
+  const { userEmail, useCase } = formData
+  const errors = []
+  const warnings = []
+
+  if (!userEmail || userEmail.trim().length === 0) {
+    errors.push('User Email is required')
+  }
+  if (!useCase || useCase.trim().length === 0) {
+    errors.push('Intended Use Case is required')
+  }
+
+  // Verify user exists
+  if (userEmail) {
+    try {
+      const user = await graphClient
+        .api('/users')
+        .filter(`userPrincipalName eq '${userEmail}'`)
+        .get()
+
+      if (!user.value || user.value.length === 0) {
+        errors.push(`User '${userEmail}' not found`)
+      }
+    } catch (err) {
+      warnings.push('Could not verify user existence')
+    }
+  }
+
+  warnings.push('Note: M365 E3/E5 license is a prerequisite for Copilot')
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      'Verify user exists and has M365 E3 or E5',
+      'Check Copilot license availability',
+      'Verify Copilot prerequisites met',
+      'Check group-based assignment config'
+    ]
+  }
+}
+
+/**
+ * Execute Request Copilot License
+ */
+export async function executeRequestCopilot(formData) {
+  const { userEmail, useCase, licenseGroup, useGroupAssignment } = formData
+
+  const licenseSkuMap = {
+    'Microsoft 365 Copilot': 'COPILOT_M365'
+  }
+
+  let psCommand
+
+  if (useGroupAssignment && licenseGroup) {
+    psCommand = `
+# Get user and group
+$user = Get-MgUser -Filter "userPrincipalName eq '${userEmail}'" -ErrorAction Stop
+$group = Get-UnifiedGroup -Identity '${licenseGroup}' -ErrorAction Stop
+Write-Host "Adding user to Copilot license group: $($group.DisplayName)"
+Write-Host "User Email: ${userEmail}"
+Write-Host "Use Case: ${useCase}"
+
+# Verify E3/E5 prerequisite
+$userLicenses = $user.AssignedLicenses
+$hasPrereq = $userLicenses | Where-Object { $_.SkuId -like '*ENTERPRISEPACK*' -or $_.SkuId -like '*ENTERPRISEPREMIUM*' }
+if (-not $hasPrereq) {
+  Write-Host "⚠️ WARNING: User does not have M365 E3 or E5 license (prerequisite for Copilot)"
+}
+
+# Add user to Copilot license group
+Add-UnifiedGroupMember -Identity $group.Id -Members $user.Id -ErrorAction Stop
+Write-Host "✓ User added to Copilot license group"
+Write-Host "✓ Copilot license will be automatically assigned via group membership"
+
+Write-Host "✓ Copilot license request processed for ${userEmail}"
+`
+  } else {
+    psCommand = `
+# Get user
+$user = Get-MgUser -Filter "userPrincipalName eq '${userEmail}'" -ErrorAction Stop
+Write-Host "Requesting Copilot license for: $($user.DisplayName)"
+Write-Host "Email: ${userEmail}"
+Write-Host "Use Case: ${useCase}"
+
+# Verify E3/E5 prerequisite
+$userLicenses = $user.AssignedLicenses
+$hasPrereq = $userLicenses | Where-Object { $_.SkuId -like '*ENTERPRISEPACK*' -or $_.SkuId -like '*ENTERPRISEPREMIUM*' }
+if (-not $hasPrereq) {
+  Write-Host "⚠️ WARNING: User does not have M365 E3 or E5 license (prerequisite for Copilot)"
+  throw "Copilot requires M365 E3 or E5 license"
+}
+
+# Get license SKU
+$licenseSku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq 'COPILOT_M365' } -ErrorAction Stop
+Write-Host "✓ Copilot License SKU found"
+
+# Check available licenses
+$availableUnits = $licenseSku.PrepaidUnits.Available
+Write-Host "Available Copilot licenses: $availableUnits"
+
+if ($availableUnits -le 0) {
+  Write-Host "⚠️ WARNING: No available Copilot licenses"
+  throw "Insufficient Copilot licenses available"
+}
+
+# Assign license
+Set-MgUserLicense -UserId $user.Id -AddLicenses @(@{SkuId = $licenseSku.SkuId}) -RemoveLicenses @() -ErrorAction Stop
+Write-Host "✓ Copilot license assigned successfully"
+
+Write-Host "✓ Microsoft 365 Copilot license successfully requested for ${userEmail}"
+`
+  }
+
+  return {
+    psCommand,
+    serviceName: 'Microsoft.Graph',
+    operation: 'Request Copilot License',
+    userEmail: userEmail,
+    useCase: useCase,
+    useGroupAssignment: useGroupAssignment || false,
+    licenseGroup: licenseGroup,
+    expectedResult: `Copilot license requested for ${userEmail}`
+  }
+}
+
+/**
+ * Validate Remove Copilot License
+ */
+export async function validateRemoveCopilot(formData) {
+  const { userEmail, reason, confirmRemoval } = formData
+  const errors = []
+  const warnings = []
+
+  if (!userEmail || userEmail.trim().length === 0) {
+    errors.push('User Email is required')
+  }
+  if (!reason || reason.trim().length === 0) {
+    errors.push('Reason for Removal is required')
+  }
+  if (confirmRemoval !== 'REMOVE_COPILOT') {
+    errors.push('Must confirm removal by typing REMOVE_COPILOT')
+  }
+
+  // Verify user exists
+  if (userEmail) {
+    try {
+      const user = await graphClient
+        .api('/users')
+        .filter(`userPrincipalName eq '${userEmail}'`)
+        .get()
+
+      if (!user.value || user.value.length === 0) {
+        errors.push(`User '${userEmail}' not found`)
+      }
+    } catch (err) {
+      warnings.push('Could not verify user existence')
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    agentChecks: [
+      'Verify user exists',
+      'Confirm current Copilot assignment',
+      'Check active usage metrics',
+      'Verify removal will not impact productivity'
+    ]
+  }
+}
+
+/**
+ * Execute Remove Copilot License
+ */
+export async function executeRemoveCopilot(formData) {
+  const { userEmail, reason } = formData
+
+  const psCommand = `
+# Get user
+$user = Get-MgUser -Filter "userPrincipalName eq '${userEmail}'" -ErrorAction Stop
+Write-Host "Removing Copilot license from: $($user.DisplayName)"
+Write-Host "Email: ${userEmail}"
+Write-Host "Reason: ${reason}"
+
+# Get Copilot license SKU
+$copilotSku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq 'COPILOT_M365' } -ErrorAction Stop
+Write-Host "✓ Copilot SKU found"
+
+# Remove license
+Set-MgUserLicense -UserId $user.Id -AddLicenses @() -RemoveLicenses @($copilotSku.SkuId) -ErrorAction Stop
+Write-Host "✓ Copilot license removed successfully"
+
+Write-Host "✓ Microsoft 365 Copilot license successfully removed from ${userEmail}"
+`
+
+  return {
+    psCommand,
+    serviceName: 'Microsoft.Graph',
+    operation: 'Remove Copilot License',
+    userEmail: userEmail,
+    reason: reason,
+    expectedResult: `Copilot license removed from ${userEmail}`
+  }
+}
+
+/**
  * Validate Get License Inventory request
  */
 export async function validateGetLicenseInventory(formData) {

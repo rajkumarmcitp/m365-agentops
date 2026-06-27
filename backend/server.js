@@ -64,6 +64,8 @@ import {
   validateRemoveLicense, executeRemoveLicense,
   validateChangeLicense, executeChangeLicense,
   validateConvertSharedMailbox, executeConvertSharedMailbox,
+  validateRequestCopilot, executeRequestCopilot,
+  validateRemoveCopilot, executeRemoveCopilot,
   validateGetLicenseInventory, executeGetLicenseInventory
 } from './self-service-executor.js'
 import {
@@ -12877,6 +12879,12 @@ app.post('/api/self-service/operations/license/execute', async (req, res) => {
       case 'convert-shared-mailbox':
         executionDef = await executeConvertSharedMailbox(formData)
         break
+      case 'req-copilot':
+        executionDef = await executeRequestCopilot(formData)
+        break
+      case 'remove-copilot':
+        executionDef = await executeRemoveCopilot(formData)
+        break
       case 'get-license-inventory':
         executionDef = await executeGetLicenseInventory(formData)
         break
@@ -12917,7 +12925,8 @@ app.get('/api/admin/license-config', (req, res) => {
       'Microsoft 365 Business Premium': null,
       'Microsoft 365 Enterprise E1': null,
       'Microsoft 365 Enterprise E3': null,
-      'Microsoft 365 Enterprise E5': null
+      'Microsoft 365 Enterprise E5': null,
+      'Microsoft 365 Copilot': null
     }
 
     res.json({
