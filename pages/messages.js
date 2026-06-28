@@ -1,5 +1,6 @@
 import { skeletonLoader } from '../lib/skeleton-loader.js'
 import { SVC_META, SVC_HEALTH } from '../data/msgcenter-data.js'
+import { state } from '../app.js'
 import {
   getServiceHealthMessages,
   searchServiceHealthMessages,
@@ -337,20 +338,84 @@ function showMessageDetail(el, msg) {
   `
 
   // Save handler
-  el.querySelector('#msg-save-btn')?.addEventListener('click', () => {
-    msg.reviewed = el.querySelector('#msg-review-status').value === 'reviewed'
-    msg.assigned = el.querySelector('#msg-assign-to').value || null
-    msg.deadline = el.querySelector('#msg-deadline').value || null
-    msg.notes = el.querySelector('#msg-notes').value || ''
-    msg.reviewedBy = msg.reviewed ? 'You' : null
-
-    // Visual feedback
+  el.querySelector('#msg-save-btn')?.addEventListener('click', async () => {
     const btn = el.querySelector('#msg-save-btn')
-    btn.textContent = '✓ Saved!'
-    btn.style.background = '#4caf50'
-    setTimeout(() => {
-      btn.textContent = '💾 Save Changes'
-      btn.style.background = 'var(--clr-primary-bg)'
-    }, 2000)
+    const reviewStatus = el.querySelector('#msg-review-status').value
+    const assigned = el.querySelector('#msg-assign-to').value || null
+    const deadline = el.querySelector('#msg-deadline').value || null
+    const notes = el.querySelector('#msg-notes').value || ''
+
+    // Update local message
+    msg.reviewed = reviewStatus === 'reviewed'
+    msg.assigned = assigned
+    msg.deadline = deadline
+    msg.notes = notes
+    msg.reviewedBy = msg.reviewed ? 'You' : null
+    msg.reviewStatus = reviewStatus === 'reviewed' ? 'Reviewed' : 'Pending Review'
+
+    // Show saving state
+    btn.disabled = true
+    btn.textContent = '💾 Saving...'
+
+    try {
+      // Persist to SharePoint via backend API
+      const siteId = state.settings?.serviceHealthSiteId
+      const listId = state.settings?.serviceHealthListId
+
+      if (!siteId || !listId) {
+        // No SharePoint configured, just save locally
+        console.log('[Messages] No SharePoint configured - saving locally only')
+        applyLocalChanges()
+      } else {
+        // Call backend API to save to SharePoint
+        const response = await fetch(
+          `http://localhost:3001/api/servicehealth/messages/${msg.id}?siteId=${encodeURIComponent(siteId)}&listId=${encodeURIComponent(listId)}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: msg.title,
+              description: msg.description,
+              impact: msg.impact,
+              service: msg.service,
+              severity: msg.severity,
+              status: msg.status,
+              assigned: assigned,
+              reviewStatus: msg.reviewStatus,
+              reviewedBy: msg.reviewed ? msg.reviewedBy : null,
+              deadline: deadline,
+              notes: notes
+            })
+          }
+        )
+
+        const result = await response.json()
+
+        if (result.success) {
+          console.log('[Messages] Changes saved to SharePoint')
+          applyLocalChanges()
+        } else {
+          console.warn('[Messages] Save returned error:', result.error)
+          applyLocalChanges() // Still save locally even if SharePoint fails
+        }
+      }
+    } catch (error) {
+      console.warn('[Messages] Save error:', error)
+      // Still save locally even if SharePoint fails
+      applyLocalChanges()
+    }
+
+    function applyLocalChanges() {
+      // Show success feedback
+      btn.textContent = '✓ Saved!'
+      btn.style.background = '#4caf50'
+
+      // Reset after 2 seconds
+      setTimeout(() => {
+        btn.textContent = '💾 Save Changes'
+        btn.style.background = 'var(--clr-primary-bg)'
+        btn.disabled = false
+      }, 2000)
+    }
   })
 }
