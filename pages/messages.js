@@ -337,21 +337,13 @@ function showMessageDetail(el, msg) {
     </div>
   `
 
-  // Save handler
+  // Save handler with conflict detection
   el.querySelector('#msg-save-btn')?.addEventListener('click', async () => {
     const btn = el.querySelector('#msg-save-btn')
     const reviewStatus = el.querySelector('#msg-review-status').value
     const assigned = el.querySelector('#msg-assign-to').value || null
     const deadline = el.querySelector('#msg-deadline').value || null
     const notes = el.querySelector('#msg-notes').value || ''
-
-    // Update local message
-    msg.reviewed = reviewStatus === 'reviewed'
-    msg.assigned = assigned
-    msg.deadline = deadline
-    msg.notes = notes
-    msg.reviewedBy = msg.reviewed ? 'You' : null
-    msg.reviewStatus = reviewStatus === 'reviewed' ? 'Reviewed' : 'Pending Review'
 
     // Show saving state
     btn.disabled = true
@@ -365,9 +357,15 @@ function showMessageDetail(el, msg) {
       if (!siteId || !listId) {
         // No SharePoint configured, just save locally
         console.log('[Messages] No SharePoint configured - saving locally only')
-        applyLocalChanges()
+        applyLocalChanges('Local')
       } else {
-        // Call backend API to save to SharePoint
+        // Validate fields before sending
+        if (deadline && isNaN(Date.parse(deadline))) {
+          showError('Invalid deadline date', 3000)
+          return
+        }
+
+        // Call backend API to save to SharePoint with conflict detection
         const response = await fetch(
           `http://localhost:3001/api/servicehealth/messages/${msg.id}?siteId=${encodeURIComponent(siteId)}&listId=${encodeURIComponent(listId)}`,
           {
@@ -384,30 +382,82 @@ function showMessageDetail(el, msg) {
               reviewStatus: msg.reviewStatus,
               reviewedBy: msg.reviewed ? msg.reviewedBy : null,
               deadline: deadline,
-              notes: notes
+              notes: notes,
+              expectedLastModified: msg.lastModified
             })
           }
         )
 
         const result = await response.json()
 
+        if (response.status === 409) {
+          // Conflict detected - item was modified by another user
+          showError(`Conflict: Item was modified by another user. Please refresh to see latest changes.`, 5000)
+          btn.textContent = '⚠️ Conflict - Refresh'
+          btn.style.background = '#ff9800'
+          return
+        }
+
+        if (response.status === 429) {
+          // Rate limit
+          showError(`Rate limited. Please try again in ${result.retryAfter || 60} seconds.`, 5000)
+          btn.textContent = '⏱️ Rate Limited'
+          return
+        }
+
         if (result.success) {
           console.log('[Messages] Changes saved to SharePoint')
-          applyLocalChanges()
+          // Update local message with new values
+          msg.reviewed = reviewStatus === 'reviewed'
+          msg.assigned = assigned
+          msg.deadline = deadline
+          msg.notes = notes
+          msg.reviewedBy = msg.reviewed ? 'You' : null
+          msg.reviewStatus = reviewStatus === 'reviewed' ? 'Reviewed' : 'Pending Review'
+          msg.lastModified = result.timestamp
+          applyLocalChanges('SharePoint')
+        } else if (result.conflict) {
+          showError(`Conflict: Item was modified by another user. Please refresh to see latest changes.`, 5000)
+          btn.textContent = '⚠️ Conflict - Refresh'
+          btn.style.background = '#ff9800'
+          return
         } else {
           console.warn('[Messages] Save returned error:', result.error)
-          applyLocalChanges() // Still save locally even if SharePoint fails
+          // Still save locally even if SharePoint fails
+          msg.reviewed = reviewStatus === 'reviewed'
+          msg.assigned = assigned
+          msg.deadline = deadline
+          msg.notes = notes
+          msg.reviewedBy = msg.reviewed ? 'You' : null
+          msg.reviewStatus = reviewStatus === 'reviewed' ? 'Reviewed' : 'Pending Review'
+          applyLocalChanges('Local (offline)')
         }
       }
     } catch (error) {
       console.warn('[Messages] Save error:', error)
       // Still save locally even if SharePoint fails
-      applyLocalChanges()
+      msg.reviewed = reviewStatus === 'reviewed'
+      msg.assigned = assigned
+      msg.deadline = deadline
+      msg.notes = notes
+      msg.reviewedBy = msg.reviewed ? 'You' : null
+      msg.reviewStatus = reviewStatus === 'reviewed' ? 'Reviewed' : 'Pending Review'
+      applyLocalChanges('Local (error)')
     }
 
-    function applyLocalChanges() {
-      // Show success feedback
-      btn.textContent = '✓ Saved!'
+    function showError(message, duration = 4000) {
+      btn.textContent = '❌ Error'
+      btn.style.background = '#f44336'
+      setTimeout(() => {
+        btn.textContent = '💾 Save Changes'
+        btn.style.background = 'var(--clr-primary-bg)'
+        btn.disabled = false
+      }, duration)
+    }
+
+    function applyLocalChanges(source) {
+      // Show success feedback with source
+      btn.textContent = `✓ Saved to ${source}!`
       btn.style.background = '#4caf50'
 
       // Reset after 2 seconds

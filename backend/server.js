@@ -5878,7 +5878,7 @@ app.post('/api/servicehealth/initialize', async (req, res) => {
  */
 app.get('/api/servicehealth/messages', async (req, res) => {
   try {
-    const { siteId, listId } = req.query
+    const { siteId, listId, skip = '0', top = '100', orderBy = 'lastModifiedDateTime' } = req.query
 
     if (!siteId || !listId) {
       return res.status(400).json({
@@ -5887,17 +5887,33 @@ app.get('/api/servicehealth/messages', async (req, res) => {
       })
     }
 
-    // Try to fetch real messages from SharePoint
+    // Validate pagination parameters
+    const pageSize = Math.min(parseInt(top) || 100, 500) // Max 500 items per page
+    const skipCount = Math.max(parseInt(skip) || 0, 0)
+
+    // Try to fetch real messages from SharePoint with pagination
     if (graphClient) {
       try {
-        console.log(`[Service Health] Fetching messages from SharePoint list ${listId}...`)
+        console.log(`[Service Health] Fetching messages (skip=${skipCount}, top=${pageSize}) from SharePoint list ${listId}...`)
 
-        const items = await graphClient
+        // Build query with pagination and ordering
+        let query = graphClient
           .api(`/sites/${siteId}/lists/${listId}/items`)
           .expand('fields')
-          .get()
+          .top(pageSize)
+          .skip(skipCount)
 
-        const messages = (items.value || []).map(item => {
+        // Add ordering
+        if (orderBy === 'lastModifiedDateTime') {
+          query = query.orderby('lastModifiedDateTime desc')
+        } else if (orderBy === 'createdDateTime') {
+          query = query.orderby('createdDateTime desc')
+        }
+
+        const response = await query.get()
+        const items = response.value || []
+
+        const messages = items.map(item => {
           const fields = item.fields || {}
           return {
             id: item.id,
@@ -5923,31 +5939,44 @@ app.get('/api/servicehealth/messages', async (req, res) => {
 
         console.log(`[Service Health] ✓ Fetched ${messages.length} messages from SharePoint`)
 
+        // Check if more items exist
+        const hasMore = items.length === pageSize
+
         res.json({
           success: true,
           messages,
           count: messages.length,
-          source: 'SharePoint'
+          hasMore,
+          skip: skipCount,
+          top: pageSize,
+          source: 'SharePoint',
+          timestamp: new Date().toISOString()
         })
       } catch (graphError) {
         console.warn(`[Service Health] Graph API error (${graphError.status}): ${graphError.message}`)
         // Fall back to demo data if Graph API fails
+        const demoMessages = getDemoServiceHealthMessages()
         res.json({
           success: true,
-          messages: getDemoServiceHealthMessages(),
-          count: 2,
+          messages: demoMessages,
+          count: demoMessages.length,
+          hasMore: false,
           source: 'Demo (Graph API failed)',
-          warning: graphError.message
+          warning: graphError.message,
+          timestamp: new Date().toISOString()
         })
       }
     } else {
       // No Graph Client - use demo data
+      const demoMessages = getDemoServiceHealthMessages()
       res.json({
         success: true,
-        messages: getDemoServiceHealthMessages(),
-        count: 2,
+        messages: demoMessages,
+        count: demoMessages.length,
+        hasMore: false,
         source: 'Demo (no Graph Client)',
-        warning: 'Graph Client not initialized - using demo data'
+        warning: 'Graph Client not initialized - using demo data',
+        timestamp: new Date().toISOString()
       })
     }
   } catch (error) {
@@ -5958,6 +5987,44 @@ app.get('/api/servicehealth/messages', async (req, res) => {
     })
   }
 })
+
+/**
+ * Validate Service Health message fields
+ * Ensures field values are proper types for SharePoint
+ */
+function validateServiceHealthFields(fields) {
+  const errors = []
+
+  // Validate field types
+  if (fields.Title && typeof fields.Title !== 'string') {
+    errors.push('Title must be a string')
+  }
+
+  if (fields.Service && !['Exchange Online', 'Microsoft Teams', 'SharePoint Online', 'Microsoft Entra ID', 'Microsoft 365', 'OneDrive', 'Outlook', 'Power Platform', 'Defender'].includes(fields.Service)) {
+    errors.push(`Invalid Service: ${fields.Service}`)
+  }
+
+  if (fields.Severity && !['High', 'Medium', 'Low'].includes(fields.Severity)) {
+    errors.push(`Invalid Severity: ${fields.Severity}`)
+  }
+
+  if (fields.Status && !['Active', 'Assigned', 'In Review', 'Resolved'].includes(fields.Status)) {
+    errors.push(`Invalid Status: ${fields.Status}`)
+  }
+
+  if (fields.ReviewStatus && !['Pending Review', 'Reviewed'].includes(fields.ReviewStatus)) {
+    errors.push(`Invalid ReviewStatus: ${fields.ReviewStatus}`)
+  }
+
+  if (fields.Deadline && isNaN(Date.parse(fields.Deadline))) {
+    errors.push(`Invalid Deadline date: ${fields.Deadline}`)
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors: errors
+  }
+}
 
 /**
  * Helper function: Demo Service Health messages
@@ -6020,10 +6087,53 @@ app.patch('/api/servicehealth/messages/:itemId', async (req, res) => {
       })
     }
 
+    // Validate field types before updating
+    const validation = validateServiceHealthFields(updates)
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid field values',
+        validationErrors: validation.errors
+      })
+    }
+
     // Try to update in real SharePoint
     if (graphClient) {
       try {
         console.log(`[Service Health] Updating message ${itemId} in SharePoint...`)
+
+        // Check for concurrent updates: fetch current item first
+        let currentItem
+        try {
+          currentItem = await graphClient
+            .api(`/sites/${siteId}/lists/${listId}/items/${itemId}`)
+            .expand('fields')
+            .get()
+        } catch (getError) {
+          if (getError.status === 404) {
+            return res.status(404).json({
+              success: false,
+              error: 'Item not found - it may have been deleted'
+            })
+          }
+          throw getError
+        }
+
+        // Detect conflicts: check if item was modified by someone else
+        if (updates.expectedLastModified) {
+          const itemModTime = new Date(currentItem.lastModifiedDateTime).getTime()
+          const expectedTime = new Date(updates.expectedLastModified).getTime()
+          if (Math.abs(itemModTime - expectedTime) > 1000) {
+            console.warn(`[Service Health] Conflict detected: item ${itemId} was modified by another user`)
+            return res.status(409).json({
+              success: false,
+              error: 'Item was modified by another user. Please refresh and try again.',
+              conflict: true,
+              currentData: currentItem.fields,
+              lastModified: currentItem.lastModifiedDateTime
+            })
+          }
+        }
 
         // Build fields object from updates
         const fields = {}
@@ -6052,9 +6162,19 @@ app.patch('/api/servicehealth/messages/:itemId', async (req, res) => {
           message: 'Service Health message updated successfully',
           itemId,
           updated: fields,
-          source: 'SharePoint'
+          source: 'SharePoint',
+          timestamp: new Date().toISOString()
         })
       } catch (graphError) {
+        // Handle 429 rate limit
+        if (graphError.status === 429) {
+          return res.status(429).json({
+            success: false,
+            error: 'Rate limit exceeded. Please try again in a moment.',
+            retryAfter: graphError.response?.headers?.['retry-after'] || 60
+          })
+        }
+
         console.warn(`[Service Health] Update failed (${graphError.status}): ${graphError.message}`)
         // Still return success since this will be synced next cycle
         res.json({
