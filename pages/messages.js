@@ -238,7 +238,7 @@ function renderMessages(el) {
         </div>
 
         <!-- Expanded View (Hidden by Default) -->
-        <div class="msg-expanded" style="display:none;padding:16px;border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);display:grid;grid-template-columns:1fr 320px;gap:16px">
+        <div class="msg-expanded" style="display:none;padding:16px;border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)">
           <!-- Left Panel: Issue Details -->
           <div style="overflow-y:auto;max-height:600px">
             <!-- Issue Details Section -->
@@ -383,7 +383,9 @@ function renderMessages(el) {
 
       // Toggle current card
       if (!isExpanded) {
-        expanded.style.display = 'block'
+        expanded.style.display = 'grid'
+        expanded.style.gridTemplateColumns = '1fr 320px'
+        expanded.style.gap = '16px'
         selectedMessage = filteredMessages[idx]
         attachSaveHandler(card, selectedMessage)
       }
