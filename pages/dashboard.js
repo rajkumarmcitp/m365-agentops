@@ -91,8 +91,8 @@ function renderDashboardSkeleton(el) {
   buildChangeIntelWidget().then(ciHtml => {
     ciSection.innerHTML = ciHtml
     console.log('✓ Change Intelligence loaded')
-    // Attach event listeners after HTML is inserted
-    el.querySelector('#dash-to-messages')?.addEventListener('click', async () => await go('messages'))
+    // Attach event listeners after HTML is inserted (search in ciSection, not el)
+    ciSection.querySelector('#dash-to-messages')?.addEventListener('click', async () => await go('messages'))
   }).catch(ciError => {
     console.error('❌ Error loading Change Intelligence:', ciError.message)
     ciSection.innerHTML = `<div style="padding:20px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)"><div style="color:var(--color-text-secondary);font-size:11px">Failed to load Change Intelligence: ${ciError.message}</div></div>`
