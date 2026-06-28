@@ -300,59 +300,55 @@ function renderMessages(el) {
             </div>
           </div>
 
-          <!-- Right Panel: Admin Actions (Conditional) -->
-          ${state.settings?.serviceHealthAdminActionsEnabled !== false ? `
-          <div style="background:var(--color-background-primary);padding:12px;border-radius:6px;height:fit-content;border:1px solid var(--color-border-secondary)">
-            <div style="font-size:11px;font-weight:600;margin-bottom:10px;color:var(--color-text-primary);text-transform:uppercase">Admin Actions</div>` : `
-          <div style="background:var(--color-background-primary);padding:12px;border-radius:6px;height:fit-content;border:1px solid var(--color-border-secondary);display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);font-size:10px;min-height:300px;text-align:center">
-            <div>
-              <i class="ti ti-lock" style="font-size:24px;margin-bottom:8px;display:block;opacity:0.5"></i>
-              <div>Admin actions are disabled</div>
-              <div style="font-size:9px;margin-top:4px">Enable in Settings to manage service health issues</div>
-            </div>
-          </div>
-          <!-- Hidden admin actions when disabled -->
-          <div style="display:none">`
-
-            <!-- Review Status -->
-            <div style="margin-bottom:10px">
-              <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Review Status</label>
-              <select class="msg-review-status" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
-                <option value="pending" ${!msg.reviewed ? 'selected' : ''}>Pending Review</option>
-                <option value="reviewed" ${msg.reviewed ? 'selected' : ''}>Reviewed</option>
-              </select>
-            </div>
-
-            <!-- Assign To -->
-            <div style="margin-bottom:10px">
-              <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Assign To</label>
-              <input type="text" class="msg-assign-to" placeholder="Email or name..." value="${msg.assigned || ''}" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
-            </div>
-
-            <!-- Set Deadline -->
-            <div style="margin-bottom:10px">
-              <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Set Deadline</label>
-              <input type="date" class="msg-deadline" value="${msg.deadline || ''}" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
-            </div>
-
-            <!-- Notes -->
-            <div style="margin-bottom:10px">
-              <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Notes</label>
-              <textarea class="msg-notes" placeholder="Add notes..." style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary);min-height:70px;resize:vertical">${msg.notes || ''}</textarea>
-            </div>
-
-            <!-- Save Button -->
-            <button class="msg-save-btn" style="width:100%;padding:8px;background:var(--clr-primary-bg);color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;margin-bottom:8px">💾 Save Changes</button>
-
-            <!-- Status Info -->
-            ${msg.status === 'resolved' ? `
-              <div style="padding:8px;background:#4caf5020;border-radius:4px;border-left:3px solid #4caf50;font-size:9px;color:#4caf50">
-                ✓ Resolved on ${new Date(msg.resolvedDate).toLocaleDateString()}
+          <!-- Right Panel: Admin Actions -->
+          <div class="msg-admin-panel" style="background:var(--color-background-primary);padding:12px;border-radius:6px;height:fit-content;border:1px solid var(--color-border-secondary);${state.settings?.serviceHealthAdminActionsEnabled === false ? 'display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);font-size:10px;min-height:300px;text-align:center' : ''}">
+            ${state.settings?.serviceHealthAdminActionsEnabled === false ? `
+              <div>
+                <i class="ti ti-lock" style="font-size:24px;margin-bottom:8px;display:block;opacity:0.5"></i>
+                <div>Admin actions are disabled</div>
+                <div style="font-size:9px;margin-top:4px">Enable in Settings to manage service health issues</div>
               </div>
-            ` : ''}
+            ` : `
+              <div style="font-size:11px;font-weight:600;margin-bottom:10px;color:var(--color-text-primary);text-transform:uppercase">Admin Actions</div>
+
+              <!-- Review Status -->
+              <div style="margin-bottom:10px">
+                <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Review Status</label>
+                <select class="msg-review-status" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
+                  <option value="pending" ${!msg.reviewed ? 'selected' : ''}>Pending Review</option>
+                  <option value="reviewed" ${msg.reviewed ? 'selected' : ''}>Reviewed</option>
+                </select>
+              </div>
+
+              <!-- Assign To -->
+              <div style="margin-bottom:10px">
+                <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Assign To</label>
+                <input type="text" class="msg-assign-to" placeholder="Email or name..." value="${msg.assigned || ''}" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
+              </div>
+
+              <!-- Set Deadline -->
+              <div style="margin-bottom:10px">
+                <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Set Deadline</label>
+                <input type="date" class="msg-deadline" value="${msg.deadline || ''}" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
+              </div>
+
+              <!-- Notes -->
+              <div style="margin-bottom:10px">
+                <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Notes</label>
+                <textarea class="msg-notes" placeholder="Add notes..." style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary);min-height:70px;resize:vertical">${msg.notes || ''}</textarea>
+              </div>
+
+              <!-- Save Button -->
+              <button class="msg-save-btn" style="width:100%;padding:8px;background:var(--clr-primary-bg);color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;margin-bottom:8px">💾 Save Changes</button>
+
+              <!-- Status Info -->
+              ${msg.status === 'resolved' ? `
+                <div style="padding:8px;background:#4caf5020;border-radius:4px;border-left:3px solid #4caf50;font-size:9px;color:#4caf50">
+                  ✓ Resolved on ${new Date(msg.resolvedDate).toLocaleDateString()}
+                </div>
+              ` : ''}
+            `}
           </div>
-          </div>
-          ${state.settings?.serviceHealthAdminActionsEnabled !== false ? '' : '</div>'}
         </div>
       </div>
     `
