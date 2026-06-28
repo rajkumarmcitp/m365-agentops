@@ -703,7 +703,7 @@ function setupUserSearch(el) {
   // Get API URL - determine if production or development
   const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   const apiUrl = isDev
-    ? 'http://localhost:3000/api'
+    ? 'http://localhost:3001/api'
     : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net/api'
 
   // Handle both user and group search inputs
