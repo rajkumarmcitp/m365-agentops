@@ -34,7 +34,7 @@ function renderMessagesLayout(el) {
     </div>
 
     <!-- Main Container with Left & Right Panels -->
-    <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;height:calc(100vh - 240px);margin-bottom:16px;@media(max-width:1200px){grid-template-columns:1fr;gap:0}">
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;height:calc(100vh - 240px);margin-bottom:16px">
       <!-- Left Panel: Filters & Messages -->
       <div style="display:flex;flex-direction:column;gap:12px;overflow:hidden">
         <!-- Filters -->
