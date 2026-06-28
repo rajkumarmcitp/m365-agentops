@@ -145,11 +145,36 @@ function renderSettings(el) {
 
     <!-- Service Health Messages Configuration -->
     <div class="card mb-3">
-      <div class="card-title mb-3"><i class="ti ti-heartbeat"></i> Service Health Messages Configuration</div>
-      <div style="background:#fff3e0;border-left:4px solid #ff9800;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#e65100">
-        <i class="ti ti-info-circle"></i>
-        <strong>Configuration:</strong> Specify the SharePoint site where Service Health announcements and incident tracking will be stored. The system will automatically create a list with all required fields and sync announcements every hour.
+      <div class="card-title mb-3"><i class="ti ti-heartbeat"></i> Service Health Monitoring</div>
+
+      <!-- Service Health Enabled Toggle -->
+      <div style="margin-bottom:16px;padding:12px;background:var(--color-background-secondary);border-radius:4px;border-left:3px solid #ff9800">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div>
+            <div style="font-weight:600;font-size:11px;color:var(--color-text-primary);margin-bottom:2px">Monitor Service Health</div>
+            <div style="font-size:9px;color:var(--color-text-secondary)">Enable or disable Service Health monitoring and issue tracking</div>
+          </div>
+          <div id="settings-servicehealth-enabled-toggle"></div>
+        </div>
       </div>
+
+      <!-- Service Health Configuration (Only visible when enabled) -->
+      <div id="settings-servicehealth-config-section" style="display:none">
+        <div style="background:#fff3e0;border-left:4px solid #ff9800;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#e65100">
+          <i class="ti ti-info-circle"></i>
+          <strong>Configuration:</strong> Specify the SharePoint site where Service Health announcements and incident tracking will be stored. The system will automatically create a list with all required fields and sync announcements every hour.
+        </div>
+
+        <!-- Admin Actions Toggle -->
+        <div style="margin-bottom:14px;padding:12px;background:var(--color-background-secondary);border-radius:4px;border-left:3px solid #4caf50">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div>
+              <div style="font-weight:600;font-size:11px;color:var(--color-text-primary);margin-bottom:2px">Enable Admin Actions</div>
+              <div style="font-size:9px;color:var(--color-text-secondary)">Allow admins to assign, review, and manage service health issues</div>
+            </div>
+            <div id="settings-servicehealth-admin-actions-toggle"></div>
+          </div>
+        </div>
 
       <div style="margin-bottom:14px">
         <label class="form-label">SharePoint Site URL</label>
@@ -197,10 +222,11 @@ function renderSettings(el) {
         </div>
       </div>
 
-      <div id="settings-servicehealth-config" style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);display:none">
-        <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">✅ Configuration Complete</div>
-        <div style="background:#f5f5f5;padding:8px;border-radius:4px;font-family:monospace;font-size:9px;color:#333;white-space:pre-wrap;word-break:break-all" id="settings-servicehealth-env-output"></div>
-        <button class="btn btn-sm" id="settings-servicehealth-copy" style="margin-top:8px;font-size:9px"><i class="ti ti-copy"></i> Copy Configuration</button>
+        <div id="settings-servicehealth-config" style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);display:none">
+          <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">✅ Configuration Complete</div>
+          <div style="background:#f5f5f5;padding:8px;border-radius:4px;font-family:monospace;font-size:9px;color:#333;white-space:pre-wrap;word-break:break-all" id="settings-servicehealth-env-output"></div>
+          <button class="btn btn-sm" id="settings-servicehealth-copy" style="margin-top:8px;font-size:9px"><i class="ti ti-copy"></i> Copy Configuration</button>
+        </div>
       </div>
     </div>
 
@@ -539,6 +565,10 @@ function renderSettings(el) {
   })
 
   // ---- Service Health Messages Configuration ----
+  const servicehealthEnabledToggle = el.querySelector('#settings-servicehealth-enabled-toggle')
+  const servicehealthAdminActionsToggle = el.querySelector('#settings-servicehealth-admin-actions-toggle')
+  const servicehealthConfigSection = el.querySelector('#settings-servicehealth-config-section')
+
   const servicehealthInput = el.querySelector('#settings-servicehealth-site')
   const servicehealthTestBtn = el.querySelector('#settings-servicehealth-test')
   const servicehealthStatus = el.querySelector('#settings-servicehealth-status')
@@ -547,6 +577,30 @@ function renderSettings(el) {
   const servicehealthConfig = el.querySelector('#settings-servicehealth-config')
   const servicehealthEnvOutput = el.querySelector('#settings-servicehealth-env-output')
   const servicehealthCopyBtn = el.querySelector('#settings-servicehealth-copy')
+
+  // Create Service Health Enabled Toggle
+  servicehealthEnabledToggle.appendChild(createToggle(
+    s.serviceHealthEnabled !== false,
+    (enabled) => {
+      state.settings.serviceHealthEnabled = enabled
+      saveState()
+      servicehealthConfigSection.style.display = enabled ? 'block' : 'none'
+      showToast(enabled ? 'Service Health monitoring enabled' : 'Service Health monitoring disabled', 'success')
+    }
+  ))
+
+  // Create Admin Actions Toggle
+  servicehealthAdminActionsToggle.appendChild(createToggle(
+    s.serviceHealthAdminActionsEnabled !== false,
+    (enabled) => {
+      state.settings.serviceHealthAdminActionsEnabled = enabled
+      saveState()
+      showToast(enabled ? 'Admin actions enabled' : 'Admin actions disabled', 'success')
+    }
+  ))
+
+  // Show/hide configuration section based on enabled status
+  servicehealthConfigSection.style.display = s.serviceHealthEnabled !== false ? 'block' : 'none'
 
   servicehealthInput.value = s.serviceHealthSiteUrl || 'root'
 

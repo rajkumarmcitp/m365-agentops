@@ -227,79 +227,92 @@ function renderMessages(el) {
         </div>
 
         <!-- Expanded View (Hidden by Default) -->
-        <div class="msg-expanded" style="display:none;padding:16px;border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)">
-          <!-- Issue Details Section -->
-          <div style="margin-bottom:12px;background:var(--color-background-primary);padding:10px;border-radius:4px;border-left:3px solid #185FA5">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:9px;margin-bottom:8px">
-              <div>
-                <div style="color:var(--color-text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:2px">Issue ID</div>
-                <div style="color:var(--color-text-primary);font-family:monospace;font-size:8px;word-break:break-all">${msg.issueId || msg.messageId || msg.id || 'N/A'}</div>
+        <div class="msg-expanded" style="display:none;padding:16px;border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);display:grid;grid-template-columns:1fr 320px;gap:16px">
+          <!-- Left Panel: Issue Details -->
+          <div style="overflow-y:auto;max-height:600px">
+            <!-- Issue Details Section -->
+            <div style="margin-bottom:12px;background:var(--color-background-primary);padding:10px;border-radius:4px;border-left:3px solid #185FA5">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:9px;margin-bottom:8px">
+                <div>
+                  <div style="color:var(--color-text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:2px">Issue ID</div>
+                  <div style="color:var(--color-text-primary);font-family:monospace;font-size:8px;word-break:break-all">${msg.issueId || msg.messageId || msg.id || 'N/A'}</div>
+                </div>
+                <div>
+                  <div style="color:var(--color-text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:2px">Issue Type</div>
+                  <div style="color:var(--color-text-primary)">${msg.issueType || 'Advisory'}</div>
+                </div>
+                <div>
+                  <div style="color:var(--color-text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:2px">Started</div>
+                  <div style="color:var(--color-text-primary)">${msg.startDate ? new Date(msg.startDate).toLocaleString() : 'N/A'}</div>
+                </div>
+                <div>
+                  <div style="color:var(--color-text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:2px">Last Updated</div>
+                  <div style="color:var(--color-text-primary)">${msg.lastUpdated ? new Date(msg.lastUpdated).toLocaleString() : 'N/A'}</div>
+                </div>
               </div>
-              <div>
-                <div style="color:var(--color-text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:2px">Issue Type</div>
-                <div style="color:var(--color-text-primary)">${msg.issueType || 'Advisory'}</div>
-              </div>
-              <div>
-                <div style="color:var(--color-text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:2px">Started</div>
-                <div style="color:var(--color-text-primary)">${msg.startDate ? new Date(msg.startDate).toLocaleString() : 'N/A'}</div>
-              </div>
-              <div>
-                <div style="color:var(--color-text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:2px">Last Updated</div>
-                <div style="color:var(--color-text-primary)">${msg.lastUpdated ? new Date(msg.lastUpdated).toLocaleString() : 'N/A'}</div>
-              </div>
+              ${msg.nextUpdateBy ? `<div style="font-size:9px;color:var(--color-text-secondary)">Next update by: ${new Date(msg.nextUpdateBy).toLocaleString()}</div>` : ''}
             </div>
-            ${msg.nextUpdateBy ? `<div style="font-size:9px;color:var(--color-text-secondary)">Next update by: ${new Date(msg.nextUpdateBy).toLocaleString()}</div>` : ''}
+
+            <!-- Impact & Scope Section -->
+            <div style="margin-bottom:12px;background:var(--color-background-primary);padding:10px;border-radius:4px">
+              <div style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--color-text-primary);text-transform:uppercase">Impact Analysis</div>
+              ${msg.userImpact ? `
+                <div style="margin-bottom:8px;font-size:9px">
+                  <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">User Impact</div>
+                  <div style="color:var(--color-text-primary);line-height:1.4">${msg.userImpact}</div>
+                </div>
+              ` : ''}
+              ${msg.scopeOfImpact ? `
+                <div style="margin-bottom:8px;font-size:9px">
+                  <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">Scope of Impact</div>
+                  <div style="color:var(--color-text-primary);line-height:1.4">${msg.scopeOfImpact}</div>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Details Section -->
+            <div style="background:var(--color-background-primary);padding:10px;border-radius:4px">
+              <div style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--color-text-primary);text-transform:uppercase">Details</div>
+              ${msg.description ? `
+                <div style="margin-bottom:8px;font-size:9px">
+                  <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">Description</div>
+                  <div style="color:var(--color-text-primary);line-height:1.4">${msg.description}</div>
+                </div>
+              ` : ''}
+              ${msg.rootCause ? `
+                <div style="margin-bottom:8px;font-size:9px">
+                  <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">Root Cause</div>
+                  <div style="color:var(--color-text-primary);line-height:1.4">${msg.rootCause}</div>
+                </div>
+              ` : ''}
+              ${msg.moreInfo ? `
+                <div style="margin-bottom:8px;font-size:9px">
+                  <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">More Info</div>
+                  <div style="color:var(--color-text-primary);line-height:1.4">${msg.moreInfo}</div>
+                </div>
+              ` : ''}
+              ${msg.updates ? `
+                <div style="font-size:9px">
+                  <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">Updates</div>
+                  <div style="color:var(--color-text-primary);line-height:1.4">${msg.updates}</div>
+                </div>
+              ` : ''}
+            </div>
           </div>
 
-          <!-- Impact & Scope Section -->
-          <div style="margin-bottom:12px;background:var(--color-background-primary);padding:10px;border-radius:4px">
-            <div style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--color-text-primary);text-transform:uppercase">Impact Analysis</div>
-            ${msg.userImpact ? `
-              <div style="margin-bottom:8px;font-size:9px">
-                <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">User Impact</div>
-                <div style="color:var(--color-text-primary);line-height:1.4">${msg.userImpact}</div>
-              </div>
-            ` : ''}
-            ${msg.scopeOfImpact ? `
-              <div style="margin-bottom:8px;font-size:9px">
-                <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">Scope of Impact</div>
-                <div style="color:var(--color-text-primary);line-height:1.4">${msg.scopeOfImpact}</div>
-              </div>
-            ` : ''}
+          <!-- Right Panel: Admin Actions (Conditional) -->
+          ${state.settings?.serviceHealthAdminActionsEnabled !== false ? `
+          <div style="background:var(--color-background-primary);padding:12px;border-radius:6px;height:fit-content;border:1px solid var(--color-border-secondary)">
+            <div style="font-size:11px;font-weight:600;margin-bottom:10px;color:var(--color-text-primary);text-transform:uppercase">Admin Actions</div>` : `
+          <div style="background:var(--color-background-primary);padding:12px;border-radius:6px;height:fit-content;border:1px solid var(--color-border-secondary);display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);font-size:10px;min-height:300px;text-align:center">
+            <div>
+              <i class="ti ti-lock" style="font-size:24px;margin-bottom:8px;display:block;opacity:0.5"></i>
+              <div>Admin actions are disabled</div>
+              <div style="font-size:9px;margin-top:4px">Enable in Settings to manage service health issues</div>
+            </div>
           </div>
-
-          <!-- Details Section -->
-          <div style="margin-bottom:12px;background:var(--color-background-primary);padding:10px;border-radius:4px">
-            <div style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--color-text-primary);text-transform:uppercase">Details</div>
-            ${msg.description ? `
-              <div style="margin-bottom:8px;font-size:9px">
-                <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">Description</div>
-                <div style="color:var(--color-text-primary);line-height:1.4">${msg.description}</div>
-              </div>
-            ` : ''}
-            ${msg.rootCause ? `
-              <div style="margin-bottom:8px;font-size:9px">
-                <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">Root Cause</div>
-                <div style="color:var(--color-text-primary);line-height:1.4">${msg.rootCause}</div>
-              </div>
-            ` : ''}
-            ${msg.moreInfo ? `
-              <div style="margin-bottom:8px;font-size:9px">
-                <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">More Info</div>
-                <div style="color:var(--color-text-primary);line-height:1.4">${msg.moreInfo}</div>
-              </div>
-            ` : ''}
-            ${msg.updates ? `
-              <div style="font-size:9px">
-                <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">Updates</div>
-                <div style="color:var(--color-text-primary);line-height:1.4">${msg.updates}</div>
-              </div>
-            ` : ''}
-          </div>
-
-          <!-- Admin Actions -->
-          <div style="background:var(--color-background-primary);padding:12px;border-radius:6px">
-            <div style="font-size:11px;font-weight:600;margin-bottom:10px;color:var(--color-text-primary);text-transform:uppercase">Admin Actions</div>
+          <!-- Hidden admin actions when disabled -->
+          <div style="display:none">`
 
             <!-- Review Status -->
             <div style="margin-bottom:10px">
@@ -338,6 +351,8 @@ function renderMessages(el) {
               </div>
             ` : ''}
           </div>
+          </div>
+          ${state.settings?.serviceHealthAdminActionsEnabled !== false ? '' : '</div>'}
         </div>
       </div>
     `

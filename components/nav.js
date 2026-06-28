@@ -72,10 +72,16 @@ export function renderNav() {
   // Check if self-service portal is enabled
   const portalEnabled = state.settings?.portalEnabled !== false
 
-  // Admin section (filter out Requests if portal is disabled)
+  // Check if Service Health monitoring is enabled
+  const serviceHealthEnabled = state.settings?.serviceHealthEnabled !== false
+
+  // Admin section (filter out Requests if portal is disabled, filter out Service Health if disabled)
   let adminNavItems = NAV_ITEMS.admin
   if (!portalEnabled) {
     adminNavItems = adminNavItems.filter(item => item.id !== 'requests')
+  }
+  if (!serviceHealthEnabled) {
+    adminNavItems = adminNavItems.filter(item => item.id !== 'messages')
   }
   const adminItems = buildItems(adminNavItems)
   if (adminItems) {
