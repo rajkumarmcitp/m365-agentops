@@ -11,6 +11,7 @@ const NAV_ITEMS = {
     { id: 'privaccts',  label: 'Privileged Accounts',  icon: 'ti-crown',              badge: '2',  badgeCls: 'red' },
     { id: 'm365config', label: 'M365 Config',          icon: 'ti-settings-2',         badge: '4',  badgeCls: 'amber' },
     { id: 'msgcenter',      label: 'Change Intelligence',  icon: 'ti-antenna',            badge: '8',  badgeCls: 'red' },
+    { id: 'messages',       label: 'Service Health',       icon: 'ti-heartbeat',          badge: '5',  badgeCls: 'orange' },
     { id: 'tasks',          label: 'Change Tasks',         icon: 'ti-checkbox',           badge: '0',  badgeCls: 'blue' },
     { id: 'applications',   label: 'Entra Apps',          icon: 'ti-app-window',         badge: '2',  badgeCls: 'red' },
     { id: 'intune',         label: 'Intune Insights',     icon: 'ti-device-laptop',      badge: '2',  badgeCls: 'red' },
