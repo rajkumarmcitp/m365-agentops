@@ -113,6 +113,7 @@ function renderDashboardSkeleton(el) {
   el.querySelector('#dash-to-approvals')?.addEventListener('click', async () => await go('approvals'))
   el.querySelector('#dash-to-msgcenter')?.addEventListener('click', async () => await go('msgcenter'))
   el.querySelector('#dash-to-audit')?.addEventListener('click', async () => await go('audit'))
+}
 
 async function loadDashboardData(el) {
   try {
