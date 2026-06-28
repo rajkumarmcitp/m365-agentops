@@ -27,6 +27,7 @@ import { initSso } from './pages/sso.js'
 import { initAudit } from './pages/audit.js'
 import { initSettings } from './pages/settings.js'
 import { initMsgCenter } from './pages/msgcenter.js'
+import { initMessages } from './pages/messages.js'
 import { initTasks } from './pages/tasks.js'
 import { initNotifications, stopNotifications } from './components/notifications.js'
 import { initApplications } from './pages/applications.js'
@@ -156,6 +157,7 @@ export function isRole(...roles) {
 const PAGE_INIT = {
   dashboard: initDashboard,
   msgcenter: initMsgCenter,
+  messages: initMessages,
   tasks: initTasks,
   applications: initApplications,
   intune: initIntune,
@@ -457,7 +459,7 @@ function renderShell() {
 function renderAllPages() {
   const pages = [
     'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','privaccts','m365config',
-    'msgcenter','tasks','applications','intune','licenses','agents','approvals','portal','myreqs','myaccount','chat',
+    'msgcenter','messages','tasks','applications','intune','licenses','agents','approvals','portal','myreqs','myaccount','chat',
     'graphapi','sso','audit','settings'
   ]
   return pages.map(p => `<div class="page" id="page-${p}"></div>`).join('')

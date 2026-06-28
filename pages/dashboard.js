@@ -97,7 +97,7 @@ function renderDashboardSkeleton(el) {
   })
 
   // Attach event listeners
-  el.querySelector('#dash-to-msgcenter-health')?.addEventListener('click', async () => await go('msgcenter'))
+  el.querySelector('#dash-to-messages')?.addEventListener('click', async () => await go('messages'))
   el.querySelector('#dash-to-requests')?.addEventListener('click', async () => await go('requests'))
   el.querySelector('#dash-to-security')?.addEventListener('click', async () => await go('security'))
   el.querySelector('#dash-to-tenantguard')?.addEventListener('click', async () => await go('tenantguard'))
@@ -602,7 +602,8 @@ async function buildChangeIntelWidget() {
     critical = mcMessages.filter(m => m.actionRequired && m.severity === 'high').slice(0, 3)
   }
 
-  const activeIssues = svcHealth.filter(h => h.status !== 'resolved' && h.status !== 'Resolved')
+  const allActiveIssues = svcHealth.filter(h => h.status !== 'resolved' && h.status !== 'Resolved')
+  const activeIssues = allActiveIssues.slice(0, 3) // Show only last 3
   const actionCount = mcMessages.filter(m => m.actionRequired).length
 
   const svcHealthDots = Object.entries(SVC_META).map(([svc, meta]) => {
@@ -648,12 +649,12 @@ async function buildChangeIntelWidget() {
       <div class="card" style="grid-column: span 2;">
         <div class="card-header">
           <span class="card-title"><i class="ti ti-heartbeat"></i> Service Health</span>
-          <span class="badge ${activeIssues.length > 0 ? 'warning' : 'success'}">${activeIssues.length > 0 ? activeIssues.length + ' active' : 'All clear'}</span>
+          <span class="badge ${allActiveIssues.length > 0 ? 'warning' : 'success'}">${allActiveIssues.length > 0 ? allActiveIssues.length + ' active' : 'All clear'}</span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:10px">
           ${svcHealthDots}
         </div>
-        ${activeIssues.length > 0 ? activeIssues.map(h => `
+        ${allActiveIssues.length > 0 ? activeIssues.map(h => `
           <div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:11px">
             <span class="status-dot ${h.severity === 'high' ? 'fail' : 'warn'} pulse"></span>
             <div>
@@ -666,9 +667,9 @@ async function buildChangeIntelWidget() {
             <i class="ti ti-circle-check"></i> All ${Object.keys(SVC_META).length} monitored services operational.
           </div>
         `}
-        <div style="margin-top:10px">
-          <button class="btn btn-sm" id="dash-to-msgcenter-health">
-            <i class="ti ti-heartbeat"></i> Service Health
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="btn btn-sm btn-primary" id="dash-to-messages" style="flex:1">
+            <i class="ti ti-arrow-right"></i> View all Service Health (${allActiveIssues.length > 0 ? allActiveIssues.length + ' issues' : 'All clear'})
           </button>
         </div>
       </div>
