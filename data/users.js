@@ -8,7 +8,7 @@ export const USERS = [
     color: '#00C7B7',
     navAccess: [
       'dashboard', 'requests', 'security', 'tenantguard', 'tenantguard-enhanced', 'zerotrust', 'privaccts',
-      'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune',
+      'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'messages', 'applications', 'intune',
       'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings'
     ],
     isDemoAccount: true,
@@ -41,7 +41,7 @@ export const USERS = [
     color: '#633806',
     navAccess: [
       'dashboard', 'requests', 'security', 'tenantguard', 'tenantguard-enhanced', 'zerotrust', 'privaccts',
-      'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune',
+      'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'messages', 'applications', 'intune',
       'portal', 'myreqs', 'myaccount', 'chat',
       'audit', 'settings'
     ],
@@ -55,7 +55,7 @@ export const USERS = [
     color: '#791F1F',
     navAccess: [
       'dashboard', 'requests', 'security', 'tenantguard', 'tenantguard-enhanced', 'zerotrust', 'privaccts',
-      'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'applications', 'intune',
+      'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'messages', 'applications', 'intune',
       'portal', 'myreqs', 'myaccount', 'chat',
       'audit', 'settings',
       'graphapi', 'sso'
