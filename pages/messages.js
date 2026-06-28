@@ -1,5 +1,14 @@
 import { skeletonLoader } from '../lib/skeleton-loader.js'
 import { SVC_META, SVC_HEALTH } from '../data/msgcenter-data.js'
+import {
+  getServiceHealthMessages,
+  searchServiceHealthMessages,
+  refreshServiceHealth,
+  getServiceHealthStatus,
+  isServiceHealthInitialized,
+  onServiceHealthEvent,
+  exportServiceHealthMessages
+} from '../lib/service-health-manager.js'
 
 let allMessages = []
 let filteredMessages = []
@@ -16,6 +25,20 @@ export async function initMessages() {
 
   renderMessagesLayout(el)
   loadMessages(el)
+
+  // Listen for sync events from Service Health manager
+  if (isServiceHealthInitialized()) {
+    // Listen for successful syncs
+    onServiceHealthEvent('refreshed', () => {
+      console.log('[Messages] Service Health sync completed, refreshing UI')
+      loadMessages(el)
+    })
+
+    // Listen for sync errors
+    onServiceHealthEvent('syncError', (detail) => {
+      console.warn('[Messages] Service Health sync error:', detail.error)
+    })
+  }
 }
 
 let selectedMessage = null
@@ -105,40 +128,70 @@ function renderMessagesLayout(el) {
     applyFilters(el)
   })
 
-  el.querySelector('#msg-refresh')?.addEventListener('click', () => {
-    loadMessages(el)
+  el.querySelector('#msg-refresh')?.addEventListener('click', async () => {
+    const refreshBtn = el.querySelector('#msg-refresh')
+    refreshBtn.disabled = true
+    refreshBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px;margin-right:6px"></span> Refreshing...'
+
+    try {
+      if (isServiceHealthInitialized()) {
+        // Trigger manual sync from SharePoint
+        await refreshServiceHealth()
+      }
+      loadMessages(el)
+    } catch (error) {
+      console.error('Refresh error:', error)
+    } finally {
+      refreshBtn.disabled = false
+      refreshBtn.innerHTML = '<i class="ti ti-refresh"></i> Refresh'
+    }
   })
 }
 
 
 function loadMessages(el) {
-  // Load demo data (in production, this would fetch from API)
-  allMessages = SVC_HEALTH.map((msg, idx) => ({
-    ...msg,
-    assigned: idx % 3 === 0 ? 'John Smith' : idx % 3 === 1 ? 'Sarah Johnson' : null,
-    reviewed: idx % 4 === 0,
-    resolvedDate: msg.status === 'resolved' ? new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString() : null,
-    reviewedBy: idx % 4 === 0 ? 'Mike Chen' : null
-  }))
+  // Load from Service Health sync service
+  if (isServiceHealthInitialized()) {
+    // Fetch real data from SharePoint via sync service
+    allMessages = getServiceHealthMessages()
+    console.log(`[Messages] Loaded ${allMessages.length} messages from Service Health`)
+  } else {
+    // Fall back to demo data if not configured
+    console.log('[Messages] Service Health not configured, using demo data')
+    allMessages = SVC_HEALTH.map((msg, idx) => ({
+      ...msg,
+      assigned: idx % 3 === 0 ? 'John Smith' : idx % 3 === 1 ? 'Sarah Johnson' : null,
+      reviewed: idx % 4 === 0,
+      resolvedDate: msg.status === 'resolved' ? new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString() : null,
+      reviewedBy: idx % 4 === 0 ? 'Mike Chen' : null
+    }))
+  }
 
   applyFilters(el)
 }
 
 function applyFilters(el) {
-  filteredMessages = allMessages.filter(msg => {
-    const serviceMatch = filters.service === 'All' || msg.service === filters.service
-    const statusMatch = filters.status === 'All' ||
-      (filters.status === 'active' && msg.status !== 'resolved') ||
-      (filters.status === 'resolved' && msg.status === 'resolved') ||
-      (filters.status === 'assigned' && msg.assigned) ||
-      (filters.status === 'reviewing' && msg.reviewed)
-    const severityMatch = filters.severity === 'All' || msg.severity === filters.severity
-    const searchMatch = filters.searchQuery === '' ||
-      msg.title.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
-      msg.id.toLowerCase().includes(filters.searchQuery.toLowerCase())
+  // Use service filtering if available
+  if (isServiceHealthInitialized()) {
+    filteredMessages = searchServiceHealthMessages(filters)
+  } else {
+    // Fallback to local filtering
+    filteredMessages = allMessages.filter(msg => {
+      const serviceMatch = filters.service === 'All' || msg.service === filters.service
+      const statusMatch = filters.status === 'All' ||
+        (filters.status === 'active' && msg.status !== 'resolved') ||
+        (filters.status === 'resolved' && msg.status === 'resolved') ||
+        (filters.status === 'assigned' && msg.assigned) ||
+        (filters.status === 'reviewing' && msg.reviewed)
+      const severityMatch = filters.severity === 'All' || msg.severity === filters.severity
+      const searchMatch = filters.searchQuery === '' ||
+        msg.title.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
+        (msg.messageId && msg.messageId.toLowerCase().includes(filters.searchQuery.toLowerCase())) ||
+        (msg.id && msg.id.toLowerCase().includes(filters.searchQuery.toLowerCase()))
 
-    return serviceMatch && statusMatch && severityMatch && searchMatch
-  })
+      return serviceMatch && statusMatch && severityMatch && searchMatch
+    })
+  }
 
   renderMessages(el)
 }

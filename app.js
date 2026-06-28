@@ -33,6 +33,7 @@ import { initNotifications, stopNotifications } from './components/notifications
 import { initApplications } from './pages/applications.js'
 import { initIntune } from './pages/intune.js'
 import { initMyAccount } from './pages/myaccount.js'
+import { initializeServiceHealth } from './lib/service-health-manager.js'
 
 // ============================================================
 // Global application state
@@ -57,6 +58,10 @@ export const state = {
     sharepointSiteUrl: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SHAREPOINT_SITE) || 'root',
     sharepointSiteId: null,
     announcementSyncDays: 7, // 7, 14, or 30 days
+    // Service Health Messages - SharePoint Configuration
+    serviceHealthSiteUrl: null,
+    serviceHealthSiteId: null,
+    serviceHealthListId: null,
     // Task Resolution Approvers
     primaryApprover: null,
     secondaryApprover: null,
@@ -360,6 +365,12 @@ async function doLogin(userId) {
   console.log(`✅ Demo login: ${user.name} (${user.email})`)
   renderShell()
   initNotifications()
+
+  // Initialize Service Health sync service if configured
+  initializeServiceHealth().catch(err => {
+    console.warn('[Service Health] Initialization warning:', err.message)
+  })
+
   const defaultPage = user.navAccess[0]
   await go(defaultPage)
   showToast(`Welcome back, ${user.name}!`, 'success')
@@ -426,6 +437,11 @@ async function doLoginWithEntraID(account) {
 
   // Initialize notifications
   initNotifications()
+
+  // Initialize Service Health sync service if configured
+  initializeServiceHealth().catch(err => {
+    console.warn('[Service Health] Initialization warning:', err.message)
+  })
 
   // Fetch tenant domain from Graph API
   fetchTenantDomain()
