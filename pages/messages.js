@@ -374,15 +374,18 @@ function renderMessages(el) {
     const idx = parseInt(card.dataset.msgIdx)
 
     collapsed.addEventListener('click', () => {
-      const isExpanded = expanded.style.display === 'block'
+      const isExpanded = expanded.style.display !== 'none' && expanded.style.display !== ''
 
-      // Close all other expanded cards
-      container.querySelectorAll('.msg-card').forEach(c => {
-        c.querySelector('.msg-expanded').style.display = 'none'
-      })
+      // If clicking on an expanded card, collapse it
+      if (isExpanded) {
+        expanded.style.display = 'none'
+      } else {
+        // Close all other expanded cards
+        container.querySelectorAll('.msg-card').forEach(c => {
+          c.querySelector('.msg-expanded').style.display = 'none'
+        })
 
-      // Toggle current card
-      if (!isExpanded) {
+        // Expand current card
         expanded.style.display = 'grid'
         expanded.style.gridTemplateColumns = '1fr 320px'
         expanded.style.gap = '16px'
