@@ -6012,12 +6012,24 @@ function validateServiceHealthFields(fields) {
     errors.push(`Invalid Status: ${fields.Status}`)
   }
 
+  if (fields.IssueType && !['Advisory', 'Incident', 'Service Degradation', 'Maintenance', 'Investigation'].includes(fields.IssueType)) {
+    errors.push(`Invalid IssueType: ${fields.IssueType}`)
+  }
+
   if (fields.ReviewStatus && !['Pending Review', 'Reviewed'].includes(fields.ReviewStatus)) {
     errors.push(`Invalid ReviewStatus: ${fields.ReviewStatus}`)
   }
 
   if (fields.Deadline && isNaN(Date.parse(fields.Deadline))) {
     errors.push(`Invalid Deadline date: ${fields.Deadline}`)
+  }
+
+  if (fields.NextUpdateBy && isNaN(Date.parse(fields.NextUpdateBy))) {
+    errors.push(`Invalid NextUpdateBy date: ${fields.NextUpdateBy}`)
+  }
+
+  if (fields.LastUpdated && isNaN(Date.parse(fields.LastUpdated))) {
+    errors.push(`Invalid LastUpdated date: ${fields.LastUpdated}`)
   }
 
   return {
