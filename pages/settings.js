@@ -1104,7 +1104,7 @@ async function loadClaudeStatus(el) {
 
 async function loadLicenseConfig(el) {
   try {
-    const response = await fetch('/api/admin/license-config')
+    const response = await fetch(`${api}/admin/license-config`)
     const result = await response.json()
 
     if (result.success && result.licenseConfig) {
@@ -1150,7 +1150,7 @@ async function loadLicenseConfig(el) {
         btn.innerHTML = '<i class="ti ti-loading"></i> Saving...'
 
         try {
-          const response = await fetch('/api/admin/license-config', {
+          const response = await fetch(`${api}/admin/license-config`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ licenseConfig: config })
