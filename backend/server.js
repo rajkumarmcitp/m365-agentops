@@ -5599,32 +5599,71 @@ function addNotification(type, title, message, data = {}) {
 
 /**
  * POST /api/servicehealth/validate-sharepoint
- * Validate SharePoint site connection
+ * Validate Service Health SharePoint site connection
  */
 app.post('/api/servicehealth/validate-sharepoint', async (req, res) => {
   try {
-    const { siteUrl } = req.body
-
-    if (!siteUrl) {
-      return res.status(400).json({
-        success: false,
-        error: 'Site URL is required'
-      })
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
     }
 
-    // For now, return success with mock data
-    // In production, this would validate via Graph API
-    res.json({
-      success: true,
-      siteId: `sh-site-${Date.now()}`,
-      siteName: siteUrl,
-      message: 'SharePoint site validated successfully'
-    })
+    const { siteUrl } = req.body
+    if (!siteUrl) {
+      return res.status(400).json({ success: false, error: 'Site URL is required' })
+    }
+
+    let siteId, siteName
+    try {
+      // Try direct lookup first
+      let site
+      try {
+        site = await graphClient.api(`/sites/${siteUrl}`).get()
+        siteId = site.id
+        siteName = site.displayName || site.name || siteUrl
+      } catch (directError) {
+        // If direct lookup fails, search for the site
+        console.log(`⚠️ Direct lookup failed for ${siteUrl}, searching...`)
+        const searchName = siteUrl.split('/').pop().toLowerCase()
+        const sites = await graphClient.api('/sites').get()
+        const matching = sites.value?.filter(s =>
+          (s.name || '').toLowerCase() === searchName ||
+          (s.displayName || '').toLowerCase() === searchName ||
+          (s.webUrl || '').toLowerCase().includes(searchName)
+        ) || []
+
+        if (matching.length === 0) {
+          throw new Error(`No SharePoint site found matching "${searchName}"`)
+        }
+
+        if (matching.length > 1) {
+          matching.sort((a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime))
+        }
+
+        site = matching[0]
+        siteId = site.id
+        siteName = site.displayName || site.name || searchName
+        console.log(`✓ Found site via search: ${siteName}`)
+      }
+
+      console.log(`✓ Service Health SharePoint site validated: ${siteName}`)
+      res.json({
+        success: true,
+        siteId,
+        siteName,
+        message: `Connected to ${siteName}`
+      })
+    } catch (error) {
+      console.error('Service Health site validation error:', error.message)
+      res.status(400).json({
+        success: false,
+        error: error.message || 'Failed to validate SharePoint site'
+      })
+    }
   } catch (error) {
     console.error('Service Health validation error:', error)
-    res.status(400).json({
+    res.status(500).json({
       success: false,
-      error: error.message || 'Failed to validate SharePoint site'
+      error: error.message || 'Validation error'
     })
   }
 })
@@ -5635,40 +5674,64 @@ app.post('/api/servicehealth/validate-sharepoint', async (req, res) => {
  */
 app.post('/api/servicehealth/initialize', async (req, res) => {
   try {
-    const { siteUrl } = req.body
-
-    if (!siteUrl) {
-      return res.status(400).json({
-        success: false,
-        error: 'Site URL is required'
-      })
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
     }
 
-    // Generate IDs
-    const siteId = `sh-site-${Date.now()}`
-    const listId = `sh-list-${Date.now()}`
+    const { siteUrl } = req.body
+    if (!siteUrl) {
+      return res.status(400).json({ success: false, error: 'Site URL is required' })
+    }
 
-    // List columns that will be created
-    const columnsCreated = 14
+    // Get site ID first
+    let siteId
+    try {
+      let site
+      try {
+        site = await graphClient.api(`/sites/${siteUrl}`).get()
+        siteId = site.id
+      } catch (directError) {
+        const searchName = siteUrl.split('/').pop().toLowerCase()
+        const sites = await graphClient.api('/sites').get()
+        const matching = sites.value?.filter(s =>
+          (s.name || '').toLowerCase() === searchName
+        ) || []
+        if (matching.length === 0) throw new Error('Site not found')
+        site = matching[0]
+        siteId = site.id
+      }
 
-    res.json({
-      success: true,
-      siteId,
-      listId,
-      message: 'Service Health list created successfully',
-      columnsCreated,
-      columns: [
-        'Title', 'Description', 'Impact',
-        'Service', 'Severity', 'Status',
-        'StartDate', 'AssignedTo', 'ReviewStatus', 'ReviewedBy',
-        'Deadline', 'Notes', 'ResolvedDate', 'MessageID'
-      ]
-    })
+      // Mock list creation for Phase 4
+      // In Phase 5, this will call Graph API to create real list
+      const listId = `sh-list-${Date.now()}`
+      const columnsCreated = 14
+
+      console.log(`✓ Service Health list initialized for site: ${siteUrl}`)
+      res.json({
+        success: true,
+        siteId,
+        listId,
+        message: 'Service Health list created successfully',
+        columnsCreated,
+        columns: [
+          'Title', 'Description', 'Impact',
+          'Service', 'Severity', 'Status',
+          'StartDate', 'AssignedTo', 'ReviewStatus', 'ReviewedBy',
+          'Deadline', 'Notes', 'ResolvedDate', 'MessageID'
+        ]
+      })
+    } catch (error) {
+      console.error('Service Health initialization error:', error.message)
+      res.status(400).json({
+        success: false,
+        error: error.message || 'Failed to initialize Service Health list'
+      })
+    }
   } catch (error) {
-    console.error('Service Health initialization error:', error)
-    res.status(400).json({
+    console.error('Service Health init error:', error)
+    res.status(500).json({
       success: false,
-      error: error.message || 'Failed to initialize Service Health list'
+      error: error.message || 'Initialization error'
     })
   }
 })
@@ -5688,8 +5751,7 @@ app.get('/api/servicehealth/messages', async (req, res) => {
       })
     }
 
-    // Return demo messages for now
-    // In production, this would fetch from SharePoint
+    // Demo messages for Phase 4
     const demoMessages = [
       {
         id: '1',
