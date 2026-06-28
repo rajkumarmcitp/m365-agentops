@@ -301,7 +301,7 @@ app.use((req, res, next) => {
   next()
 })
 
-app.use(express.json())
+app.use(express.json({ limit: '50mb' }))
 
 // ============================================================
 // Azure Identity & Graph Client Setup
@@ -12074,10 +12074,26 @@ app.get('/api/tenantguard/sync/status', (req, res) => {
 app.post('/api/tenantguard/store-to-sharepoint', async (req, res) => {
   try {
     console.log('📤 Storing TenantGuard Enhanced data to SharePoint...')
-    const db = getDatabase()
+    console.log('Request body size:', JSON.stringify(req.body).length, 'bytes')
+
+    let db
+    try {
+      db = getDatabase()
+      console.log('✓ Database initialized')
+    } catch (dbErr) {
+      console.error('❌ Database error:', dbErr.message)
+      throw dbErr
+    }
 
     // Get ONLY P1 and P2 alerts (critical and high priority)
-    const allAlerts = (db.prepare('SELECT * FROM alerts WHERE dismissed = 0 ORDER BY created_at DESC LIMIT 200').all() || [])
+    let allAlerts
+    try {
+      allAlerts = (db.prepare('SELECT * FROM alerts WHERE dismissed = 0 ORDER BY created_at DESC LIMIT 200').all() || [])
+      console.log(`✓ Queried database: found ${allAlerts.length} total alerts`)
+    } catch (queryErr) {
+      console.error('❌ Query error:', queryErr.message)
+      throw queryErr
+    }
     const alerts = allAlerts.filter(a => a.priority === 'P1' || a.priority === 'P2')
 
     const correlations = (db.prepare('SELECT * FROM alert_correlations ORDER BY created_at DESC LIMIT 50').all() || [])
@@ -12148,6 +12164,8 @@ app.post('/api/tenantguard/store-to-sharepoint', async (req, res) => {
     res.json(result)
   } catch (error) {
     console.error('❌ Error storing to SharePoint:', error.message)
+    console.error('Full error:', error)
+    console.error('Stack:', error.stack)
     res.status(500).json({
       success: false,
       error: error.message,
