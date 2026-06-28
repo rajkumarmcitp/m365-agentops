@@ -44,6 +44,17 @@ export async function initMessages() {
 
 let selectedMessage = null
 
+// Helper function to format date for HTML date input (yyyy-MM-dd)
+function formatDateForInput(dateStr) {
+  if (!dateStr) return ''
+  try {
+    const date = new Date(dateStr)
+    return date.toISOString().split('T')[0]
+  } catch {
+    return ''
+  }
+}
+
 function renderMessagesLayout(el) {
   el.innerHTML = `
     <div class="page-header">
@@ -329,7 +340,7 @@ function renderMessages(el) {
               <!-- Set Deadline -->
               <div style="margin-bottom:10px">
                 <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Set Deadline</label>
-                <input type="date" class="msg-deadline" value="${msg.deadline || ''}" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
+                <input type="date" class="msg-deadline" value="${formatDateForInput(msg.deadline)}" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
               </div>
 
               <!-- Notes -->

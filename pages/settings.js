@@ -579,25 +579,29 @@ function renderSettings(el) {
   const servicehealthCopyBtn = el.querySelector('#settings-servicehealth-copy')
 
   // Create Service Health Enabled Toggle
-  servicehealthEnabledToggle.appendChild(createToggle(
-    s.serviceHealthEnabled !== false,
-    (enabled) => {
+  servicehealthEnabledToggle.appendChild(createToggle({
+    id: 'settings-servicehealth-enabled',
+    checked: s.serviceHealthEnabled !== false,
+    label: 'Monitor Service Health',
+    onChange: (enabled) => {
       state.settings.serviceHealthEnabled = enabled
       saveState()
       servicehealthConfigSection.style.display = enabled ? 'block' : 'none'
       showToast(enabled ? 'Service Health monitoring enabled' : 'Service Health monitoring disabled', 'success')
     }
-  ))
+  }))
 
   // Create Admin Actions Toggle
-  servicehealthAdminActionsToggle.appendChild(createToggle(
-    s.serviceHealthAdminActionsEnabled !== false,
-    (enabled) => {
+  servicehealthAdminActionsToggle.appendChild(createToggle({
+    id: 'settings-servicehealth-admin-actions',
+    checked: s.serviceHealthAdminActionsEnabled !== false,
+    label: 'Enable Admin Actions',
+    onChange: (enabled) => {
       state.settings.serviceHealthAdminActionsEnabled = enabled
       saveState()
       showToast(enabled ? 'Admin actions enabled' : 'Admin actions disabled', 'success')
     }
-  ))
+  }))
 
   // Show/hide configuration section based on enabled status
   servicehealthConfigSection.style.display = s.serviceHealthEnabled !== false ? 'block' : 'none'
