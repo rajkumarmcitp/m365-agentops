@@ -14,16 +14,18 @@ export async function initMessages() {
   const el = document.getElementById('page-messages')
   if (!el) return
 
-  renderMessagesHeader(el)
+  renderMessagesLayout(el)
   loadMessages(el)
 }
 
-function renderMessagesHeader(el) {
+let selectedMessage = null
+
+function renderMessagesLayout(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
         <div class="page-title"><i class="ti ti-heartbeat"></i> Service Health Messages</div>
-        <div class="page-subtitle">Monitor and manage all service health notifications, assignments, and resolutions</div>
+        <div class="page-subtitle">Monitor and manage all service health notifications</div>
       </div>
       <div class="page-actions">
         <button class="btn" id="msg-refresh"><i class="ti ti-refresh"></i> Refresh</button>
@@ -31,47 +33,58 @@ function renderMessagesHeader(el) {
       </div>
     </div>
 
-    <!-- Filters Section -->
-    <div class="card" style="margin-bottom:16px">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:0">
-        <div style="padding:12px">
-          <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;text-transform:uppercase">Service</div>
-          <select id="msg-filter-service" style="width:100%;padding:8px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
-            <option value="All">All Services</option>
-            ${Object.keys(SVC_META).map(svc => `<option value="${svc}">${svc}</option>`).join('')}
-          </select>
+    <!-- Main Container with Left & Right Panels -->
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;height:calc(100vh - 240px);margin-bottom:16px;@media(max-width:1200px){grid-template-columns:1fr;gap:0}">
+      <!-- Left Panel: Filters & Messages -->
+      <div style="display:flex;flex-direction:column;gap:12px;overflow:hidden">
+        <!-- Filters -->
+        <div class="card" style="margin:0;padding:12px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
+            <div>
+              <div style="font-size:9px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Service</div>
+              <select id="msg-filter-service" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
+                <option value="All">All Services</option>
+                ${Object.keys(SVC_META).map(svc => `<option value="${svc}">${svc}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Status</div>
+              <select id="msg-filter-status" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
+                <option value="All">All Status</option>
+                <option value="active">Active</option>
+                <option value="assigned">Assigned</option>
+                <option value="reviewing">In Review</option>
+                <option value="resolved">Resolved</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Severity</div>
+              <select id="msg-filter-severity" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
+                <option value="All">All Severity</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Search</div>
+              <input type="text" id="msg-search" placeholder="Search..." style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
+            </div>
+          </div>
         </div>
-        <div style="padding:12px">
-          <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;text-transform:uppercase">Status</div>
-          <select id="msg-filter-status" style="width:100%;padding:8px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
-            <option value="All">All Status</option>
-            <option value="active">Active</option>
-            <option value="assigned">Assigned</option>
-            <option value="reviewing">In Review</option>
-            <option value="resolved">Resolved</option>
-          </select>
-        </div>
-        <div style="padding:12px">
-          <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;text-transform:uppercase">Severity</div>
-          <select id="msg-filter-severity" style="width:100%;padding:8px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
-            <option value="All">All Severity</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-        </div>
-        <div style="padding:12px">
-          <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;text-transform:uppercase">Search</div>
-          <input type="text" id="msg-search" placeholder="Search messages..." style="width:100%;padding:8px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
-        </div>
+
+        <!-- Messages List -->
+        <div id="msg-container" style="flex:1;overflow-y:auto;display:grid;gap:8px"></div>
+      </div>
+
+      <!-- Right Panel: Detail View -->
+      <div id="msg-detail-panel" style="background:var(--color-background-secondary);border-radius:8px;padding:16px;overflow-y:auto;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);font-size:13px">
+        Select a message to view details
       </div>
     </div>
-
-    <!-- Messages List -->
-    <div id="msg-container"></div>
   `
 
-  // Add filter listeners
+  // Filter listeners
   el.querySelector('#msg-filter-service')?.addEventListener('change', (e) => {
     filters.service = e.target.value
     applyFilters(el)
@@ -96,6 +109,7 @@ function renderMessagesHeader(el) {
     loadMessages(el)
   })
 }
+
 
 function loadMessages(el) {
   // Load demo data (in production, this would fetch from API)
@@ -143,185 +157,147 @@ function renderMessages(el) {
     return
   }
 
-  container.innerHTML = `
-    <div style="display:grid;gap:12px" id="messages-list">
-      ${filteredMessages.map((msg, idx) => {
-        const svc = SVC_META[msg.service] || { icon: 'ti-apps', color: '#185FA5', bg: '#E6F1FB' }
-        const statusColor = msg.status === 'resolved' ? '#4caf50' : msg.severity === 'high' ? '#f44336' : '#ff9800'
-        const statusLabel = msg.status === 'resolved' ? 'Resolved' : 'Active'
-        const assignmentClass = msg.assigned ? 'success' : 'neutral'
-        const reviewClass = msg.reviewed ? 'success' : 'warning'
+  const html = filteredMessages.map((msg, idx) => {
+    const svc = SVC_META[msg.service] || { icon: 'ti-apps', color: '#185FA5', bg: '#E6F1FB' }
+    const statusLabel = msg.status === 'resolved' ? 'Resolved' : msg.reviewed ? 'Reviewed' : msg.assigned ? 'Assigned' : 'Active'
+    const statusColor = msg.status === 'resolved' ? '#4caf50' : msg.reviewed ? '#4caf50' : msg.assigned ? '#ff9800' : '#f44336'
 
-        return `
-          <div class="card" style="padding:16px;cursor:pointer;transition:all 200ms" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow=''">
-            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:start">
-              <!-- Service Icon -->
-              <div style="width:40px;height:40px;border-radius:8px;background:${svc.bg};display:flex;align-items:center;justify-content:center;color:${svc.color};font-size:20px;flex-shrink:0">
-                <i class="ti ${svc.icon}"></i>
-              </div>
-
-              <!-- Message Details -->
-              <div style="flex:1;min-width:0">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                  <div style="font-weight:700;font-size:12px">${msg.title}</div>
-                  <span class="badge ${msg.severity === 'high' ? 'danger' : msg.severity === 'medium' ? 'warning' : 'info'}" style="font-size:9px">${msg.severity.toUpperCase()}</span>
-                </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:8px;font-size:10px;color:var(--color-text-secondary)">
-                  <div><strong>ID:</strong> ${msg.id}</div>
-                  <div><strong>Service:</strong> ${msg.service}</div>
-                  <div><strong>Started:</strong> ${new Date(msg.startDate || Date.now()).toLocaleDateString()}</div>
-                </div>
-              </div>
-
-              <!-- Status & Tracking -->
-              <div style="text-align:right;flex-shrink:0">
-                <div style="margin-bottom:8px">
-                  <span class="badge ${statusColor === '#4caf50' ? 'success' : statusColor === '#f44336' ? 'danger' : 'warning'}" style="display:inline-block;font-size:10px">${statusLabel}</span>
-                </div>
-
-                <!-- Assignments -->
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:9px;justify-content:flex-end">
-                  <i class="ti ti-user" style="font-size:12px;color:${msg.assigned ? '#4caf50' : '#999'}"></i>
-                  <span style="color:${msg.assigned ? '#4caf50' : '#999'}">${msg.assigned ? 'Assigned to ' + msg.assigned : 'Unassigned'}</span>
-                </div>
-
-                <!-- Review Status -->
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:9px;justify-content:flex-end">
-                  <i class="ti ti-check-circle" style="font-size:12px;color:${msg.reviewed ? '#4caf50' : '#ff9800'}"></i>
-                  <span style="color:${msg.reviewed ? '#4caf50' : '#ff9800'}">${msg.reviewed ? 'Reviewed by ' + msg.reviewedBy : 'Pending Review'}</span>
-                </div>
-
-                <!-- Resolution Tracking -->
-                ${msg.status === 'resolved' ? `
-                  <div style="display:flex;align-items:center;gap:6px;font-size:9px;color:#4caf50;justify-content:flex-end">
-                    <i class="ti ti-circle-check" style="font-size:12px"></i>
-                    <span>Resolved ${new Date(msg.resolvedDate).toLocaleDateString()}</span>
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-
-            <!-- Expandable Details -->
-            <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--color-border-secondary);display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;font-size:10px">
-              <div>
-                <div style="color:var(--color-text-secondary);margin-bottom:4px">Description</div>
-                <div style="color:var(--color-text-primary)">${msg.description || 'No description provided'}</div>
-              </div>
-              <div>
-                <div style="color:var(--color-text-secondary);margin-bottom:4px">Impact</div>
-                <div style="color:var(--color-text-primary)">${msg.impact || 'Service disruption'}</div>
-              </div>
-              ${msg.assigned ? `
-                <div>
-                  <div style="color:var(--color-text-secondary);margin-bottom:4px">Assigned To</div>
-                  <div style="color:var(--color-text-primary)">${msg.assigned}</div>
-                </div>
-              ` : ''}
-              ${msg.reviewedBy ? `
-                <div>
-                  <div style="color:var(--color-text-secondary);margin-bottom:4px">Reviewed By</div>
-                  <div style="color:var(--color-text-primary)">${msg.reviewedBy}</div>
-                </div>
-              ` : ''}
+    return `
+      <div class="card msg-card" data-msg-idx="${idx}" style="padding:12px;cursor:pointer;transition:all 150ms;border-left:3px solid ${statusColor}">
+        <div style="display:flex;gap:10px;align-items:start">
+          <div style="width:36px;height:36px;border-radius:6px;background:${svc.bg};display:flex;align-items:center;justify-content:center;color:${svc.color};font-size:18px;flex-shrink:0">
+            <i class="ti ${svc.icon}"></i>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:12px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${msg.title}</div>
+            <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:6px">${msg.service}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="badge ${msg.severity === 'high' ? 'danger' : msg.severity === 'medium' ? 'warning' : 'info'}" style="font-size:8px">${msg.severity.toUpperCase()}</span>
+              <span class="badge" style="background:${statusColor}30;color:${statusColor};font-size:8px">${statusLabel}</span>
             </div>
           </div>
-        `
-      }).join('')}
-    </div>
-  `
+        </div>
+      </div>
+    `
+  }).join('')
 
-  // Add click handlers for each message card
-  container.querySelectorAll('.card').forEach((card, idx) => {
-    card.style.cursor = 'pointer'
+  container.innerHTML = html
+
+  // Click handlers
+  container.querySelectorAll('.msg-card').forEach(card => {
     card.addEventListener('click', () => {
-      showMessageDetail(filteredMessages[idx])
+      const idx = parseInt(card.dataset.msgIdx)
+      selectedMessage = filteredMessages[idx]
+      showMessageDetail(el, selectedMessage)
+
+      // Visual feedback
+      container.querySelectorAll('.msg-card').forEach(c => c.style.background = '')
+      card.style.background = 'var(--color-background-secondary)'
     })
   })
 }
 
-function showMessageDetail(msg) {
+function showMessageDetail(el, msg) {
+  const panel = el.querySelector('#msg-detail-panel')
+  if (!panel) return
+
   const svc = SVC_META[msg.service] || { icon: 'ti-apps', color: '#185FA5', bg: '#E6F1FB' }
   const statusColor = msg.status === 'resolved' ? '#4caf50' : msg.severity === 'high' ? '#f44336' : '#ff9800'
-  const statusLabel = msg.status === 'resolved' ? 'Resolved' : 'Active'
 
-  const modal = document.createElement('div')
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000'
-
-  modal.innerHTML = `
-    <div style="background:var(--color-background-primary);border-radius:12px;max-width:700px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.2)">
-      <!-- Header -->
-      <div style="padding:20px;border-bottom:1px solid var(--color-border-secondary);display:flex;justify-content:space-between;align-items:start">
-        <div style="display:flex;gap:12px;flex:1">
-          <div style="width:48px;height:48px;border-radius:8px;background:${svc.bg};display:flex;align-items:center;justify-content:center;color:${svc.color};font-size:24px;flex-shrink:0">
-            <i class="ti ${svc.icon}"></i>
-          </div>
-          <div style="flex:1">
-            <div style="font-size:16px;font-weight:700;margin-bottom:4px">${msg.title}</div>
-            <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">${msg.id} • ${msg.service}</div>
-            <div style="display:flex;gap:8px">
-              <span class="badge ${msg.severity === 'high' ? 'danger' : msg.severity === 'medium' ? 'warning' : 'info'}" style="font-size:10px">${msg.severity.toUpperCase()}</span>
-              <span class="badge ${statusColor === '#4caf50' ? 'success' : statusColor === '#f44336' ? 'danger' : 'warning'}" style="font-size:10px">${statusLabel}</span>
-            </div>
-          </div>
+  panel.innerHTML = `
+    <!-- Header -->
+    <div style="width:100%;padding-bottom:12px;border-bottom:0.5px solid var(--color-border-secondary);margin-bottom:12px">
+      <div style="display:flex;gap:10px;align-items:start">
+        <div style="width:40px;height:40px;border-radius:6px;background:${svc.bg};display:flex;align-items:center;justify-content:center;color:${svc.color};font-size:18px;flex-shrink:0">
+          <i class="ti ${svc.icon}"></i>
         </div>
-        <button style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--color-text-secondary)" onclick="this.closest('[style*=position:fixed]').remove()">✕</button>
-      </div>
-
-      <!-- Content -->
-      <div style="padding:20px">
-        <div style="margin-bottom:20px">
-          <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--color-text-primary)">Details</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px">
-            <div>
-              <div style="color:var(--color-text-secondary);margin-bottom:4px">Started</div>
-              <div style="color:var(--color-text-primary)">${new Date(msg.startDate || Date.now()).toLocaleDateString()}</div>
-            </div>
-            <div>
-              <div style="color:var(--color-text-secondary);margin-bottom:4px">Service</div>
-              <div style="color:var(--color-text-primary)">${msg.service}</div>
-            </div>
-            <div>
-              <div style="color:var(--color-text-secondary);margin-bottom:4px">Description</div>
-              <div style="color:var(--color-text-primary)">${msg.description || 'No description'}</div>
-            </div>
-            <div>
-              <div style="color:var(--color-text-secondary);margin-bottom:4px">Impact</div>
-              <div style="color:var(--color-text-primary)">${msg.impact || 'Service disruption'}</div>
-            </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:12px;margin-bottom:2px">${msg.title}</div>
+          <div style="font-size:9px;color:var(--color-text-secondary);margin-bottom:6px">${msg.id}</div>
+          <div style="display:flex;gap:6px">
+            <span class="badge ${msg.severity === 'high' ? 'danger' : msg.severity === 'medium' ? 'warning' : 'info'}" style="font-size:8px">${msg.severity.toUpperCase()}</span>
+            <span class="badge" style="background:${statusColor}30;color:${statusColor};font-size:8px">${msg.status === 'resolved' ? 'Resolved' : 'Active'}</span>
           </div>
-        </div>
-
-        <!-- Assignment & Review -->
-        <div style="margin-bottom:20px;padding:12px;background:var(--color-background-secondary);border-radius:8px">
-          <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--color-text-primary)">Status & Tracking</div>
-          <div style="display:grid;gap:8px;font-size:12px">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="color:var(--color-text-secondary)">Assigned to:</span>
-              <span style="color:${msg.assigned ? '#4caf50' : '#999'};font-weight:600">${msg.assigned || 'Unassigned'}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="color:var(--color-text-secondary)">Reviewed by:</span>
-              <span style="color:${msg.reviewed ? '#4caf50' : '#ff9800'};font-weight:600">${msg.reviewedBy || 'Pending Review'}</span>
-            </div>
-            ${msg.status === 'resolved' ? `
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span style="color:var(--color-text-secondary)">Resolved:</span>
-                <span style="color:#4caf50;font-weight:600">${new Date(msg.resolvedDate).toLocaleDateString()}</span>
-              </div>
-            ` : ''}
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div style="display:flex;gap:8px">
-          ${!msg.assigned ? `<button style="flex:1;padding:10px;background:var(--clr-info-bg);color:var(--clr-info-text);border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px">Assign to Me</button>` : ''}
-          ${msg.assigned && !msg.reviewed ? `<button style="flex:1;padding:10px;background:#ff9800;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px">Mark as Reviewed</button>` : ''}
-          ${msg.reviewed && msg.status !== 'resolved' ? `<button style="flex:1;padding:10px;background:#4caf50;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px">Mark as Resolved</button>` : ''}
-          <button style="flex:1;padding:10px;background:var(--color-background-secondary);color:var(--color-text-primary);border:1px solid var(--color-border-secondary);border-radius:6px;cursor:pointer;font-weight:600;font-size:12px" onclick="this.closest('[style*=position:fixed]').remove()">Close</button>
         </div>
       </div>
     </div>
+
+    <!-- Summary Section -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--color-text-primary);text-transform:uppercase">Summary</div>
+      <div style="font-size:10px;color:var(--color-text-secondary);line-height:1.5;background:var(--color-background-primary);padding:8px;border-radius:4px;margin-bottom:8px">
+        ${msg.description || 'No description provided'}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:9px">
+        <div>
+          <div style="color:var(--color-text-secondary);margin-bottom:2px">Service</div>
+          <div style="color:var(--color-text-primary);font-weight:500">${msg.service}</div>
+        </div>
+        <div>
+          <div style="color:var(--color-text-secondary);margin-bottom:2px">Started</div>
+          <div style="color:var(--color-text-primary);font-weight:500">${new Date(msg.startDate || Date.now()).toLocaleDateString()}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Actions Section -->
+    <div style="background:var(--color-background-primary);padding:12px;border-radius:6px">
+      <div style="font-size:11px;font-weight:600;margin-bottom:10px;color:var(--color-text-primary);text-transform:uppercase">Admin Actions</div>
+
+      <!-- Review Status -->
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Review Status</label>
+        <select id="msg-review-status" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
+          <option value="pending" ${!msg.reviewed ? 'selected' : ''}>Pending Review</option>
+          <option value="reviewed" ${msg.reviewed ? 'selected' : ''}>Reviewed</option>
+        </select>
+      </div>
+
+      <!-- Assign To -->
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Assign To</label>
+        <input type="text" id="msg-assign-to" placeholder="Email or name..." value="${msg.assigned || ''}" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
+      </div>
+
+      <!-- Set Deadline -->
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Set Deadline</label>
+        <input type="date" id="msg-deadline" value="${msg.deadline || ''}" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
+      </div>
+
+      <!-- Notes -->
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Notes</label>
+        <textarea id="msg-notes" placeholder="Add notes..." style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary);min-height:70px;resize:vertical">${msg.notes || ''}</textarea>
+      </div>
+
+      <!-- Save Button -->
+      <button id="msg-save-btn" style="width:100%;padding:8px;background:var(--clr-primary-bg);color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;margin-bottom:8px">💾 Save Changes</button>
+
+      <!-- Status Info -->
+      ${msg.status === 'resolved' ? `
+        <div style="padding:8px;background:#4caf5020;border-radius:4px;border-left:3px solid #4caf50;font-size:9px;color:#4caf50">
+          ✓ Resolved on ${new Date(msg.resolvedDate).toLocaleDateString()}
+        </div>
+      ` : ''}
+    </div>
   `
 
-  document.body.appendChild(modal)
+  // Save handler
+  el.querySelector('#msg-save-btn')?.addEventListener('click', () => {
+    msg.reviewed = el.querySelector('#msg-review-status').value === 'reviewed'
+    msg.assigned = el.querySelector('#msg-assign-to').value || null
+    msg.deadline = el.querySelector('#msg-deadline').value || null
+    msg.notes = el.querySelector('#msg-notes').value || ''
+    msg.reviewedBy = msg.reviewed ? 'You' : null
+
+    // Visual feedback
+    const btn = el.querySelector('#msg-save-btn')
+    btn.textContent = '✓ Saved!'
+    btn.style.background = '#4caf50'
+    setTimeout(() => {
+      btn.textContent = '💾 Save Changes'
+      btn.style.background = 'var(--clr-primary-bg)'
+    }, 2000)
+  })
 }
