@@ -455,7 +455,7 @@ function setupEventListeners() {
   window.dismissAlert = async (alertId) => {
     try {
       const isLocalDev = window.location.hostname === 'localhost'
-      const baseUrl = isLocalDev ? 'http://localhost:3000' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
+      const baseUrl = isLocalDev ? 'http://localhost:3001' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
 
       const response = await fetch(`${baseUrl}/api/tenantguard/alerts/${alertId}/dismiss`, {
         method: 'POST',
@@ -476,7 +476,7 @@ function setupEventListeners() {
   window.markReviewed = async (alertId) => {
     try {
       const isLocalDev = window.location.hostname === 'localhost'
-      const baseUrl = isLocalDev ? 'http://localhost:3000' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
+      const baseUrl = isLocalDev ? 'http://localhost:3001' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
 
       const response = await fetch(`${baseUrl}/api/tenantguard/alerts/${alertId}/mark-reviewed`, {
         method: 'POST',
@@ -497,7 +497,7 @@ function setupEventListeners() {
   window.unmarkReviewed = async (alertId) => {
     try {
       const isLocalDev = window.location.hostname === 'localhost'
-      const baseUrl = isLocalDev ? 'http://localhost:3000' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
+      const baseUrl = isLocalDev ? 'http://localhost:3001' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
 
       const response = await fetch(`${baseUrl}/api/tenantguard/alerts/${alertId}/unmark-reviewed`, {
         method: 'POST',

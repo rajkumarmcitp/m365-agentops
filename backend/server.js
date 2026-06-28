@@ -12096,7 +12096,14 @@ app.post('/api/tenantguard/store-to-sharepoint', async (req, res) => {
     }
     const alerts = allAlerts.filter(a => a.priority === 'P1' || a.priority === 'P2')
 
-    const correlations = (db.prepare('SELECT * FROM alert_correlations ORDER BY created_at DESC LIMIT 50').all() || [])
+    let correlations
+    try {
+      correlations = (db.prepare('SELECT * FROM alert_correlations ORDER BY created_at DESC LIMIT 50').all() || [])
+      console.log(`✓ Queried correlations: found ${correlations.length} total`)
+    } catch (corrQueryErr) {
+      console.error('❌ Correlations query error:', corrQueryErr.message)
+      correlations = []
+    }
 
     console.log(`📦 Storing ${alerts.length} P1/P2 alerts and ${correlations.length} correlations to Enhanced lists...`)
 
