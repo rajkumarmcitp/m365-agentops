@@ -645,31 +645,61 @@ async function buildChangeIntelWidget() {
         <button class="btn btn-primary" id="dash-to-msgcenter"><i class="ti ti-arrow-right"></i> View all messages</button>
       </div>
 
-      <!-- Service Health Summary -->
+      <!-- Service Health Summary Table -->
       <div class="card" style="grid-column: span 2;">
         <div class="card-header">
-          <span class="card-title"><i class="ti ti-heartbeat"></i> Service Health</span>
+          <span class="card-title"><i class="ti ti-heartbeat"></i> Service Health Issues</span>
           <span class="badge ${allActiveIssues.length > 0 ? 'warning' : 'success'}">${allActiveIssues.length > 0 ? allActiveIssues.length + ' active' : 'All clear'}</span>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:10px">
+
+        <!-- Status Dots -->
+        <div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:12px">
           ${svcHealthDots}
         </div>
-        ${allActiveIssues.length > 0 ? activeIssues.map(h => `
-          <div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:11px">
-            <span class="status-dot ${h.severity === 'high' ? 'fail' : 'warn'} pulse"></span>
-            <div>
-              <div style="font-weight:600">${h.service}</div>
-              <div style="font-size:10px;color:var(--color-text-secondary)">${h.title}</div>
-            </div>
+
+        <!-- Table View -->
+        ${allActiveIssues.length > 0 ? `
+          <div style="overflow-x:auto;font-size:10px">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr style="border-bottom:1px solid var(--color-border-secondary);background:var(--color-background-secondary)">
+                  <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-primary)">Service</th>
+                  <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-primary)">Issue</th>
+                  <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-primary)">Type</th>
+                  <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-primary)">Started</th>
+                  <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-primary)">Impact</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${activeIssues.slice(0, 5).map(h => `
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary);hover:background:var(--color-background-secondary)">
+                    <td style="padding:8px;font-weight:600">${h.service}</td>
+                    <td style="padding:8px;color:var(--color-text-secondary);max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${h.title}">${h.title}</td>
+                    <td style="padding:8px">
+                      <span class="badge ${h.severity === 'high' ? 'danger' : h.severity === 'medium' ? 'warning' : 'info'}" style="font-size:8px">${(h.severity || 'medium').toUpperCase()}</span>
+                    </td>
+                    <td style="padding:8px;color:var(--color-text-secondary);font-size:9px">
+                      ${h.startDate ? new Date(h.startDate).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td style="padding:8px">
+                      <span style="color:var(--color-text-secondary);font-size:9px">${h.userImpact ? h.userImpact.substring(0, 30) + '...' : 'See details'}</span>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            ${activeIssues.length > 5 ? `<div style="padding:8px;color:var(--color-text-secondary);font-size:9px">...and ${activeIssues.length - 5} more issues</div>` : ''}
           </div>
-        `).join('') : `
-          <div style="font-size:11px;color:var(--clr-success-text);display:flex;align-items:center;gap:6px">
-            <i class="ti ti-circle-check"></i> All ${Object.keys(SVC_META).length} monitored services operational.
+        ` : `
+          <div style="font-size:11px;color:var(--clr-success-text);display:flex;align-items:center;gap:6px;padding:20px;text-align:center;justify-content:center">
+            <i class="ti ti-circle-check"></i> All ${Object.keys(SVC_META).length} monitored services operational
           </div>
         `}
-        <div style="margin-top:10px;display:flex;gap:8px">
+
+        <!-- Action Button -->
+        <div style="margin-top:12px;display:flex;gap:8px">
           <button class="btn btn-sm btn-primary" id="dash-to-messages" style="flex:1">
-            <i class="ti ti-arrow-right"></i> View all Service Health (${allActiveIssues.length > 0 ? allActiveIssues.length + ' issues' : 'All clear'})
+            <i class="ti ti-arrow-right"></i> View Details
           </button>
         </div>
       </div>

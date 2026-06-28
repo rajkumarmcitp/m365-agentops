@@ -228,21 +228,73 @@ function renderMessages(el) {
 
         <!-- Expanded View (Hidden by Default) -->
         <div class="msg-expanded" style="display:none;padding:16px;border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)">
-          <!-- Description & Details -->
-          <div style="margin-bottom:14px">
-            <div style="font-size:10px;color:var(--color-text-secondary);line-height:1.5;background:var(--color-background-primary);padding:8px;border-radius:4px;margin-bottom:8px">
-              ${msg.description || 'No description provided'}
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:9px">
+          <!-- Issue Details Section -->
+          <div style="margin-bottom:12px;background:var(--color-background-primary);padding:10px;border-radius:4px;border-left:3px solid #185FA5">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:9px;margin-bottom:8px">
               <div>
-                <div style="color:var(--color-text-secondary);margin-bottom:2px">Started</div>
-                <div style="color:var(--color-text-primary);font-weight:500">${new Date(msg.startDate || Date.now()).toLocaleDateString()}</div>
+                <div style="color:var(--color-text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:2px">Issue ID</div>
+                <div style="color:var(--color-text-primary);font-family:monospace;font-size:8px;word-break:break-all">${msg.issueId || msg.messageId || msg.id || 'N/A'}</div>
               </div>
               <div>
-                <div style="color:var(--color-text-secondary);margin-bottom:2px">Message ID</div>
-                <div style="color:var(--color-text-primary);font-weight:500;font-family:monospace;font-size:8px">${msg.messageId || msg.id}</div>
+                <div style="color:var(--color-text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:2px">Issue Type</div>
+                <div style="color:var(--color-text-primary)">${msg.issueType || 'Advisory'}</div>
+              </div>
+              <div>
+                <div style="color:var(--color-text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:2px">Started</div>
+                <div style="color:var(--color-text-primary)">${msg.startDate ? new Date(msg.startDate).toLocaleString() : 'N/A'}</div>
+              </div>
+              <div>
+                <div style="color:var(--color-text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:2px">Last Updated</div>
+                <div style="color:var(--color-text-primary)">${msg.lastUpdated ? new Date(msg.lastUpdated).toLocaleString() : 'N/A'}</div>
               </div>
             </div>
+            ${msg.nextUpdateBy ? `<div style="font-size:9px;color:var(--color-text-secondary)">Next update by: ${new Date(msg.nextUpdateBy).toLocaleString()}</div>` : ''}
+          </div>
+
+          <!-- Impact & Scope Section -->
+          <div style="margin-bottom:12px;background:var(--color-background-primary);padding:10px;border-radius:4px">
+            <div style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--color-text-primary);text-transform:uppercase">Impact Analysis</div>
+            ${msg.userImpact ? `
+              <div style="margin-bottom:8px;font-size:9px">
+                <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">User Impact</div>
+                <div style="color:var(--color-text-primary);line-height:1.4">${msg.userImpact}</div>
+              </div>
+            ` : ''}
+            ${msg.scopeOfImpact ? `
+              <div style="margin-bottom:8px;font-size:9px">
+                <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">Scope of Impact</div>
+                <div style="color:var(--color-text-primary);line-height:1.4">${msg.scopeOfImpact}</div>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Details Section -->
+          <div style="margin-bottom:12px;background:var(--color-background-primary);padding:10px;border-radius:4px">
+            <div style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--color-text-primary);text-transform:uppercase">Details</div>
+            ${msg.description ? `
+              <div style="margin-bottom:8px;font-size:9px">
+                <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">Description</div>
+                <div style="color:var(--color-text-primary);line-height:1.4">${msg.description}</div>
+              </div>
+            ` : ''}
+            ${msg.rootCause ? `
+              <div style="margin-bottom:8px;font-size:9px">
+                <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">Root Cause</div>
+                <div style="color:var(--color-text-primary);line-height:1.4">${msg.rootCause}</div>
+              </div>
+            ` : ''}
+            ${msg.moreInfo ? `
+              <div style="margin-bottom:8px;font-size:9px">
+                <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">More Info</div>
+                <div style="color:var(--color-text-primary);line-height:1.4">${msg.moreInfo}</div>
+              </div>
+            ` : ''}
+            ${msg.updates ? `
+              <div style="font-size:9px">
+                <div style="color:var(--color-text-secondary);font-weight:600;margin-bottom:2px">Updates</div>
+                <div style="color:var(--color-text-primary);line-height:1.4">${msg.updates}</div>
+              </div>
+            ` : ''}
           </div>
 
           <!-- Admin Actions -->
