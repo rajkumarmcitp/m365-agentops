@@ -143,6 +143,67 @@ function renderSettings(el) {
       </div>
     </div>
 
+    <!-- Service Health Messages Configuration -->
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-heartbeat"></i> Service Health Messages Configuration</div>
+      <div style="background:#fff3e0;border-left:4px solid #ff9800;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#e65100">
+        <i class="ti ti-info-circle"></i>
+        <strong>Configuration:</strong> Specify the SharePoint site where Service Health announcements and incident tracking will be stored. The system will automatically create a list with all required fields and sync announcements every hour.
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label class="form-label">SharePoint Site URL</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" class="form-input" id="settings-servicehealth-site" placeholder="e.g., root or /sites/OpsCenter" style="flex:1">
+          <button class="btn" id="settings-servicehealth-test" style="white-space:nowrap"><i class="ti ti-check"></i> Test</button>
+        </div>
+        <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px">
+          Enter "root" for tenant root site, or "/sites/SiteName" for a specific site
+        </div>
+      </div>
+      <div id="settings-servicehealth-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none">
+        Status will appear here
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-primary" id="settings-servicehealth-init" style="white-space:nowrap"><i class="ti ti-database"></i> Create Service Health List</button>
+        <div style="font-size:10px;color:var(--color-text-tertiary);padding:8px">Creates SharePoint list with all required columns and fields</div>
+      </div>
+      <div id="settings-servicehealth-init-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none;margin-top:8px">
+        Initialization status will appear here
+      </div>
+
+      <div style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+        <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">📋 Configuration Reference</div>
+        <div style="font-size:9px;color:var(--color-text-secondary);line-height:1.6">
+          <strong>List Created:</strong><br>
+          • Service Health Messages — Service health announcements, incident tracking, assignments, and reviews<br><br>
+          <strong>Columns:</strong><br>
+          • Title, Description, Impact<br>
+          • Service (Exchange, Teams, SharePoint, Entra, etc.)<br>
+          • Severity (High, Medium, Low)<br>
+          • Status (Active, Assigned, In Review, Resolved)<br>
+          • StartDate, ResolvedDate, Deadline<br>
+          • AssignedTo, ReviewedBy (person fields)<br>
+          • ReviewStatus, Notes, MessageID<br><br>
+          <strong>Auto Sync:</strong><br>
+          • Initial sync on setup<br>
+          • Automatic hourly refresh (every 60 minutes)<br>
+          • Manual refresh button available on Service Health page<br><br>
+          <strong>After Initialization:</strong><br>
+          • Service Health page will display announcements from SharePoint<br>
+          • Admins can manage messages via the Admin Actions panel<br>
+          • All changes are saved back to SharePoint
+        </div>
+      </div>
+
+      <div id="settings-servicehealth-config" style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);display:none">
+        <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">✅ Configuration Complete</div>
+        <div style="background:#f5f5f5;padding:8px;border-radius:4px;font-family:monospace;font-size:9px;color:#333;white-space:pre-wrap;word-break:break-all" id="settings-servicehealth-env-output"></div>
+        <button class="btn btn-sm" id="settings-servicehealth-copy" style="margin-top:8px;font-size:9px"><i class="ti ti-copy"></i> Copy Configuration</button>
+      </div>
+    </div>
+
     <!-- License Management Configuration -->
     <div class="card mb-3">
       <div class="card-title mb-3"><i class="ti ti-license"></i> License Management — Group-Based Assignment</div>
@@ -474,6 +535,122 @@ function renderSettings(el) {
     } finally {
       msgcenterInitBtn.disabled = false
       msgcenterInitBtn.innerHTML = '<i class="ti ti-database"></i> Initialize Lists'
+    }
+  })
+
+  // ---- Service Health Messages Configuration ----
+  const servicehealthInput = el.querySelector('#settings-servicehealth-site')
+  const servicehealthTestBtn = el.querySelector('#settings-servicehealth-test')
+  const servicehealthStatus = el.querySelector('#settings-servicehealth-status')
+  const servicehealthInitBtn = el.querySelector('#settings-servicehealth-init')
+  const servicehealthInitStatus = el.querySelector('#settings-servicehealth-init-status')
+  const servicehealthConfig = el.querySelector('#settings-servicehealth-config')
+  const servicehealthEnvOutput = el.querySelector('#settings-servicehealth-env-output')
+  const servicehealthCopyBtn = el.querySelector('#settings-servicehealth-copy')
+
+  servicehealthInput.value = s.serviceHealthSiteUrl || 'root'
+
+  servicehealthTestBtn.addEventListener('click', async () => {
+    const siteUrl = servicehealthInput.value.trim() || 'root'
+    servicehealthTestBtn.disabled = true
+    servicehealthTestBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Testing...'
+    servicehealthStatus.style.display = 'block'
+    servicehealthStatus.textContent = 'Testing connection...'
+
+    try {
+      const response = await fetch(`${api}/servicehealth/validate-sharepoint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteUrl })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        servicehealthStatus.style.background = '#e8f5e9'
+        servicehealthStatus.style.color = '#2e7d32'
+        servicehealthStatus.textContent = `✓ Connected! Site: ${result.siteName || siteUrl}`
+        state.settings.serviceHealthSiteUrl = siteUrl
+        state.settings.serviceHealthSiteId = result.siteId
+        saveState()
+        showToast('SharePoint site configured successfully', 'success')
+      } else {
+        servicehealthStatus.style.background = '#ffebee'
+        servicehealthStatus.style.color = '#c62828'
+        servicehealthStatus.textContent = `✗ Error: ${result.error || 'Could not connect to site'}`
+        showToast('SharePoint connection failed', 'error')
+      }
+    } catch (error) {
+      servicehealthStatus.style.background = '#ffebee'
+      servicehealthStatus.style.color = '#c62828'
+      servicehealthStatus.textContent = `✗ Error: ${error.message}`
+      showToast('SharePoint connection error', 'error')
+    } finally {
+      servicehealthTestBtn.disabled = false
+      servicehealthTestBtn.innerHTML = '<i class="ti ti-check"></i> Test'
+    }
+  })
+
+  // Initialize Service Health List
+  servicehealthInitBtn.addEventListener('click', async () => {
+    const siteUrl = servicehealthInput.value.trim() || 'root'
+    servicehealthInitBtn.disabled = true
+    servicehealthInitBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Creating...'
+    servicehealthInitStatus.style.display = 'block'
+    servicehealthInitStatus.textContent = 'Creating Service Health list and fields...'
+
+    try {
+      const response = await fetch(`${api}/servicehealth/initialize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteUrl })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        servicehealthInitStatus.style.background = '#e8f5e9'
+        servicehealthInitStatus.style.color = '#2e7d32'
+
+        let statusMsg = `✓ ${result.message}`
+        if (result.columnsCreated) {
+          statusMsg += `\n📋 Columns created: ${result.columnsCreated} fields`
+        }
+        servicehealthInitStatus.textContent = statusMsg
+
+        // Display configuration
+        if (result.siteId && result.listId) {
+          servicehealthConfig.style.display = 'block'
+          servicehealthEnvOutput.textContent = `SHAREPOINT_SITE_ID=${result.siteId}
+SHAREPOINT_SERVICE_HEALTH_LIST_ID=${result.listId}`
+
+          servicehealthCopyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(servicehealthEnvOutput.textContent)
+            showToast('Configuration copied to clipboard', 'success')
+          })
+
+          // Save configuration
+          state.settings.serviceHealthSiteUrl = siteUrl
+          state.settings.serviceHealthSiteId = result.siteId
+          state.settings.serviceHealthListId = result.listId
+          saveState()
+        }
+
+        showToast('Service Health list created successfully', 'success')
+      } else {
+        servicehealthInitStatus.style.background = '#ffebee'
+        servicehealthInitStatus.style.color = '#c62828'
+        servicehealthInitStatus.textContent = `✗ Error: ${result.error || 'Could not create list'}`
+        showToast('List creation failed', 'error')
+      }
+    } catch (error) {
+      servicehealthInitStatus.style.background = '#ffebee'
+      servicehealthInitStatus.style.color = '#c62828'
+      servicehealthInitStatus.textContent = `✗ Error: ${error.message}`
+      showToast('List creation error', 'error')
+    } finally {
+      servicehealthInitBtn.disabled = false
+      servicehealthInitBtn.innerHTML = '<i class="ti ti-database"></i> Create Service Health List'
     }
   })
 
