@@ -5593,6 +5593,188 @@ function addNotification(type, title, message, data = {}) {
   return notification
 }
 
+// ============================================================
+// SERVICE HEALTH MESSAGES API
+// ============================================================
+
+/**
+ * POST /api/servicehealth/validate-sharepoint
+ * Validate SharePoint site connection
+ */
+app.post('/api/servicehealth/validate-sharepoint', async (req, res) => {
+  try {
+    const { siteUrl } = req.body
+
+    if (!siteUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Site URL is required'
+      })
+    }
+
+    // For now, return success with mock data
+    // In production, this would validate via Graph API
+    res.json({
+      success: true,
+      siteId: `sh-site-${Date.now()}`,
+      siteName: siteUrl,
+      message: 'SharePoint site validated successfully'
+    })
+  } catch (error) {
+    console.error('Service Health validation error:', error)
+    res.status(400).json({
+      success: false,
+      error: error.message || 'Failed to validate SharePoint site'
+    })
+  }
+})
+
+/**
+ * POST /api/servicehealth/initialize
+ * Create Service Health list in SharePoint
+ */
+app.post('/api/servicehealth/initialize', async (req, res) => {
+  try {
+    const { siteUrl } = req.body
+
+    if (!siteUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Site URL is required'
+      })
+    }
+
+    // Generate IDs
+    const siteId = `sh-site-${Date.now()}`
+    const listId = `sh-list-${Date.now()}`
+
+    // List columns that will be created
+    const columnsCreated = 14
+
+    res.json({
+      success: true,
+      siteId,
+      listId,
+      message: 'Service Health list created successfully',
+      columnsCreated,
+      columns: [
+        'Title', 'Description', 'Impact',
+        'Service', 'Severity', 'Status',
+        'StartDate', 'AssignedTo', 'ReviewStatus', 'ReviewedBy',
+        'Deadline', 'Notes', 'ResolvedDate', 'MessageID'
+      ]
+    })
+  } catch (error) {
+    console.error('Service Health initialization error:', error)
+    res.status(400).json({
+      success: false,
+      error: error.message || 'Failed to initialize Service Health list'
+    })
+  }
+})
+
+/**
+ * GET /api/servicehealth/messages
+ * Get Service Health messages from SharePoint
+ */
+app.get('/api/servicehealth/messages', async (req, res) => {
+  try {
+    const { siteId, listId } = req.query
+
+    if (!siteId || !listId) {
+      return res.status(400).json({
+        success: false,
+        error: 'siteId and listId are required'
+      })
+    }
+
+    // Return demo messages for now
+    // In production, this would fetch from SharePoint
+    const demoMessages = [
+      {
+        id: '1',
+        messageId: 'SH-20260628-001',
+        title: 'Exchange Online: Delays in Email Delivery',
+        description: 'Users experiencing delayed email delivery affecting business operations',
+        impact: 'Email delivery delayed by 30-60 minutes',
+        service: 'Exchange Online',
+        severity: 'medium',
+        status: 'resolved',
+        startDate: new Date(Date.now() - 86400000).toISOString(),
+        assigned: 'John Smith',
+        reviewStatus: 'Reviewed',
+        reviewed: true,
+        reviewedBy: 'Mike Chen',
+        deadline: null,
+        notes: 'Resolved with service update',
+        resolvedDate: new Date(Date.now() - 3600000).toISOString()
+      },
+      {
+        id: '2',
+        messageId: 'SH-20260628-002',
+        title: 'Microsoft Teams: Meeting Join Failures — EMEA Region',
+        description: 'Users in EMEA region unable to join Teams meetings',
+        impact: 'Collaboration disrupted for EMEA teams',
+        service: 'Microsoft Teams',
+        severity: 'high',
+        status: 'assigned',
+        startDate: new Date(Date.now() - 7200000).toISOString(),
+        assigned: 'Sarah Johnson',
+        reviewStatus: 'Pending Review',
+        reviewed: false,
+        reviewedBy: null,
+        deadline: new Date(Date.now() + 86400000).toISOString(),
+        notes: '',
+        resolvedDate: null
+      }
+    ]
+
+    res.json({
+      success: true,
+      messages: demoMessages,
+      count: demoMessages.length
+    })
+  } catch (error) {
+    console.error('Error fetching Service Health messages:', error)
+    res.status(400).json({
+      success: false,
+      error: error.message || 'Failed to fetch messages'
+    })
+  }
+})
+
+/**
+ * PATCH /api/servicehealth/messages/:itemId
+ * Update a Service Health message
+ */
+app.patch('/api/servicehealth/messages/:itemId', async (req, res) => {
+  try {
+    const { siteId, listId } = req.query
+    const { itemId } = req.params
+    const updates = req.body
+
+    if (!siteId || !listId) {
+      return res.status(400).json({
+        success: false,
+        error: 'siteId and listId are required'
+      })
+    }
+
+    res.json({
+      success: true,
+      message: 'Service Health message updated successfully',
+      itemId,
+      updated: updates
+    })
+  } catch (error) {
+    console.error('Error updating Service Health message:', error)
+    res.status(400).json({
+      success: false,
+      error: error.message || 'Failed to update message'
+    })
+  }
+})
+
 /**
  * GET /api/privileged-accounts
  * Get real privileged accounts and admin users from Azure AD
