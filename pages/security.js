@@ -305,7 +305,10 @@ function render(el) {
 // Top-5 always-visible strip
 // ============================================================
 function topFiveKpi() {
-  const ss = realSecureScore || SECURE_SCORE || { current: 0, max: 100, percentOf100: 0, delta7d: 0 }
+  // Use realSecureScore if it has the required properties, otherwise fall back to demo data
+  const ss = (realSecureScore && realSecureScore.current && realSecureScore.max)
+    ? realSecureScore
+    : SECURE_SCORE || { current: 0, max: 100, percentOf100: 0, delta7d: 0 }
   const pct = ss.percentOf100 || 0
   const ssColor = pct >= 80 ? 'success' : pct >= 60 ? 'warning' : 'danger'
   const incidents = Array.isArray(realIncidents) ? realIncidents : []
@@ -412,7 +415,9 @@ function renderSection() {
 // EXECUTIVE DASHBOARD
 // ============================================================
 function renderExecutive() {
-  const ss = realSecureScore || SECURE_SCORE || { current: 0, max: 100, percentOf100: 0, categories: [], trend7d: [], trend30d: [] }
+  const ss = (realSecureScore && realSecureScore.current && realSecureScore.max)
+    ? realSecureScore
+    : SECURE_SCORE || { current: 0, max: 100, percentOf100: 0, categories: [], trend7d: [], trend30d: [] }
   const incidents = Array.isArray(realIncidents) ? realIncidents : []
   return `
     <!-- Secondary KPI row - Real data only -->
