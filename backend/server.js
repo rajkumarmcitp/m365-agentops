@@ -362,6 +362,56 @@ if (isValidCredentials) {
 }
 
 // ============================================================
+// Authentication Utilities
+// ============================================================
+
+/**
+ * Check if Graph Client is authenticated
+ * @returns {boolean} True if graphClient is ready for API calls
+ */
+function isGraphClientAuthenticated() {
+  return graphClient !== null && graphClient !== undefined
+}
+
+/**
+ * Ensure Graph Client is available
+ * @throws {Error} If Graph Client is not authenticated
+ */
+function requireGraphClient() {
+  if (!isGraphClientAuthenticated()) {
+    throw new Error('Graph Client not initialized. Ensure Azure credentials are configured (GRAPH_TENANT_ID, GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET)')
+  }
+}
+
+/**
+ * Handle Graph API errors with helpful messages
+ * @param {Error} error - The error from Graph API
+ * @returns {Object} Error response with helpful message
+ */
+function handleGraphError(error) {
+  console.error('[Graph API Error]', error.message)
+
+  // Map common Graph API errors to user-friendly messages
+  const errorMap = {
+    401: 'Authentication failed - check Azure credentials',
+    403: 'Permission denied - ensure app registration has Sites.ReadWrite.All permission',
+    404: 'Resource not found - check site ID and list ID',
+    429: 'Too many requests - API throttling, please retry',
+    500: 'Graph API server error - please retry'
+  }
+
+  const statusCode = error.statusCode || error.status
+  const userMessage = errorMap[statusCode] || error.message
+
+  return {
+    status: statusCode || 400,
+    message: userMessage,
+    detail: error.message,
+    code: error.code
+  }
+}
+
+// ============================================================
 // Configuration Variables
 // ============================================================
 // Load Self Service Portal configuration from disk
@@ -5603,8 +5653,15 @@ function addNotification(type, title, message, data = {}) {
  */
 app.post('/api/servicehealth/validate-sharepoint', async (req, res) => {
   try {
-    if (!graphClient) {
-      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    // Verify Graph Client is authenticated
+    try {
+      requireGraphClient()
+    } catch (authError) {
+      return res.status(503).json({
+        success: false,
+        error: authError.message,
+        authenticated: false
+      })
     }
 
     const { siteUrl } = req.body
@@ -5612,17 +5669,28 @@ app.post('/api/servicehealth/validate-sharepoint', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Site URL is required' })
     }
 
+    console.log(`[Service Health] Validating site: ${siteUrl}`)
+
     let siteId, siteName
     try {
-      // Try direct lookup first
       let site
       try {
+        // Try direct lookup first
         site = await graphClient.api(`/sites/${siteUrl}`).get()
         siteId = site.id
         siteName = site.displayName || site.name || siteUrl
+        console.log(`[Service Health] ✓ Found site: ${siteName}`)
       } catch (directError) {
-        // If direct lookup fails, search for the site
-        console.log(`⚠️ Direct lookup failed for ${siteUrl}, searching...`)
+        // Handle authentication errors specially
+        if (directError.statusCode === 401 || directError.status === 401) {
+          throw new Error('Authentication failed - check Azure credentials (401)')
+        }
+        if (directError.statusCode === 403 || directError.status === 403) {
+          throw new Error('Permission denied - app needs Sites.Read.All permission (403)')
+        }
+
+        // Try searching if direct lookup fails
+        console.log(`[Service Health] Direct lookup failed, searching...`)
         const searchName = siteUrl.split('/').pop().toLowerCase()
         const sites = await graphClient.api('/sites').get()
         const matching = sites.value?.filter(s =>
@@ -5642,28 +5710,30 @@ app.post('/api/servicehealth/validate-sharepoint', async (req, res) => {
         site = matching[0]
         siteId = site.id
         siteName = site.displayName || site.name || searchName
-        console.log(`✓ Found site via search: ${siteName}`)
+        console.log(`[Service Health] ✓ Found site via search: ${siteName}`)
       }
 
-      console.log(`✓ Service Health SharePoint site validated: ${siteName}`)
       res.json({
         success: true,
         siteId,
         siteName,
-        message: `Connected to ${siteName}`
+        message: `Connected to ${siteName}`,
+        authenticated: true
       })
     } catch (error) {
-      console.error('Service Health site validation error:', error.message)
-      res.status(400).json({
+      const graphError = handleGraphError(error)
+      res.status(graphError.status).json({
         success: false,
-        error: error.message || 'Failed to validate SharePoint site'
+        error: graphError.message,
+        authenticated: false
       })
     }
   } catch (error) {
-    console.error('Service Health validation error:', error)
-    res.status(500).json({
+    console.error('[Service Health] Auth error:', error)
+    res.status(503).json({
       success: false,
-      error: error.message || 'Validation error'
+      error: error.message,
+      authenticated: false
     })
   }
 })
