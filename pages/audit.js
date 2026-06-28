@@ -55,11 +55,11 @@ function renderAuditContent(el) {
         <tbody>
           ${events.map(e => `
             <tr>
-              <td class="monospace" style="font-size:10px">${e.time}</td>
-              <td style="font-size:11px">${e.event}</td>
-              <td class="monospace" style="font-size:10px">${e.user}</td>
-              <td><span class="badge neutral">${e.category}</span></td>
-              <td><span class="badge ${e.sevCls}" style="text-transform:capitalize">${e.severity}</span></td>
+              <td class="monospace" style="font-size:10px" data-label="Time">${e.time}</td>
+              <td style="font-size:11px" data-label="Event">${e.event}</td>
+              <td class="monospace" style="font-size:10px" data-label="User">${e.user}</td>
+              <td data-label="Category"><span class="badge neutral">${e.category}</span></td>
+              <td data-label="Severity"><span class="badge ${e.sevCls}" style="text-transform:capitalize">${e.severity}</span></td>
             </tr>
           `).join('')}
         </tbody>

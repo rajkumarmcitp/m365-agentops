@@ -454,10 +454,10 @@ function renderDemoAlerts(el) {
         <tbody>
           ${allAlerts.map((alert, i) => `
             <tr style="border-bottom:${i < allAlerts.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none'}">
-              <td style="padding:10px 12px"><span class="badge ${alert.severity === 'CRITICAL' ? 'danger' : 'warning'}">${alert.severity}</span></td>
-              <td style="padding:10px 12px;font-size:11px;font-weight:600">${alert.title}</td>
-              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)">${alert.source}</td>
-              <td style="padding:10px 12px;font-size:10px">
+              <td style="padding:10px 12px" data-label="Severity"><span class="badge ${alert.severity === 'CRITICAL' ? 'danger' : 'warning'}">${alert.severity}</span></td>
+              <td style="padding:10px 12px;font-size:11px;font-weight:600" data-label="Alert Title">${alert.title}</td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-secondary)" data-label="Source">${alert.source}</td>
+              <td style="padding:10px 12px;font-size:10px" data-label="Risk Score">
                 <div style="display:flex;align-items:center;gap:6px">
                   <div style="width:40px;height:6px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden">
                     <div style="height:100%;width:${alert.riskScore}%;background:${alert.riskScore >= 80 ? 'var(--clr-danger-text)' : 'var(--clr-warning-text)'}"></div>
@@ -465,8 +465,8 @@ function renderDemoAlerts(el) {
                   <span style="font-weight:600;color:${alert.riskScore >= 80 ? 'var(--clr-danger-text)' : 'var(--clr-warning-text)'}">${alert.riskScore}</span>
                 </div>
               </td>
-              <td style="padding:10px 12px"><span class="badge ${alert.status === 'open' ? 'danger' : 'warning'}">${alert.status}</span></td>
-              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-tertiary)">${alert.timestamp.split(' ')[1]}</td>
+              <td style="padding:10px 12px" data-label="Status"><span class="badge ${alert.status === 'open' ? 'danger' : 'warning'}">${alert.status}</span></td>
+              <td style="padding:10px 12px;font-size:10px;color:var(--color-text-tertiary)" data-label="Time">${alert.timestamp.split(' ')[1]}</td>
             </tr>
           `).join('')}
         </tbody>

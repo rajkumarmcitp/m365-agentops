@@ -593,13 +593,13 @@ function renderSecureScore() {
         <tbody>
           ${RECOMMENDATIONS.slice(0, 8).map(r => `
             <tr>
-              <td><span class="badge ${r.priority === 'critical' ? 'danger' : r.priority === 'high' ? 'warning' : r.priority === 'medium' ? 'info' : 'neutral'}">${r.priority}</span></td>
-              <td style="font-size:11px;font-weight:500">${r.title}</td>
-              <td><span class="pill">${r.category}</span></td>
-              <td><span class="badge success">+${r.scoreGain}</span></td>
-              <td><span class="badge neutral">${r.effort}</span></td>
-              <td><span class="badge ${r.status === 'open' ? 'warning' : 'info'}">${r.status}</span></td>
-              <td><button class="btn btn-xs"><i class="ti ti-arrow-right"></i></button></td>
+              <td data-label="Priority"><span class="badge ${r.priority === 'critical' ? 'danger' : r.priority === 'high' ? 'warning' : r.priority === 'medium' ? 'info' : 'neutral'}">${r.priority}</span></td>
+              <td style="font-size:11px;font-weight:500" data-label="Recommendation">${r.title}</td>
+              <td data-label="Category"><span class="pill">${r.category}</span></td>
+              <td data-label="Score Gain"><span class="badge success">+${r.scoreGain}</span></td>
+              <td data-label="Effort"><span class="badge neutral">${r.effort}</span></td>
+              <td data-label="Status"><span class="badge ${r.status === 'open' ? 'warning' : 'info'}">${r.status}</span></td>
+              <td data-label=""><button class="btn btn-xs"><i class="ti ti-arrow-right"></i></button></td>
             </tr>
           `).join('')}
         </tbody>

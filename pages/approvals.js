@@ -137,13 +137,13 @@ function displayApprovalQueue(el, stats) {
                 })
                 return `
                   <tr style="border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer" class="req-row" data-id="${req.requestId}">
-                    <td style="padding:12px;font-size:11px;font-weight:600;color:var(--clr-info-text)">${req.requestId}</td>
-                    <td style="padding:12px;font-size:10px">${req.requesterId || 'N/A'}</td>
-                    <td style="padding:12px;font-size:10px">${req.service || 'N/A'}</td>
-                    <td style="padding:12px;font-size:10px">${req.operation || 'N/A'}</td>
-                    <td style="padding:12px;font-size:10px"><strong style="color:${statusColor}">${req.status}</strong></td>
-                    <td style="padding:12px;font-size:10px;color:var(--color-text-secondary)">${createdDate}</td>
-                    <td style="padding:12px;text-align:center">
+                    <td style="padding:12px;font-size:11px;font-weight:600;color:var(--clr-info-text)" data-label="Request ID">${req.requestId}</td>
+                    <td style="padding:12px;font-size:10px" data-label="Requester">${req.requesterId || 'N/A'}</td>
+                    <td style="padding:12px;font-size:10px" data-label="Service">${req.service || 'N/A'}</td>
+                    <td style="padding:12px;font-size:10px" data-label="Operation">${req.operation || 'N/A'}</td>
+                    <td style="padding:12px;font-size:10px" data-label="Status"><strong style="color:${statusColor}">${req.status}</strong></td>
+                    <td style="padding:12px;font-size:10px;color:var(--color-text-secondary)" data-label="Submitted">${createdDate}</td>
+                    <td style="padding:12px;text-align:center" data-label="Action">
                       ${req.status === 'Submitted' ? '<button class="btn btn-sm" style="padding:4px 8px;font-size:9px">Review</button>' : '-'}
                     </td>
                   </tr>

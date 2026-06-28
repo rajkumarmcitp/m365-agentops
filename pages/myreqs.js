@@ -209,12 +209,12 @@ function renderMyRequestsList(el, requests) {
               const itemName = getRequestedItemName(req.service, req.operation, formData)
               return `
                 <tr style="border-bottom:0.5px solid var(--color-border-tertiary);transition:background var(--transition);hover:background var(--color-background-secondary)">
-                  <td style="padding:12px;font-size:12px;font-weight:700;color:#0066CC">${req.requestId}</td>
-                  <td style="padding:12px;font-size:12px;color:var(--color-text-primary)" title="${req.service}">${serviceDisplay || '—'}</td>
-                  <td style="padding:12px;font-size:12px;color:var(--color-text-primary)" title="${req.operation}">${operationDisplay || '—'}</td>
-                  <td style="padding:12px;font-size:12px;color:var(--color-text-primary);font-weight:500">${itemName}</td>
-                  <td style="padding:12px;font-size:12px;color:var(--color-text-secondary)">${createdDate}</td>
-                  <td style="padding:12px;font-size:11px">
+                  <td style="padding:12px;font-size:12px;font-weight:700;color:#0066CC" data-label="Request ID">${req.requestId}</td>
+                  <td style="padding:12px;font-size:12px;color:var(--color-text-primary)" data-label="Requested Service" title="${req.service}">${serviceDisplay || '—'}</td>
+                  <td style="padding:12px;font-size:12px;color:var(--color-text-primary)" data-label="Type of Request" title="${req.operation}">${operationDisplay || '—'}</td>
+                  <td style="padding:12px;font-size:12px;color:var(--color-text-primary);font-weight:500" data-label="Item Name">${itemName}</td>
+                  <td style="padding:12px;font-size:12px;color:var(--color-text-secondary)" data-label="Submitted">${createdDate}</td>
+                  <td style="padding:12px;font-size:11px" data-label="Status">
                     <span style="background:${color.bg};color:${color.text};padding:4px 8px;border-radius:4px;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap">
                       <i class="ti ${color.icon}" style="font-size:11px"></i> ${req.status}
                     </span>

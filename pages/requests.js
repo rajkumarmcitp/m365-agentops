@@ -369,30 +369,30 @@ function renderList(el) {
                 const requesterEmail = req.requesterId ? req.requesterId.split('@')[0] : 'Unknown'
                 return `
                   <tr style="border-bottom:0.5px solid var(--color-border-tertiary);background:${isSelected ? 'var(--clr-info-bg)' : 'transparent'}" class="req-table-row" data-req-id="${req.requestId}">
-                    <td style="padding:12px;text-align:center">
+                    <td style="padding:12px;text-align:center" data-label="Select">
                       <input type="checkbox" class="req-checkbox" data-req-id="${req.requestId}" ${isSelected ? 'checked' : ''} style="cursor:pointer">
                     </td>
-                    <td style="padding:12px;font-weight:600;color:var(--clr-info-text)">${req.requestId}</td>
-                    <td style="padding:12px;font-size:10px">${req.service}</td>
-                    <td style="padding:12px;font-size:10px">${req.operation || 'N/A'}</td>
-                    <td style="padding:12px;font-size:10px" title="${req.requesterId}">${requesterEmail}</td>
-                    <td style="padding:12px;font-size:10px">${submittedDate}</td>
-                    <td style="padding:12px">
+                    <td style="padding:12px;font-weight:600;color:var(--clr-info-text)" data-label="Request ID">${req.requestId}</td>
+                    <td style="padding:12px;font-size:10px" data-label="Service">${req.service}</td>
+                    <td style="padding:12px;font-size:10px" data-label="Operation">${req.operation || 'N/A'}</td>
+                    <td style="padding:12px;font-size:10px" data-label="Requester" title="${req.requesterId}">${requesterEmail}</td>
+                    <td style="padding:12px;font-size:10px" data-label="Submitted">${submittedDate}</td>
+                    <td style="padding:12px" data-label="Priority">
                       <span style="padding:2px 6px;border-radius:3px;background:${priorityLevel.bg};color:${priorityLevel.color};font-weight:600;font-size:9px">
                         <i class="ti ${priorityLevel.icon}"></i> ${priorityLevel.label}
                       </span>
                     </td>
-                    <td style="padding:12px">
+                    <td style="padding:12px" data-label="Status">
                       <span style="padding:4px 8px;border-radius:4px;font-weight:600;font-size:10px;background:${getStatusColor(req.status).bg};color:${getStatusColor(req.status).text}">
                         ${req.status}
                       </span>
                     </td>
-                    <td style="padding:12px">
+                    <td style="padding:12px" data-label="SLA">
                       <div style="background:${slaColor.bg};color:${slaColor.text};padding:4px 8px;border-radius:3px;font-size:9px;font-weight:600;text-align:center">
                         ${slaStatus.message}
                       </div>
                     </td>
-                    <td style="padding:12px;text-align:center">
+                    <td style="padding:12px;text-align:center" data-label="Action">
                       ${req.status === 'Submitted' ? `
                         <button class="req-view-btn" data-id="${req.requestId}" style="padding:4px 8px;font-size:9px;background:var(--clr-info-bg);color:var(--clr-info-text);border:none;border-radius:3px;cursor:pointer">
                           Review
