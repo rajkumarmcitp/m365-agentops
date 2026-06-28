@@ -57,54 +57,46 @@ function renderMessagesLayout(el) {
       </div>
     </div>
 
-    <!-- Main Container with Left & Right Panels -->
-    <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;height:calc(100vh - 240px);margin-bottom:16px">
-      <!-- Left Panel: Filters & Messages -->
-      <div style="display:flex;flex-direction:column;gap:12px;overflow:hidden">
-        <!-- Filters -->
-        <div class="card" style="margin:0;padding:12px">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
-            <div>
-              <div style="font-size:9px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Service</div>
-              <select id="msg-filter-service" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
-                <option value="All">All Services</option>
-                ${Object.keys(SVC_META).map(svc => `<option value="${svc}">${svc}</option>`).join('')}
-              </select>
-            </div>
-            <div>
-              <div style="font-size:9px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Status</div>
-              <select id="msg-filter-status" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
-                <option value="All">All Status</option>
-                <option value="active">Active</option>
-                <option value="assigned">Assigned</option>
-                <option value="reviewing">In Review</option>
-                <option value="resolved">Resolved</option>
-              </select>
-            </div>
-            <div>
-              <div style="font-size:9px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Severity</div>
-              <select id="msg-filter-severity" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
-                <option value="All">All Severity</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-            <div>
-              <div style="font-size:9px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Search</div>
-              <input type="text" id="msg-search" placeholder="Search..." style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
-            </div>
+    <!-- Main Container: Single Column with Expandable Cards -->
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;max-width:1200px">
+      <!-- Filters -->
+      <div class="card" style="margin:0;padding:12px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
+          <div>
+            <div style="font-size:9px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Service</div>
+            <select id="msg-filter-service" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
+              <option value="All">All Services</option>
+              ${Object.keys(SVC_META).map(svc => `<option value="${svc}">${svc}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Status</div>
+            <select id="msg-filter-status" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
+              <option value="All">All Status</option>
+              <option value="active">Active</option>
+              <option value="assigned">Assigned</option>
+              <option value="reviewing">In Review</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Severity</div>
+            <select id="msg-filter-severity" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
+              <option value="All">All Severity</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:600;color:var(--color-text-secondary);margin-bottom:4px;text-transform:uppercase">Search</div>
+            <input type="text" id="msg-search" placeholder="Search..." style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:11px;background:var(--color-background-primary);color:var(--color-text-primary)">
           </div>
         </div>
-
-        <!-- Messages List -->
-        <div id="msg-container" style="flex:1;overflow-y:auto;display:grid;gap:8px"></div>
       </div>
 
-      <!-- Right Panel: Detail View -->
-      <div id="msg-detail-panel" style="background:var(--color-background-secondary);border-radius:8px;padding:16px;overflow-y:auto;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);font-size:13px">
-        Select a message to view details
-      </div>
+      <!-- Messages Container (Single Column with Expandable Cards) -->
+      <div id="msg-container" style="display:flex;flex-direction:column;gap:12px"></div>
     </div>
   `
 
@@ -217,18 +209,82 @@ function renderMessages(el) {
     const statusColor = msg.status === 'resolved' ? '#4caf50' : msg.reviewed ? '#4caf50' : msg.assigned ? '#ff9800' : '#f44336'
 
     return `
-      <div class="card msg-card" data-msg-idx="${idx}" style="padding:12px;cursor:pointer;transition:all 150ms;border-left:3px solid ${statusColor}">
-        <div style="display:flex;gap:10px;align-items:start">
+      <div class="card msg-card" data-msg-idx="${idx}" style="cursor:pointer;transition:all 150ms;overflow:hidden">
+        <!-- Collapsed View (Always Visible) -->
+        <div class="msg-collapsed" style="padding:12px;border-left:3px solid ${statusColor};display:flex;gap:10px;align-items:start">
           <div style="width:36px;height:36px;border-radius:6px;background:${svc.bg};display:flex;align-items:center;justify-content:center;color:${svc.color};font-size:18px;flex-shrink:0">
             <i class="ti ${svc.icon}"></i>
           </div>
           <div style="flex:1;min-width:0">
-            <div style="font-weight:600;font-size:12px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${msg.title}</div>
+            <div style="font-weight:600;font-size:12px;margin-bottom:2px">${msg.title}</div>
             <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:6px">${msg.service}</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
               <span class="badge ${msg.severity === 'high' ? 'danger' : msg.severity === 'medium' ? 'warning' : 'info'}" style="font-size:8px">${msg.severity.toUpperCase()}</span>
               <span class="badge" style="background:${statusColor}30;color:${statusColor};font-size:8px">${statusLabel}</span>
             </div>
+          </div>
+          <div style="color:var(--color-text-secondary);font-size:16px;flex-shrink:0">▼</div>
+        </div>
+
+        <!-- Expanded View (Hidden by Default) -->
+        <div class="msg-expanded" style="display:none;padding:16px;border-top:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary)">
+          <!-- Description & Details -->
+          <div style="margin-bottom:14px">
+            <div style="font-size:10px;color:var(--color-text-secondary);line-height:1.5;background:var(--color-background-primary);padding:8px;border-radius:4px;margin-bottom:8px">
+              ${msg.description || 'No description provided'}
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:9px">
+              <div>
+                <div style="color:var(--color-text-secondary);margin-bottom:2px">Started</div>
+                <div style="color:var(--color-text-primary);font-weight:500">${new Date(msg.startDate || Date.now()).toLocaleDateString()}</div>
+              </div>
+              <div>
+                <div style="color:var(--color-text-secondary);margin-bottom:2px">Message ID</div>
+                <div style="color:var(--color-text-primary);font-weight:500;font-family:monospace;font-size:8px">${msg.messageId || msg.id}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin Actions -->
+          <div style="background:var(--color-background-primary);padding:12px;border-radius:6px">
+            <div style="font-size:11px;font-weight:600;margin-bottom:10px;color:var(--color-text-primary);text-transform:uppercase">Admin Actions</div>
+
+            <!-- Review Status -->
+            <div style="margin-bottom:10px">
+              <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Review Status</label>
+              <select class="msg-review-status" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
+                <option value="pending" ${!msg.reviewed ? 'selected' : ''}>Pending Review</option>
+                <option value="reviewed" ${msg.reviewed ? 'selected' : ''}>Reviewed</option>
+              </select>
+            </div>
+
+            <!-- Assign To -->
+            <div style="margin-bottom:10px">
+              <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Assign To</label>
+              <input type="text" class="msg-assign-to" placeholder="Email or name..." value="${msg.assigned || ''}" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
+            </div>
+
+            <!-- Set Deadline -->
+            <div style="margin-bottom:10px">
+              <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Set Deadline</label>
+              <input type="date" class="msg-deadline" value="${msg.deadline || ''}" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
+            </div>
+
+            <!-- Notes -->
+            <div style="margin-bottom:10px">
+              <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Notes</label>
+              <textarea class="msg-notes" placeholder="Add notes..." style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary);min-height:70px;resize:vertical">${msg.notes || ''}</textarea>
+            </div>
+
+            <!-- Save Button -->
+            <button class="msg-save-btn" style="width:100%;padding:8px;background:var(--clr-primary-bg);color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;margin-bottom:8px">💾 Save Changes</button>
+
+            <!-- Status Info -->
+            ${msg.status === 'resolved' ? `
+              <div style="padding:8px;background:#4caf5020;border-radius:4px;border-left:3px solid #4caf50;font-size:9px;color:#4caf50">
+                ✓ Resolved on ${new Date(msg.resolvedDate).toLocaleDateString()}
+              </div>
+            ` : ''}
           </div>
         </div>
       </div>
@@ -237,135 +293,58 @@ function renderMessages(el) {
 
   container.innerHTML = html
 
-  // Click handlers
+  // Click handlers for expand/collapse
   container.querySelectorAll('.msg-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const idx = parseInt(card.dataset.msgIdx)
-      selectedMessage = filteredMessages[idx]
-      showMessageDetail(el, selectedMessage)
+    const collapsed = card.querySelector('.msg-collapsed')
+    const expanded = card.querySelector('.msg-expanded')
+    const idx = parseInt(card.dataset.msgIdx)
 
-      // Visual feedback
-      container.querySelectorAll('.msg-card').forEach(c => c.style.background = '')
-      card.style.background = 'var(--color-background-secondary)'
+    collapsed.addEventListener('click', () => {
+      const isExpanded = expanded.style.display === 'block'
+
+      // Close all other expanded cards
+      container.querySelectorAll('.msg-card').forEach(c => {
+        c.querySelector('.msg-expanded').style.display = 'none'
+      })
+
+      // Toggle current card
+      if (!isExpanded) {
+        expanded.style.display = 'block'
+        selectedMessage = filteredMessages[idx]
+        attachSaveHandler(card, selectedMessage)
+      }
     })
   })
 }
 
-function showMessageDetail(el, msg) {
-  const panel = el.querySelector('#msg-detail-panel')
-  if (!panel) return
+function attachSaveHandler(card, msg) {
+  const btn = card.querySelector('.msg-save-btn')
+  const el = document.getElementById('page-messages')
 
-  const svc = SVC_META[msg.service] || { icon: 'ti-apps', color: '#185FA5', bg: '#E6F1FB' }
-  const statusColor = msg.status === 'resolved' ? '#4caf50' : msg.severity === 'high' ? '#f44336' : '#ff9800'
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation()
 
-  panel.innerHTML = `
-    <!-- Header -->
-    <div style="width:100%;padding-bottom:12px;border-bottom:0.5px solid var(--color-border-secondary);margin-bottom:12px">
-      <div style="display:flex;gap:10px;align-items:start">
-        <div style="width:40px;height:40px;border-radius:6px;background:${svc.bg};display:flex;align-items:center;justify-content:center;color:${svc.color};font-size:18px;flex-shrink:0">
-          <i class="ti ${svc.icon}"></i>
-        </div>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:12px;margin-bottom:2px">${msg.title}</div>
-          <div style="font-size:9px;color:var(--color-text-secondary);margin-bottom:6px">${msg.id}</div>
-          <div style="display:flex;gap:6px">
-            <span class="badge ${msg.severity === 'high' ? 'danger' : msg.severity === 'medium' ? 'warning' : 'info'}" style="font-size:8px">${msg.severity.toUpperCase()}</span>
-            <span class="badge" style="background:${statusColor}30;color:${statusColor};font-size:8px">${msg.status === 'resolved' ? 'Resolved' : 'Active'}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    const reviewStatus = card.querySelector('.msg-review-status').value
+    const assigned = card.querySelector('.msg-assign-to').value || null
+    const deadline = card.querySelector('.msg-deadline').value || null
+    const notes = card.querySelector('.msg-notes').value || ''
 
-    <!-- Summary Section -->
-    <div style="margin-bottom:14px">
-      <div style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--color-text-primary);text-transform:uppercase">Summary</div>
-      <div style="font-size:10px;color:var(--color-text-secondary);line-height:1.5;background:var(--color-background-primary);padding:8px;border-radius:4px;margin-bottom:8px">
-        ${msg.description || 'No description provided'}
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:9px">
-        <div>
-          <div style="color:var(--color-text-secondary);margin-bottom:2px">Service</div>
-          <div style="color:var(--color-text-primary);font-weight:500">${msg.service}</div>
-        </div>
-        <div>
-          <div style="color:var(--color-text-secondary);margin-bottom:2px">Started</div>
-          <div style="color:var(--color-text-primary);font-weight:500">${new Date(msg.startDate || Date.now()).toLocaleDateString()}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Admin Actions Section -->
-    <div style="background:var(--color-background-primary);padding:12px;border-radius:6px">
-      <div style="font-size:11px;font-weight:600;margin-bottom:10px;color:var(--color-text-primary);text-transform:uppercase">Admin Actions</div>
-
-      <!-- Review Status -->
-      <div style="margin-bottom:10px">
-        <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Review Status</label>
-        <select id="msg-review-status" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
-          <option value="pending" ${!msg.reviewed ? 'selected' : ''}>Pending Review</option>
-          <option value="reviewed" ${msg.reviewed ? 'selected' : ''}>Reviewed</option>
-        </select>
-      </div>
-
-      <!-- Assign To -->
-      <div style="margin-bottom:10px">
-        <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Assign To</label>
-        <input type="text" id="msg-assign-to" placeholder="Email or name..." value="${msg.assigned || ''}" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
-      </div>
-
-      <!-- Set Deadline -->
-      <div style="margin-bottom:10px">
-        <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Set Deadline</label>
-        <input type="date" id="msg-deadline" value="${msg.deadline || ''}" style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary)">
-      </div>
-
-      <!-- Notes -->
-      <div style="margin-bottom:10px">
-        <label style="display:block;font-size:9px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);text-transform:uppercase">Notes</label>
-        <textarea id="msg-notes" placeholder="Add notes..." style="width:100%;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-primary);min-height:70px;resize:vertical">${msg.notes || ''}</textarea>
-      </div>
-
-      <!-- Save Button -->
-      <button id="msg-save-btn" style="width:100%;padding:8px;background:var(--clr-primary-bg);color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;margin-bottom:8px">💾 Save Changes</button>
-
-      <!-- Status Info -->
-      ${msg.status === 'resolved' ? `
-        <div style="padding:8px;background:#4caf5020;border-radius:4px;border-left:3px solid #4caf50;font-size:9px;color:#4caf50">
-          ✓ Resolved on ${new Date(msg.resolvedDate).toLocaleDateString()}
-        </div>
-      ` : ''}
-    </div>
-  `
-
-  // Save handler with conflict detection
-  el.querySelector('#msg-save-btn')?.addEventListener('click', async () => {
-    const btn = el.querySelector('#msg-save-btn')
-    const reviewStatus = el.querySelector('#msg-review-status').value
-    const assigned = el.querySelector('#msg-assign-to').value || null
-    const deadline = el.querySelector('#msg-deadline').value || null
-    const notes = el.querySelector('#msg-notes').value || ''
-
-    // Show saving state
     btn.disabled = true
     btn.textContent = '💾 Saving...'
 
     try {
-      // Persist to SharePoint via backend API
       const siteId = state.settings?.serviceHealthSiteId
       const listId = state.settings?.serviceHealthListId
 
       if (!siteId || !listId) {
-        // No SharePoint configured, just save locally
         console.log('[Messages] No SharePoint configured - saving locally only')
-        applyLocalChanges('Local')
+        applyLocalChanges()
       } else {
-        // Validate fields before sending
         if (deadline && isNaN(Date.parse(deadline))) {
           showError('Invalid deadline date', 3000)
           return
         }
 
-        // Call backend API to save to SharePoint with conflict detection
         const response = await fetch(
           `http://localhost:3001/api/servicehealth/messages/${msg.id}?siteId=${encodeURIComponent(siteId)}&listId=${encodeURIComponent(listId)}`,
           {
@@ -391,7 +370,6 @@ function showMessageDetail(el, msg) {
         const result = await response.json()
 
         if (response.status === 409) {
-          // Conflict detected - item was modified by another user
           showError(`Conflict: Item was modified by another user. Please refresh to see latest changes.`, 5000)
           btn.textContent = '⚠️ Conflict - Refresh'
           btn.style.background = '#ff9800'
@@ -399,7 +377,6 @@ function showMessageDetail(el, msg) {
         }
 
         if (response.status === 429) {
-          // Rate limit
           showError(`Rate limited. Please try again in ${result.retryAfter || 60} seconds.`, 5000)
           btn.textContent = '⏱️ Rate Limited'
           return
@@ -407,7 +384,6 @@ function showMessageDetail(el, msg) {
 
         if (result.success) {
           console.log('[Messages] Changes saved to SharePoint')
-          // Update local message with new values
           msg.reviewed = reviewStatus === 'reviewed'
           msg.assigned = assigned
           msg.deadline = deadline
@@ -423,7 +399,6 @@ function showMessageDetail(el, msg) {
           return
         } else {
           console.warn('[Messages] Save returned error:', result.error)
-          // Still save locally even if SharePoint fails
           msg.reviewed = reviewStatus === 'reviewed'
           msg.assigned = assigned
           msg.deadline = deadline
@@ -435,7 +410,6 @@ function showMessageDetail(el, msg) {
       }
     } catch (error) {
       console.warn('[Messages] Save error:', error)
-      // Still save locally even if SharePoint fails
       msg.reviewed = reviewStatus === 'reviewed'
       msg.assigned = assigned
       msg.deadline = deadline
@@ -456,11 +430,9 @@ function showMessageDetail(el, msg) {
     }
 
     function applyLocalChanges(source) {
-      // Show success feedback with source
       btn.textContent = `✓ Saved to ${source}!`
       btn.style.background = '#4caf50'
 
-      // Reset after 2 seconds
       setTimeout(() => {
         btn.textContent = '💾 Save Changes'
         btn.style.background = 'var(--clr-primary-bg)'
@@ -469,3 +441,4 @@ function showMessageDetail(el, msg) {
     }
   })
 }
+
