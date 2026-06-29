@@ -35,7 +35,6 @@ let realRecommendations = null
 // Sub-navigation
 // ============================================================
 let activeSection = 'executive'
-let recFilter = { priority: 'all', category: 'all', status: 'all' }
 let trendRange = '7d'
 let copilotMessages = []
 let copilotInit = false
@@ -55,7 +54,6 @@ const SEC_TABS_ROW2 = [
   { id: 'privaccess',     label: 'Priv. Access',    icon: 'ti-crown' },
   { id: 'guests',         label: 'Guests',          icon: 'ti-user-plus' },
   { id: 'incidents',      label: 'Incidents',       icon: 'ti-alert-triangle' },
-  { id: 'recommendations',label: 'Recommendations', icon: 'ti-checklist' },
   { id: 'copilot',        label: 'Security Copilot',icon: 'ti-robot' },
   { id: 'apiref',         label: 'API Reference',   icon: 'ti-api' },
 ]
@@ -311,7 +309,6 @@ function render(el) {
   const incidents = Array.isArray(realIncidents) ? realIncidents : []
   const critCount = incidents.filter(i => i.severity === 'critical').length
   const highCount = incidents.filter(i => i.severity === 'high' && i.status !== 'resolved').length
-  const openRec   = RECOMMENDATIONS.filter(r => r.priority === 'critical' || r.priority === 'high').length
 
   el.innerHTML = `
     <div class="page-header">
@@ -348,7 +345,6 @@ function render(el) {
           <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
             <i class="ti ${t.icon}"></i><span>${t.label}</span>
             ${t.id === 'incidents' && critCount > 0 ? `<span class="sec-tab-badge red">${critCount}</span>` : ''}
-            ${t.id === 'recommendations' ? `<span class="sec-tab-badge amber">${openRec}</span>` : ''}
           </button>
         `).join('')}
       </div>
@@ -509,7 +505,6 @@ function renderSection() {
     privaccess:     renderPrivAccess,
     guests:         renderGuests,
     incidents:      renderIncidents,
-    recommendations:renderRecommendations,
     copilot:        renderSecurityCopilot,
     apiref:         renderApiReference,
   }
@@ -1965,70 +1960,6 @@ function renderIncidents() {
   `
 }
 
-// ============================================================
-// RECOMMENDATIONS
-// ============================================================
-function renderRecommendations() {
-  const recs = Array.isArray(realRecommendations) ? realRecommendations : RECOMMENDATIONS
-  const filtered = recs.filter(r => {
-    if (recFilter.priority !== 'all' && r.priority !== recFilter.priority) return false
-    if (recFilter.category !== 'all' && r.category !== recFilter.category) return false
-    if (recFilter.status !== 'all' && r.status !== recFilter.status) return false
-    return true
-  })
-  const totalGain = filtered.reduce((s, r) => s + (r.scoreGain || 0), 0)
-
-  const cats = [...new Set(recs.map(r => r.category))]
-
-  return `
-    <div class="filter-bar mb-3">
-      <select class="form-select" id="rec-priority">
-        <option value="all" ${recFilter.priority === 'all' ? 'selected' : ''}>All Priorities</option>
-        <option value="critical" ${recFilter.priority === 'critical' ? 'selected' : ''}>Critical</option>
-        <option value="high" ${recFilter.priority === 'high' ? 'selected' : ''}>High</option>
-        <option value="medium" ${recFilter.priority === 'medium' ? 'selected' : ''}>Medium</option>
-        <option value="low" ${recFilter.priority === 'low' ? 'selected' : ''}>Low</option>
-      </select>
-      <select class="form-select" id="rec-category">
-        <option value="all">All Categories</option>
-        ${cats.map(c => `<option value="${c}" ${recFilter.category === c ? 'selected' : ''}>${c}</option>`).join('')}
-      </select>
-      <select class="form-select" id="rec-status">
-        <option value="all" ${recFilter.status === 'all' ? 'selected' : ''}>All Status</option>
-        <option value="open" ${recFilter.status === 'open' ? 'selected' : ''}>Open</option>
-        <option value="in-progress" ${recFilter.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
-      </select>
-      <span class="badge info" style="align-self:center">${filtered.length} items · +${totalGain} pts potential</span>
-    </div>
-
-    <div class="card" style="padding:0;overflow:hidden">
-      <table>
-        <thead><tr>
-          <th style="width:11%">Priority</th>
-          <th style="width:35%">Recommendation</th>
-          <th style="width:11%">Category</th>
-          <th style="width:23%">Graph / API Hint</th>
-          <th style="width:8%">Score ↑</th>
-          <th style="width:7%">Effort</th>
-          <th style="width:5%">Status</th>
-        </tr></thead>
-        <tbody>
-          ${filtered.map(r => `
-            <tr>
-              <td><span class="badge ${r.priority === 'critical' ? 'danger' : r.priority === 'high' ? 'warning' : r.priority === 'medium' ? 'info' : 'neutral'}" style="font-size:9px">${r.priority}</span></td>
-              <td style="font-size:11px;font-weight:500;line-height:1.3">${r.title}</td>
-              <td><span class="pill" style="font-size:9px">${r.category}</span></td>
-              <td><code style="font-size:9px;color:var(--clr-info-text);word-break:break-all;line-height:1.4">${r.apiHint}</code></td>
-              <td><span class="badge success" style="font-size:9px">+${r.scoreGain}</span></td>
-              <td><span class="badge neutral" style="font-size:9px">${r.effort}</span></td>
-              <td><span class="badge ${r.status === 'in-progress' ? 'info' : 'warning'}" style="font-size:9px">${r.status}</span></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `
-}
 
 // ============================================================
 // SECURITY COPILOT
@@ -2172,12 +2103,6 @@ function wireSection(el) {
 
   // Executive nav shortcuts
   content.querySelector('#exec-view-incidents')?.addEventListener('click', () => { activeSection = 'incidents'; render(el) })
-  content.querySelector('#exec-view-recs')?.addEventListener('click', () => { activeSection = 'recommendations'; render(el) })
-
-  // Recommendation filters
-  content.querySelector('#rec-priority')?.addEventListener('change', e => { recFilter.priority = e.target.value; render(el) })
-  content.querySelector('#rec-category')?.addEventListener('change', e => { recFilter.category = e.target.value; render(el) })
-  content.querySelector('#rec-status')?.addEventListener('change', e => { recFilter.status = e.target.value; render(el) })
 
   // Incident filters
   content.querySelector('#incident-search')?.addEventListener('input', e => { incidentFilter.search = e.target.value; render(el) })
