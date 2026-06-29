@@ -22,12 +22,11 @@ import { startAuditCollectionJob } from './tenantguard/jobs.js'
 import { startCorrelationJobs } from './tenantguard/correlation-jobs.js'
 import { storeAlertToSharePoint, storeCorrelationToSharePoint } from './tenantguard/sharepoint-sync.js'
 import {
-  getEmailThreatReport,
-  getMailFlowStatus,
-  getAntiSpamPolicyStatus,
-  getDefenderThreatReport,
-  getEmailAuthenticationStatus
-} from './lib/powershell-executor.js'
+  getEmailThreatDataFromGraph,
+  getComplianceDataFromGraph,
+  getDeviceComplianceFromGraph,
+  getUserRiskFromGraph
+} from './lib/graph-security-data.js'
 import { InvestigationService } from './tenantguard/investigation-service.js'
 import { createInvestigationTables } from './tenantguard/investigation-schema.js'
 import { SettingsService } from './tenantguard/settings-service.js'
@@ -4554,80 +4553,19 @@ app.get('/api/security/incidents', (req, res) => {
 
 /**
  * GET /api/security/email
- * Get email security settings and policies from PowerShell / Defender for Office 365
+ * Get email security data from Microsoft Graph API (no PowerShell required)
  */
 app.get('/api/security/email', async (req, res) => {
   try {
-    console.log('📧 Fetching email security data from PowerShell...')
+    console.log('📧 Fetching email security data from Graph API...')
 
-    const emailData = {
-      phishingAttempts30d: 0,
-      malwareDetected30d: 0,
-      becAttempts30d: 0,
-      spoofedDomainActivity30d: 0,
-      quarantined30d: 0,
-      spf: 'unknown',
-      dkim: 'unknown',
-      dmarc: 'unknown',
-      safeLinks: 'enabled',
-      safeAttachments: 'enabled',
-      antiSpamPolicy: 'standard',
-      externalForwardingRules: 0,
-      suspiciousInboxRules: 0,
-      sharedMailboxExposed: 0
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
     }
 
-    try {
-      // Fetch threat data from Defender (PowerShell)
-      const threatReport = await getDefenderThreatReport(30)
-      if (threatReport) {
-        emailData.phishingAttempts30d = threatReport.advancedPhishing || 0
-        emailData.malwareDetected30d = threatReport.advancedPhishing || 0
-        emailData.becAttempts30d = threatReport.businessEmailCompromise || 0
-        emailData.spoofedDomainActivity30d = threatReport.spoof || 0
-        console.log('✓ Fetched threat data from Defender')
-      }
-    } catch (e) {
-      console.warn('⚠️ Defender threat data not available:', e.message)
-    }
+    const emailData = await getEmailThreatDataFromGraph(graphClient)
 
-    try {
-      // Fetch mail flow and forwarding rules
-      const mailFlow = await getMailFlowStatus()
-      if (mailFlow) {
-        emailData.externalForwardingRules = mailFlow.externalForwardingCount || 0
-        console.log('✓ Fetched mail flow status')
-      }
-    } catch (e) {
-      console.warn('⚠️ Mail flow status not available:', e.message)
-    }
-
-    try {
-      // Fetch anti-spam and malware policy status
-      const policyStatus = await getAntiSpamPolicyStatus()
-      if (policyStatus) {
-        emailData.safeAttachments = policyStatus.safeAttachmentsEnabled ? 'enabled' : 'disabled'
-        emailData.antiSpamPolicy = policyStatus.antiSpamEnabled ? 'strict' : 'standard'
-        console.log('✓ Fetched anti-spam policy status')
-      }
-    } catch (e) {
-      console.warn('⚠️ Anti-spam policy status not available:', e.message)
-    }
-
-    try {
-      // Fetch email authentication status
-      const authStatus = await getEmailAuthenticationStatus()
-      if (authStatus) {
-        emailData.spf = authStatus.spf || 'unknown'
-        emailData.dkim = authStatus.dkim || 'unknown'
-        emailData.dmarc = authStatus.dmarc || 'unknown'
-        console.log('✓ Fetched email authentication status')
-      }
-    } catch (e) {
-      console.warn('⚠️ Email authentication status not available:', e.message)
-    }
-
-    console.log('✓ Email security data loaded')
+    console.log('✓ Email security data loaded from Graph API')
     res.json({ success: true, data: emailData })
   } catch (error) {
     console.error('❌ Error fetching email security data:', error.message)
