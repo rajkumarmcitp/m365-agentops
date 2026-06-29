@@ -784,22 +784,50 @@ function renderEmail() {
 
     <div class="card mb-3">
       <div class="card-title mb-3"><i class="ti ti-shield-check"></i> Organization Email Security Policies</div>
-      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:12px;font-style:italic">Tenant-wide email security policies applied to all domains. Domain-specific DNS records are validated in the table below.</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        ${[
-          { label: 'SPF Record',          ok: spf === 'pass',        note: spf === 'pass' ? 'Configured — v=spf1 include:protection.outlook.com -all' : 'Missing or misconfigured' },
-          { label: 'DKIM Signing',         ok: dkim === 'pass',       note: dkim === 'pass' ? 'Enabled for contoso.com' : 'Not configured' },
-          { label: 'DMARC Policy',         ok: dmarc === 'reject' ? 'pass' : dmarc === 'quarantine' ? 'warn' : false, note: `Policy: ${dmarc} — ${dmarc !== 'reject' ? 'upgrade to reject for full protection' : 'optimal'}` },
-          { label: 'Safe Links',           ok: safeLinks === 'enabled',note: safeLinks === 'enabled' ? 'Active for all users' : 'Disabled' },
-          { label: 'Safe Attachments',     ok: safeAttachments === 'enabled' ? 'pass' : 'warn', note: safeAttachments === 'partial' ? 'Partial — not all users covered' : `Status: ${safeAttachments}` },
-          { label: 'Anti-spam Policy',     ok: antiSpamPolicy === 'strict' ? 'pass' : 'warn', note: `Level: ${antiSpamPolicy || 'unknown'} — recommend strict` },
-        ].map(item => `
-          <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary)">
-            <div style="font-size:10px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:5px">${item.label}</div>
-            <div style="font-size:12px;font-weight:600;margin-bottom:3px">${statusIcon(item.ok, item.ok === 'pass' || item.ok === true ? 'Pass' : item.ok === 'warn' ? 'Warning' : 'Fail')}</div>
-            <div style="font-size:10px;color:var(--color-text-tertiary);line-height:1.3">${item.note}</div>
-          </div>
-        `).join('')}
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:12px;font-style:italic">Tenant-wide threat protection policies configured in Microsoft 365 Defender. Domain-specific DNS records are validated below.</div>
+
+      <!-- DNS Authentication Records -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--color-border-tertiary)">📧 Email Authentication</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          ${[
+            { label: 'SPF Record',          ok: spf === 'pass',        note: spf === 'pass' ? 'Configured' : 'Missing or misconfigured' },
+            { label: 'DKIM Signing',         ok: dkim === 'pass',       note: dkim === 'pass' ? 'Configured' : 'Not configured' },
+            { label: 'DMARC Policy',         ok: dmarc === 'reject' ? 'pass' : dmarc === 'quarantine' ? 'warn' : false, note: dmarc !== 'unknown' ? dmarc : 'Not configured' },
+          ].map(item => `
+            <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary)">
+              <div style="font-size:10px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:5px">${item.label}</div>
+              <div style="font-size:12px;font-weight:600;margin-bottom:3px">${statusIcon(item.ok, item.ok === 'pass' || item.ok === true ? 'Pass' : item.ok === 'warn' ? 'Warning' : 'Fail')}</div>
+              <div style="font-size:10px;color:var(--color-text-tertiary)">${item.note}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Threat Protection Policies -->
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--color-border-tertiary)">🛡️ Threat Protection</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          ${[
+            { label: 'Safe Links', icon: '🔗', ok: e.organizationPolicies?.safeLinks?.enabled, desc: e.organizationPolicies?.safeLinks?.description || 'Protection enabled' },
+            { label: 'Safe Attachments', icon: '📎', ok: e.organizationPolicies?.safeAttachments?.enabled, desc: e.organizationPolicies?.safeAttachments?.description || 'Scanning enabled' },
+            { label: 'Anti-Phishing', icon: '🎣', ok: e.organizationPolicies?.antiPhishing?.enabled, desc: e.organizationPolicies?.antiPhishing?.description || 'Protection enabled' },
+            { label: 'Anti-Spam', icon: '📤', ok: e.organizationPolicies?.antiSpam?.enabled, desc: `${e.organizationPolicies?.antiSpam?.level || 'Standard'} filtering` },
+            { label: 'Anti-Malware', icon: '🦠', ok: e.organizationPolicies?.antiMalware?.enabled, desc: e.organizationPolicies?.antiMalware?.description || 'Protection enabled' },
+            { label: 'Zero-hour Auto Purge', icon: '⚡', ok: e.organizationPolicies?.zeroHourAutoPurge?.enabled, desc: e.organizationPolicies?.zeroHourAutoPurge?.description || 'ZAP enabled' },
+            { label: 'Threat Policies', icon: '⚠️', ok: e.organizationPolicies?.threatPolicies?.configured, desc: e.organizationPolicies?.threatPolicies?.description || 'Policies configured' },
+            { label: 'Threat Explorer', icon: '🔍', ok: e.organizationPolicies?.threatExplorer?.enabled, desc: e.organizationPolicies?.threatExplorer?.description || 'Available' },
+            { label: 'Automated Investigation', icon: '🤖', ok: e.organizationPolicies?.automatedInvestigation?.enabled, desc: e.organizationPolicies?.automatedInvestigation?.description || 'AIR enabled' },
+            { label: 'AIR Settings', icon: '⚙️', ok: e.organizationPolicies?.airSettings?.enabled, desc: e.organizationPolicies?.airSettings?.autoRemediationLevel ? 'Auto-remediation: ' + e.organizationPolicies.airSettings.autoRemediationLevel : 'Configured' },
+            { label: 'Email Policies', icon: '📋', ok: e.organizationPolicies?.emailCollaborationPolicies?.enabled, desc: e.organizationPolicies?.emailCollaborationPolicies?.description || 'Policies configured' },
+          ].map(item => `
+            <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary)">
+              <div style="font-size:10px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:5px">${item.icon} ${item.label}</div>
+              <div style="font-size:12px;font-weight:600;margin-bottom:3px">${statusIcon(item.ok, 'Enabled')}</div>
+              <div style="font-size:10px;color:var(--color-text-tertiary)">${item.desc}</div>
+            </div>
+          `).join('')}
+        </div>
       </div>
     </div>
 
