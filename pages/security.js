@@ -1741,80 +1741,113 @@ function renderGuests() {
 // ============================================================
 let incidentFilter = { severity: 'all', status: 'all', search: '' }
 
+function getMeaningfulIncidents() {
+  return realIncidents.filter(i => i.actor && i.actor !== 'System')
+}
+
 function showIncidentModal(el, incident) {
   const timestamp = new Date(incident.timestamp || incident.created).toLocaleString()
+  const incidentJSON = JSON.stringify(incident, null, 2)
+
+  // Parse incident details for better display
+  const titleParts = incident.title?.split(':') || ['Incident']
+  const incidentType = titleParts[0]?.trim() || 'Incident'
+  const incidentAction = titleParts[1]?.trim() || ''
 
   const html = `
     <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px" id="incident-modal-backdrop">
-      <div style="background:#fff;border-radius:12px;max-width:650px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.3);position:relative">
+      <div style="background:#fff;border-radius:12px;max-width:750px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.3);position:relative">
 
-        <div style="padding:24px;border-bottom:1px solid #e5e5e5;display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="padding:24px;border-bottom:1px solid #e5e5e5;display:flex;justify-content:space-between;align-items:flex-start;sticky;top:0;background:#fff;z-index:100">
           <div style="flex:1">
             <div style="display:flex;gap:8px;margin-bottom:12px">
               <span style="display:inline-block;padding:4px 8px;border-radius:4px;font-size:10px;font-weight:600;background:${incident.severity === 'critical' ? '#fee2e2;color:#991b1b' : incident.severity === 'high' ? '#fee2e2;color:#991b1b' : '#fef3c7;color:#92400e'}">${incident.severity.toUpperCase()}</span>
               <span style="display:inline-block;padding:4px 8px;border-radius:4px;font-size:10px;font-weight:600;background:#f3f4f6;color:#374151">${incident.status}</span>
             </div>
-            <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827">${incident.title}</h2>
+            <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827">${incidentType}</h2>
+            ${incidentAction ? `<p style="margin:6px 0 0;font-size:12px;color:#6b7280">${incidentAction}</p>` : ''}
           </div>
-          <button onclick="document.getElementById('incident-modal-backdrop').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#6b7280;padding:0;width:32px;height:32px">×</button>
+          <button onclick="document.getElementById('incident-modal-backdrop').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#6b7280;padding:0;width:32px;height:32px;flex-shrink:0">×</button>
         </div>
 
-        <div style="font-size:11px;color:#6b7280;font-family:monospace;padding:0 24px;word-break:break-all;margin-bottom:16px">
-          ID: ${incident.id}
-        </div>
-
-        <div style="padding:0 24px 24px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+        <div style="padding:24px">
+          <!-- Key Details Grid -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;padding:16px;background:#f9fafb;border-radius:8px">
             <div>
-              <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:8px">Actor</div>
-              <div style="font-size:14px;font-weight:600;color:#111827">${incident.actor || 'System'}</div>
+              <div style="font-size:10px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:6px">Actor / User</div>
+              <div style="font-size:14px;font-weight:600;color:#111827;word-break:break-all">${incident.actor || 'Unknown'}</div>
             </div>
             <div>
-              <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:8px">Risk Score</div>
-              <div style="font-size:14px;font-weight:700;color:${incident.riskScore > 70 ? '#991b1b' : incident.riskScore > 40 ? '#b45309' : '#059669'}">${incident.riskScore || 0}/100</div>
+              <div style="font-size:10px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:6px">Risk Score</div>
+              <div style="font-size:16px;font-weight:700;color:${incident.riskScore > 70 ? '#dc2626' : incident.riskScore > 40 ? '#f59e0b' : '#059669'}">${incident.riskScore || 45}<span style="font-size:11px;color:#6b7280">/100</span></div>
             </div>
             <div>
-              <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:8px">Timestamp</div>
-              <div style="font-size:13px;color:#374151">${timestamp}</div>
+              <div style="font-size:10px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:6px">Timestamp</div>
+              <div style="font-size:12px;color:#374151">${timestamp}</div>
             </div>
             <div>
-              <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:8px">Status</div>
-              <div style="font-size:13px;color:#374151">${incident.status}</div>
+              <div style="font-size:10px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:6px">Status</div>
+              <div style="font-size:12px;color:#374151;text-transform:capitalize">${incident.status}</div>
             </div>
           </div>
 
+          <!-- Event Description -->
           <div style="margin-bottom:24px">
-            <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:10px">Description</div>
-            <div style="font-size:13px;line-height:1.6;color:#374151;background:#f9fafb;padding:14px;border-radius:6px;border-left:3px solid #3b82f6">
+            <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:10px">What Happened</div>
+            <div style="font-size:13px;line-height:1.7;color:#374151;background:#f9fafb;padding:16px;border-radius:6px;border-left:4px solid #3b82f6;word-break:break-word">
               ${incident.description || 'No additional details available'}
             </div>
           </div>
 
-          <div style="background:#f9fafb;padding:14px;border-radius:6px;border-left:3px solid ${incident.severity === 'critical' ? '#dc2626' : incident.severity === 'high' ? '#dc2626' : '#f59e0b'};margin-bottom:20px">
-            <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:10px">Recommended Actions</div>
-            <ul style="margin:0;padding-left:20px;font-size:13px;line-height:1.8;color:#374151">
+          <!-- Incident ID (Technical) -->
+          <div style="margin-bottom:24px;padding:12px;background:#f3f4f6;border-radius:6px">
+            <div style="font-size:10px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:6px">Audit Event ID</div>
+            <div style="font-size:11px;color:#374151;font-family:monospace;word-break:break-all;padding:8px;background:#fff;border-radius:4px;border:1px solid #e5e7eb">
+              ${incident.id}
+            </div>
+          </div>
+
+          <!-- Recommended Actions -->
+          <div style="background:${incident.severity === 'critical' ? '#fee2e2' : incident.severity === 'high' ? '#fee2e2' : '#fef3c7'};padding:16px;border-radius:8px;border-left:4px solid ${incident.severity === 'critical' ? '#dc2626' : incident.severity === 'high' ? '#dc2626' : '#f59e0b'};margin-bottom:24px">
+            <div style="font-size:11px;color:${incident.severity === 'critical' || incident.severity === 'high' ? '#991b1b' : '#92400e'};text-transform:uppercase;font-weight:700;margin-bottom:10px">⚡ Recommended Next Steps</div>
+            <ul style="margin:0;padding-left:20px;font-size:13px;line-height:2;color:${incident.severity === 'critical' || incident.severity === 'high' ? '#991b1b' : '#92400e'}">
               ${incident.severity === 'critical' ? `
-                <li>Immediately investigate the root cause</li>
-                <li>Check for unauthorized access or data exfiltration</li>
-                <li>Review related incidents for patterns</li>
-                <li>Escalate to security team if compromised</li>
+                <li><strong>IMMEDIATE:</strong> Isolate affected accounts and review for unauthorized access</li>
+                <li>Check for data exfiltration or malicious activity</li>
+                <li>Review all incidents from this actor in the last 24 hours</li>
+                <li>Escalate to Security team and management</li>
               ` : incident.severity === 'high' ? `
-                <li>Review the incident details and actor</li>
-                <li>Verify the action was authorized</li>
-                <li>Check for similar incidents</li>
-                <li>Document findings in ticket</li>
+                <li>Verify if this action was authorized by IT/management</li>
+                <li>Contact the user to confirm legitimacy</li>
+                <li>Review related incidents for patterns</li>
+                <li>Document and escalate if suspicious</li>
               ` : `
-                <li>Log and track the incident</li>
-                <li>Correlate with other events if needed</li>
-                <li>Determine if remediation is required</li>
-                <li>Mark resolved when complete</li>
+                <li>Log this incident for compliance records</li>
+                <li>Determine if this requires investigation</li>
+                <li>Mark as resolved if normal activity</li>
+                <li>Update incident tracking system</li>
               `}
             </ul>
           </div>
 
-          <div style="display:flex;gap:10px">
-            <button onclick="document.getElementById('incident-modal-backdrop').remove()" style="padding:8px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">Close</button>
-            <button onclick="navigator.clipboard.writeText(JSON.stringify(${JSON.stringify(incident).replace(/"/g, '&quot;')}, null, 2)); alert('Incident details copied to clipboard'); document.getElementById('incident-modal-backdrop').remove()" style="padding:8px 16px;background:#f3f4f6;color:#111827;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">Export JSON</button>
+          <!-- Action Buttons -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button onclick="document.getElementById('incident-modal-backdrop').remove()" style="padding:10px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">Close</button>
+            <button onclick="
+              const textarea = document.createElement('textarea');
+              textarea.value = \`${incidentJSON.replace(/`/g, '\\`')}\`;
+              document.body.appendChild(textarea);
+              textarea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textarea);
+              alert('Full incident details copied to clipboard');
+            " style="padding:10px 16px;background:#10b981;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">Copy Full Details</button>
+            <button onclick="
+              const link = document.createElement('a');
+              link.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(\`${incidentJSON.replace(/"/g, '\\"')}\`);
+              link.download = 'incident_${incident.id?.substring(0, 20)}.json';
+              link.click();
+            " style="padding:10px 16px;background:#8b5cf6;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">Download JSON</button>
           </div>
         </div>
       </div>
@@ -1828,7 +1861,8 @@ function showIncidentModal(el, incident) {
 }
 
 function renderIncidents() {
-  let filtered = realIncidents.filter(i => {
+  const meaningfulIncidents = getMeaningfulIncidents()
+  let filtered = meaningfulIncidents.filter(i => {
     if (incidentFilter.severity !== 'all' && i.severity !== incidentFilter.severity) return false
     if (incidentFilter.status !== 'all' && i.status !== incidentFilter.status) return false
     if (incidentFilter.search && !i.title?.toLowerCase().includes(incidentFilter.search.toLowerCase()) &&
@@ -1839,10 +1873,10 @@ function renderIncidents() {
 
   const active = filtered.filter(i => i.status !== 'resolved')
   const resolved = filtered.filter(i => i.status === 'resolved')
-  const critical = realIncidents.filter(i => i.severity === 'critical').length
-  const high = realIncidents.filter(i => i.severity === 'high').length
-  const med = realIncidents.filter(i => i.severity === 'medium').length
-  const low = realIncidents.filter(i => i.severity === 'low').length
+  const critical = meaningfulIncidents.filter(i => i.severity === 'critical').length
+  const high = meaningfulIncidents.filter(i => i.severity === 'high').length
+  const med = meaningfulIncidents.filter(i => i.severity === 'medium').length
+  const low = meaningfulIncidents.filter(i => i.severity === 'low').length
 
   return `
     <div class="kpi-row mb-3">
