@@ -1074,7 +1074,7 @@ function renderIncidents() {
             </div>
             <div style="font-size:12px;font-weight:700;margin-bottom:4px">${inc.title}</div>
             <div style="font-size:10px;color:var(--color-text-tertiary)">
-              Assignee: ${inc.assignee} · Services: ${inc.services.join(', ')} · Created: ${inc.created}
+              Assignee: ${inc.assignee || 'Unassigned'} · Services: ${Array.isArray(inc.services) ? inc.services.join(', ') : inc.services || 'N/A'} · Created: ${inc.created || 'N/A'}
             </div>
           </div>
           <div style="margin-left:auto;display:flex;gap:6px;flex-shrink:0">
