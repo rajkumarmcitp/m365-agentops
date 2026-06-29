@@ -98,51 +98,75 @@ export async function getEmailThreatDataFromGraph(graphClient) {
       console.warn('⚠️ Mailbox access not available via Graph API:', e.message)
     }
 
-    // Endpoint 5: Fetch organization threat protection policies using PowerShell
-    console.log('📋 Fetching organization threat protection policies via PowerShell...')
+    // Endpoint 5: Fetch organization threat protection policies
+    // Strategy: Try Graph API first, then fall back to PowerShell
+    console.log('📋 Fetching organization threat protection policies...')
 
     try {
-      const policies = await fetchThreatPoliciesFromPowerShell()
+      // Step 1: Try Graph API first (no additional setup required)
+      console.log('  📡 Attempting Graph API policy fetch...')
+      const graphPolicies = await fetchThreatPoliciesFromGraphAPI(graphClient)
 
-      if (policies) {
-        // Update policies from PowerShell results
-        if (policies.SafeLinks && Array.isArray(policies.SafeLinks) && policies.SafeLinks.length > 0) {
-          const policyNames = policies.SafeLinks.filter(Boolean).join(', ')
-          emailData.organizationPolicies.safeLinks.description = policyNames
-          emailData.organizationPolicies.safeLinks.count = policies.SafeLinks.length
-          console.log(`✓ Found ${policies.SafeLinks.length} Safe Links policies: ${policyNames}`)
+      if (graphPolicies && Object.keys(graphPolicies).length > 0) {
+        console.log('✓ Graph API returned policy data')
+
+        if (graphPolicies.advancedThreatProtection !== undefined) {
+          emailData.organizationPolicies.antiMalware.enabled = graphPolicies.advancedThreatProtection
+          console.log(`✓ Advanced threat protection status: ${graphPolicies.advancedThreatProtection}`)
         }
 
-        if (policies.SafeAttachments && Array.isArray(policies.SafeAttachments) && policies.SafeAttachments.length > 0) {
-          const policyNames = policies.SafeAttachments.filter(Boolean).join(', ')
-          emailData.organizationPolicies.safeAttachments.description = policyNames
-          emailData.organizationPolicies.safeAttachments.count = policies.SafeAttachments.length
-          console.log(`✓ Found ${policies.SafeAttachments.length} Safe Attachments policies: ${policyNames}`)
+        if (graphPolicies.servicesHealthy) {
+          console.log('✓ Threat protection services are healthy')
+          emailData.organizationPolicies.threatExplorer.enabled = true
         }
+      } else {
+        console.log('⚠️ Graph API did not return policy details, trying PowerShell fallback...')
 
-        if (policies.AntiPhish && Array.isArray(policies.AntiPhish) && policies.AntiPhish.length > 0) {
-          const policyNames = policies.AntiPhish.filter(Boolean).join(', ')
-          emailData.organizationPolicies.antiPhishing.description = policyNames
-          emailData.organizationPolicies.antiPhishing.count = policies.AntiPhish.length
-          console.log(`✓ Found ${policies.AntiPhish.length} Anti-Phishing policies: ${policyNames}`)
-        }
+        // Step 2: Fall back to PowerShell if Graph API doesn't have policy details
+        const pwshPolicies = await fetchThreatPoliciesFromPowerShell()
 
-        if (policies.AntiMalware && Array.isArray(policies.AntiMalware) && policies.AntiMalware.length > 0) {
-          const policyNames = policies.AntiMalware.filter(Boolean).join(', ')
-          emailData.organizationPolicies.antiMalware.description = policyNames
-          emailData.organizationPolicies.antiMalware.count = policies.AntiMalware.length
-          console.log(`✓ Found ${policies.AntiMalware.length} Anti-Malware policies: ${policyNames}`)
-        }
+        if (pwshPolicies) {
+          // Update policies from PowerShell results
+          if (pwshPolicies.SafeLinks && Array.isArray(pwshPolicies.SafeLinks) && pwshPolicies.SafeLinks.length > 0) {
+            const policyNames = pwshPolicies.SafeLinks.filter(Boolean).join(', ')
+            emailData.organizationPolicies.safeLinks.description = policyNames
+            emailData.organizationPolicies.safeLinks.count = pwshPolicies.SafeLinks.length
+            console.log(`✓ Found ${pwshPolicies.SafeLinks.length} Safe Links policies via PowerShell: ${policyNames}`)
+          }
 
-        if (policies.AntiSpam && Array.isArray(policies.AntiSpam) && policies.AntiSpam.length > 0) {
-          const policyNames = policies.AntiSpam.filter(Boolean).join(', ')
-          emailData.organizationPolicies.antiSpam.description = policyNames
-          emailData.organizationPolicies.antiSpam.count = policies.AntiSpam.length
-          console.log(`✓ Found ${policies.AntiSpam.length} Anti-Spam policies: ${policyNames}`)
+          if (pwshPolicies.SafeAttachments && Array.isArray(pwshPolicies.SafeAttachments) && pwshPolicies.SafeAttachments.length > 0) {
+            const policyNames = pwshPolicies.SafeAttachments.filter(Boolean).join(', ')
+            emailData.organizationPolicies.safeAttachments.description = policyNames
+            emailData.organizationPolicies.safeAttachments.count = pwshPolicies.SafeAttachments.length
+            console.log(`✓ Found ${pwshPolicies.SafeAttachments.length} Safe Attachments policies via PowerShell: ${policyNames}`)
+          }
+
+          if (pwshPolicies.AntiPhish && Array.isArray(pwshPolicies.AntiPhish) && pwshPolicies.AntiPhish.length > 0) {
+            const policyNames = pwshPolicies.AntiPhish.filter(Boolean).join(', ')
+            emailData.organizationPolicies.antiPhishing.description = policyNames
+            emailData.organizationPolicies.antiPhishing.count = pwshPolicies.AntiPhish.length
+            console.log(`✓ Found ${pwshPolicies.AntiPhish.length} Anti-Phishing policies via PowerShell: ${policyNames}`)
+          }
+
+          if (pwshPolicies.AntiMalware && Array.isArray(pwshPolicies.AntiMalware) && pwshPolicies.AntiMalware.length > 0) {
+            const policyNames = pwshPolicies.AntiMalware.filter(Boolean).join(', ')
+            emailData.organizationPolicies.antiMalware.description = policyNames
+            emailData.organizationPolicies.antiMalware.count = pwshPolicies.AntiMalware.length
+            console.log(`✓ Found ${pwshPolicies.AntiMalware.length} Anti-Malware policies via PowerShell: ${policyNames}`)
+          }
+
+          if (pwshPolicies.AntiSpam && Array.isArray(pwshPolicies.AntiSpam) && pwshPolicies.AntiSpam.length > 0) {
+            const policyNames = pwshPolicies.AntiSpam.filter(Boolean).join(', ')
+            emailData.organizationPolicies.antiSpam.description = policyNames
+            emailData.organizationPolicies.antiSpam.count = pwshPolicies.AntiSpam.length
+            console.log(`✓ Found ${pwshPolicies.AntiSpam.length} Anti-Spam policies via PowerShell: ${policyNames}`)
+          }
+        } else {
+          console.log('⚠️ PowerShell fallback also unavailable - using defaults')
         }
       }
     } catch (e) {
-      console.warn('⚠️ PowerShell policy fetch error:', e.message)
+      console.warn('⚠️ Policy fetch error:', e.message)
     }
 
     // Get organization for license info
@@ -327,7 +351,87 @@ export async function getUserRiskFromGraph(graphClient) {
 }
 
 /**
- * Fetch threat protection policies using PowerShell
+ * Fetch threat protection policies using Microsoft Graph API
+ * Tries multiple endpoints to fetch policy information
+ */
+async function fetchThreatPoliciesFromGraphAPI(graphClient) {
+  try {
+    console.log('📋 Fetching threat policies from Graph API...')
+    const policies = {}
+
+    // Attempt 1: Security settings endpoint
+    try {
+      const securitySettings = await graphClient.api('/security/securitySettings').get()
+      if (securitySettings) {
+        console.log('✓ Security settings retrieved from Graph API')
+        // Extract any policy information if available
+        if (securitySettings.advancedThreatProtectionEnabled !== undefined) {
+          policies.advancedThreatProtection = securitySettings.advancedThreatProtectionEnabled
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ Security settings endpoint not available:', e.message)
+    }
+
+    // Attempt 2: Organization settings - check for threat policies
+    try {
+      const org = await graphClient.api('/organization').select('id,displayName').get()
+      if (org && org.value && org.value.length > 0) {
+        const orgId = org.value[0].id
+        console.log(`✓ Organization retrieved: ${org.value[0].displayName}`)
+
+        // Try to get organization security settings
+        try {
+          const orgSettings = await graphClient.api(`/organization/${orgId}/settings`).get()
+          if (orgSettings) {
+            policies.organizationSettings = orgSettings
+          }
+        } catch (e) {
+          console.warn('⚠️ Organization settings not available:', e.message)
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ Organization endpoint error:', e.message)
+    }
+
+    // Attempt 3: Audit logs to detect policy changes (infer policies from recent activity)
+    try {
+      const auditLogs = await graphClient.api('/auditLogs/directoryAudits')
+        .filter("activityDisplayName eq 'Update Safe Links policy' or activityDisplayName eq 'Update Safe Attachments policy' or activityDisplayName eq 'Update anti-phishing policy'")
+        .top(10)
+        .get()
+
+      if (auditLogs && auditLogs.value && auditLogs.value.length > 0) {
+        console.log(`✓ Found ${auditLogs.value.length} policy-related audit events`)
+        policies.recentPolicyChanges = auditLogs.value.length > 0
+      }
+    } catch (e) {
+      console.warn('⚠️ Audit logs not available:', e.message)
+    }
+
+    // Attempt 4: Service health to check if Defender features are enabled
+    try {
+      const serviceHealth = await graphClient.api('/admin/serviceAnnouncement/healthOverviews')
+        .filter("service eq 'Exchange Online' or service eq 'Microsoft Defender for Office 365'")
+        .get()
+
+      if (serviceHealth && serviceHealth.value && serviceHealth.value.length > 0) {
+        console.log(`✓ Service health retrieved for ${serviceHealth.value.length} services`)
+        policies.servicesHealthy = true
+      }
+    } catch (e) {
+      console.warn('⚠️ Service health not available:', e.message)
+    }
+
+    return Object.keys(policies).length > 0 ? policies : null
+  } catch (error) {
+    console.error('❌ Graph API policy fetch error:', error.message)
+    return null
+  }
+}
+
+/**
+ * Fetch threat protection policies using PowerShell (fallback)
  * Gets real policy names and configurations from Exchange Online
  */
 async function fetchThreatPoliciesFromPowerShell() {
@@ -358,9 +462,6 @@ try {
 
   # Get Hosted Content Filter Policies
   \$antiSpamPolicies = Get-HostedContentFilterPolicy -ErrorAction SilentlyContinue 2>$null | Select-Object Name, Identity
-
-  # Get organization config
-  \$orgConfig = Get-OrganizationConfig -ErrorAction SilentlyContinue 2>$null
 
   # Build response
   \$result = @{
