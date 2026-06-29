@@ -1,6 +1,6 @@
 import { go, state } from '../app.js'
 import { showToast } from '../components/toast.js'
-import { getSecurityScore, getIncidents, getDevices, getIdentityPosture } from '../lib/api-client.js'
+import { getSecurityScore, getIncidents, getDevices, getIdentityPosture, callAPI } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
 import {
@@ -22,6 +22,13 @@ import {
 let realSecureScore = null
 let realIncidents = []
 let realIdentityPosture = IDENTITY
+let realEmailSecurity = null
+let realEndpointSecurity = null
+let realTeamsSecurity = null
+let realSharepointSecurity = null
+let realDataProtection = null
+let realGuestAccess = null
+let realRecommendations = null
 
 // ============================================================
 // Sub-navigation
@@ -84,12 +91,19 @@ export async function initSecurity() {
 // Load all data in background without blocking initial render
 async function loadAllDataAsync(el) {
   try {
-    // Load all data in parallel
-    const [scoreResult, devicesResult, incidentsResult, identityResult] = await Promise.all([
+    // Load all security data in parallel
+    const [scoreResult, devicesResult, incidentsResult, identityResult, emailResult, endpointResult, teamsResult, sharepointResult, dpResult, guestResult, recResult] = await Promise.all([
       getSecurityScore(),
       getDevices(),
       getIncidents(),
-      getIdentityPosture()
+      getIdentityPosture(),
+      callAPI('/security/email'),
+      callAPI('/security/endpoint'),
+      callAPI('/security/teams'),
+      callAPI('/security/sharepoint'),
+      callAPI('/security/data-protection'),
+      callAPI('/security/guests'),
+      callAPI('/security/recommendations')
     ])
 
     // Update realSecureScore
@@ -111,8 +125,50 @@ async function loadAllDataAsync(el) {
       console.log('✅ Loaded identity posture')
     }
 
+    // Update email security
+    if (emailResult.success && emailResult.data) {
+      realEmailSecurity = emailResult.data
+      console.log('✅ Loaded email security')
+    }
+
+    // Update endpoint security
+    if (endpointResult.success && endpointResult.data) {
+      realEndpointSecurity = endpointResult.data
+      console.log('✅ Loaded endpoint security')
+    }
+
+    // Update Teams security
+    if (teamsResult.success && teamsResult.data) {
+      realTeamsSecurity = teamsResult.data
+      console.log('✅ Loaded Teams security')
+    }
+
+    // Update SharePoint security
+    if (sharepointResult.success && sharepointResult.data) {
+      realSharepointSecurity = sharepointResult.data
+      console.log('✅ Loaded SharePoint security')
+    }
+
+    // Update data protection
+    if (dpResult.success && dpResult.data) {
+      realDataProtection = dpResult.data
+      console.log('✅ Loaded data protection')
+    }
+
+    // Update guest access
+    if (guestResult.success && guestResult.data) {
+      realGuestAccess = guestResult.data
+      console.log('✅ Loaded guest access')
+    }
+
+    // Update recommendations
+    if (recResult.success && recResult.data) {
+      realRecommendations = recResult.data
+      console.log('✅ Loaded recommendations')
+    }
+
     // Re-render with fresh data
-    console.log('🔄 Re-rendering with loaded data...')
+    console.log('🔄 Re-rendering with all security data...')
     render(el)
   } catch (error) {
     console.error('❌ Error loading data:', error.message)
@@ -520,7 +576,7 @@ function renderExecutive() {
 // SECURE SCORE
 // ============================================================
 function renderSecureScore() {
-  const ss = SECURE_SCORE
+  const ss = (realSecureScore && realSecureScore.current && realSecureScore.max) ? realSecureScore : SECURE_SCORE
   return `
     <div class="grid-2 mb-3" style="gap:16px">
       <div class="card">
@@ -687,7 +743,7 @@ function renderIdentity() {
 // EMAIL SECURITY
 // ============================================================
 function renderEmail() {
-  const e = EMAIL
+  const e = realEmailSecurity || EMAIL
   return `
     <div class="kpi-row mb-3">
       <div class="kpi-tile"><div class="kpi-value danger" style="font-size:28px;font-weight:700">${e.phishingAttempts30d.toLocaleString()}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Phishing Blocked (30d)</div></div>
@@ -744,7 +800,7 @@ function renderEmail() {
 // ENDPOINT SECURITY
 // ============================================================
 function renderEndpoint() {
-  const ep = ENDPOINT
+  const ep = realEndpointSecurity || ENDPOINT
   return `
     <div class="kpi-row mb-3">
       <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${ep.totalManaged}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Managed Devices</div></div>
@@ -797,7 +853,7 @@ function renderEndpoint() {
 // TEAMS SECURITY
 // ============================================================
 function renderTeams() {
-  const t = TEAMS_SEC
+  const t = realTeamsSecurity || TEAMS_SEC
   return `
     <div class="kpi-row mb-3">
       <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${t.totalTeams}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Total Teams</div></div>
@@ -836,7 +892,7 @@ function renderTeams() {
 // SHAREPOINT SECURITY
 // ============================================================
 function renderSharepoint() {
-  const s = SHAREPOINT_SEC
+  const s = realSharepointSecurity || SHAREPOINT_SEC
   return `
     <div class="kpi-row mb-3">
       <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${s.totalSites}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Total Sites</div></div>
@@ -877,7 +933,7 @@ function renderSharepoint() {
 // DATA PROTECTION
 // ============================================================
 function renderDataProtection() {
-  const d = DATA_PROTECTION
+  const d = realDataProtection || DATA_PROTECTION
   return `
     <div class="kpi-row mb-3">
       <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${d.sensitivityLabelsApplied}%</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Labels Applied</div></div>
@@ -979,7 +1035,7 @@ function renderPrivAccess() {
 // GUEST GOVERNANCE
 // ============================================================
 function renderGuests() {
-  const g = GUEST_GOVERNANCE
+  const g = realGuestAccess || GUEST_GOVERNANCE
   return `
     <div class="kpi-row mb-3">
       <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${g.totalGuests}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Total Guests</div></div>
@@ -1091,15 +1147,16 @@ function renderIncidents() {
 // RECOMMENDATIONS
 // ============================================================
 function renderRecommendations() {
-  const filtered = RECOMMENDATIONS.filter(r => {
+  const recs = Array.isArray(realRecommendations) ? realRecommendations : RECOMMENDATIONS
+  const filtered = recs.filter(r => {
     if (recFilter.priority !== 'all' && r.priority !== recFilter.priority) return false
     if (recFilter.category !== 'all' && r.category !== recFilter.category) return false
     if (recFilter.status !== 'all' && r.status !== recFilter.status) return false
     return true
   })
-  const totalGain = filtered.reduce((s, r) => s + r.scoreGain, 0)
+  const totalGain = filtered.reduce((s, r) => s + (r.scoreGain || 0), 0)
 
-  const cats = [...new Set(RECOMMENDATIONS.map(r => r.category))]
+  const cats = [...new Set(recs.map(r => r.category))]
 
   return `
     <div class="filter-bar mb-3">
