@@ -70,107 +70,140 @@ export async function initSecurity() {
   // Show skeleton immediately
   renderSecuritySkeleton(el)
 
-  try {
-    console.log('📡 Fetching real security data from backend...')
+  // Load critical data first (Secure Score, Incidents, Identity)
+  console.log('📡 Loading critical security data...')
+  await loadCriticalData()
 
-    // Fetch secure score
+  // Render page with loaded data
+  render(el)
+
+  // Load secondary data in background (no blocking)
+  loadSecondaryDataAsync()
+
+  // Wire up tab click handlers for lazy loading
+  wireTabHandlers(el)
+}
+
+// Load critical data needed for initial view
+async function loadCriticalData() {
+  try {
+    // Fetch secure score (used in top KPIs)
     const scoreResult = await getSecurityScore()
     if (scoreResult.success && scoreResult.data) {
       realSecureScore = scoreResult.data
-      console.log('✅ Loaded real secure score from API')
+      console.log('✅ Loaded real secure score')
     } else {
-      console.warn('⚠️ No secure score data available from API')
       realSecureScore = null
     }
 
-    // Fetch real devices first (needed for both real and static incidents)
-    let devicesData = []
-    try {
-      const devicesResult = await getDevices()
-      if (devicesResult.success && devicesResult.data) {
-        devicesData = devicesResult.data
-        console.log(`✅ Loaded ${devicesData.length} real devices from Intune`)
-      }
-    } catch (deviceError) {
-      console.warn('⚠️ Could not fetch device data:', deviceError.message)
-    }
+    // Fetch incidents (used in executive summary)
+    const devicesResult = await getDevices()
+    let devicesData = devicesResult.success ? devicesResult.data : []
 
-    // Helper function to enrich incidents with device data
-    const enrichIncidents = (incidents) => {
-      return incidents.map(incident => {
-        // Extract device name from description, title, or use deviceName field
-        const deviceNameSource = incident.deviceName ||
-                                incident.description?.match(/Device ([A-Z0-9-]+)/)?.[1] ||
-                                incident.title?.match(/([A-Z0-9-]+)/)?.[1] ||
-                                incident.description?.match(/([A-Z0-9]{3,})/)?.[1]
-
-        if (deviceNameSource && devicesData.length > 0) {
-          // Try to find matching device in Intune
-          const realDevice = devicesData.find(d =>
-            d.deviceName?.toUpperCase().includes(deviceNameSource.toUpperCase()) ||
-            d.deviceName?.includes(deviceNameSource) ||
-            d.id === deviceNameSource
-          )
-
-          if (realDevice) {
-            return {
-              ...incident,
-              deviceId: realDevice.id,
-              deviceName: realDevice.deviceName,
-              deviceOS: realDevice.operatingSystem,
-              compliant: realDevice.complianceState === 'Compliant',
-              managed: true,
-              owner: realDevice.userDisplayName
-            }
-          }
-        }
-        return incident
-      })
-    }
-
-    // Fetch incidents (from alerts)
     const incidentsResult = await getIncidents()
-    if (incidentsResult.success && Array.isArray(incidentsResult.data) && incidentsResult.data.length > 0) {
-      realIncidents = enrichIncidents(incidentsResult.data)
-      console.log(`✅ Loaded ${realIncidents.length} real incidents from alerts (enriched with device data)`)
+    if (incidentsResult.success && Array.isArray(incidentsResult.data)) {
+      realIncidents = enrichIncidents(incidentsResult.data, devicesData)
+      console.log(`✅ Loaded ${realIncidents.length} incidents`)
     } else {
-      console.warn('⚠️ No active incidents found')
-      // Show empty state instead of static data
       realIncidents = []
     }
 
-    // Fetch identity posture
+    // Fetch identity posture (used in executive summary)
     const identityResult = await getIdentityPosture()
     if (identityResult.success && identityResult.data) {
-      realIdentityPosture = {
-        totalUsers: identityResult.data.totalUsers || IDENTITY.totalUsers,
-        privAccounts: identityResult.data.privilegedAccounts || IDENTITY.privAccounts,
-        globalAdmins: identityResult.data.globalAdmins || IDENTITY.globalAdmins,
-        serviceAccounts: identityResult.data.serviceAccounts || IDENTITY.serviceAccounts,
-        breakGlass: identityResult.data.breakGlassAccounts || IDENTITY.breakGlass,
-        identitySecureScore: identityResult.data.identitySecureScore || IDENTITY.identitySecureScore,
-        mfaEnabled: identityResult.data.mfaEnabled || IDENTITY.mfaEnabled,
-        mfaExcluded: identityResult.data.mfaExcluded || IDENTITY.mfaExcluded,
-        passwordlessAdoption: identityResult.data.passwordlessAdoption || IDENTITY.passwordlessAdoption,
-        fido2Adoption: identityResult.data.fido2Adoption || IDENTITY.fido2Adoption,
-        legacyAuthConnections: identityResult.data.legacyAuthConnections || IDENTITY.legacyAuthConnections,
-        highRiskUsers: identityResult.data.highRiskUsers || IDENTITY.highRiskUsers,
-        riskySignIns30d: identityResult.data.riskySignIns30d || IDENTITY.riskySignIns30d,
-        impossibleTravel30d: IDENTITY.impossibleTravel30d,
-        anonymousIP30d: IDENTITY.anonymousIP30d,
-        passwordSpray30d: IDENTITY.passwordSpray30d,
-        caPoliciesEnabled: identityResult.data.caPoliciesEnabled || IDENTITY.caPoliciesEnabled,
-        caPoliciesDisabled: identityResult.data.caPoliciesDisabled || IDENTITY.caPoliciesDisabled,
-        caPoliciesReportOnly: identityResult.data.caPoliciesReportOnly || IDENTITY.caPoliciesReportOnly,
-        caUsersExcluded: identityResult.data.caUsersExcluded || IDENTITY.caUsersExcluded,
-      }
-      console.log('✅ Loaded real identity posture data from Azure AD')
+      realIdentityPosture = mergeIdentityData(identityResult.data)
+      console.log('✅ Loaded identity posture')
     }
   } catch (error) {
-    console.error('❌ Error loading security data:', error.message)
+    console.error('❌ Error loading critical data:', error.message)
   }
+}
 
-  render(el)
+// Load secondary data in background (non-blocking)
+async function loadSecondaryDataAsync() {
+  console.log('📡 Preloading secondary data in background...')
+  try {
+    await Promise.all([
+      // These can load in parallel but won't block rendering
+      getSecurityScore(),
+      getDevices(),
+      getIncidents(),
+      getIdentityPosture()
+    ])
+    console.log('✅ Secondary data preload complete')
+  } catch (error) {
+    console.warn('⚠️ Some secondary data failed to preload:', error.message)
+  }
+}
+
+// Helper function to enrich incidents
+function enrichIncidents(incidents, devicesData = []) {
+  return incidents.map(incident => {
+    const deviceNameSource = incident.deviceName ||
+                            incident.description?.match(/Device ([A-Z0-9-]+)/)?.[1] ||
+                            incident.title?.match(/([A-Z0-9-]+)/)?.[1] ||
+                            incident.description?.match(/([A-Z0-9]{3,})/)?.[1]
+
+    if (deviceNameSource && devicesData.length > 0) {
+      const realDevice = devicesData.find(d =>
+        d.deviceName?.toUpperCase().includes(deviceNameSource.toUpperCase()) ||
+        d.deviceName?.includes(deviceNameSource) ||
+        d.id === deviceNameSource
+      )
+
+      if (realDevice) {
+        return {
+          ...incident,
+          deviceId: realDevice.id,
+          deviceName: realDevice.deviceName,
+          deviceOS: realDevice.operatingSystem,
+          compliant: realDevice.complianceState === 'Compliant',
+          managed: true,
+          owner: realDevice.userDisplayName
+        }
+      }
+    }
+    return incident
+  })
+}
+
+// Helper function to merge identity data
+function mergeIdentityData(data) {
+  return {
+    totalUsers: data.totalUsers || IDENTITY.totalUsers,
+    privAccounts: data.privilegedAccounts || IDENTITY.privAccounts,
+    globalAdmins: data.globalAdmins || IDENTITY.globalAdmins,
+    serviceAccounts: data.serviceAccounts || IDENTITY.serviceAccounts,
+    breakGlass: data.breakGlassAccounts || IDENTITY.breakGlass,
+    identitySecureScore: data.identitySecureScore || IDENTITY.identitySecureScore,
+    mfaEnabled: data.mfaEnabled || IDENTITY.mfaEnabled,
+    mfaExcluded: data.mfaExcluded || IDENTITY.mfaExcluded,
+    passwordlessAdoption: data.passwordlessAdoption || IDENTITY.passwordlessAdoption,
+    fido2Adoption: data.fido2Adoption || IDENTITY.fido2Adoption,
+    legacyAuthConnections: data.legacyAuthConnections || IDENTITY.legacyAuthConnections,
+    highRiskUsers: data.highRiskUsers || IDENTITY.highRiskUsers,
+    riskySignIns30d: data.riskySignIns30d || IDENTITY.riskySignIns30d,
+    impossibleTravel30d: IDENTITY.impossibleTravel30d,
+    anonymousIP30d: IDENTITY.anonymousIP30d,
+    passwordSpray30d: IDENTITY.passwordSpray30d,
+    caPoliciesEnabled: data.caPoliciesEnabled || IDENTITY.caPoliciesEnabled,
+    caPoliciesDisabled: data.caPoliciesDisabled || IDENTITY.caPoliciesDisabled,
+    caPoliciesReportOnly: data.caPoliciesReportOnly || IDENTITY.caPoliciesReportOnly,
+    caUsersExcluded: data.caUsersExcluded || IDENTITY.caUsersExcluded,
+  }
+}
+
+// Wire up tab click handlers for lazy loading
+function wireTabHandlers(el) {
+  const tabs = el.querySelectorAll('.sec-tab-btn')
+  tabs.forEach(tab => {
+    tab.addEventListener('click', async (e) => {
+      const section = e.target.dataset.section
+      // Sections load on demand when clicked
+      // Data is already preloaded in background, just switch view
+      activeSection = section
+    })
+  })
 }
 
 function renderSecuritySkeleton(el) {
