@@ -60,6 +60,10 @@ export const EMAIL = {
   suspiciousInboxRules: 1,
   sharedMailboxExposed: 14,
   antiSpamPolicy: 'standard',
+  domains: [
+    { id: 'contoso.onmicrosoft.com', name: 'contoso.onmicrosoft.com', isVerified: true, isDefault: false, spf: 'pass', dkim: 'pass', dmarc: 'quarantine' },
+    { id: 'contoso.com', name: 'contoso.com', isVerified: true, isDefault: true, spf: 'pass', dkim: 'pass', dmarc: 'pass' },
+  ],
 }
 
 export const ENDPOINT = {
