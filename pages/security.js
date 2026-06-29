@@ -749,6 +749,12 @@ function renderEmail() {
   const bec = Number(e.becAttempts30d) || 0
   const spoofed = Number(e.spoofedDomainActivity30d) || 0
   const quarantined = Number(e.quarantined30d) || 0
+  const safeAttachments = typeof e.safeAttachments === 'string' ? e.safeAttachments : 'enabled'
+  const antiSpamPolicy = typeof e.antiSpamPolicy === 'string' ? e.antiSpamPolicy : 'standard'
+  const spf = typeof e.spf === 'string' ? e.spf : 'unknown'
+  const dkim = typeof e.dkim === 'string' ? e.dkim : 'unknown'
+  const dmarc = typeof e.dmarc === 'string' ? e.dmarc : 'unknown'
+  const safeLinks = typeof e.safeLinks === 'string' ? e.safeLinks : 'enabled'
 
   return `
     <div class="kpi-row mb-3">
@@ -764,12 +770,12 @@ function renderEmail() {
         <div class="card-title mb-3"><i class="ti ti-shield-check"></i> Email Authentication Status</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           ${[
-            { label: 'SPF Record',          ok: e.spf === 'pass',        note: e.spf === 'pass' ? 'Configured — v=spf1 include:protection.outlook.com -all' : 'Missing or misconfigured' },
-            { label: 'DKIM Signing',         ok: e.dkim === 'pass',       note: e.dkim === 'pass' ? 'Enabled for contoso.com' : 'Not configured' },
-            { label: 'DMARC Policy',         ok: e.dmarc === 'reject' ? 'pass' : e.dmarc === 'quarantine' ? 'warn' : false, note: `Policy: ${e.dmarc} — ${e.dmarc !== 'reject' ? 'upgrade to reject for full protection' : 'optimal'}` },
-            { label: 'Safe Links',           ok: e.safeLinks === 'enabled',note: e.safeLinks === 'enabled' ? 'Active for all users' : 'Disabled' },
-            { label: 'Safe Attachments',     ok: e.safeAttachments === 'enabled' ? 'pass' : 'warn', note: e.safeAttachments === 'partial' ? 'Partial — not all users covered' : e.safeAttachments },
-            { label: 'Anti-spam Policy',     ok: e.antiSpamPolicy === 'strict' ? 'pass' : 'warn', note: `Level: ${e.antiSpamPolicy} — recommend strict` },
+            { label: 'SPF Record',          ok: spf === 'pass',        note: spf === 'pass' ? 'Configured — v=spf1 include:protection.outlook.com -all' : 'Missing or misconfigured' },
+            { label: 'DKIM Signing',         ok: dkim === 'pass',       note: dkim === 'pass' ? 'Enabled for contoso.com' : 'Not configured' },
+            { label: 'DMARC Policy',         ok: dmarc === 'reject' ? 'pass' : dmarc === 'quarantine' ? 'warn' : false, note: `Policy: ${dmarc} — ${dmarc !== 'reject' ? 'upgrade to reject for full protection' : 'optimal'}` },
+            { label: 'Safe Links',           ok: safeLinks === 'enabled',note: safeLinks === 'enabled' ? 'Active for all users' : 'Disabled' },
+            { label: 'Safe Attachments',     ok: safeAttachments === 'enabled' ? 'pass' : 'warn', note: safeAttachments === 'partial' ? 'Partial — not all users covered' : `Status: ${safeAttachments}` },
+            { label: 'Anti-spam Policy',     ok: antiSpamPolicy === 'strict' ? 'pass' : 'warn', note: `Level: ${antiSpamPolicy || 'unknown'} — recommend strict` },
           ].map(item => `
             <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary)">
               <div style="font-size:10px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:5px">${item.label}</div>
