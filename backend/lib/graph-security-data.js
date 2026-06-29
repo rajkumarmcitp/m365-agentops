@@ -245,6 +245,147 @@ export async function getUserRiskFromGraph(graphClient) {
 }
 
 /**
+ * Validate DNS records for a domain using PowerShell
+ * Checks for SPF, DKIM, and DMARC records
+ */
+async function validateDomainDNSRecords(domainName) {
+  try {
+    const { execFile } = await import('child_process')
+    const { promisify } = await import('util')
+    const execFileAsync = promisify(execFile)
+
+    const pwshPath = process.platform === 'darwin' ? '/usr/local/bin/pwsh' : 'pwsh'
+
+    // PowerShell script to check DNS records
+    const psScript = `
+$domain = '${domainName}'
+$results = @{}
+
+# Check SPF record
+try {
+  $spf = Resolve-DnsName -Name $domain -Type TXT -ErrorAction SilentlyContinue 2>$null | Where-Object { $_.Strings -like '*v=spf1*' }
+  $results.SPF = if ($spf) { 'pass' } else { 'fail' }
+} catch {
+  $results.SPF = 'fail'
+}
+
+# Check DKIM record (default selector)
+try {
+  $dkim = Resolve-DnsName -Name "default._domainkey.$domain" -Type TXT -ErrorAction SilentlyContinue 2>$null | Where-Object { $_.Strings -like '*v=DKIM1*' }
+  $results.DKIM = if ($dkim) { 'pass' } else { 'fail' }
+} catch {
+  $results.DKIM = 'fail'
+}
+
+# Check DMARC record
+try {
+  $dmarc = Resolve-DnsName -Name "_dmarc.$domain" -Type TXT -ErrorAction SilentlyContinue 2>$null | Where-Object { $_.Strings -like '*v=DMARC1*' }
+  $results.DMARC = if ($dmarc) { 'pass' } else { 'fail' }
+} catch {
+  $results.DMARC = 'fail'
+}
+
+# Output results as JSON
+\$results | ConvertTo-Json
+`
+
+    const { stdout, stderr } = await execFileAsync(pwshPath, [
+      '-NoProfile',
+      '-NoLogo',
+      '-NonInteractive',
+      '-Command', psScript
+    ], {
+      timeout: 10000,
+      encoding: 'utf-8'
+    })
+
+    if (stdout) {
+      try {
+        const results = JSON.parse(stdout)
+        console.log(`✓ DNS validation for ${domainName}: SPF=${results.SPF}, DKIM=${results.DKIM}, DMARC=${results.DMARC}`)
+        return {
+          spf: results.SPF || 'unknown',
+          dkim: results.DKIM || 'unknown',
+          dmarc: results.DMARC || 'unknown'
+        }
+      } catch (parseErr) {
+        console.warn(`⚠️ Could not parse DNS results for ${domainName}:`, parseErr.message)
+      }
+    }
+
+    return { spf: 'unknown', dkim: 'unknown', dmarc: 'unknown' }
+  } catch (error) {
+    console.warn(`⚠️ PowerShell DNS validation not available for ${domainName}:`, error.message)
+    // Fallback to nslookup if PowerShell fails
+    return await validateDomainDNSRecordsNslookup(domainName)
+  }
+}
+
+/**
+ * Fallback: Validate DNS records using nslookup (cross-platform)
+ */
+async function validateDomainDNSRecordsNslookup(domainName) {
+  try {
+    const { execFile } = await import('child_process')
+    const { promisify } = await import('util')
+    const execFileAsync = promisify(execFile)
+
+    const results = { spf: 'unknown', dkim: 'unknown', dmarc: 'unknown' }
+
+    // Check SPF
+    try {
+      const { stdout } = await execFileAsync('nslookup', ['-type=TXT', domainName], {
+        timeout: 5000,
+        encoding: 'utf-8'
+      })
+      if (stdout && stdout.includes('v=spf1')) {
+        results.spf = 'pass'
+      } else {
+        results.spf = 'fail'
+      }
+    } catch (e) {
+      results.spf = 'fail'
+    }
+
+    // Check DKIM (default selector)
+    try {
+      const { stdout } = await execFileAsync('nslookup', ['-type=TXT', `default._domainkey.${domainName}`], {
+        timeout: 5000,
+        encoding: 'utf-8'
+      })
+      if (stdout && stdout.includes('v=DKIM1')) {
+        results.dkim = 'pass'
+      } else {
+        results.dkim = 'fail'
+      }
+    } catch (e) {
+      results.dkim = 'fail'
+    }
+
+    // Check DMARC
+    try {
+      const { stdout } = await execFileAsync('nslookup', ['-type=TXT', `_dmarc.${domainName}`], {
+        timeout: 5000,
+        encoding: 'utf-8'
+      })
+      if (stdout && stdout.includes('v=DMARC1')) {
+        results.dmarc = 'pass'
+      } else {
+        results.dmarc = 'fail'
+      }
+    } catch (e) {
+      results.dmarc = 'fail'
+    }
+
+    console.log(`✓ nslookup DNS validation for ${domainName}: SPF=${results.spf}, DKIM=${results.dkim}, DMARC=${results.dmarc}`)
+    return results
+  } catch (error) {
+    console.warn(`⚠️ nslookup DNS validation failed for ${domainName}:`, error.message)
+    return { spf: 'unknown', dkim: 'unknown', dmarc: 'unknown' }
+  }
+}
+
+/**
  * Get domain authentication status for all domains in tenant
  */
 export async function getDomainAuthenticationStatusFromGraph(graphClient) {
@@ -278,20 +419,16 @@ export async function getDomainAuthenticationStatusFromGraph(graphClient) {
             antiSpamPolicy: 'standard'
           }
 
-          // Try to fetch domain DNS records
+          // Validate DNS records using PowerShell or nslookup
           try {
-            const dnsRecords = await graphClient.api(`/domains/${domain.id}/domainNameReferences`)
-              .get()
-
-            if (dnsRecords && dnsRecords.value) {
-              // Check for SPF, DKIM, DMARC records in the domain
-              const records = dnsRecords.value
-              domainRecord.spf = records.some(r => r.includes('spf')) ? 'pass' : 'unknown'
-              domainRecord.dkim = records.some(r => r.includes('dkim')) ? 'pass' : 'unknown'
-              domainRecord.dmarc = records.some(r => r.includes('dmarc')) ? 'pass' : 'unknown'
-            }
+            console.log(`🔍 Validating DNS records for domain: ${domain.id}`)
+            const dnsValidation = await validateDomainDNSRecords(domain.id)
+            domainRecord.spf = dnsValidation.spf
+            domainRecord.dkim = dnsValidation.dkim
+            domainRecord.dmarc = dnsValidation.dmarc
           } catch (e) {
-            console.warn(`⚠️ Could not fetch DNS records for ${domain.id}:`, e.message)
+            console.warn(`⚠️ Could not validate DNS records for ${domain.id}:`, e.message)
+            // Keep defaults (unknown)
           }
 
           domainData.domains.push(domainRecord)

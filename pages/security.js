@@ -463,15 +463,18 @@ function statusIcon(ok, label) {
 function statusBadge(status) {
   status = String(status || 'unknown').toLowerCase()
   if (status === 'pass' || status === 'enabled') {
-    return `<span style="display:inline-block;padding:3px 8px;background:rgba(34,197,94,0.1);color:#22c55e;border-radius:4px;font-size:10px;font-weight:600">✓ ${status}</span>`
+    return `<span style="display:inline-block;padding:3px 8px;background:rgba(34,197,94,0.1);color:#22c55e;border-radius:4px;font-size:10px;font-weight:600">✓ Pass</span>`
   }
   if (status === 'warn' || status === 'warning' || status === 'partial') {
-    return `<span style="display:inline-block;padding:3px 8px;background:rgba(234,179,8,0.1);color:#eab308;border-radius:4px;font-size:10px;font-weight:600">⚠ ${status}</span>`
+    return `<span style="display:inline-block;padding:3px 8px;background:rgba(234,179,8,0.1);color:#eab308;border-radius:4px;font-size:10px;font-weight:600">⚠ Warning</span>`
   }
   if (status === 'unknown') {
-    return `<span style="display:inline-block;padding:3px 8px;background:rgba(100,116,139,0.1);color:#64748b;border-radius:4px;font-size:10px;font-weight:600">? ${status}</span>`
+    return `<span style="display:inline-block;padding:3px 8px;background:rgba(100,116,139,0.1);color:#64748b;border-radius:4px;font-size:10px;font-weight:600">? Unknown</span>`
   }
-  return `<span style="display:inline-block;padding:3px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border-radius:4px;font-size:10px;font-weight:600">✗ ${status}</span>`
+  if (status === 'fail') {
+    return `<span style="display:inline-block;padding:3px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border-radius:4px;font-size:10px;font-weight:600">✗ Fail</span>`
+  }
+  return `<span style="display:inline-block;padding:3px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border-radius:4px;font-size:10px;font-weight:600">✗ Fail</span>`
 }
 
 // ============================================================
