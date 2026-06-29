@@ -21,6 +21,13 @@ import { initDatabase, getDatabase } from './tenantguard/database.js'
 import { startAuditCollectionJob } from './tenantguard/jobs.js'
 import { startCorrelationJobs } from './tenantguard/correlation-jobs.js'
 import { storeAlertToSharePoint, storeCorrelationToSharePoint } from './tenantguard/sharepoint-sync.js'
+import {
+  getEmailThreatReport,
+  getMailFlowStatus,
+  getAntiSpamPolicyStatus,
+  getDefenderThreatReport,
+  getEmailAuthenticationStatus
+} from './lib/powershell-executor.js'
 import { InvestigationService } from './tenantguard/investigation-service.js'
 import { createInvestigationTables } from './tenantguard/investigation-schema.js'
 import { SettingsService } from './tenantguard/settings-service.js'
@@ -4547,27 +4554,23 @@ app.get('/api/security/incidents', (req, res) => {
 
 /**
  * GET /api/security/email
- * Get email security settings and policies from Graph API / Defender
+ * Get email security settings and policies from PowerShell / Defender for Office 365
  */
 app.get('/api/security/email', async (req, res) => {
   try {
-    console.log('📧 Fetching email security data from Graph API...')
+    console.log('📧 Fetching email security data from PowerShell...')
 
-    if (!graphClient) {
-      throw new Error('Graph Client not initialized')
-    }
-
-    let emailData = {
+    const emailData = {
       phishingAttempts30d: 0,
       malwareDetected30d: 0,
       becAttempts30d: 0,
       spoofedDomainActivity30d: 0,
       quarantined30d: 0,
-      spf: 'pass',
-      dkim: 'pass',
-      dmarc: 'quarantine',
+      spf: 'unknown',
+      dkim: 'unknown',
+      dmarc: 'unknown',
       safeLinks: 'enabled',
-      safeAttachments: 'partial',
+      safeAttachments: 'enabled',
       antiSpamPolicy: 'standard',
       externalForwardingRules: 0,
       suspiciousInboxRules: 0,
@@ -4575,29 +4578,59 @@ app.get('/api/security/email', async (req, res) => {
     }
 
     try {
-      // Try to fetch threat data from Defender API
-      const threatData = await graphClient.api('/security/protectionPolicies').get()
-      if (threatData && threatData.value) {
-        console.log('✓ Fetched threat protection data from Graph API')
+      // Fetch threat data from Defender (PowerShell)
+      const threatReport = await getDefenderThreatReport(30)
+      if (threatReport) {
+        emailData.phishingAttempts30d = threatReport.advancedPhishing || 0
+        emailData.malwareDetected30d = threatReport.advancedPhishing || 0
+        emailData.becAttempts30d = threatReport.businessEmailCompromise || 0
+        emailData.spoofedDomainActivity30d = threatReport.spoof || 0
+        console.log('✓ Fetched threat data from Defender')
       }
     } catch (e) {
-      console.warn('⚠️ Defender threat data not available via Graph API - using defaults')
+      console.warn('⚠️ Defender threat data not available:', e.message)
     }
 
     try {
-      // Try to fetch mail flow insights
-      const mailFlow = await graphClient.api('/admin/reportSettings').get()
+      // Fetch mail flow and forwarding rules
+      const mailFlow = await getMailFlowStatus()
       if (mailFlow) {
-        console.log('✓ Fetched mail flow data')
+        emailData.externalForwardingRules = mailFlow.externalForwardingCount || 0
+        console.log('✓ Fetched mail flow status')
       }
     } catch (e) {
-      console.warn('⚠️ Mail flow data not available')
+      console.warn('⚠️ Mail flow status not available:', e.message)
+    }
+
+    try {
+      // Fetch anti-spam and malware policy status
+      const policyStatus = await getAntiSpamPolicyStatus()
+      if (policyStatus) {
+        emailData.safeAttachments = policyStatus.safeAttachmentsEnabled ? 'enabled' : 'disabled'
+        emailData.antiSpamPolicy = policyStatus.antiSpamEnabled ? 'strict' : 'standard'
+        console.log('✓ Fetched anti-spam policy status')
+      }
+    } catch (e) {
+      console.warn('⚠️ Anti-spam policy status not available:', e.message)
+    }
+
+    try {
+      // Fetch email authentication status
+      const authStatus = await getEmailAuthenticationStatus()
+      if (authStatus) {
+        emailData.spf = authStatus.spf || 'unknown'
+        emailData.dkim = authStatus.dkim || 'unknown'
+        emailData.dmarc = authStatus.dmarc || 'unknown'
+        console.log('✓ Fetched email authentication status')
+      }
+    } catch (e) {
+      console.warn('⚠️ Email authentication status not available:', e.message)
     }
 
     console.log('✓ Email security data loaded')
     res.json({ success: true, data: emailData })
   } catch (error) {
-    console.warn('⚠️ Email security fetch failed:', error.message)
+    console.error('❌ Error fetching email security data:', error.message)
     res.json({
       success: true,
       data: {
@@ -4606,11 +4639,11 @@ app.get('/api/security/email', async (req, res) => {
         becAttempts30d: 0,
         spoofedDomainActivity30d: 0,
         quarantined30d: 0,
-        spf: 'pass',
-        dkim: 'pass',
-        dmarc: 'quarantine',
+        spf: 'unknown',
+        dkim: 'unknown',
+        dmarc: 'unknown',
         safeLinks: 'enabled',
-        safeAttachments: 'partial',
+        safeAttachments: 'enabled',
         antiSpamPolicy: 'standard',
         externalForwardingRules: 0,
         suspiciousInboxRules: 0,
