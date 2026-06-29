@@ -98,6 +98,67 @@ export async function getEmailThreatDataFromGraph(graphClient) {
       console.warn('⚠️ Mailbox access not available via Graph API:', e.message)
     }
 
+    // Endpoint 5: Fetch organization threat protection policies using PowerShell
+    console.log('📋 Fetching organization threat protection policies via PowerShell...')
+
+    try {
+      const policies = await fetchThreatPoliciesFromPowerShell()
+
+      if (policies) {
+        // Update policies from PowerShell results
+        if (policies.SafeLinks && Array.isArray(policies.SafeLinks) && policies.SafeLinks.length > 0) {
+          const policyNames = policies.SafeLinks.filter(Boolean).join(', ')
+          emailData.organizationPolicies.safeLinks.description = policyNames
+          emailData.organizationPolicies.safeLinks.count = policies.SafeLinks.length
+          console.log(`✓ Found ${policies.SafeLinks.length} Safe Links policies: ${policyNames}`)
+        }
+
+        if (policies.SafeAttachments && Array.isArray(policies.SafeAttachments) && policies.SafeAttachments.length > 0) {
+          const policyNames = policies.SafeAttachments.filter(Boolean).join(', ')
+          emailData.organizationPolicies.safeAttachments.description = policyNames
+          emailData.organizationPolicies.safeAttachments.count = policies.SafeAttachments.length
+          console.log(`✓ Found ${policies.SafeAttachments.length} Safe Attachments policies: ${policyNames}`)
+        }
+
+        if (policies.AntiPhish && Array.isArray(policies.AntiPhish) && policies.AntiPhish.length > 0) {
+          const policyNames = policies.AntiPhish.filter(Boolean).join(', ')
+          emailData.organizationPolicies.antiPhishing.description = policyNames
+          emailData.organizationPolicies.antiPhishing.count = policies.AntiPhish.length
+          console.log(`✓ Found ${policies.AntiPhish.length} Anti-Phishing policies: ${policyNames}`)
+        }
+
+        if (policies.AntiMalware && Array.isArray(policies.AntiMalware) && policies.AntiMalware.length > 0) {
+          const policyNames = policies.AntiMalware.filter(Boolean).join(', ')
+          emailData.organizationPolicies.antiMalware.description = policyNames
+          emailData.organizationPolicies.antiMalware.count = policies.AntiMalware.length
+          console.log(`✓ Found ${policies.AntiMalware.length} Anti-Malware policies: ${policyNames}`)
+        }
+
+        if (policies.AntiSpam && Array.isArray(policies.AntiSpam) && policies.AntiSpam.length > 0) {
+          const policyNames = policies.AntiSpam.filter(Boolean).join(', ')
+          emailData.organizationPolicies.antiSpam.description = policyNames
+          emailData.organizationPolicies.antiSpam.count = policies.AntiSpam.length
+          console.log(`✓ Found ${policies.AntiSpam.length} Anti-Spam policies: ${policyNames}`)
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ PowerShell policy fetch error:', e.message)
+    }
+
+    // Get organization for license info
+    try {
+      const org = await graphClient.api('/organization')
+        .select('displayName,id')
+        .get()
+
+      if (org && org.value && org.value.length > 0) {
+        console.log(`✓ Organization: ${org.value[0].displayName}`)
+        emailData.organizationPolicies.threatExplorer.enabled = true
+      }
+    } catch (e) {
+      console.warn('⚠️ Organization data not available:', e.message)
+    }
+
     return emailData
   } catch (error) {
     console.error('❌ Error fetching email threat data:', error.message)
@@ -262,6 +323,85 @@ export async function getUserRiskFromGraph(graphClient) {
       riskySignIns: 0,
       highRiskUsers: 0
     }
+  }
+}
+
+/**
+ * Fetch threat protection policies using PowerShell
+ * Gets real policy names and configurations from Exchange Online
+ */
+async function fetchThreatPoliciesFromPowerShell() {
+  try {
+    const { execFile } = await import('child_process')
+    const { promisify } = await import('util')
+    const execFileAsync = promisify(execFile)
+
+    const pwshPath = process.platform === 'darwin' ? '/usr/local/bin/pwsh' : 'pwsh'
+
+    // PowerShell script to fetch threat policies
+    const psScript = `
+try {
+  # Import Exchange Online module
+  Import-Module ExchangeOnlineManagement -ErrorAction SilentlyContinue
+
+  # Get Safe Links Policies
+  \$safeLinksPolicies = Get-SafeLinksPolicy -ErrorAction SilentlyContinue 2>$null | Select-Object Name, Identity
+
+  # Get Safe Attachments Policies
+  \$safeAttachmentsPolicies = Get-SafeAttachmentPolicy -ErrorAction SilentlyContinue 2>$null | Select-Object Name, Identity
+
+  # Get Anti-Phishing Policies
+  \$antiPhishPolicies = Get-AntiPhishPolicy -ErrorAction SilentlyContinue 2>$null | Select-Object Name, Identity
+
+  # Get Malware Filter Policies
+  \$antiMalwarePolicies = Get-MalwareFilterPolicy -ErrorAction SilentlyContinue 2>$null | Select-Object Name, Identity
+
+  # Get Hosted Content Filter Policies
+  \$antiSpamPolicies = Get-HostedContentFilterPolicy -ErrorAction SilentlyContinue 2>$null | Select-Object Name, Identity
+
+  # Get organization config
+  \$orgConfig = Get-OrganizationConfig -ErrorAction SilentlyContinue 2>$null
+
+  # Build response
+  \$result = @{
+    SafeLinks = @(\$safeLinksPolicies | ForEach-Object { \$_.Name })
+    SafeAttachments = @(\$safeAttachmentsPolicies | ForEach-Object { \$_.Name })
+    AntiPhish = @(\$antiPhishPolicies | ForEach-Object { \$_.Name })
+    AntiMalware = @(\$antiMalwarePolicies | ForEach-Object { \$_.Name })
+    AntiSpam = @(\$antiSpamPolicies | ForEach-Object { \$_.Name })
+  }
+
+  \$result | ConvertTo-Json
+} catch {
+  Write-Host "Error: \$(\$_.Exception.Message)"
+  @{} | ConvertTo-Json
+}
+`
+
+    const { stdout, stderr } = await execFileAsync(pwshPath, [
+      '-NoProfile',
+      '-NoLogo',
+      '-NonInteractive',
+      '-Command', psScript
+    ], {
+      timeout: 15000,
+      encoding: 'utf-8'
+    })
+
+    if (stdout) {
+      try {
+        const policies = JSON.parse(stdout)
+        console.log('✓ PowerShell policies fetched successfully')
+        return policies
+      } catch (parseErr) {
+        console.warn('⚠️ Could not parse PowerShell policies:', parseErr.message)
+      }
+    }
+
+    return null
+  } catch (error) {
+    console.warn('⚠️ PowerShell policy fetch failed:', error.message)
+    return null
   }
 }
 
