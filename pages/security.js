@@ -698,8 +698,8 @@ function renderSecureScore() {
             <div class="kpi-label">90-day</div>
           </div>
           <div class="kpi-tile" style="text-align:center">
-            <div class="kpi-value warning">${RECOMMENDATIONS.reduce((s, r) => s + r.scoreGain, 0)}</div>
-            <div class="kpi-label">Potential gain</div>
+            <div class="kpi-value info">${Array.isArray(realRecommendations) ? realRecommendations.length : RECOMMENDATIONS.length}</div>
+            <div class="kpi-label">Actions</div>
           </div>
         </div>
         <div class="alert-banner info mt-3" style="margin-bottom:0">
@@ -748,32 +748,33 @@ function renderSecureScore() {
     <div class="card">
       <div class="card-header">
         <span class="card-title"><i class="ti ti-list-check"></i> Improvement Actions</span>
-        <span class="badge info">${RECOMMENDATIONS.length} recommendations · ${RECOMMENDATIONS.reduce((s, r) => s + r.scoreGain, 0)} pts potential</span>
+        ${Array.isArray(realRecommendations) ? `<span class="badge info">${realRecommendations.length} actions</span>` : `<span class="badge info">${RECOMMENDATIONS.length} recommendations</span>`}
       </div>
-      <table>
-        <thead><tr>
-          <th style="width:12%">Priority</th>
-          <th style="width:38%">Recommendation</th>
-          <th style="width:13%">Category</th>
-          <th style="width:10%">Score Gain</th>
-          <th style="width:10%">Effort</th>
-          <th style="width:12%">Status</th>
-          <th style="width:5%"></th>
-        </tr></thead>
-        <tbody>
-          ${RECOMMENDATIONS.slice(0, 8).map(r => `
-            <tr>
-              <td data-label="Priority"><span class="badge ${r.priority === 'critical' ? 'danger' : r.priority === 'high' ? 'warning' : r.priority === 'medium' ? 'info' : 'neutral'}">${r.priority}</span></td>
-              <td style="font-size:11px;font-weight:500" data-label="Recommendation">${r.title}</td>
-              <td data-label="Category"><span class="pill">${r.category}</span></td>
-              <td data-label="Score Gain"><span class="badge success">+${r.scoreGain}</span></td>
-              <td data-label="Effort"><span class="badge neutral">${r.effort}</span></td>
-              <td data-label="Status"><span class="badge ${r.status === 'open' ? 'warning' : 'info'}">${r.status}</span></td>
-              <td data-label=""><button class="btn btn-xs"><i class="ti ti-arrow-right"></i></button></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th style="width:12%">Priority</th>
+            <th style="width:40%">Action</th>
+            <th style="width:15%">Category</th>
+            <th style="width:20%">Current State</th>
+            <th style="width:13%"></th>
+          </tr></thead>
+          <tbody>
+            ${(Array.isArray(realRecommendations) ? realRecommendations : RECOMMENDATIONS).slice(0, 8).map(r => `
+              <tr>
+                <td data-label="Priority"><span class="badge ${r.priority === 'critical' ? 'danger' : r.priority === 'high' ? 'warning' : r.priority === 'medium' ? 'info' : 'neutral'}">${r.priority}</span></td>
+                <td style="font-size:11px;font-weight:500;line-height:1.5" data-label="Action">
+                  <div style="font-weight:600;margin-bottom:4px">${r.title}</div>
+                  <div style="font-size:10px;color:var(--color-text-secondary)">${r.impact || r.description || 'Review and implement'}</div>
+                </td>
+                <td data-label="Category"><span class="pill" style="font-size:10px">${r.category}</span></td>
+                <td style="font-size:10px;color:var(--color-text-secondary)" data-label="Current State">${r.currentState || r.status || 'Open'}</td>
+                <td data-label=""><button class="btn btn-xs" title="${r.action || 'View details'}"><i class="ti ti-arrow-right"></i></button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
     </div>
   `
 }
