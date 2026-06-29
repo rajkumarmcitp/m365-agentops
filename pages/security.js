@@ -726,18 +726,18 @@ function renderSecureScore() {
           const statusText = c.score >= 80 ? 'Good' : c.score >= 65 ? 'Needs attention' : 'Needs improvement'
           const statusColor = c.score >= 80 ? '#059669' : c.score >= 65 ? '#d97706' : '#dc2626'
           return `
-          <div style="margin-bottom:24px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <span style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:10px;color:#111827">
-                <i class="ti ${c.icon}" style="font-size:18px;color:${col.bar}"></i>${c.name}
+          <div style="margin-bottom:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px;color:var(--color-text-primary)">
+                <i class="ti ${c.icon}" style="font-size:16px;color:${col.bar}"></i>${c.name}
               </span>
-              <span style="font-size:18px;font-weight:700;color:${col.bar}">${c.score}%</span>
+              <span style="font-size:16px;font-weight:700;color:${col.bar}">${c.score}%</span>
             </div>
-            <div style="height:12px;background:#e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:8px">
-              <div style="width:${c.score}%;height:100%;background:${col.bar};border-radius:6px;transition:width 0.3s ease"></div>
+            <div style="height:8px;background:var(--color-bg-secondary);border-radius:4px;overflow:hidden;margin-bottom:6px">
+              <div style="width:${c.score}%;height:100%;background:${col.bar};border-radius:4px;transition:width 0.3s ease"></div>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6b7280">
-              <span style="font-size:16px;color:${statusColor}">${statusIcon}</span>
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary)">
+              <span style="font-size:14px;color:${statusColor}">${statusIcon}</span>
               <span>${statusText}</span>
             </div>
           </div>
