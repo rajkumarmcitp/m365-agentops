@@ -260,8 +260,8 @@ function render(el) {
       </div>
     </div>
 
-    <!-- Top-5 always-visible KPI strip -->
-    <div class="sec-top5">
+    <!-- Top KPI strip - Full Width -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px">
       ${topFiveKpi()}
     </div>
 
@@ -331,32 +331,30 @@ function topFiveKpi() {
   const critical = incidents.filter(i => i.severity === 'critical' && i.status !== 'resolved').length
 
   return `
-    <div class="kpi-tile sec-kpi-primary" style="min-width:160px">
-      <div style="display:flex;align-items:center;gap:12px">
+    <div class="kpi-tile sec-kpi-primary" style="background:var(--color-background-secondary);border-radius:8px;padding:16px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center">
+      <div style="margin-bottom:12px">
         ${scoreGauge(ss.current, ss.max, 52)}
-        <div>
-          <div class="kpi-value ${ssColor}" style="font-size:28px;font-weight:700">${ss.current}<span style="font-size:12px;font-weight:500;color:var(--color-text-tertiary)">/${ss.max}</span></div>
-          <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Secure Score</div>
-          <div style="font-size:10px;margin-top:3px;color:${ss.delta7d >= 0 ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'}">
-            ${ss.delta7d >= 0 ? '+' : ''}${ss.delta7d} this week
-          </div>
-        </div>
+      </div>
+      <div class="kpi-value ${ssColor}" style="font-size:24px;font-weight:700">${ss.current}<span style="font-size:10px;font-weight:500;color:var(--color-text-tertiary)">/${ss.max}</span></div>
+      <div class="kpi-label" style="font-size:9px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600;margin-top:6px">Secure Score</div>
+      <div style="font-size:9px;margin-top:6px;color:${ss.delta7d >= 0 ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'}">
+        ${ss.delta7d >= 0 ? '+' : ''}${ss.delta7d} this week
       </div>
     </div>
-    <div class="kpi-tile">
-      <div class="kpi-value ${critical > 0 ? 'danger' : 'success'}" style="font-size:28px;font-weight:700">${critical > 0 ? critical : '✓'}</div>
-      <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Critical Incidents</div>
-      <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${incidents.filter(i => i.status !== 'resolved').length} open total</div>
+    <div class="kpi-tile" style="background:var(--color-background-secondary);border-radius:8px;padding:16px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center">
+      <div class="kpi-value ${critical > 0 ? 'danger' : 'success'}" style="font-size:24px;font-weight:700">${critical > 0 ? critical : '✓'}</div>
+      <div class="kpi-label" style="font-size:9px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600;margin-top:6px">Critical Incidents</div>
+      <div style="font-size:9px;margin-top:6px;color:var(--color-text-tertiary)">${incidents.filter(i => i.status !== 'resolved').length} open total</div>
     </div>
-    <div class="kpi-tile">
-      <div class="kpi-value ${realIdentityPosture.highRiskUsers > 0 ? 'danger' : 'success'}" style="font-size:28px;font-weight:700">${realIdentityPosture.highRiskUsers}</div>
-      <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">High-Risk Users</div>
-      <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${realIdentityPosture.riskySignIns30d} risky sign-ins (30d)</div>
+    <div class="kpi-tile" style="background:var(--color-background-secondary);border-radius:8px;padding:16px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center">
+      <div class="kpi-value ${realIdentityPosture.highRiskUsers > 0 ? 'danger' : 'success'}" style="font-size:24px;font-weight:700">${realIdentityPosture.highRiskUsers}</div>
+      <div class="kpi-label" style="font-size:9px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600;margin-top:6px">High-Risk Users</div>
+      <div style="font-size:9px;margin-top:6px;color:var(--color-text-tertiary)">${realIdentityPosture.riskySignIns30d} risky sign-ins (30d)</div>
     </div>
-    <div class="kpi-tile">
-      <div class="kpi-value success" style="font-size:28px;font-weight:700">0</div>
-      <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Vulnerable Devices</div>
-      <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">0 non-compliant</div>
+    <div class="kpi-tile" style="background:var(--color-background-secondary);border-radius:8px;padding:16px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center">
+      <div class="kpi-value success" style="font-size:24px;font-weight:700">0</div>
+      <div class="kpi-label" style="font-size:9px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600;margin-top:6px">Vulnerable Devices</div>
+      <div style="font-size:9px;margin-top:6px;color:var(--color-text-tertiary)">0 non-compliant</div>
     </div>
   `
 }
