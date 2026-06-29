@@ -713,20 +713,33 @@ function renderSecureScore() {
           <span class="card-title"><i class="ti ti-chart-bar"></i> Score by Category</span>
         </div>
         ${(Array.isArray(ss.categories) ? ss.categories : []).map(c => {
-          const colors = { success: { text: '#10b981', bar: '#d1fae5' }, warning: { text: '#f59e0b', bar: '#fef3c7' }, danger: { text: '#ef4444', bar: '#fee2e2' } }
-          const col = colors[c.colorClass] || colors.danger
+          const categoryColors = {
+            'Identity': { bar: '#1e3a8a', text: '#1e3a8a' },
+            'Apps': { bar: '#78350f', text: '#78350f' },
+            'Data': { bar: '#1e1b4b', text: '#1e1b4b' },
+            'Devices': { bar: '#15803d', text: '#15803d' },
+            'Infrastructure': { bar: '#7c2d12', text: '#7c2d12' },
+            'Other': { bar: '#6b7280', text: '#6b7280' }
+          }
+          const col = categoryColors[c.name] || categoryColors['Other']
+          const statusIcon = c.score >= 80 ? '✓' : c.score >= 65 ? '⚠' : '●'
+          const statusText = c.score >= 80 ? 'Good' : c.score >= 65 ? 'Needs attention' : 'Needs improvement'
+          const statusColor = c.score >= 80 ? '#059669' : c.score >= 65 ? '#d97706' : '#dc2626'
           return `
-          <div style="margin-bottom:14px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-              <span style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px">
-                <i class="ti ${c.icon}" style="color:${col.text}"></i>${c.name}
+          <div style="margin-bottom:24px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <span style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:10px;color:#111827">
+                <i class="ti ${c.icon}" style="font-size:18px;color:${col.bar}"></i>${c.name}
               </span>
-              <span style="font-size:12px;font-weight:700;color:${col.text}">${c.score}%</span>
+              <span style="font-size:18px;font-weight:700;color:${col.bar}">${c.score}%</span>
             </div>
-            <div style="height:8px;background:${col.bar};border-radius:3px;overflow:hidden">
-              <div style="width:${c.score}%;height:100%;background:${col.text};border-radius:3px;transition:width 0.3s ease"></div>
+            <div style="height:12px;background:#e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:8px">
+              <div style="width:${c.score}%;height:100%;background:${col.bar};border-radius:6px;transition:width 0.3s ease"></div>
             </div>
-            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:3px">${c.score >= 80 ? '✅ Good' : c.score >= 65 ? '⚠️ Needs attention' : '🔴 Needs improvement'}</div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6b7280">
+              <span style="font-size:16px;color:${statusColor}">${statusIcon}</span>
+              <span>${statusText}</span>
+            </div>
           </div>
         `}).join('')}
       </div>
