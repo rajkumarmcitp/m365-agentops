@@ -743,14 +743,20 @@ function renderIdentity() {
 // EMAIL SECURITY
 // ============================================================
 function renderEmail() {
-  const e = realEmailSecurity || EMAIL
+  const e = (realEmailSecurity && typeof realEmailSecurity === 'object') ? realEmailSecurity : EMAIL
+  const phishing = Number(e.phishingAttempts30d) || 0
+  const malware = Number(e.malwareDetected30d) || 0
+  const bec = Number(e.becAttempts30d) || 0
+  const spoofed = Number(e.spoofedDomainActivity30d) || 0
+  const quarantined = Number(e.quarantined30d) || 0
+
   return `
     <div class="kpi-row mb-3">
-      <div class="kpi-tile"><div class="kpi-value danger" style="font-size:28px;font-weight:700">${e.phishingAttempts30d.toLocaleString()}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Phishing Blocked (30d)</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${e.malwareDetected30d}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Malware Detected</div></div>
-      <div class="kpi-tile"><div class="kpi-value danger" style="font-size:28px;font-weight:700">${e.becAttempts30d}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">BEC Attempts</div></div>
-      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${e.spoofedDomainActivity30d}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Spoofed Domain</div></div>
-      <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${e.quarantined30d.toLocaleString()}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Quarantined</div></div>
+      <div class="kpi-tile"><div class="kpi-value danger" style="font-size:28px;font-weight:700">${phishing.toLocaleString()}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Phishing Blocked (30d)</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${malware}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Malware Detected</div></div>
+      <div class="kpi-tile"><div class="kpi-value danger" style="font-size:28px;font-weight:700">${bec}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">BEC Attempts</div></div>
+      <div class="kpi-tile"><div class="kpi-value warning" style="font-size:28px;font-weight:700">${spoofed}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Spoofed Domain</div></div>
+      <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${quarantined.toLocaleString()}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Quarantined</div></div>
     </div>
 
     <div class="grid-2 mb-3" style="gap:16px">
@@ -776,14 +782,14 @@ function renderEmail() {
 
       <div class="card">
         <div class="card-title mb-3"><i class="ti ti-mail-forward"></i> Mail Flow Security</div>
-        <div class="alert-banner ${e.externalForwardingRules > 0 ? 'danger' : 'success'} mb-3">
-          <i class="ti ti-${e.externalForwardingRules > 0 ? 'alert-triangle' : 'circle-check'}"></i>
-          ${e.externalForwardingRules > 0 ? `${e.externalForwardingRules} mailboxes have active external forwarding rules — potential data exfiltration risk.` : 'No external forwarding rules detected.'}
+        <div class="alert-banner ${(Number(e.externalForwardingRules) || 0) > 0 ? 'danger' : 'success'} mb-3">
+          <i class="ti ti-${(Number(e.externalForwardingRules) || 0) > 0 ? 'alert-triangle' : 'circle-check'}"></i>
+          ${(Number(e.externalForwardingRules) || 0) > 0 ? `${Number(e.externalForwardingRules) || 0} mailboxes have active external forwarding rules — potential data exfiltration risk.` : 'No external forwarding rules detected.'}
         </div>
         ${metricGrid([
-          { label: 'External Forwarding Rules', val: e.externalForwardingRules, cls: e.externalForwardingRules === 0 ? 'success' : 'danger' },
-          { label: 'Suspicious Inbox Rules',    val: e.suspiciousInboxRules, cls: e.suspiciousInboxRules === 0 ? 'success' : 'danger' },
-          { label: 'Shared Mailboxes',          val: e.sharedMailboxExposed, cls: 'info' },
+          { label: 'External Forwarding Rules', val: Number(e.externalForwardingRules) || 0, cls: (Number(e.externalForwardingRules) || 0) === 0 ? 'success' : 'danger' },
+          { label: 'Suspicious Inbox Rules',    val: Number(e.suspiciousInboxRules) || 0, cls: (Number(e.suspiciousInboxRules) || 0) === 0 ? 'success' : 'danger' },
+          { label: 'Shared Mailboxes',          val: Number(e.sharedMailboxExposed) || 0, cls: 'info' },
         ])}
         ${recBox([
           'Enable Strict Preset Security Policies in Defender for Office 365',
