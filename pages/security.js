@@ -70,69 +70,52 @@ export async function initSecurity() {
   // Show skeleton immediately
   renderSecuritySkeleton(el)
 
-  // Load critical data first (Secure Score, Incidents, Identity)
-  console.log('📡 Loading critical security data...')
-  await loadCriticalData()
-
-  // Render page with loaded data
+  // Render immediately with skeleton - no waiting for data
   render(el)
 
-  // Load secondary data in background (no blocking)
-  loadSecondaryDataAsync()
+  // Load all data in background (non-blocking)
+  console.log('📡 Loading security data in background...')
+  loadAllDataAsync(el)
 
   // Wire up tab click handlers for lazy loading
   wireTabHandlers(el)
 }
 
-// Load critical data needed for initial view
-async function loadCriticalData() {
+// Load all data in background without blocking initial render
+async function loadAllDataAsync(el) {
   try {
-    // Fetch secure score (used in top KPIs)
-    const scoreResult = await getSecurityScore()
-    if (scoreResult.success && scoreResult.data) {
-      realSecureScore = scoreResult.data
-      console.log('✅ Loaded real secure score')
-    } else {
-      realSecureScore = null
-    }
-
-    // Fetch incidents (used in executive summary)
-    const devicesResult = await getDevices()
-    let devicesData = devicesResult.success ? devicesResult.data : []
-
-    const incidentsResult = await getIncidents()
-    if (incidentsResult.success && Array.isArray(incidentsResult.data)) {
-      realIncidents = enrichIncidents(incidentsResult.data, devicesData)
-      console.log(`✅ Loaded ${realIncidents.length} incidents`)
-    } else {
-      realIncidents = []
-    }
-
-    // Fetch identity posture (used in executive summary)
-    const identityResult = await getIdentityPosture()
-    if (identityResult.success && identityResult.data) {
-      realIdentityPosture = mergeIdentityData(identityResult.data)
-      console.log('✅ Loaded identity posture')
-    }
-  } catch (error) {
-    console.error('❌ Error loading critical data:', error.message)
-  }
-}
-
-// Load secondary data in background (non-blocking)
-async function loadSecondaryDataAsync() {
-  console.log('📡 Preloading secondary data in background...')
-  try {
-    await Promise.all([
-      // These can load in parallel but won't block rendering
+    // Load all data in parallel
+    const [scoreResult, devicesResult, incidentsResult, identityResult] = await Promise.all([
       getSecurityScore(),
       getDevices(),
       getIncidents(),
       getIdentityPosture()
     ])
-    console.log('✅ Secondary data preload complete')
+
+    // Update realSecureScore
+    if (scoreResult.success && scoreResult.data) {
+      realSecureScore = scoreResult.data
+      console.log('✅ Loaded secure score')
+    }
+
+    // Update incidents with device enrichment
+    let devicesData = devicesResult.success ? devicesResult.data : []
+    if (incidentsResult.success && Array.isArray(incidentsResult.data)) {
+      realIncidents = enrichIncidents(incidentsResult.data, devicesData)
+      console.log(`✅ Loaded ${realIncidents.length} incidents`)
+    }
+
+    // Update identity posture
+    if (identityResult.success && identityResult.data) {
+      realIdentityPosture = mergeIdentityData(identityResult.data)
+      console.log('✅ Loaded identity posture')
+    }
+
+    // Re-render with fresh data
+    console.log('🔄 Re-rendering with loaded data...')
+    render(el)
   } catch (error) {
-    console.warn('⚠️ Some secondary data failed to preload:', error.message)
+    console.error('❌ Error loading data:', error.message)
   }
 }
 
