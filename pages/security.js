@@ -460,6 +460,20 @@ function statusIcon(ok, label) {
   return `<span style="color:var(--clr-danger-text)"><i class="ti ti-circle-x"></i> ${label}</span>`
 }
 
+function statusBadge(status) {
+  status = String(status || 'unknown').toLowerCase()
+  if (status === 'pass' || status === 'enabled') {
+    return `<span style="display:inline-block;padding:3px 8px;background:rgba(34,197,94,0.1);color:#22c55e;border-radius:4px;font-size:10px;font-weight:600">✓ ${status}</span>`
+  }
+  if (status === 'warn' || status === 'warning' || status === 'partial') {
+    return `<span style="display:inline-block;padding:3px 8px;background:rgba(234,179,8,0.1);color:#eab308;border-radius:4px;font-size:10px;font-weight:600">⚠ ${status}</span>`
+  }
+  if (status === 'unknown') {
+    return `<span style="display:inline-block;padding:3px 8px;background:rgba(100,116,139,0.1);color:#64748b;border-radius:4px;font-size:10px;font-weight:600">? ${status}</span>`
+  }
+  return `<span style="display:inline-block;padding:3px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border-radius:4px;font-size:10px;font-weight:600">✗ ${status}</span>`
+}
+
 // ============================================================
 // Section dispatcher
 // ============================================================
@@ -765,29 +779,66 @@ function renderEmail() {
       <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${quarantined.toLocaleString()}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Quarantined</div></div>
     </div>
 
-    <div class="grid-2 mb-3" style="gap:16px">
-      <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-shield-check"></i> Email Authentication Status</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          ${[
-            { label: 'SPF Record',          ok: spf === 'pass',        note: spf === 'pass' ? 'Configured — v=spf1 include:protection.outlook.com -all' : 'Missing or misconfigured' },
-            { label: 'DKIM Signing',         ok: dkim === 'pass',       note: dkim === 'pass' ? 'Enabled for contoso.com' : 'Not configured' },
-            { label: 'DMARC Policy',         ok: dmarc === 'reject' ? 'pass' : dmarc === 'quarantine' ? 'warn' : false, note: `Policy: ${dmarc} — ${dmarc !== 'reject' ? 'upgrade to reject for full protection' : 'optimal'}` },
-            { label: 'Safe Links',           ok: safeLinks === 'enabled',note: safeLinks === 'enabled' ? 'Active for all users' : 'Disabled' },
-            { label: 'Safe Attachments',     ok: safeAttachments === 'enabled' ? 'pass' : 'warn', note: safeAttachments === 'partial' ? 'Partial — not all users covered' : `Status: ${safeAttachments}` },
-            { label: 'Anti-spam Policy',     ok: antiSpamPolicy === 'strict' ? 'pass' : 'warn', note: `Level: ${antiSpamPolicy || 'unknown'} — recommend strict` },
-          ].map(item => `
-            <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary)">
-              <div style="font-size:10px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:5px">${item.label}</div>
-              <div style="font-size:12px;font-weight:600;margin-bottom:3px">${statusIcon(item.ok, item.ok === 'pass' || item.ok === true ? 'Pass' : item.ok === 'warn' ? 'Warning' : 'Fail')}</div>
-              <div style="font-size:10px;color:var(--color-text-tertiary);line-height:1.3">${item.note}</div>
-            </div>
-          `).join('')}
-        </div>
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-shield-check"></i> Email Authentication Status</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${[
+          { label: 'SPF Record',          ok: spf === 'pass',        note: spf === 'pass' ? 'Configured — v=spf1 include:protection.outlook.com -all' : 'Missing or misconfigured' },
+          { label: 'DKIM Signing',         ok: dkim === 'pass',       note: dkim === 'pass' ? 'Enabled for contoso.com' : 'Not configured' },
+          { label: 'DMARC Policy',         ok: dmarc === 'reject' ? 'pass' : dmarc === 'quarantine' ? 'warn' : false, note: `Policy: ${dmarc} — ${dmarc !== 'reject' ? 'upgrade to reject for full protection' : 'optimal'}` },
+          { label: 'Safe Links',           ok: safeLinks === 'enabled',note: safeLinks === 'enabled' ? 'Active for all users' : 'Disabled' },
+          { label: 'Safe Attachments',     ok: safeAttachments === 'enabled' ? 'pass' : 'warn', note: safeAttachments === 'partial' ? 'Partial — not all users covered' : `Status: ${safeAttachments}` },
+          { label: 'Anti-spam Policy',     ok: antiSpamPolicy === 'strict' ? 'pass' : 'warn', note: `Level: ${antiSpamPolicy || 'unknown'} — recommend strict` },
+        ].map(item => `
+          <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary)">
+            <div style="font-size:10px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:5px">${item.label}</div>
+            <div style="font-size:12px;font-weight:600;margin-bottom:3px">${statusIcon(item.ok, item.ok === 'pass' || item.ok === true ? 'Pass' : item.ok === 'warn' ? 'Warning' : 'Fail')}</div>
+            <div style="font-size:10px;color:var(--color-text-tertiary);line-height:1.3">${item.note}</div>
+          </div>
+        `).join('')}
       </div>
+    </div>
 
-      <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-mail-forward"></i> Mail Flow Security</div>
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-globe"></i> Domain Authentication Status</div>
+      <div style="overflow-x:auto">
+        <table class="table" style="width:100%;font-size:11px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--color-border-secondary)">
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Domain</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">SPF</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">DKIM</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">DMARC</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Safe Links</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Safe Attachments</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Anti-spam</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Verified</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${Array.isArray(e.domains) && e.domains.length > 0 ? e.domains.map(d => `
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary);padding:0">
+                <td style="padding:8px;font-weight:600">${d.name || d.id}</td>
+                <td style="padding:8px;text-align:center">${statusBadge(d.spf)}</td>
+                <td style="padding:8px;text-align:center">${statusBadge(d.dkim)}</td>
+                <td style="padding:8px;text-align:center">${statusBadge(d.dmarc)}</td>
+                <td style="padding:8px;text-align:center">${statusBadge(d.safeLinks)}</td>
+                <td style="padding:8px;text-align:center">${statusBadge(d.safeAttachments)}</td>
+                <td style="padding:8px;text-align:center">${statusBadge(d.antiSpamPolicy)}</td>
+                <td style="padding:8px;text-align:center">${d.isVerified ? '✅' : '❌'}</td>
+              </tr>
+            `).join('') : `
+              <tr>
+                <td colspan="8" style="padding:20px;text-align:center;color:var(--color-text-tertiary)">No domains found</td>
+              </tr>
+            `}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-mail-forward"></i> Mail Flow Security</div>
         <div class="alert-banner ${(Number(e.externalForwardingRules) || 0) > 0 ? 'danger' : 'success'} mb-3">
           <i class="ti ti-${(Number(e.externalForwardingRules) || 0) > 0 ? 'alert-triangle' : 'circle-check'}"></i>
           ${(Number(e.externalForwardingRules) || 0) > 0 ? `${Number(e.externalForwardingRules) || 0} mailboxes have active external forwarding rules — potential data exfiltration risk.` : 'No external forwarding rules detected.'}
@@ -803,7 +854,6 @@ function renderEmail() {
           'Upgrade DMARC policy from quarantine to reject',
           'Extend Safe Attachments coverage to all users (currently partial)',
         ])}
-      </div>
     </div>
   `
 }

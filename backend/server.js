@@ -25,7 +25,8 @@ import {
   getEmailThreatDataFromGraph,
   getComplianceDataFromGraph,
   getDeviceComplianceFromGraph,
-  getUserRiskFromGraph
+  getUserRiskFromGraph,
+  getDomainAuthenticationStatusFromGraph
 } from './lib/graph-security-data.js'
 import { InvestigationService } from './tenantguard/investigation-service.js'
 import { createInvestigationTables } from './tenantguard/investigation-schema.js'
@@ -4564,9 +4565,16 @@ app.get('/api/security/email', async (req, res) => {
     }
 
     const emailData = await getEmailThreatDataFromGraph(graphClient)
+    const domainData = await getDomainAuthenticationStatusFromGraph(graphClient)
+
+    // Combine email threat data with domain authentication data
+    const combinedData = {
+      ...emailData,
+      domains: domainData.domains || []
+    }
 
     console.log('✓ Email security data loaded from Graph API')
-    res.json({ success: true, data: emailData })
+    res.json({ success: true, data: combinedData })
   } catch (error) {
     console.error('❌ Error fetching email security data:', error.message)
     res.json({
@@ -4585,7 +4593,8 @@ app.get('/api/security/email', async (req, res) => {
         antiSpamPolicy: 'standard',
         externalForwardingRules: 0,
         suspiciousInboxRules: 0,
-        sharedMailboxExposed: 0
+        sharedMailboxExposed: 0,
+        domains: []
       }
     })
   }
