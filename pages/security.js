@@ -489,44 +489,29 @@ function renderExecutive() {
         `).join('')}
       </div>
 
-    <!-- Real Incidents only -->
-    <div class="grid-2" style="gap:16px">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><i class="ti ti-alert-triangle"></i> Active Incidents</span>
-          <button class="btn btn-xs btn-primary" id="exec-view-incidents">View all</button>
-        </div>
-        ${incidents.filter(i => i.status !== 'resolved').length > 0 ? `
-          ${incidents.filter(i => i.status !== 'resolved').slice(0, 4).map(inc => `
-            <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
-              <span class="badge ${inc.severity === 'critical' ? 'danger' : inc.severity === 'high' ? 'danger' : 'warning'}" style="flex-shrink:0;min-width:56px;justify-content:center">${inc.severity}</span>
-              <div style="flex:1;min-width:0">
-                <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inc.title}</div>
-                <div style="font-size:9px;color:var(--color-text-tertiary)">${inc.id} · ${inc.category} · ${inc.created}</div>
-              </div>
+    <!-- Real Incidents only - Full Width -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="ti ti-alert-triangle"></i> Active Incidents</span>
+        <button class="btn btn-xs btn-primary" id="exec-view-incidents">View all</button>
+      </div>
+      ${incidents.filter(i => i.status !== 'resolved').length > 0 ? `
+        ${incidents.filter(i => i.status !== 'resolved').slice(0, 4).map(inc => `
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <span class="badge ${inc.severity === 'critical' ? 'danger' : inc.severity === 'high' ? 'danger' : 'warning'}" style="flex-shrink:0;min-width:56px;justify-content:center">${inc.severity}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inc.title}</div>
+              <div style="font-size:9px;color:var(--color-text-tertiary)">${inc.id} · ${inc.category} · ${inc.created}</div>
             </div>
-          `).join('')}
-        ` : `
-          <div style="padding:16px;text-align:center;color:var(--clr-success-text)">
-            <i class="ti ti-circle-check" style="font-size:24px;display:block;margin-bottom:8px"></i>
-            <strong>No active incidents</strong><br/>
-            <span style="font-size:11px">Your tenant is secure</span>
           </div>
-        `}
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><i class="ti ti-shield-check"></i> Identity Security</span>
+        `).join('')}
+      ` : `
+        <div style="padding:16px;text-align:center;color:var(--clr-success-text)">
+          <i class="ti ti-circle-check" style="font-size:24px;display:block;margin-bottom:8px"></i>
+          <strong>No active incidents</strong><br/>
+          <span style="font-size:11px">Your tenant is secure</span>
         </div>
-        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-bottom:12px">
-          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px;text-transform:uppercase;font-weight:600">Real-time Metrics</div>
-          <div style="font-size:12px"><strong>${realIdentityPosture.totalUsers}</strong> users</div>
-          <div style="font-size:12px"><strong>${realIdentityPosture.globalAdmins}</strong> global admins</div>
-          <div style="font-size:12px"><strong>${realIdentityPosture.highRiskUsers}</strong> high-risk users</div>
-          <div style="font-size:12px"><strong>${realIdentityPosture.caPoliciesEnabled}</strong> CA policies enabled</div>
-        </div>
-      </div>
+      `}
     </div>
   `
 }
