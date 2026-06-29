@@ -99,7 +99,7 @@ import {
   isPowerShellEnabled, setPowerShellEnabled, resetValidationConfig, exportConfig
 } from './validation-config.js'
 
-dotenv.config({ path: join(__dirname, '.env') })
+dotenv.config({ path: join(__dirname, '..', '.env') })
 
 import { randomUUID } from 'crypto'
 
