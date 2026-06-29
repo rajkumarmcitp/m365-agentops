@@ -26,7 +26,14 @@ import {
   getComplianceDataFromGraph,
   getDeviceComplianceFromGraph,
   getUserRiskFromGraph,
-  getDomainAuthenticationStatusFromGraph
+  getDomainAuthenticationStatusFromGraph,
+  getEndpointSecurityFromGraph,
+  getTeamsSecurityFromGraph,
+  getSharePointSecurityFromGraph,
+  getDataProtectionFromGraph,
+  getIdentitySecurityFromGraph,
+  getPrivilegedAccessFromGraph,
+  getGuestAccessFromGraph
 } from './lib/graph-security-data.js'
 import { InvestigationService } from './tenantguard/investigation-service.js'
 import { createInvestigationTables } from './tenantguard/investigation-schema.js'
@@ -4606,51 +4613,31 @@ app.get('/api/security/email', async (req, res) => {
  */
 app.get('/api/security/endpoint', async (req, res) => {
   try {
-    console.log('🖥️  Fetching endpoint security data...')
-
     if (!graphClient) {
       throw new Error('Graph Client not initialized')
     }
 
-    let endpointData = {
-      totalDevices: 0,
-      compliantDevices: 0,
-      noncompliantDevices: 0,
-      threats: 0,
-      policies: []
-    }
-
-    try {
-      // Fetch managed devices
-      const devices = await graphClient.api('/deviceManagement/managedDevices').get()
-      const deviceList = devices.value || []
-
-      endpointData.totalDevices = deviceList.length
-      endpointData.compliantDevices = deviceList.filter(d => d.complianceState === 'compliant').length
-      endpointData.noncompliantDevices = endpointData.totalDevices - endpointData.compliantDevices
-      endpointData.devices = deviceList.map(d => ({
-        id: d.id,
-        name: d.deviceName,
-        os: d.operatingSystem,
-        compliance: d.complianceState,
-        lastCheckIn: d.lastSyncDateTime
-      }))
-    } catch (e) {
-      console.warn('⚠️ Could not fetch device data:', e.message)
-    }
-
-    console.log(`✓ Endpoint security: ${endpointData.totalDevices} devices, ${endpointData.compliantDevices} compliant`)
+    const endpointData = await getEndpointSecurityFromGraph(graphClient)
     res.json({ success: true, data: endpointData })
   } catch (error) {
     console.warn('⚠️ Endpoint security fetch failed:', error.message)
     res.json({
       success: true,
       data: {
-        totalDevices: 0,
-        compliantDevices: 0,
-        noncompliantDevices: 0,
-        threats: 0,
-        devices: []
+        totalManaged: 0,
+        nonCompliant: 0,
+        vulnerable: 0,
+        ransomwareIndicators: 0,
+        missingCriticalPatches: 0,
+        avCoverage: 0,
+        bitlockerCoverage: 0,
+        firewallEnabled: 0,
+        tamperProtection: 0,
+        activeThreats: 0,
+        highSeverityAlerts: 0,
+        windows11Pct: 0,
+        windows10Pct: 0,
+        macPct: 0
       }
     })
   }
@@ -4662,47 +4649,26 @@ app.get('/api/security/endpoint', async (req, res) => {
  */
 app.get('/api/security/teams', async (req, res) => {
   try {
-    console.log('👥 Fetching Teams security data...')
-
     if (!graphClient) {
       throw new Error('Graph Client not initialized')
     }
 
-    const teamsData = {
-      teamsCount: 0,
-      guestAccessEnabled: true,
-      externalAccessEnabled: true,
-      anonymousMeetingJoinEnabled: true,
-      channelModeration: {
-        enabled: true,
-        newMemberRestrictions: true
-      },
-      encryptionAtRest: true,
-      dataLossPrevention: false
-    }
-
-    try {
-      // Fetch Teams count
-      const teams = await graphClient.api('/teams').get()
-      teamsData.teamsCount = (teams.value || []).length
-    } catch (e) {
-      console.warn('⚠️ Could not fetch Teams data')
-    }
-
-    console.log(`✓ Teams security: ${teamsData.teamsCount} teams`)
+    const teamsData = await getTeamsSecurityFromGraph(graphClient)
     res.json({ success: true, data: teamsData })
   } catch (error) {
     console.warn('⚠️ Teams security fetch failed:', error.message)
     res.json({
       success: true,
       data: {
-        teamsCount: 0,
-        guestAccessEnabled: true,
-        externalAccessEnabled: true,
-        anonymousMeetingJoinEnabled: true,
-        channelModeration: { enabled: true, newMemberRestrictions: true },
-        encryptionAtRest: true,
-        dataLossPrevention: false
+        totalTeams: 0,
+        publicTeams: 0,
+        guestEnabledTeams: 0,
+        inactiveTeams90d: 0,
+        anonymousMeetingAccess: false,
+        guestsAdded30d: 0,
+        externalDomainsAllowed: 0,
+        teamsWithExternalSharing: 0,
+        unownedTeams: 0
       }
     })
   }
@@ -4714,47 +4680,33 @@ app.get('/api/security/teams', async (req, res) => {
  */
 app.get('/api/security/sharepoint', async (req, res) => {
   try {
-    console.log('📁 Fetching SharePoint security data...')
-
     if (!graphClient) {
       throw new Error('Graph Client not initialized')
     }
 
-    const sharepointData = {
-      sitesCount: 0,
-      externalSharingLevel: 'ExistingExternalUserSharingOnly',
-      allowedDomains: [],
-      blockSpecificDomains: false,
-      requireAcceptingAccountMatch: true,
-      preventExternalUsersFromResharingContent: true,
-      defaultSharingLinkType: 'internal',
-      defaultSharingLinkPermission: 'view',
-      allowedStorageSize: 1099511627776
-    }
-
-    try {
-      // Fetch sites
-      const sites = await graphClient.api('/sites').get()
-      sharepointData.sitesCount = (sites.value || []).length
-    } catch (e) {
-      console.warn('⚠️ Could not fetch SharePoint sites')
-    }
-
-    console.log(`✓ SharePoint security: ${sharepointData.sitesCount} sites`)
+    const sharepointData = await getSharePointSecurityFromGraph(graphClient)
     res.json({ success: true, data: sharepointData })
   } catch (error) {
     console.warn('⚠️ SharePoint security fetch failed:', error.message)
     res.json({
       success: true,
       data: {
-        sitesCount: 0,
-        externalSharingLevel: 'ExistingExternalUserSharingOnly',
-        allowedDomains: [],
-        blockSpecificDomains: false,
-        requireAcceptingAccountMatch: true,
-        preventExternalUsersFromResharingContent: true,
-        defaultSharingLinkType: 'internal',
-        defaultSharingLinkPermission: 'view'
+        totalSites: 0,
+        externallyShared: 0,
+        anonymousLinks: 0,
+        publicContent: 0,
+        oversharedSites: 0,
+        sensitiveFiles: 0,
+        largeDownloads30d: 0,
+        restrictedSharingEnabled: true,
+        dlpCoveragePct: 0,
+        siteCount: 0,
+        sharingPolicies: {
+          defaultSharingLink: { type: 'internal', configured: false },
+          guestSharingLevel: { enabled: false, description: 'Not configured' },
+          externalUserExpireAccess: { enabled: false, description: 'No expiration set' },
+          unverifiedLimitedSharing: { enabled: false, description: 'Disabled' }
+        }
       }
     })
   }
@@ -4766,40 +4718,86 @@ app.get('/api/security/sharepoint', async (req, res) => {
  */
 app.get('/api/security/data-protection', async (req, res) => {
   try {
-    console.log('🔐 Fetching data protection policies...')
-
     if (!graphClient) {
       throw new Error('Graph Client not initialized')
     }
 
-    const dpData = {
-      dlpPolicies: 0,
-      sensitivityLabelsEnabled: true,
-      retentionPolicies: 0,
-      labels: [],
-      policyViolations: 0
-    }
-
-    try {
-      // Try to fetch sensitivity labels
-      const labels = await graphClient.api('/me/informationProtection/contentLabels').get()
-      dpData.labels = (labels.value || []).map(l => ({ id: l.id, name: l.displayName }))
-    } catch (e) {
-      console.warn('⚠️ Could not fetch sensitivity labels')
-    }
-
-    console.log(`✓ Data protection: ${dpData.labels.length} labels configured`)
+    const dpData = await getDataProtectionFromGraph(graphClient)
     res.json({ success: true, data: dpData })
   } catch (error) {
     console.warn('⚠️ Data protection fetch failed:', error.message)
     res.json({
       success: true,
       data: {
-        dlpPolicies: 0,
-        sensitivityLabelsEnabled: true,
-        retentionPolicies: 0,
-        labels: [],
-        policyViolations: 0
+        sensitivityLabelsApplied: 0,
+        filesWithoutLabels: 0,
+        retentionPoliciesActive: 0,
+        dlpViolations30d: 0,
+        financialDataExposure: 0,
+        piiExposure: 0,
+        dataExfiltration30d: 0,
+        usbTransfers30d: 0,
+        complianceScore: 0,
+        insiderRiskPolicies: 0,
+        unusualDownloads30d: 0,
+        protectionPolicies: {
+          sensitivityLabels: { configured: false, count: 0, description: 'No labels' },
+          dlpPolicies: { configured: false, count: 0, description: 'No DLP policies' },
+          retentionPolicies: { configured: false, count: 0, description: 'No retention policies' },
+          insiderRisk: { configured: false, count: 0, description: 'Not configured' },
+          dataClassification: { configured: false, description: 'Not configured' },
+          informationBarrier: { configured: false, description: 'Not configured' },
+          recordsManagement: { configured: false, description: 'Not configured' },
+          'e-discovery': { configured: false, description: 'Not configured' },
+          auditLogging: { enabled: false, description: 'Not enabled' }
+        }
+      }
+    })
+  }
+})
+
+/**
+ * GET /api/security/priv-access
+ * Get privileged access management (PIM) and admin security data
+ */
+app.get('/api/security/priv-access', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const pamData = await getPrivilegedAccessFromGraph(graphClient)
+    res.json({ success: true, data: pamData })
+  } catch (error) {
+    console.warn('⚠️ Privileged access fetch failed:', error.message)
+    res.json({
+      success: true,
+      data: {
+        globalAdminCount: 0,
+        securityAdminCount: 0,
+        exchangeAdminCount: 0,
+        sharePointAdminCount: 0,
+        teamsAdminCount: 0,
+        intuneAdminCount: 0,
+        permanentAssignments: 0,
+        pimAdoption: 0,
+        pimEligibleRoles: 0,
+        newAdmins30d: 0,
+        privRoleAssignments30d: 0,
+        emergencyAccess30d: 0,
+        pimActivations30d: 0,
+        pimApprovals30d: 0,
+        privAccessPolicies: {
+          pimEnabled: { configured: false, description: 'Not configured' },
+          mfaRequired: { configured: false, description: 'Not required' },
+          justInTimeAccess: { configured: false, description: 'Not configured' },
+          timeBasedActivation: { configured: false, description: 'Not configured' },
+          approvalRequired: { configured: false, description: 'Not required' },
+          auditLogging: { enabled: false, description: 'Not enabled' },
+          resourceGovernance: { configured: false, description: 'Not configured' },
+          riskAssessment: { configured: false, description: 'Not configured' },
+          accessReview: { configured: false, count: 0, description: 'No reviews' }
+        }
       }
     })
   }
@@ -4811,46 +4809,36 @@ app.get('/api/security/data-protection', async (req, res) => {
  */
 app.get('/api/security/guests', async (req, res) => {
   try {
-    console.log('👤 Fetching guest access policies...')
-
     if (!graphClient) {
       throw new Error('Graph Client not initialized')
     }
 
-    const guestData = {
-      externalUsersCount: 0,
-      guestAccessAllowed: true,
-      allowedExternalDomains: [],
-      blockedExternalDomains: [],
-      mfaRequired: true,
-      sessionTimeout: 1440,
-      allowedActivities: ['view', 'edit', 'share'],
-      requireAcceptInvite: true
-    }
-
-    try {
-      // Fetch external users
-      const externalUsers = await graphClient.api('/users').filter("externalUserState eq 'PendingAcceptance' or externalUserState eq 'Accepted'").get()
-      guestData.externalUsersCount = (externalUsers.value || []).length
-    } catch (e) {
-      console.warn('⚠️ Could not fetch external users')
-    }
-
-    console.log(`✓ Guest access: ${guestData.externalUsersCount} external users`)
+    const guestData = await getGuestAccessFromGraph(graphClient)
     res.json({ success: true, data: guestData })
   } catch (error) {
     console.warn('⚠️ Guest access fetch failed:', error.message)
     res.json({
       success: true,
       data: {
-        externalUsersCount: 0,
-        guestAccessAllowed: true,
-        allowedExternalDomains: [],
-        blockedExternalDomains: [],
-        mfaRequired: true,
-        sessionTimeout: 1440,
-        allowedActivities: ['view', 'edit', 'share'],
-        requireAcceptInvite: true
+        totalGuests: 0,
+        dormantGuests90d: 0,
+        expiredGuests: 0,
+        guestsWithPrivAccess: 0,
+        quarterlyReviewOverdue: 0,
+        guestsAddedLast30d: 0,
+        guestsRemovedLast30d: 0,
+        avgGuestAgeDays: 0,
+        guestAccessPolicies: {
+          guestAccessAllowed: { enabled: false, description: 'Not configured' },
+          mfaRequired: { configured: false, description: 'Not required' },
+          externalSharing: { configured: false, description: 'Not configured' },
+          b2bCollaboration: { configured: false, description: 'Not configured' },
+          guestInviteRestrictions: { configured: false, description: 'Default' },
+          accessReviewPolicy: { configured: false, count: 0, description: 'No reviews' },
+          sessionTimeout: { configured: false, minutes: 0, description: 'No timeout' },
+          deviceCompliance: { configured: false, description: 'Not required' },
+          riskBasedAccess: { configured: false, description: 'Not configured' }
+        }
       }
     })
   }
@@ -6749,157 +6737,44 @@ app.get('/api/identity/posture', async (req, res) => {
       throw new Error('Graph Client not initialized')
     }
 
-    // Fetch total users (basic call, should work with minimal permissions)
-    console.log('📡 Fetching users from Graph API...')
-    const users = await graphClient
-      .api('/users')
-      .get()
-
-    const totalUsers = users.value?.length || 0
-    console.log(`📊 Total users: ${totalUsers}`)
-
-    // Fetch directory roles to find privileged users
-    console.log('📡 Fetching directory roles...')
-    const roles = await graphClient
-      .api('/directoryRoles')
-      .expand('members')
-      .get()
-
-    let globalAdmins = 0
-    let privilegedUsers = new Set()
-
-    for (const role of roles.value || []) {
-      const roleMembers = role.members || []
-      console.log(`  Role: ${role.displayName} (${roleMembers.length} members)`)
-      if (role.displayName === 'Global Administrator') {
-        globalAdmins = roleMembers.length
-      }
-      if (role.displayName !== 'Guest Inviter') {
-        roleMembers.forEach(m => privilegedUsers.add(m.id))
-      }
-    }
-
-    // Fetch service principals (service accounts)
-    console.log('📡 Fetching service principals...')
-    const servicePrincipals = await graphClient
-      .api('/servicePrincipals')
-      .select('id,displayName,accountEnabled')
-      .top(500)
-      .get()
-
-    const serviceAccounts = servicePrincipals.value?.filter(sp => sp.accountEnabled).length || 0
-    console.log(`📊 Service accounts: ${serviceAccounts}`)
-
-    // Estimate break glass accounts
-    const breakGlassAccounts = Math.max(1, Math.floor(globalAdmins / 2))
-
-    // Try to fetch risky sign-ins (may fail if feature not available)
-    let riskySignIns30d = 0
-    let highRiskUsers = 0
-    try {
-      console.log('📡 Fetching risky sign-ins...')
-      const riskySignIns = await graphClient
-        .api('/identityProtection/riskDetections')
-        .top(100)
-        .get()
-      riskySignIns30d = riskySignIns.value?.length || 0
-      console.log(`📊 Risky sign-ins: ${riskySignIns30d}`)
-
-      console.log('📡 Fetching high-risk users...')
-      const riskUsers = await graphClient
-        .api('/identityProtection/riskyUsers')
-        .top(50)
-        .get()
-      highRiskUsers = riskUsers.value?.filter(u => u.riskLevel === 'high' || u.riskLevel === 'medium').length || 0
-      console.log(`📊 High-risk users: ${highRiskUsers}`)
-    } catch (riskError) {
-      console.warn('⚠️ Risk detection not available:', riskError.message)
-    }
-
-    const mfaEnabled = Math.round(totalUsers * 0.85)
-
-    // Fetch Conditional Access policies
-    console.log('📡 Fetching Conditional Access policies...')
-    let caPoliciesEnabled = 0
-    let caPoliciesDisabled = 0
-    let caPoliciesReportOnly = 0
-    try {
-      const policies = await graphClient
-        .api('/identity/conditionalAccess/policies')
-        .get()
-
-      for (const policy of policies.value || []) {
-        if (policy.state === 'enabled') caPoliciesEnabled++
-        else if (policy.state === 'disabled') caPoliciesDisabled++
-        else if (policy.state === 'enabledForReportingButNotEnforced') caPoliciesReportOnly++
-      }
-      console.log(`📊 CA Policies - Enabled: ${caPoliciesEnabled}, Disabled: ${caPoliciesDisabled}, Report-only: ${caPoliciesReportOnly}`)
-    } catch (caError) {
-      console.warn('⚠️ Conditional Access policies not available:', caError.message)
-    }
-
-    // Try to estimate MFA excluded and passwordless adoption
-    let mfaExcluded = 0
-    let passwordlessAdoption = 0
-    try {
-      console.log('📡 Fetching authentication methods policy...')
-      const authPolicy = await graphClient
-        .api('/policies/authenticationMethodsPolicy')
-        .get()
-
-      if (authPolicy?.authenticationMethodConfigurations) {
-        const fido2Config = authPolicy.authenticationMethodConfigurations.find(m => m.id === 'Fido2')
-        const windowsHelloConfig = authPolicy.authenticationMethodConfigurations.find(m => m.id === 'WindowsHelloForBusiness')
-        const passwordlessPhoneConfig = authPolicy.authenticationMethodConfigurations.find(m => m.id === 'TemporaryAccessPass')
-
-        if (fido2Config?.state === 'enabled' || windowsHelloConfig?.state === 'enabled' || passwordlessPhoneConfig?.state === 'enabled') {
-          passwordlessAdoption = Math.round(totalUsers * 0.15)
-        }
-      }
-    } catch (authError) {
-      console.warn('⚠️ Auth methods policy not available:', authError.message)
-    }
-
-    console.log(`✅ Identity posture: ${totalUsers} users, ${privilegedUsers.size} privileged, ${globalAdmins} admins, ${caPoliciesEnabled} CA policies`)
-
+    const identityData = await getIdentitySecurityFromGraph(graphClient)
+    res.json({ success: true, data: identityData })
+  } catch (error) {
+    console.error('❌ Identity posture API error:', error.message)
     res.json({
       success: true,
       data: {
-        totalUsers,
-        privilegedAccounts: privilegedUsers.size,
-        globalAdmins,
-        serviceAccounts,
-        breakGlassAccounts,
-        identitySecureScore: 72,
-        mfaEnabled,
-        mfaExcluded: Math.max(0, totalUsers - mfaEnabled),
-        passwordlessAdoption,
-        fido2Adoption: Math.round(passwordlessAdoption * 0.3),
-        legacyAuthConnections: 0,
-        caPoliciesEnabled,
-        caPoliciesDisabled,
-        caPoliciesReportOnly,
-        caUsersExcluded: 0,
-        riskySignIns30d,
-        highRiskUsers
-      }
-    })
-  } catch (error) {
-    console.error('❌ Identity posture API error:', error.message)
-    console.error('Stack:', error.stack)
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      data: {
         totalUsers: 0,
-        privilegedAccounts: 0,
+        privAccounts: 0,
         globalAdmins: 0,
         serviceAccounts: 0,
-        breakGlassAccounts: 0,
-        identitySecureScore: 0,
+        breakGlass: 0,
         mfaEnabled: 0,
+        mfaExcluded: 0,
+        passwordlessAdoption: 0,
+        fido2Adoption: 0,
+        legacyAuthConnections: 0,
+        highRiskUsers: 0,
         riskySignIns30d: 0,
-        highRiskUsers: 0
+        impossibleTravel30d: 0,
+        anonymousIP30d: 0,
+        passwordSpray30d: 0,
+        caPoliciesEnabled: 0,
+        caPoliciesDisabled: 0,
+        caPoliciesReportOnly: 0,
+        caUsersExcluded: 0,
+        identitySecureScore: 0,
+        identityPolicies: {
+          mfaPolicy: { configured: false, enrollment: 0, description: 'Not configured' },
+          conditionalAccess: { configured: false, count: 0, description: 'No policies' },
+          passwordPolicy: { configured: false, description: 'Default policy' },
+          authenticationMethods: { configured: false, description: 'Not configured' },
+          riskPolicy: { configured: false, description: 'Not configured' },
+          userRiskPolicy: { configured: false, description: 'Not configured' },
+          signInRiskPolicy: { configured: false, description: 'Not configured' },
+          sessionManagement: { configured: false, description: 'Not configured' },
+          accessReview: { configured: false, count: 0, description: 'No reviews' }
+        }
       }
     })
   }

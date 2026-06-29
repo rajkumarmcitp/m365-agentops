@@ -126,6 +126,8 @@ async function loadDashboardData(el) {
       getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return {} })
     ])
 
+    // Update KPI tiles
+    updateKpiTiles(el, devicesResult, usersResult, scoreResult)
     updateCriticalAlerts(el)
     updateSystemHealth(el)
     updateApplicationsHealth(el)
@@ -133,6 +135,31 @@ async function loadDashboardData(el) {
     console.log(`✅ Dashboard data loaded: ${realDeviceCount} devices, ${realUserCount} users`)
   } catch (error) {
     console.error('❌ Error loading dashboard data:', error)
+  }
+}
+
+function updateKpiTiles(el, devicesResult, usersResult, scoreResult) {
+  // Update Managed Devices
+  if (devicesResult.data && devicesResult.data.value) {
+    realDeviceCount = devicesResult.data.value.length || 0
+    const deviceEl = el.querySelector('.kpi-row')?.children[0]?.querySelector('.kpi-value')
+    if (deviceEl) deviceEl.textContent = realDeviceCount.toLocaleString()
+  }
+
+  // Update Total Users
+  if (usersResult.data && usersResult.data.value) {
+    realUserCount = usersResult.data.value.length || 0
+    const userEl = el.querySelector('.kpi-row')?.children[1]?.querySelector('.kpi-value')
+    if (userEl) userEl.textContent = realUserCount.toLocaleString()
+  }
+
+  // Update Security Score
+  if (scoreResult.data && scoreResult.data.currentScore && scoreResult.data.maxScore) {
+    const current = Math.round(scoreResult.data.currentScore)
+    const max = Math.round(scoreResult.data.maxScore)
+    realSecureScore = scoreResult.data
+    const scoreEl = el.querySelector('#dash-kpi-score')
+    if (scoreEl) scoreEl.textContent = `${current}/${max}`
   }
 }
 
@@ -356,7 +383,7 @@ function renderDemoDashboard(el) {
         <div class="kpi-label">Total Users</div>
       </div>
       <div class="kpi-tile">
-        <div class="kpi-value warning">78/100</div>
+        <div class="kpi-value warning" id="dash-kpi-score">—</div>
         <div class="kpi-label">Security Score</div>
       </div>
     </div>

@@ -27,6 +27,7 @@ let realEndpointSecurity = null
 let realTeamsSecurity = null
 let realSharepointSecurity = null
 let realDataProtection = null
+let realPrivAccess = null
 let realGuestAccess = null
 let realRecommendations = null
 
@@ -92,7 +93,7 @@ export async function initSecurity() {
 async function loadAllDataAsync(el) {
   try {
     // Load all security data in parallel
-    const [scoreResult, devicesResult, incidentsResult, identityResult, emailResult, endpointResult, teamsResult, sharepointResult, dpResult, guestResult, recResult] = await Promise.all([
+    const [scoreResult, devicesResult, incidentsResult, identityResult, emailResult, endpointResult, teamsResult, sharepointResult, dpResult, pamResult, guestResult, recResult] = await Promise.all([
       getSecurityScore(),
       getDevices(),
       getIncidents(),
@@ -102,6 +103,7 @@ async function loadAllDataAsync(el) {
       callAPI('/security/teams'),
       callAPI('/security/sharepoint'),
       callAPI('/security/data-protection'),
+      callAPI('/security/priv-access'),
       callAPI('/security/guests'),
       callAPI('/security/recommendations')
     ])
@@ -153,6 +155,12 @@ async function loadAllDataAsync(el) {
     if (dpResult.success && dpResult.data) {
       realDataProtection = dpResult.data
       console.log('✅ Loaded data protection')
+    }
+
+    // Update privileged access
+    if (pamResult.success && pamResult.data) {
+      realPrivAccess = pamResult.data
+      console.log('✅ Loaded privileged access')
     }
 
     // Update guest access
@@ -209,26 +217,27 @@ function enrichIncidents(incidents, devicesData = []) {
 // Helper function to merge identity data
 function mergeIdentityData(data) {
   return {
-    totalUsers: data.totalUsers || IDENTITY.totalUsers,
-    privAccounts: data.privilegedAccounts || IDENTITY.privAccounts,
-    globalAdmins: data.globalAdmins || IDENTITY.globalAdmins,
-    serviceAccounts: data.serviceAccounts || IDENTITY.serviceAccounts,
-    breakGlass: data.breakGlassAccounts || IDENTITY.breakGlass,
-    identitySecureScore: data.identitySecureScore || IDENTITY.identitySecureScore,
-    mfaEnabled: data.mfaEnabled || IDENTITY.mfaEnabled,
-    mfaExcluded: data.mfaExcluded || IDENTITY.mfaExcluded,
-    passwordlessAdoption: data.passwordlessAdoption || IDENTITY.passwordlessAdoption,
-    fido2Adoption: data.fido2Adoption || IDENTITY.fido2Adoption,
-    legacyAuthConnections: data.legacyAuthConnections || IDENTITY.legacyAuthConnections,
-    highRiskUsers: data.highRiskUsers || IDENTITY.highRiskUsers,
-    riskySignIns30d: data.riskySignIns30d || IDENTITY.riskySignIns30d,
-    impossibleTravel30d: IDENTITY.impossibleTravel30d,
-    anonymousIP30d: IDENTITY.anonymousIP30d,
-    passwordSpray30d: IDENTITY.passwordSpray30d,
-    caPoliciesEnabled: data.caPoliciesEnabled || IDENTITY.caPoliciesEnabled,
-    caPoliciesDisabled: data.caPoliciesDisabled || IDENTITY.caPoliciesDisabled,
-    caPoliciesReportOnly: data.caPoliciesReportOnly || IDENTITY.caPoliciesReportOnly,
-    caUsersExcluded: data.caUsersExcluded || IDENTITY.caUsersExcluded,
+    totalUsers: data.totalUsers ?? IDENTITY.totalUsers,
+    privAccounts: data.privAccounts ?? IDENTITY.privAccounts,
+    globalAdmins: data.globalAdmins ?? IDENTITY.globalAdmins,
+    serviceAccounts: data.serviceAccounts ?? IDENTITY.serviceAccounts,
+    breakGlass: data.breakGlass ?? IDENTITY.breakGlass,
+    identitySecureScore: data.identitySecureScore ?? IDENTITY.identitySecureScore,
+    mfaEnabled: data.mfaEnabled ?? IDENTITY.mfaEnabled,
+    mfaExcluded: data.mfaExcluded ?? IDENTITY.mfaExcluded,
+    passwordlessAdoption: data.passwordlessAdoption ?? IDENTITY.passwordlessAdoption,
+    fido2Adoption: data.fido2Adoption ?? IDENTITY.fido2Adoption,
+    legacyAuthConnections: data.legacyAuthConnections ?? IDENTITY.legacyAuthConnections,
+    highRiskUsers: data.highRiskUsers ?? IDENTITY.highRiskUsers,
+    riskySignIns30d: data.riskySignIns30d ?? IDENTITY.riskySignIns30d,
+    impossibleTravel30d: data.impossibleTravel30d ?? IDENTITY.impossibleTravel30d,
+    anonymousIP30d: data.anonymousIP30d ?? IDENTITY.anonymousIP30d,
+    passwordSpray30d: data.passwordSpray30d ?? IDENTITY.passwordSpray30d,
+    caPoliciesEnabled: data.caPoliciesEnabled ?? IDENTITY.caPoliciesEnabled,
+    caPoliciesDisabled: data.caPoliciesDisabled ?? IDENTITY.caPoliciesDisabled,
+    caPoliciesReportOnly: data.caPoliciesReportOnly ?? IDENTITY.caPoliciesReportOnly,
+    caUsersExcluded: data.caUsersExcluded ?? IDENTITY.caUsersExcluded,
+    identityPolicies: data.identityPolicies,
   }
 }
 
@@ -378,9 +387,16 @@ function render(el) {
 // ============================================================
 function topFiveKpi() {
   // Use realSecureScore if it has the required properties, otherwise fall back to demo data
-  const ss = (realSecureScore && realSecureScore.current && realSecureScore.max)
-    ? realSecureScore
-    : SECURE_SCORE || { current: 0, max: 100, percentOf100: 0, delta7d: 0 }
+  let ss = SECURE_SCORE || { currentScore: 0, maxScore: 100, percentOf100: 0, delta7d: 0 }
+  if (realSecureScore && realSecureScore.currentScore && realSecureScore.maxScore) {
+    const pct = Math.round((realSecureScore.currentScore / realSecureScore.maxScore) * 100)
+    ss = {
+      currentScore: Math.round(realSecureScore.currentScore),
+      maxScore: Math.round(realSecureScore.maxScore),
+      percentOf100: pct,
+      delta7d: 0 // Would need historical data to calculate
+    }
+  }
   const pct = ss.percentOf100 || 0
   const ssColor = pct >= 80 ? 'success' : pct >= 60 ? 'warning' : 'danger'
   const incidents = Array.isArray(realIncidents) ? realIncidents : []
@@ -389,9 +405,9 @@ function topFiveKpi() {
   return `
     <div class="kpi-tile sec-kpi-primary" style="min-width:160px">
       <div style="display:flex;align-items:center;gap:12px">
-        ${scoreGauge(ss.current, ss.max, 52)}
+        ${scoreGauge(ss.currentScore, ss.maxScore, 52)}
         <div>
-          <div class="kpi-value ${ssColor}" style="font-size:28px;font-weight:700">${ss.current}<span style="font-size:12px;font-weight:500;color:var(--color-text-tertiary)">/${ss.max}</span></div>
+          <div class="kpi-value ${ssColor}" style="font-size:28px;font-weight:700">${ss.currentScore}<span style="font-size:12px;font-weight:500;color:var(--color-text-tertiary)">/${ss.maxScore}</span></div>
           <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Secure Score</div>
           <div style="font-size:10px;margin-top:3px;color:${ss.delta7d >= 0 ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'}">
             ${ss.delta7d >= 0 ? '+' : ''}${ss.delta7d} this week
@@ -504,9 +520,18 @@ function renderSection() {
 // EXECUTIVE DASHBOARD
 // ============================================================
 function renderExecutive() {
-  const ss = (realSecureScore && realSecureScore.current && realSecureScore.max)
-    ? realSecureScore
-    : SECURE_SCORE || { current: 0, max: 100, percentOf100: 0, categories: [], trend7d: [], trend30d: [] }
+  let ss = SECURE_SCORE || { currentScore: 0, maxScore: 100, percentOf100: 0, categories: [], trend7d: [], trend30d: [] }
+  if (realSecureScore && realSecureScore.currentScore && realSecureScore.maxScore) {
+    const pct = Math.round((realSecureScore.currentScore / realSecureScore.maxScore) * 100)
+    ss = {
+      currentScore: Math.round(realSecureScore.currentScore),
+      maxScore: Math.round(realSecureScore.maxScore),
+      percentOf100: pct,
+      categories: realSecureScore.controlScores || [],
+      trend7d: [],
+      trend30d: []
+    }
+  }
   const incidents = Array.isArray(realIncidents) ? realIncidents : []
   return `
     <!-- Secondary KPI row - Real data only -->
@@ -593,16 +618,66 @@ function renderExecutive() {
 // SECURE SCORE
 // ============================================================
 function renderSecureScore() {
-  const ss = (realSecureScore && realSecureScore.current && realSecureScore.max) ? realSecureScore : SECURE_SCORE
+  let ss = SECURE_SCORE || { currentScore: 0, maxScore: 100, avgComparable: 0, delta7d: 0, delta30d: 0, delta90d: 0, categories: [] }
+  if (realSecureScore && realSecureScore.currentScore && realSecureScore.maxScore) {
+    const comparativeData = realSecureScore.averageComparativeScores?.[0] || {}
+
+    // Transform control scores to category format
+    const categories = {}
+    if (Array.isArray(realSecureScore.controlScores)) {
+      realSecureScore.controlScores.forEach(control => {
+        const category = control.controlCategory || 'Other'
+        if (!categories[category]) {
+          categories[category] = { name: category, scores: [], count: 0 }
+        }
+        const score = control.scoreInPercentage ?? 0
+        categories[category].scores.push(score)
+        categories[category].count++
+      })
+    }
+
+    // Convert to array with averages and styling
+    const categoryMap = {
+      'Identity': { icon: 'ti-user-check' },
+      'Apps': { icon: 'ti-app-window' },
+      'Data': { icon: 'ti-database' },
+      'Devices': { icon: 'ti-device-laptop' },
+      'Infrastructure': { icon: 'ti-building' },
+      'Other': { icon: 'ti-help' }
+    }
+
+    const categoryList = Object.entries(categories).map(([name, data]) => {
+      const avgScore = Math.round(data.scores.reduce((a, b) => a + b, 0) / data.count)
+      const meta = categoryMap[name] || categoryMap['Other']
+      // Color class based on score thresholds
+      const colorClass = avgScore >= 80 ? 'success' : avgScore >= 65 ? 'warning' : 'danger'
+      return {
+        name: name,
+        score: avgScore,
+        icon: meta.icon,
+        colorClass: colorClass
+      }
+    })
+
+    ss = {
+      currentScore: Math.round(realSecureScore.currentScore),
+      maxScore: Math.round(realSecureScore.maxScore),
+      avgComparable: Math.round(comparativeData.averageScore || 0),
+      delta7d: 0,
+      delta30d: 0,
+      delta90d: 0,
+      categories: categoryList
+    }
+  }
   return `
     <div class="grid-2 mb-3" style="gap:16px">
       <div class="card">
         <div class="card-title mb-3"><i class="ti ti-shield-check"></i> Microsoft Secure Score</div>
         <div style="display:flex;align-items:center;gap:24px;margin-bottom:20px">
-          ${scoreGauge(ss.current, ss.max, 100)}
+          ${scoreGauge(ss.currentScore, ss.maxScore, 100)}
           <div>
-            <div style="font-size:32px;font-weight:800;color:var(--clr-warning-text);line-height:1">${ss.current}</div>
-            <div style="font-size:16px;color:var(--color-text-tertiary)">out of ${ss.max}</div>
+            <div style="font-size:32px;font-weight:800;color:var(--clr-warning-text);line-height:1">${ss.currentScore}</div>
+            <div style="font-size:16px;color:var(--color-text-tertiary)">out of ${ss.maxScore}</div>
             <div style="font-size:12px;color:var(--color-text-secondary);margin-top:8px">
               You are in the <strong style="color:var(--clr-info-text)">top 40%</strong> of similar organisations
             </div>
@@ -637,20 +712,23 @@ function renderSecureScore() {
         <div class="card-header">
           <span class="card-title"><i class="ti ti-chart-bar"></i> Score by Category</span>
         </div>
-        ${(Array.isArray(ss.categories) ? ss.categories : []).map(c => `
+        ${(Array.isArray(ss.categories) ? ss.categories : []).map(c => {
+          const colors = { success: { text: '#10b981', bar: '#d1fae5' }, warning: { text: '#f59e0b', bar: '#fef3c7' }, danger: { text: '#ef4444', bar: '#fee2e2' } }
+          const col = colors[c.colorClass] || colors.danger
+          return `
           <div style="margin-bottom:14px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
               <span style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px">
-                <i class="ti ${c.icon}" style="color:${c.color}"></i>${c.name}
+                <i class="ti ${c.icon}" style="color:${col.text}"></i>${c.name}
               </span>
-              <span style="font-size:12px;font-weight:700;color:${c.color}">${c.score}%</span>
+              <span style="font-size:12px;font-weight:700;color:${col.text}">${c.score}%</span>
             </div>
-            <div class="score-bar" style="height:10px">
-              <div class="score-bar-fill" style="width:${c.score}%;background:${c.color}"></div>
+            <div style="height:8px;background:${col.bar};border-radius:3px;overflow:hidden">
+              <div style="width:${c.score}%;height:100%;background:${col.text};border-radius:3px;transition:width 0.3s ease"></div>
             </div>
             <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:3px">${c.score >= 80 ? '✅ Good' : c.score >= 65 ? '⚠️ Needs attention' : '🔴 Needs improvement'}</div>
           </div>
-        `).join('')}
+        `}).join('')}
       </div>
     </div>
 
@@ -751,6 +829,65 @@ function renderIdentity() {
           { label: 'Users Excluded',       val: id.caUsersExcluded, cls: id.caUsersExcluded > 10 ? 'warning' : 'success' },
         ])}
         ${recBox(['Require phishing-resistant MFA (FIDO2/CBA) for all admins', 'Remove legacy authentication via dedicated CA policy', 'Reduce Global Admin count to maximum 2 PIM-protected accounts', 'Review 18 CA policy exclusions — remove unnecessary exemptions'])}
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-shield-lock"></i> Identity Protection Policies</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:12px;font-style:italic">Security policies and configurations for authentication, access control, and risk management.</div>
+      <div style="overflow-x:auto">
+        <table class="table" style="width:100%;font-size:11px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--color-border-secondary)">
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Policy / Configuration</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Status</th>
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${[
+              { name: 'MFA Policy', key: 'mfaPolicy', icon: '🔐' },
+              { name: 'Conditional Access', key: 'conditionalAccess', icon: '🔒' },
+              { name: 'Password Policy', key: 'passwordPolicy', icon: '🔑' },
+              { name: 'Authentication Methods', key: 'authenticationMethods', icon: '📱' },
+              { name: 'Risk Policy', key: 'riskPolicy', icon: '⚠️' },
+              { name: 'User Risk Policy', key: 'userRiskPolicy', icon: '👤' },
+              { name: 'Sign-In Risk Policy', key: 'signInRiskPolicy', icon: '🚨' },
+              { name: 'Session Management', key: 'sessionManagement', icon: '⏱️' },
+              { name: 'Access Reviews', key: 'accessReview', icon: '📋' }
+            ].map(policy => {
+              const config = id.identityPolicies?.[policy.key]
+              let isConfigured = false
+              let details = 'Not configured'
+
+              if (config) {
+                if (policy.key === 'mfaPolicy') {
+                  isConfigured = config.configured
+                  details = config.enrollment > 0 ? config.enrollment + '% enrolled' : config.description
+                } else if (policy.key === 'conditionalAccess') {
+                  isConfigured = config.configured
+                  details = config.count > 0 ? config.count + ' policies deployed' : 'No policies'
+                } else if (policy.key === 'accessReview') {
+                  isConfigured = config.configured
+                  details = config.count > 0 ? config.count + ' active reviews' : 'No reviews'
+                } else {
+                  isConfigured = config.configured || config.enabled
+                  details = config.description || 'Not configured'
+                }
+              }
+
+              return '<tr style="border-bottom:0.5px solid var(--color-border-tertiary);padding:0">' +
+                '<td style="padding:8px;font-weight:600">' + policy.icon + ' ' + policy.name + '</td>' +
+                '<td style="padding:8px;text-align:center">' + statusBadge(isConfigured ? 'enabled' : 'unknown') + '</td>' +
+                '<td style="padding:8px;color:var(--color-text-tertiary)">' + details + '</td>' +
+                '</tr>'
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="alert-banner info mt-3" style="margin-bottom:0">
+        <i class="ti ti-api"></i>
+        <code style="font-size:9px">GET /policies/authenticationMethodsPolicy · GET /identity/conditionalAccess/policies · GET /beta/riskyUsers · GET /beta/riskDetections</code>
       </div>
     </div>
   `
@@ -922,17 +1059,75 @@ function renderEndpoint() {
 
       <div class="card">
         <div class="card-title mb-3"><i class="ti ti-alert-triangle"></i> Threat Analytics</div>
-        <div class="alert-banner danger mb-3">
-          <i class="ti ti-virus"></i>
-          <strong>Ransomware indicators detected on MBX-LAPTOP-047.</strong> INC-2341 is active — isolate device immediately.
-        </div>
+        ${ep.activeThreats > 0 ? `
+          <div class="alert-banner danger mb-3">
+            <i class="ti ti-virus"></i>
+            ${ep.activeThreats} active threat${ep.activeThreats > 1 ? 's' : ''} detected. Investigate and remediate immediately.
+          </div>
+        ` : `
+          <div class="alert-banner success mb-3">
+            <i class="ti ti-circle-check"></i>
+            No active threats detected. Security posture is clean.
+          </div>
+        `}
         ${metricGrid([
           { label: 'Active Threats',        val: ep.activeThreats,        cls: ep.activeThreats === 0 ? 'success' : 'danger' },
-          { label: 'High Severity Alerts',  val: ep.highSeverityAlerts,   cls: 'danger' },
+          { label: 'High Severity Alerts',  val: ep.highSeverityAlerts,   cls: ep.highSeverityAlerts === 0 ? 'success' : 'danger' },
           { label: 'Windows 11 (%)',        val: ep.windows11Pct + '%',   cls: 'success' },
-          { label: 'Windows 10 (%)',        val: ep.windows10Pct + '%',   cls: 'warning' },
+          { label: 'Windows 10 (%)',        val: ep.windows10Pct + '%',   cls: ep.windows10Pct > 20 ? 'warning' : 'success' },
         ])}
-        ${recBox(['Patch 23 devices missing critical security updates', 'Isolate ransomware-affected device MBX-LAPTOP-047', 'Enable BitLocker on remaining 36 unencrypted devices', 'Harden SMB and RDP access on Windows 10 devices'])}
+        ${recBox([
+          ep.missingCriticalPatches > 0 ? `Patch ${ep.missingCriticalPatches} device${ep.missingCriticalPatches > 1 ? 's' : ''} missing critical security updates` : 'All devices are patched with critical updates',
+          ep.nonCompliant > 0 ? `Review ${ep.nonCompliant} non-compliant device${ep.nonCompliant > 1 ? 's' : ''} and enforce compliance policies` : 'All devices are in compliance',
+          ep.bitlockerCoverage < 95 ? `Enable BitLocker on remaining ${Math.round(ep.totalManaged * (100 - ep.bitlockerCoverage) / 100)} unencrypted devices` : 'BitLocker encryption is enabled on all devices',
+          ep.windows10Pct > 20 ? 'Plan Windows 10 end-of-life migration — upgrade to Windows 11' : 'OS deployment is aligned with support timelines'
+        ])}
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-shield-lock"></i> Defender & Intune Security Settings</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:12px;font-style:italic">Security policies and configurations deployed across your tenant.</div>
+      <div style="overflow-x:auto">
+        <table class="table" style="width:100%;font-size:11px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--color-border-secondary)">
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Setting</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Status</th>
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${[
+              { name: 'Antivirus Policy', key: 'antivirusPolicy', icon: '🦠' },
+              { name: 'Attack Surface Reduction', key: 'attackSurfaceReduction', icon: '🛡️' },
+              { name: 'Web Protection', key: 'webProtection', icon: '🌐' },
+              { name: 'Web Content Filtering', key: 'webContentFiltering', icon: '📶' },
+              { name: 'Firewall Policies', key: 'firewallPolicies', icon: '🔥' },
+              { name: 'Endpoint Detection & Response', key: 'endpointDetectionResponse', icon: '🎯' },
+              { name: 'Tamper Protection', key: 'tamperProtection', icon: '⚙️' },
+              { name: 'Device Control', key: 'deviceControl', icon: '🖥️' },
+              { name: 'USB Policies', key: 'usbPolicies', icon: '💾' },
+              { name: 'Device Isolation', key: 'deviceIsolation', icon: '🚫' },
+              { name: 'Live Response Settings', key: 'liveResponseSettings', icon: '📡' }
+            ].map(setting => {
+              const config = ep.defenderSettings?.[setting.key]
+              const isConfigured = config?.configured
+              const count = config?.count
+              const policyPlural = count > 1 ? 'ies' : 'y'
+              const details = config?.description || (count && count > 0 ? count + ' polic' + policyPlural + ' deployed' : 'Not configured')
+              return '<tr style="border-bottom:0.5px solid var(--color-border-tertiary);padding:0">' +
+                '<td style="padding:8px;font-weight:600">' + setting.icon + ' ' + setting.name + '</td>' +
+                '<td style="padding:8px;text-align:center">' + statusBadge(isConfigured ? 'enabled' : 'unknown') + '</td>' +
+                '<td style="padding:8px;color:var(--color-text-tertiary)">' + details + '</td>' +
+                '</tr>'
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="alert-banner info mt-3" style="margin-bottom:0">
+        <i class="ti ti-api"></i>
+        <code style="font-size:9px">GET /deviceManagement/deviceConfigurations · GET /deviceManagement/deviceCompliancePolicies</code>
       </div>
     </div>
   `
@@ -966,12 +1161,56 @@ function renderTeams() {
       <div class="card">
         <div class="card-title mb-3"><i class="ti ti-shield"></i> Recommendations</div>
         ${recBox([
-          'Archive 23 inactive Teams (90d+) to reduce sprawl and exposure',
-          'Assign owners to 5 unowned Teams',
-          'Conduct guest access review for 34 guest-enabled Teams',
-          'Review 8 public Teams — consider making private',
-          'Restrict external domains to known partners only',
+          t.inactiveTeams90d > 0 ? 'Archive ' + t.inactiveTeams90d + ' inactive Teams (90d+) to reduce sprawl and exposure' : 'No inactive Teams to archive',
+          t.unownedTeams > 0 ? 'Assign owners to ' + t.unownedTeams + ' unowned Teams' : 'All Teams have assigned owners',
+          t.guestEnabledTeams > 0 ? 'Conduct guest access review for ' + t.guestEnabledTeams + ' guest-enabled Teams' : 'No Teams with guest access enabled',
+          t.publicTeams > 5 ? 'Review ' + t.publicTeams + ' public Teams — consider making private' : 'Public Teams count is within acceptable range',
+          t.externalDomainsAllowed > 0 ? 'Restrict external domains to known partners only' : 'External domain restrictions already in place',
         ])}
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-shield-lock"></i> Teams Security Policies & Settings</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:12px;font-style:italic">Security policies and organizational settings for Teams.</div>
+      <div style="overflow-x:auto">
+        <table class="table" style="width:100%;font-size:11px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--color-border-secondary)">
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Policy / Setting</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Status</th>
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${[
+              { name: 'Teams Messaging Policy', key: 'messagingPolicy', icon: '💬' },
+              { name: 'Teams Meeting Policy', key: 'meetingPolicy', icon: '📞' },
+              { name: 'Teams Calling Policy', key: 'callingPolicy', icon: '☎️' },
+              { name: 'Teams App Permission Policy', key: 'appPermissionPolicy', icon: '🔑' },
+              { name: 'Teams App Setup Policy', key: 'appSetupPolicy', icon: '⚙️' },
+              { name: 'Guest Access', key: 'guestAccess', icon: '👥' },
+              { name: 'External Access', key: 'externalAccess', icon: '🌐' },
+              { name: 'Federation Settings', key: 'federationSettings', icon: '🔗' },
+              { name: 'Teams Security Settings', key: 'teamsSecurity', icon: '🛡️' }
+            ].map(policy => {
+              const config = t.securityPolicies?.[policy.key]
+              const isConfigured = config?.configured || config?.enabled
+              const count = config?.count
+              const details = config?.description || (isConfigured ? 'Configured' : 'Not configured')
+              const statusType = isConfigured ? 'enabled' : 'unknown'
+              return '<tr style="border-bottom:0.5px solid var(--color-border-tertiary);padding:0">' +
+                '<td style="padding:8px;font-weight:600">' + policy.icon + ' ' + policy.name + '</td>' +
+                '<td style="padding:8px;text-align:center">' + statusBadge(statusType) + '</td>' +
+                '<td style="padding:8px;color:var(--color-text-tertiary)">' + details + '</td>' +
+                '</tr>'
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="alert-banner info mt-3" style="margin-bottom:0">
+        <i class="ti ti-api"></i>
+        <code style="font-size:9px">GET /teamwork/teamsAppSettings · GET /policies/teamsMessagingPolicy · GET /policies/teamsMeetingPolicy · GET /policies/teamsCallingPolicy</code>
       </div>
     </div>
   `
@@ -1007,12 +1246,150 @@ function renderSharepoint() {
       <div class="card">
         <div class="card-title mb-3"><i class="ti ti-shield"></i> Recommendations</div>
         ${recBox([
-          'Remove 3 anonymous sharing links — replace with authenticated sharing',
-          'Review 5 overshared sites with > 100 members',
+          s.anonymousLinks > 0 ? 'Remove ' + s.anonymousLinks + ' anonymous sharing links — replace with authenticated sharing' : 'No anonymous sharing links detected',
+          s.oversharedSites > 0 ? 'Review ' + s.oversharedSites + ' overshared sites with excessive members' : 'No overshared sites detected',
           'Enable sensitivity labels for automatic file classification',
-          'Restrict external sharing to "Existing guests only" on high-risk sites',
-          'Configure DLP policy for SharePoint to reach 100% coverage',
+          s.externallyShared > 10 ? 'Restrict external sharing to "Existing guests only" on ' + s.externallyShared + ' externally shared sites' : 'External sharing is properly restricted',
+          s.dlpCoveragePct < 100 ? 'Configure DLP policy for SharePoint to reach 100% coverage (currently ' + s.dlpCoveragePct + '%)' : 'DLP coverage is at 100%',
         ])}
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-shield-lock"></i> SharePoint Sharing Policies & Security</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:12px;font-style:italic">Organizational policies and settings that control sharing and collaboration.</div>
+      <div style="overflow-x:auto">
+        <table class="table" style="width:100%;font-size:11px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--color-border-secondary)">
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Policy / Setting</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Status</th>
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Configuration</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${[
+              { name: 'Default Sharing Link Type', key: 'defaultSharingLink', icon: '🔗', desc: 'Type of link shared by default' },
+              { name: 'Guest Sharing Level', key: 'guestSharingLevel', icon: '👥', desc: 'External guest access permissions' },
+              { name: 'External User Expiration', key: 'externalUserExpireAccess', icon: '⏰', desc: 'Auto-expire external user access' },
+              { name: 'Unverified Limited Sharing', key: 'unverifiedLimitedSharing', icon: '⚠️', desc: 'Limit sharing with unverified domains' },
+              { name: 'DLP Policies', key: 'dlpPolicy', icon: '🔒', desc: 'Data loss prevention coverage' },
+              { name: 'Sensitivity Labels', key: 'sensitivityLabels', icon: '🏷️', desc: 'Information classification' },
+              { name: 'Restricted Sharing', key: 'restrictedSharing', icon: '🚫', desc: 'Prevent external resharing' }
+            ].map(policy => {
+              let config = s.sharingPolicies?.[policy.key]
+              let isEnabled = false
+              let details = 'Not configured'
+
+              if (policy.key === 'defaultSharingLink') {
+                isEnabled = config?.configured
+                details = config?.type || 'Internal link'
+              } else if (policy.key === 'guestSharingLevel') {
+                isEnabled = config?.enabled
+                details = config?.description || 'Not configured'
+              } else if (policy.key === 'externalUserExpireAccess') {
+                isEnabled = config?.enabled
+                details = config?.description || 'No expiration'
+              } else if (policy.key === 'unverifiedLimitedSharing') {
+                isEnabled = config?.enabled
+                details = config?.description || 'Disabled'
+              } else if (policy.key === 'dlpPolicy') {
+                isEnabled = s.dlpCoveragePct > 0
+                details = 'DLP coverage: ' + s.dlpCoveragePct + '%'
+              } else if (policy.key === 'sensitivityLabels') {
+                isEnabled = true
+                details = 'Automatic classification available'
+              } else if (policy.key === 'restrictedSharing') {
+                isEnabled = s.restrictedSharingEnabled
+                details = isEnabled ? 'External users cannot reshare' : 'External resharing allowed'
+              }
+
+              return '<tr style="border-bottom:0.5px solid var(--color-border-tertiary);padding:0">' +
+                '<td style="padding:8px;font-weight:600">' + policy.icon + ' ' + policy.name + '</td>' +
+                '<td style="padding:8px;text-align:center">' + statusBadge(isEnabled ? 'enabled' : 'unknown') + '</td>' +
+                '<td style="padding:8px;color:var(--color-text-tertiary)">' + details + '</td>' +
+                '</tr>'
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="alert-banner info mt-3" style="margin-bottom:0">
+        <i class="ti ti-api"></i>
+        <code style="font-size:9px">GET /sites · GET /admin/sharepoint/settings · GET /informationProtection</code>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-settings"></i> Advanced SharePoint Security Settings</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:12px;font-style:italic">Detailed configuration for external sharing, link handling, and data classification.</div>
+      <div style="overflow-x:auto">
+        <table class="table" style="width:100%;font-size:11px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--color-border-secondary)">
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Setting</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Status</th>
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Configuration</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${[
+              { name: 'External Sharing Policies', key: 'externalSharingPolicies', icon: '🌐' },
+              { name: 'Site Sharing Policies', key: 'siteSharingPolicies', icon: '🏢' },
+              { name: 'Anonymous Links', key: 'anonymousLinkControl', icon: '🔗' },
+              { name: 'Default Link Type', key: 'defaultLinkType', icon: '📎' },
+              { name: 'Sharing Expiration', key: 'sharingExpiration', icon: '⏰' },
+              { name: 'Site Collection Policies', key: 'siteCollectionPolicies', icon: '📂' },
+              { name: 'OneDrive Sharing Policies', key: 'onedriveSharing', icon: '☁️' },
+              { name: 'Sharing Domains', key: 'sharingDomains', icon: '🌍' },
+              { name: 'Site Sensitivity Labels', key: 'siteSensitivityLabels', icon: '🏷️' }
+            ].map(setting => {
+              const config = s.advancedSettings?.[setting.key]
+              let isConfigured = false
+              let details = 'Not configured'
+
+              if (config) {
+                if (setting.key === 'externalSharingPolicies') {
+                  isConfigured = config.configured
+                  details = config.description || 'Default sharing policies'
+                } else if (setting.key === 'siteSharingPolicies') {
+                  isConfigured = config.configured
+                  details = config.count > 0 ? config.count + ' sites with policies' : 'No site policies'
+                } else if (setting.key === 'anonymousLinkControl') {
+                  isConfigured = config.enabled
+                  details = isConfigured ? 'Anonymous sharing ' + (config.maxAge === 'unlimited' ? 'allowed' : 'with ' + config.maxAge + ' expiry') : 'Disabled'
+                } else if (setting.key === 'defaultLinkType') {
+                  isConfigured = true
+                  details = config.type ? 'Type: ' + config.type + ' (' + config.scope + ')' : 'Internal link'
+                } else if (setting.key === 'sharingExpiration') {
+                  isConfigured = config.enabled
+                  details = isConfigured ? 'Expires after ' + config.days + ' days' : 'No expiration'
+                } else if (setting.key === 'siteCollectionPolicies') {
+                  isConfigured = config.configured
+                  details = config.description || 'Using tenant defaults'
+                } else if (setting.key === 'onedriveSharing') {
+                  isConfigured = config.enabled
+                  details = config.description || 'OneDrive sharing enabled'
+                } else if (setting.key === 'sharingDomains') {
+                  isConfigured = config.blocked?.length > 0 || config.allowed?.length > 0
+                  details = config.description || 'No domain restrictions'
+                } else if (setting.key === 'siteSensitivityLabels') {
+                  isConfigured = config.configured
+                  details = config.count > 0 ? config.count + ' labels available' : 'No labels configured'
+                }
+              }
+
+              return '<tr style="border-bottom:0.5px solid var(--color-border-tertiary);padding:0">' +
+                '<td style="padding:8px;font-weight:600">' + setting.icon + ' ' + setting.name + '</td>' +
+                '<td style="padding:8px;text-align:center">' + statusBadge(isConfigured ? 'enabled' : 'unknown') + '</td>' +
+                '<td style="padding:8px;color:var(--color-text-tertiary)">' + details + '</td>' +
+                '</tr>'
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="alert-banner info mt-3" style="margin-bottom:0">
+        <i class="ti ti-api"></i>
+        <code style="font-size:9px">GET /sites · GET /admin/sharepoint/settings · GET /me/drives · GET /me/informationProtection/sensitivityLabels</code>
       </div>
     </div>
   `
@@ -1058,13 +1435,87 @@ function renderDataProtection() {
       <div class="card">
         <div class="card-title mb-3"><i class="ti ti-shield"></i> Recommendations</div>
         ${recBox([
-          'Enable sensitivity auto-labeling for ~18,000 unlabeled Office files',
-          'Extend DLP policy coverage to include Teams messages',
-          'Configure insider risk policy for data exfiltration patterns',
-          'Review 3 USB transfer events — check device compliance policy',
-          'Expand retention policies to cover Teams chat and OneDrive',
+          d.filesWithoutLabels > 1000 ? 'Enable sensitivity auto-labeling for ~' + d.filesWithoutLabels.toLocaleString() + ' unlabeled files' : 'File labeling coverage is adequate',
+          d.protectionPolicies?.dlpPolicies?.count > 0 ? 'Extend DLP policy coverage to include Teams messages' : 'Deploy DLP policies to protect data',
+          d.insiderRiskPolicies > 0 ? 'Monitor ' + d.insiderRiskPolicies + ' insider risk policy alerts' : 'Configure insider risk policies for data exfiltration patterns',
+          d.usbTransfers30d > 0 ? 'Review ' + d.usbTransfers30d + ' USB transfer events — check device compliance' : 'No USB transfer events detected',
+          d.retentionPoliciesActive > 0 ? 'Expand ' + d.retentionPoliciesActive + ' retention policies to cover Teams and OneDrive' : 'Deploy retention policies for Teams and OneDrive',
         ])}
-        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api"></i><code style="font-size:9px">Get-DlpCompliancePolicy | Get-Label | Get-RetentionCompliancePolicy</code></div>
+        <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api"></i><code style="font-size:9px">GET /me/informationProtection/sensitivityLabels · GET /security/informationProtection/dlpPolicies · GET /compliance/retentionPolicies</code></div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-shield-lock"></i> Data Protection Policies & Compliance</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:12px;font-style:italic">Security policies and configurations for data classification, loss prevention, and retention.</div>
+      <div style="overflow-x:auto">
+        <table class="table" style="width:100%;font-size:11px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--color-border-secondary)">
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Policy / Configuration</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Status</th>
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${[
+              { name: 'Sensitivity Labels', key: 'sensitivityLabels', icon: '🏷️' },
+              { name: 'DLP Policies', key: 'dlpPolicies', icon: '🔒' },
+              { name: 'Retention Policies', key: 'retentionPolicies', icon: '📋' },
+              { name: 'Insider Risk', key: 'insiderRisk', icon: '⚠️' },
+              { name: 'Data Classification', key: 'dataClassification', icon: '📊' },
+              { name: 'Information Barriers', key: 'informationBarrier', icon: '🚧' },
+              { name: 'Records Management', key: 'recordsManagement', icon: '📂' },
+              { name: 'E-Discovery', key: 'e-discovery', icon: '🔍' },
+              { name: 'Audit Logging', key: 'auditLogging', icon: '📝' }
+            ].map(policy => {
+              const config = d.protectionPolicies?.[policy.key]
+              let isConfigured = false
+              let details = 'Not configured'
+
+              if (config) {
+                if (policy.key === 'sensitivityLabels') {
+                  isConfigured = config.configured
+                  details = config.count > 0 ? config.count + ' labels configured' : 'No labels'
+                } else if (policy.key === 'dlpPolicies') {
+                  isConfigured = config.configured
+                  details = config.count > 0 ? config.count + ' DLP policies deployed' : 'No DLP policies'
+                } else if (policy.key === 'retentionPolicies') {
+                  isConfigured = config.configured
+                  details = config.count > 0 ? config.count + ' active retention policies' : 'No retention policies'
+                } else if (policy.key === 'insiderRisk') {
+                  isConfigured = config.configured
+                  details = config.count > 0 ? config.count + ' insider risk policies' : 'Not configured'
+                } else if (policy.key === 'dataClassification') {
+                  isConfigured = config.configured
+                  details = config.description || 'Not configured'
+                } else if (policy.key === 'informationBarrier') {
+                  isConfigured = config.configured
+                  details = config.description || 'Not configured'
+                } else if (policy.key === 'recordsManagement') {
+                  isConfigured = config.configured
+                  details = config.description || 'Not configured'
+                } else if (policy.key === 'e-discovery') {
+                  isConfigured = config.configured
+                  details = config.description || 'Not configured'
+                } else if (policy.key === 'auditLogging') {
+                  isConfigured = config.enabled
+                  details = config.description || 'Not enabled'
+                }
+              }
+
+              return '<tr style="border-bottom:0.5px solid var(--color-border-tertiary);padding:0">' +
+                '<td style="padding:8px;font-weight:600">' + policy.icon + ' ' + policy.name + '</td>' +
+                '<td style="padding:8px;text-align:center">' + statusBadge(isConfigured ? 'enabled' : 'unknown') + '</td>' +
+                '<td style="padding:8px;color:var(--color-text-tertiary)">' + details + '</td>' +
+                '</tr>'
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="alert-banner info mt-3" style="margin-bottom:0">
+        <i class="ti ti-api"></i>
+        <code style="font-size:9px">GET /me/informationProtection/sensitivityLabels · GET /security/informationProtection/dlpPolicies · GET /compliance/retentionPolicies · GET /auditLogs/directoryAudits</code>
       </div>
     </div>
   `
@@ -1074,7 +1525,7 @@ function renderDataProtection() {
 // PRIVILEGED ACCESS
 // ============================================================
 function renderPrivAccess() {
-  const p = PRIV_ACCESS
+  const p = realPrivAccess || PRIV_ACCESS
   return `
     <div class="kpi-row mb-3">
       <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${p.globalAdminCount}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Global Admins</div></div>
@@ -1113,8 +1564,61 @@ function renderPrivAccess() {
           { label: 'Emergency Access Used',    val: p.emergencyAccess30d,        cls: p.emergencyAccess30d > 0 ? 'danger' : 'success' },
           { label: 'PIM Eligible Roles',       val: p.pimEligibleRoles,          cls: 'success' },
         ])}
-        ${recBox(['Convert 4 permanent admin role assignments to PIM eligible', 'Implement Just-in-Time access for all privileged roles', 'Conduct quarterly access review for all admin role holders', 'Enable PIM access review notifications for approvers'])}
+        ${recBox(['Convert ' + p.permanentAssignments + ' permanent admin role assignments to PIM eligible', 'Implement Just-in-Time access for all privileged roles', 'Conduct quarterly access review for all admin role holders', 'Enable PIM access review notifications for approvers'])}
         <div class="alert-banner info mt-3" style="margin-bottom:0"><i class="ti ti-api"></i><code style="font-size:9px">GET /beta/roleManagement/directory/roleEligibilitySchedules</code></div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-shield-lock"></i> Privileged Access Management (PIM) Policies</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:12px;font-style:italic">Security policies and configurations for privileged access and Just-in-Time elevation.</div>
+      <div style="overflow-x:auto">
+        <table class="table" style="width:100%;font-size:11px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--color-border-secondary)">
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Policy / Setting</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Status</th>
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Configuration</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${[
+              { name: 'PIM Enabled', key: 'pimEnabled', icon: '🔐' },
+              { name: 'MFA Required', key: 'mfaRequired', icon: '📱' },
+              { name: 'Just-in-Time Access', key: 'justInTimeAccess', icon: '⏱️' },
+              { name: 'Time-Based Activation', key: 'timeBasedActivation', icon: '⏲️' },
+              { name: 'Approval Required', key: 'approvalRequired', icon: '✅' },
+              { name: 'Audit Logging', key: 'auditLogging', icon: '📝' },
+              { name: 'Resource Governance', key: 'resourceGovernance', icon: '🎯' },
+              { name: 'Risk Assessment', key: 'riskAssessment', icon: '⚠️' },
+              { name: 'Access Reviews', key: 'accessReview', icon: '👁️' }
+            ].map(policy => {
+              const config = p.privAccessPolicies?.[policy.key]
+              let isConfigured = false
+              let details = 'Not configured'
+
+              if (config) {
+                if (policy.key === 'accessReview') {
+                  isConfigured = config.configured
+                  details = config.count > 0 ? config.count + ' active reviews' : 'No reviews'
+                } else {
+                  isConfigured = config.configured || config.enabled
+                  details = config.description || 'Not configured'
+                }
+              }
+
+              return '<tr style="border-bottom:0.5px solid var(--color-border-tertiary);padding:0">' +
+                '<td style="padding:8px;font-weight:600">' + policy.icon + ' ' + policy.name + '</td>' +
+                '<td style="padding:8px;text-align:center">' + statusBadge(isConfigured ? 'enabled' : 'unknown') + '</td>' +
+                '<td style="padding:8px;color:var(--color-text-tertiary)">' + details + '</td>' +
+                '</tr>'
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="alert-banner info mt-3" style="margin-bottom:0">
+        <i class="ti ti-api"></i>
+        <code style="font-size:9px">GET /directoryRoles · GET /beta/roleManagement/directory/roleEligibilitySchedules · GET /beta/roleManagement/directory/roleAssignmentScheduleInstances</code>
       </div>
     </div>
   `
@@ -1124,7 +1628,7 @@ function renderPrivAccess() {
 // GUEST GOVERNANCE
 // ============================================================
 function renderGuests() {
-  const g = realGuestAccess || GUEST_GOVERNANCE
+  const g = (realGuestAccess && typeof realGuestAccess === 'object') ? realGuestAccess : GUEST_GOVERNANCE
   return `
     <div class="kpi-row mb-3">
       <div class="kpi-tile"><div class="kpi-value info" style="font-size:28px;font-weight:700">${g.totalGuests}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Total Guests</div></div>
@@ -1151,12 +1655,68 @@ function renderGuests() {
       <div class="card">
         <div class="card-title mb-3"><i class="ti ti-shield"></i> Recommendations</div>
         ${recBox([
-          'Remove 3 expired guest accounts immediately',
-          'Review and remove 12 dormant guests (90d+ no sign-in)',
-          'Schedule overdue quarterly access review for 14 guests',
+          g.expiredGuests > 0 ? 'Remove ' + g.expiredGuests + ' expired guest accounts immediately' : 'No expired guest accounts',
+          g.dormantGuests90d > 0 ? 'Review and remove ' + g.dormantGuests90d + ' dormant guests (90d+ no sign-in)' : 'No dormant guests detected',
+          g.quarterlyReviewOverdue > 0 ? 'Schedule overdue quarterly access review for ' + g.quarterlyReviewOverdue + ' guests' : 'Guest access reviews up to date',
           'Require manager attestation for all guest renewals',
           'Implement automatic expiry policy (365 days max)',
         ])}
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-shield-lock"></i> Guest Access Policies & Security</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:12px;font-style:italic">Policies and configurations controlling external guest access to your tenant.</div>
+      <div style="overflow-x:auto">
+        <table class="table" style="width:100%;font-size:11px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--color-border-secondary)">
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Policy / Setting</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Status</th>
+              <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Configuration</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${[
+              { name: 'Guest Access Allowed', key: 'guestAccessAllowed', icon: '👥' },
+              { name: 'MFA Required', key: 'mfaRequired', icon: '📱' },
+              { name: 'External Sharing', key: 'externalSharing', icon: '🌐' },
+              { name: 'B2B Collaboration', key: 'b2bCollaboration', icon: '🤝' },
+              { name: 'Guest Invite Restrictions', key: 'guestInviteRestrictions', icon: '🚫' },
+              { name: 'Access Review Policy', key: 'accessReviewPolicy', icon: '👁️' },
+              { name: 'Session Timeout', key: 'sessionTimeout', icon: '⏱️' },
+              { name: 'Device Compliance', key: 'deviceCompliance', icon: '🖥️' },
+              { name: 'Risk-Based Access', key: 'riskBasedAccess', icon: '⚠️' }
+            ].map(policy => {
+              const config = g.guestAccessPolicies?.[policy.key]
+              let isConfigured = false
+              let details = 'Not configured'
+
+              if (config) {
+                if (policy.key === 'sessionTimeout') {
+                  isConfigured = config.configured
+                  details = config.minutes > 0 ? 'Timeout: ' + config.minutes + ' minutes' : 'No timeout'
+                } else if (policy.key === 'accessReviewPolicy') {
+                  isConfigured = config.configured
+                  details = config.count > 0 ? config.count + ' active reviews' : 'No reviews configured'
+                } else {
+                  isConfigured = config.configured || config.enabled
+                  details = config.description || 'Not configured'
+                }
+              }
+
+              return '<tr style="border-bottom:0.5px solid var(--color-border-tertiary);padding:0">' +
+                '<td style="padding:8px;font-weight:600">' + policy.icon + ' ' + policy.name + '</td>' +
+                '<td style="padding:8px;text-align:center">' + statusBadge(isConfigured ? 'enabled' : 'unknown') + '</td>' +
+                '<td style="padding:8px;color:var(--color-text-tertiary)">' + details + '</td>' +
+                '</tr>'
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="alert-banner info mt-3" style="margin-bottom:0">
+        <i class="ti ti-api"></i>
+        <code style="font-size:9px">GET /users?$filter=userType eq 'Guest' · GET /auditLogs/directoryAudits · GET /identity/conditionalAccess/policies</code>
       </div>
     </div>
   `
@@ -1165,9 +1725,106 @@ function renderGuests() {
 // ============================================================
 // realIncidents & THREATS
 // ============================================================
+let incidentFilter = { severity: 'all', status: 'all', search: '' }
+
+function showIncidentModal(el, incident) {
+  const timestamp = new Date(incident.timestamp || incident.created).toLocaleString()
+
+  const html = `
+    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px" id="incident-modal-backdrop">
+      <div style="background:#fff;border-radius:12px;max-width:650px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.3);position:relative">
+
+        <div style="padding:24px;border-bottom:1px solid #e5e5e5;display:flex;justify-content:space-between;align-items:flex-start">
+          <div style="flex:1">
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+              <span style="display:inline-block;padding:4px 8px;border-radius:4px;font-size:10px;font-weight:600;background:${incident.severity === 'critical' ? '#fee2e2;color:#991b1b' : incident.severity === 'high' ? '#fee2e2;color:#991b1b' : '#fef3c7;color:#92400e'}">${incident.severity.toUpperCase()}</span>
+              <span style="display:inline-block;padding:4px 8px;border-radius:4px;font-size:10px;font-weight:600;background:#f3f4f6;color:#374151">${incident.status}</span>
+            </div>
+            <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827">${incident.title}</h2>
+          </div>
+          <button onclick="document.getElementById('incident-modal-backdrop').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#6b7280;padding:0;width:32px;height:32px">×</button>
+        </div>
+
+        <div style="font-size:11px;color:#6b7280;font-family:monospace;padding:0 24px;word-break:break-all;margin-bottom:16px">
+          ID: ${incident.id}
+        </div>
+
+        <div style="padding:0 24px 24px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+            <div>
+              <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:8px">Actor</div>
+              <div style="font-size:14px;font-weight:600;color:#111827">${incident.actor || 'System'}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:8px">Risk Score</div>
+              <div style="font-size:14px;font-weight:700;color:${incident.riskScore > 70 ? '#991b1b' : incident.riskScore > 40 ? '#b45309' : '#059669'}">${incident.riskScore || 0}/100</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:8px">Timestamp</div>
+              <div style="font-size:13px;color:#374151">${timestamp}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:8px">Status</div>
+              <div style="font-size:13px;color:#374151">${incident.status}</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:24px">
+            <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:10px">Description</div>
+            <div style="font-size:13px;line-height:1.6;color:#374151;background:#f9fafb;padding:14px;border-radius:6px;border-left:3px solid #3b82f6">
+              ${incident.description || 'No additional details available'}
+            </div>
+          </div>
+
+          <div style="background:#f9fafb;padding:14px;border-radius:6px;border-left:3px solid ${incident.severity === 'critical' ? '#dc2626' : incident.severity === 'high' ? '#dc2626' : '#f59e0b'};margin-bottom:20px">
+            <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;margin-bottom:10px">Recommended Actions</div>
+            <ul style="margin:0;padding-left:20px;font-size:13px;line-height:1.8;color:#374151">
+              ${incident.severity === 'critical' ? `
+                <li>Immediately investigate the root cause</li>
+                <li>Check for unauthorized access or data exfiltration</li>
+                <li>Review related incidents for patterns</li>
+                <li>Escalate to security team if compromised</li>
+              ` : incident.severity === 'high' ? `
+                <li>Review the incident details and actor</li>
+                <li>Verify the action was authorized</li>
+                <li>Check for similar incidents</li>
+                <li>Document findings in ticket</li>
+              ` : `
+                <li>Log and track the incident</li>
+                <li>Correlate with other events if needed</li>
+                <li>Determine if remediation is required</li>
+                <li>Mark resolved when complete</li>
+              `}
+            </ul>
+          </div>
+
+          <div style="display:flex;gap:10px">
+            <button onclick="document.getElementById('incident-modal-backdrop').remove()" style="padding:8px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">Close</button>
+            <button onclick="navigator.clipboard.writeText(JSON.stringify(${JSON.stringify(incident).replace(/"/g, '&quot;')}, null, 2)); alert('Incident details copied to clipboard'); document.getElementById('incident-modal-backdrop').remove()" style="padding:8px 16px;background:#f3f4f6;color:#111827;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">Export JSON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+
+  document.body.insertAdjacentHTML('beforeend', html)
+  document.getElementById('incident-modal-backdrop').addEventListener('click', e => {
+    if (e.target.id === 'incident-modal-backdrop') e.target.remove()
+  })
+}
+
 function renderIncidents() {
-  const active = realIncidents.filter(i => i.status !== 'resolved')
-  const resolved = realIncidents.filter(i => i.status === 'resolved')
+  let filtered = realIncidents.filter(i => {
+    if (incidentFilter.severity !== 'all' && i.severity !== incidentFilter.severity) return false
+    if (incidentFilter.status !== 'all' && i.status !== incidentFilter.status) return false
+    if (incidentFilter.search && !i.title?.toLowerCase().includes(incidentFilter.search.toLowerCase()) &&
+        !i.description?.toLowerCase().includes(incidentFilter.search.toLowerCase()) &&
+        !i.actor?.toLowerCase().includes(incidentFilter.search.toLowerCase())) return false
+    return true
+  })
+
+  const active = filtered.filter(i => i.status !== 'resolved')
+  const resolved = filtered.filter(i => i.status === 'resolved')
   const critical = realIncidents.filter(i => i.severity === 'critical').length
   const high = realIncidents.filter(i => i.severity === 'high').length
   const med = realIncidents.filter(i => i.severity === 'medium').length
@@ -1182,52 +1839,80 @@ function renderIncidents() {
       <div class="kpi-tile"><div class="kpi-value success" style="font-size:28px;font-weight:700">${resolved.length}</div><div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Resolved (7d)</div></div>
     </div>
 
-    <div class="alert-banner danger mb-3">
+    <div class="alert-banner ${critical > 0 ? 'danger' : high > 0 ? 'warning' : 'info'} mb-3">
       <i class="ti ti-robot"></i>
       <div>
-        <strong>AI Security Summary:</strong> ${critical} critical incident detected involving ransomware indicators on a managed endpoint.
-        ${high} high-severity incidents include a BEC (business email compromise) attempt and risky identity sign-ins from unfamiliar locations.
-        Immediate actions: isolate MBX-LAPTOP-047, force password reset for kevin.osei@contoso.com, and remediate suspicious inbox forwarding rule.
+        <strong>Security Summary:</strong> ${active.length} active incident${active.length !== 1 ? 's' : ''} detected.
+        ${critical > 0 ? `${critical} critical · ` : ''}${high > 0 ? `${high} high · ` : ''}${med > 0 ? `${med} medium · ` : ''}${low > 0 ? `${low} low` : ''}. Review details below for immediate remediation.
       </div>
     </div>
 
-    <div class="section-heading mb-2">Active Incidents</div>
-    ${active.map(inc => `
+    <!-- Filter Bar -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:nowrap">
+      <input type="text" class="form-input" id="incident-search" placeholder="Search..." value="${incidentFilter.search}" style="flex:1;min-width:200px">
+      <select class="form-select" id="incident-severity" style="min-width:120px">
+        <option value="all" ${incidentFilter.severity === 'all' ? 'selected' : ''}>All Severity</option>
+        <option value="critical" ${incidentFilter.severity === 'critical' ? 'selected' : ''}>Critical</option>
+        <option value="high" ${incidentFilter.severity === 'high' ? 'selected' : ''}>High</option>
+        <option value="medium" ${incidentFilter.severity === 'medium' ? 'selected' : ''}>Medium</option>
+        <option value="low" ${incidentFilter.severity === 'low' ? 'selected' : ''}>Low</option>
+      </select>
+      <select class="form-select" id="incident-status" style="min-width:120px">
+        <option value="all" ${incidentFilter.status === 'all' ? 'selected' : ''}>All Status</option>
+        <option value="open" ${incidentFilter.status === 'open' ? 'selected' : ''}>Open</option>
+        <option value="resolved" ${incidentFilter.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+      </select>
+      <button class="btn" id="incident-refresh" style="white-space:nowrap"><i class="ti ti-refresh"></i></button>
+    </div>
+
+    <div class="section-heading mb-2">Active Incidents (${active.length})</div>
+    ${active.length > 0 ? active.map(inc => {
+      const incType = inc.title?.split(':')[0] || 'Incident'
+      const timestamp = new Date(inc.timestamp || inc.created).toLocaleString()
+      return `
       <div class="card mb-2" style="border-left:3px solid ${inc.severity === 'critical' ? 'var(--clr-danger-text)' : inc.severity === 'high' ? 'var(--clr-danger-text)' : 'var(--clr-warning-text)'}">
         <div style="display:flex;align-items:flex-start;gap:12px">
-          <div>
+          <div style="flex:1">
             <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-              <span class="monospace" style="font-size:10px;color:var(--color-text-tertiary)">${inc.id}</span>
+              <span class="monospace" style="font-size:9px;color:var(--color-text-tertiary);font-family:monospace">${inc.id?.substring(0, 50)}...</span>
               <span class="badge ${inc.severity === 'critical' ? 'danger' : inc.severity === 'high' ? 'danger' : 'warning'}">${inc.severity}</span>
-              <span class="badge neutral">${inc.category}</span>
-              <span class="badge ${inc.status === 'active' ? 'danger' : inc.status === 'investigating' ? 'warning' : 'info'} dot">${inc.status}</span>
+              <span class="badge neutral">${incType}</span>
+              <span class="badge ${inc.status === 'open' ? 'danger' : 'info'} dot">${inc.status}</span>
             </div>
-            <div style="font-size:12px;font-weight:700;margin-bottom:4px">${inc.title}</div>
-            <div style="font-size:10px;color:var(--color-text-tertiary)">
-              Assignee: ${inc.assignee || 'Unassigned'} · Services: ${Array.isArray(inc.services) ? inc.services.join(', ') : inc.services || 'N/A'} · Created: ${inc.created || 'N/A'}
+            <div style="font-size:12px;font-weight:700;margin-bottom:6px">${inc.title}</div>
+            <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:4px">${inc.description || 'No additional details'}</div>
+            <div style="font-size:9px;color:var(--color-text-tertiary)">
+              Actor: ${inc.actor || 'System'} · Risk Score: ${inc.riskScore || 0} · ${timestamp}
             </div>
           </div>
           <div style="margin-left:auto;display:flex;gap:6px;flex-shrink:0">
-            <button class="btn btn-xs btn-danger">Investigate</button>
-            <button class="btn btn-xs">Assign</button>
+            <button class="btn btn-xs btn-danger incident-review-btn" data-incident-id="${inc.id}">Review</button>
           </div>
         </div>
       </div>
-    `).join('')}
+    `}).join('') : `
+      <div style="text-align:center;padding:24px;color:var(--color-text-secondary)">
+        <i class="ti ti-circle-check" style="font-size:32px;display:block;margin-bottom:8px"></i>
+        <strong>No Active Incidents</strong><br/>
+        <span style="font-size:11px">Your tenant is operating normally</span>
+      </div>
+    `}
 
     ${resolved.length > 0 ? `
-      <div class="section-heading mb-2" style="margin-top:16px">Recently Resolved</div>
-      ${resolved.map(inc => `
-        <div class="card mb-2" style="opacity:0.65">
+      <div class="section-heading mb-2" style="margin-top:16px">Resolved (${resolved.length})</div>
+      ${resolved.map(inc => {
+        const timestamp = new Date(inc.timestamp || inc.created).toLocaleString()
+        return `
+        <div class="card mb-2" style="opacity:0.65;border-left:3px solid var(--clr-success-text)">
           <div style="display:flex;align-items:center;gap:10px">
-            <span class="monospace" style="font-size:10px;color:var(--color-text-tertiary)">${inc.id}</span>
+            <span class="monospace" style="font-size:9px;color:var(--color-text-tertiary)">${inc.id?.substring(0, 40)}...</span>
             <span class="badge neutral">${inc.severity}</span>
             <span style="flex:1;font-size:11px">${inc.title}</span>
             <span class="badge success dot">Resolved</span>
-            <span style="font-size:10px;color:var(--color-text-tertiary)">${inc.created}</span>
+            <span style="font-size:9px;color:var(--color-text-tertiary)">${timestamp}</span>
           </div>
         </div>
-      `).join('')}
+      `}).join('')}
     ` : ''}
   `
 }
@@ -1445,6 +2130,21 @@ function wireSection(el) {
   content.querySelector('#rec-priority')?.addEventListener('change', e => { recFilter.priority = e.target.value; render(el) })
   content.querySelector('#rec-category')?.addEventListener('change', e => { recFilter.category = e.target.value; render(el) })
   content.querySelector('#rec-status')?.addEventListener('change', e => { recFilter.status = e.target.value; render(el) })
+
+  // Incident filters
+  content.querySelector('#incident-search')?.addEventListener('input', e => { incidentFilter.search = e.target.value; render(el) })
+  content.querySelector('#incident-severity')?.addEventListener('change', e => { incidentFilter.severity = e.target.value; render(el) })
+  content.querySelector('#incident-status')?.addEventListener('change', e => { incidentFilter.status = e.target.value; render(el) })
+  content.querySelector('#incident-refresh')?.addEventListener('click', () => render(el))
+
+  // Incident review buttons
+  content.querySelectorAll('.incident-review-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const incId = btn.dataset.incidentId
+      const incident = realIncidents.find(i => i.id === incId)
+      if (incident) showIncidentModal(el, incident)
+    })
+  })
 
   // Security Copilot
   const copSend = content.querySelector('#sec-cop-send')
