@@ -783,7 +783,8 @@ function renderEmail() {
     </div>
 
     <div class="card mb-3">
-      <div class="card-title mb-3"><i class="ti ti-shield-check"></i> Email Authentication Status</div>
+      <div class="card-title mb-3"><i class="ti ti-shield-check"></i> Organization Email Security Policies</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:12px;font-style:italic">Tenant-wide email security policies applied to all domains. Domain-specific DNS records are validated in the table below.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         ${[
           { label: 'SPF Record',          ok: spf === 'pass',        note: spf === 'pass' ? 'Configured — v=spf1 include:protection.outlook.com -all' : 'Missing or misconfigured' },
@@ -803,36 +804,31 @@ function renderEmail() {
     </div>
 
     <div class="card mb-3">
-      <div class="card-title mb-3"><i class="ti ti-globe"></i> Domain Authentication Status</div>
+      <div class="card-title mb-3"><i class="ti ti-globe"></i> Domain DNS Records Validation</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:12px;font-style:italic">Shows DNS record validation for each domain. Organization-wide policies (Safe Links, Safe Attachments, Anti-spam) are configured above.</div>
       <div style="overflow-x:auto">
         <table class="table" style="width:100%;font-size:11px">
           <thead>
             <tr style="border-bottom:1px solid var(--color-border-secondary)">
               <th style="padding:8px;text-align:left;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Domain</th>
-              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">SPF</th>
-              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">DKIM</th>
-              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">DMARC</th>
-              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Safe Links</th>
-              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Safe Attachments</th>
-              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Anti-spam</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">SPF Record</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">DKIM Record</th>
+              <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">DMARC Policy</th>
               <th style="padding:8px;text-align:center;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">Verified</th>
             </tr>
           </thead>
           <tbody>
             ${Array.isArray(e.domains) && e.domains.length > 0 ? e.domains.map(d => `
               <tr style="border-bottom:0.5px solid var(--color-border-tertiary);padding:0">
-                <td style="padding:8px;font-weight:600">${d.name || d.id}</td>
+                <td style="padding:8px;font-weight:600">${d.name || d.id}${d.isDefault ? ' <span style="color:var(--color-text-tertiary);font-weight:400">(default)</span>' : ''}</td>
                 <td style="padding:8px;text-align:center">${statusBadge(d.spf)}</td>
                 <td style="padding:8px;text-align:center">${statusBadge(d.dkim)}</td>
                 <td style="padding:8px;text-align:center">${statusBadge(d.dmarc)}</td>
-                <td style="padding:8px;text-align:center">${statusBadge(d.safeLinks)}</td>
-                <td style="padding:8px;text-align:center">${statusBadge(d.safeAttachments)}</td>
-                <td style="padding:8px;text-align:center">${statusBadge(d.antiSpamPolicy)}</td>
-                <td style="padding:8px;text-align:center">${d.isVerified ? '✅' : '❌'}</td>
+                <td style="padding:8px;text-align:center">${d.isVerified ? '✅ Verified' : '❌ Not Verified'}</td>
               </tr>
             `).join('') : `
               <tr>
-                <td colspan="8" style="padding:20px;text-align:center;color:var(--color-text-tertiary)">No domains found</td>
+                <td colspan="5" style="padding:20px;text-align:center;color:var(--color-text-tertiary)">No domains found</td>
               </tr>
             `}
           </tbody>
