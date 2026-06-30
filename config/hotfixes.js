@@ -10,12 +10,13 @@
  * VITE_HOTFIX_DASHBOARD_REFRESH=120000 (milliseconds)
  */
 
-// Handle both browser (import.meta) and Node.js (process.env) environments
+// Get environment variable from Vite (browser environment)
 const getEnv = (key, defaultValue = undefined) => {
   if (typeof import.meta !== 'undefined' && import.meta.env) {
     return import.meta.env[key] || defaultValue
   }
-  return process.env[key] || defaultValue
+  // Browser environment - only import.meta.env is available
+  return defaultValue
 }
 
 export const HOTFIXES = {
