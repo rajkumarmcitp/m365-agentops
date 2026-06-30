@@ -229,6 +229,15 @@ async function fetchTenantDomain() {
     const token = await getAccessToken()
     if (!token) {
       console.warn('⚠️ No access token available for tenant domain fetch')
+      // Fallback: use email domain if available
+      if (window.userEmail) {
+        const emailDomain = window.userEmail.split('@')[1]
+        if (emailDomain) {
+          state.tenantDomain = emailDomain
+          console.log(`✓ Tenant domain (from email): ${state.tenantDomain}`)
+          renderNav()
+        }
+      }
       return
     }
 
@@ -242,6 +251,15 @@ async function fetchTenantDomain() {
 
     if (!response.ok) {
       console.warn(`⚠️ Failed to fetch organization: ${response.status}`)
+      // Fallback: use email domain
+      if (window.userEmail) {
+        const emailDomain = window.userEmail.split('@')[1]
+        if (emailDomain) {
+          state.tenantDomain = emailDomain
+          console.log(`✓ Tenant domain (from email): ${state.tenantDomain}`)
+          renderNav()
+        }
+      }
       return
     }
 
@@ -257,6 +275,15 @@ async function fetchTenantDomain() {
     }
   } catch (error) {
     console.warn('⚠️ Error fetching tenant domain:', error.message)
+    // Fallback: use email domain
+    if (window.userEmail) {
+      const emailDomain = window.userEmail.split('@')[1]
+      if (emailDomain) {
+        state.tenantDomain = emailDomain
+        console.log(`✓ Tenant domain (from email): ${state.tenantDomain}`)
+        renderNav()
+      }
+    }
   }
 }
 
@@ -371,6 +398,9 @@ async function doLogin(userId) {
     console.warn('[Service Health] Initialization warning:', err.message)
   })
 
+  // Fetch tenant domain from Graph API (even for demo users if token available)
+  await fetchTenantDomain()
+
   const defaultPage = user.navAccess[0]
   await go(defaultPage)
   showToast(`Welcome back, ${user.name}!`, 'success')
@@ -443,8 +473,8 @@ async function doLoginWithEntraID(account) {
     console.warn('[Service Health] Initialization warning:', err.message)
   })
 
-  // Fetch tenant domain from Graph API
-  fetchTenantDomain()
+  // Fetch tenant domain from Graph API (await to ensure it completes before rendering)
+  await fetchTenantDomain()
 
   const defaultPage = entraUser.navAccess[0]
   await go(defaultPage)
