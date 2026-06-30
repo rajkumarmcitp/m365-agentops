@@ -8066,6 +8066,44 @@ app.get('/api/zero-trust/validations', async (req, res) => {
 
     const results = await validator.validateAll()
 
+    // Automatically save results to SharePoint if configured
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const resultsListId = process.env.SHAREPOINT_ZEROTRUST_RESULTS_LIST_ID
+    if (siteId && resultsListId && graphClient && results.validations) {
+      console.log('💾 Saving validation results to SharePoint...')
+      try {
+        for (const validation of results.validations || []) {
+          const itemData = {
+            fields: {
+              ValidationID: validation.id,
+              Status: validation.status?.toUpperCase() === 'PASS' ? 'PASS' : validation.status?.toUpperCase() === 'FAIL' ? 'FAIL' : 'WARNING',
+              Evidence: validation.evidence ? JSON.stringify(validation.evidence) : null,
+              CurrentValue: validation.currentValue || null,
+              ValidatedAt: new Date().toISOString(),
+              ValidationMethod: 'GraphAPI',
+              ErrorMessage: validation.error || null,
+              Notes: validation.description || null
+            }
+          }
+
+          try {
+            // Try to update existing
+            const existing = await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items?$filter=fields/ValidationID eq '${validation.id}'`).get()
+            if (existing.value && existing.value.length > 0) {
+              await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items/${existing.value[0].id}`).patch(itemData)
+            } else {
+              await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items`).post(itemData)
+            }
+          } catch (e) {
+            console.warn(`⚠️ Could not save result for ${validation.id}:`, e.message)
+          }
+        }
+        console.log(`✓ Saved ${results.validations.length} results to SharePoint`)
+      } catch (e) {
+        console.warn('⚠️ Error saving to SharePoint:', e.message)
+      }
+    }
+
     res.json({
       success: true,
       data: results,
@@ -14459,6 +14497,204 @@ app.post('/api/zero-trust/initialize-sharepoint', async (req, res) => {
     })
   } catch (error) {
     console.error('Error initializing Zero Trust lists:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/zero-trust/results
+ * Retrieve all Zero Trust validation results from SharePoint
+ */
+app.get('/api/zero-trust/results', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_ZEROTRUST_RESULTS_LIST_ID
+
+    if (!siteId || !listId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Zero Trust SharePoint not configured',
+        hint: 'Run Initialize from Admin Settings > Zero Trust Configuration'
+      })
+    }
+
+    console.log(`📋 Retrieving Zero Trust results from SharePoint...`)
+
+    try {
+      const results = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$expand=fields`).get()
+
+      const items = (results.value || []).map(item => ({
+        id: item.id,
+        validationId: item.fields.ValidationID,
+        status: item.fields.Status,
+        evidence: item.fields.Evidence ? JSON.parse(item.fields.Evidence) : null,
+        currentValue: item.fields.CurrentValue,
+        validatedAt: item.fields.ValidatedAt,
+        validationMethod: item.fields.ValidationMethod,
+        errorMessage: item.fields.ErrorMessage,
+        notes: item.fields.Notes
+      }))
+
+      console.log(`✅ Retrieved ${items.length} validation results`)
+
+      res.json({
+        success: true,
+        count: items.length,
+        results: items
+      })
+    } catch (error) {
+      console.error('❌ Error retrieving results:', error.message)
+      res.status(500).json({
+        success: false,
+        error: `Failed to retrieve results: ${error.message}`
+      })
+    }
+  } catch (error) {
+    console.error('Error in GET /api/zero-trust/results:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/zero-trust/results
+ * Save Zero Trust validation results to SharePoint
+ */
+app.post('/api/zero-trust/results', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const { validationId, status, evidence, currentValue, validationMethod, errorMessage, notes } = req.body
+
+    if (!validationId || !status) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: validationId, status'
+      })
+    }
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_ZEROTRUST_RESULTS_LIST_ID
+
+    if (!siteId || !listId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Zero Trust SharePoint not configured'
+      })
+    }
+
+    console.log(`📝 Saving validation result for ${validationId}: ${status}`)
+
+    try {
+      const itemData = {
+        fields: {
+          ValidationID: validationId,
+          Status: status,
+          Evidence: evidence ? JSON.stringify(evidence) : null,
+          CurrentValue: currentValue || null,
+          ValidatedAt: new Date().toISOString(),
+          ValidationMethod: validationMethod || 'GraphAPI',
+          ErrorMessage: errorMessage || null,
+          Notes: notes || null
+        }
+      }
+
+      // Check if result already exists
+      const existing = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$filter=fields/ValidationID eq '${validationId}'`).get()
+
+      if (existing.value && existing.value.length > 0) {
+        // Update existing
+        const itemId = existing.value[0].id
+        await graphClient.api(`/sites/${siteId}/lists/${listId}/items/${itemId}`).patch(itemData)
+        console.log(`✓ Updated result for ${validationId}`)
+        res.json({
+          success: true,
+          message: `Result updated for ${validationId}`,
+          validationId: validationId,
+          status: status
+        })
+      } else {
+        // Create new
+        const newItem = await graphClient.api(`/sites/${siteId}/lists/${listId}/items`).post(itemData)
+        console.log(`✓ Created new result for ${validationId}`)
+        res.json({
+          success: true,
+          message: `Result created for ${validationId}`,
+          validationId: validationId,
+          status: status,
+          itemId: newItem.id
+        })
+      }
+    } catch (error) {
+      console.error('❌ Error saving result:', error.message)
+      res.status(500).json({
+        success: false,
+        error: `Failed to save result: ${error.message}`
+      })
+    }
+  } catch (error) {
+    console.error('Error in POST /api/zero-trust/results:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/zero-trust/history
+ * Retrieve Zero Trust assessment history from SharePoint
+ */
+app.get('/api/zero-trust/history', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_ZEROTRUST_HISTORY_LIST_ID
+
+    if (!siteId || !listId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Zero Trust SharePoint not configured'
+      })
+    }
+
+    console.log(`📋 Retrieving Zero Trust history from SharePoint...`)
+
+    try {
+      const history = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$expand=fields&$orderby=fields/ChangedAt desc`).get()
+
+      const items = (history.value || []).map(item => ({
+        id: item.id,
+        historyId: item.fields.HistoryID,
+        controlId: item.fields.ControlID,
+        previousStatus: item.fields.PreviousStatus,
+        newStatus: item.fields.NewStatus,
+        changedAt: item.fields.ChangedAt,
+        changedBy: item.fields.ChangedBy,
+        reason: item.fields.Reason
+      }))
+
+      console.log(`✅ Retrieved ${items.length} history entries`)
+
+      res.json({
+        success: true,
+        count: items.length,
+        history: items
+      })
+    } catch (error) {
+      console.error('❌ Error retrieving history:', error.message)
+      res.status(500).json({
+        success: false,
+        error: `Failed to retrieve history: ${error.message}`
+      })
+    }
+  } catch (error) {
+    console.error('Error in GET /api/zero-trust/history:', error.message)
     res.status(500).json({ success: false, error: error.message })
   }
 })
