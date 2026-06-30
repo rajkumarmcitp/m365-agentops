@@ -35,6 +35,7 @@ import {
   getPrivilegedAccessFromGraph,
   getGuestAccessFromGraph
 } from './lib/graph-security-data.js'
+import ZeroTrustValidator from './lib/zero-trust-validator.js'
 import { InvestigationService } from './tenantguard/investigation-service.js'
 import { createInvestigationTables } from './tenantguard/investigation-schema.js'
 import { SettingsService } from './tenantguard/settings-service.js'
@@ -8043,20 +8044,165 @@ app.post('/api/notifications/email', async (req, res) => {
 // ============================================================
 import { ZT_PILLARS } from '../data/zt-pillars.js'
 
+// Initialize validator with graph client
+let ztValidator = null
+
+function initZeroTrustValidator() {
+  if (!ztValidator && graphClient) {
+    ztValidator = new ZeroTrustValidator(graphClient)
+  }
+  return ztValidator
+}
+
+// Get all validations (80+ checks)
+app.get('/api/zero-trust/validations', async (req, res) => {
+  try {
+    console.log('🔍 Running comprehensive Zero Trust validations...')
+    const validator = initZeroTrustValidator()
+
+    if (!validator) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const results = await validator.validateAll()
+
+    res.json({
+      success: true,
+      data: results,
+      summary: {
+        totalControls: results.totalValidations,
+        compliance: results.overallScore + '%',
+        passed: results.summary.pass,
+        failed: results.summary.fail,
+        warnings: results.summary.warn
+      }
+    })
+  } catch (error) {
+    console.error('❌ Zero Trust validation failed:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      data: []
+    })
+  }
+})
+
+// Get single pillar details
+app.get('/api/zero-trust/pillar/:pillarId', async (req, res) => {
+  try {
+    const { pillarId } = req.params
+    const pillarName = decodeURIComponent(pillarId)
+
+    console.log(`📋 Validating pillar: ${pillarName}...`)
+    const validator = initZeroTrustValidator()
+
+    if (!validator) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const pillarDetails = await validator.getPillarDetails(pillarName)
+
+    res.json({
+      success: true,
+      data: pillarDetails
+    })
+  } catch (error) {
+    console.error('❌ Pillar validation failed:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+// Get priority actions (top 10 issues)
+app.get('/api/zero-trust/priority-actions', async (req, res) => {
+  try {
+    console.log('⚡ Fetching priority actions...')
+    const validator = initZeroTrustValidator()
+
+    if (!validator) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const actions = await validator.getPriorityActions()
+
+    res.json({
+      success: true,
+      data: actions,
+      count: actions.length
+    })
+  } catch (error) {
+    console.error('❌ Failed to fetch priority actions:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      data: []
+    })
+  }
+})
+
+// Get compliance trends (7d, 30d, 90d)
+app.get('/api/zero-trust/trends', async (req, res) => {
+  try {
+    console.log('📈 Fetching Zero Trust trends...')
+    const validator = initZeroTrustValidator()
+
+    if (!validator) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const trends = validator.getTrends()
+
+    res.json({
+      success: true,
+      data: trends
+    })
+  } catch (error) {
+    console.error('❌ Failed to fetch trends:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+// Apply auto-remediation for specific validation
+app.post('/api/zero-trust/remediate/:validationId', async (req, res) => {
+  try {
+    const { validationId } = req.params
+
+    console.log(`🔧 Remediating validation: ${validationId}...`)
+    const validator = initZeroTrustValidator()
+
+    if (!validator) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const result = await validator.remediate(validationId)
+
+    res.json({
+      success: true,
+      data: result
+    })
+  } catch (error) {
+    console.error('❌ Remediation failed:', error.message)
+    res.status(400).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+// Backwards compatibility: /api/zero-trust/pillars
 app.get('/api/zero-trust/pillars', async (req, res) => {
   try {
-    console.log('📊 Fetching Zero Trust assessment data...')
-
-    // For now, return the demo/reference data
-    // In the future, this could be enhanced to:
-    // 1. Query Graph API for real assessment data
-    // 2. Calculate compliance based on actual Entra ID/Intune policies
-    // 3. Store assessment history
+    console.log('📊 Fetching Zero Trust assessment data (legacy endpoint)...')
 
     res.json({
       success: true,
       data: ZT_PILLARS,
-      note: 'This data represents your tenant\'s Zero Trust compliance posture based on configured policies and settings.'
+      note: 'Legacy endpoint. Use /api/zero-trust/validations for comprehensive assessment.'
     })
   } catch (error) {
     console.error('❌ Error fetching Zero Trust data:', error.message)
