@@ -293,6 +293,64 @@ function renderSettings(el) {
       </div>
     </div>
 
+    <!-- Zero Trust Assessment SharePoint Configuration -->
+    <div class="card mb-3">
+      <div class="card-title mb-3"><i class="ti ti-lock-check"></i> Zero Trust Assessment — SharePoint Configuration</div>
+      <div style="background:#e8f5e9;border-left:4px solid #4caf50;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#2e7d32">
+        <i class="ti ti-info-circle"></i>
+        <strong>Configuration:</strong> Specify the SharePoint site where Zero Trust compliance validations, control results, and assessment history will be stored. Required for persistent data storage.
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label class="form-label">SharePoint Site URL</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" class="form-input" id="settings-zerotrust-site" placeholder="e.g., root or /sites/Security" style="flex:1">
+          <button class="btn" id="settings-zerotrust-test" style="white-space:nowrap"><i class="ti ti-check"></i> Test</button>
+        </div>
+        <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px">
+          Enter "root" for tenant root site, or "/sites/SiteName" for a specific site. Lists will be created here: ZeroTrust-Validations, ZeroTrust-Results, ZeroTrust-History
+        </div>
+      </div>
+      <div id="settings-zerotrust-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none">
+        Status will appear here
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary" id="settings-zerotrust-init" style="white-space:nowrap"><i class="ti ti-database"></i> Initialize Lists</button>
+        <div style="font-size:10px;color:var(--color-text-tertiary)">Creates Zero Trust lists with all required fields and columns</div>
+      </div>
+      <div id="settings-zerotrust-init-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none;margin-top:8px">
+        Initialization status will appear here
+      </div>
+
+      <div style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+        <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">📋 Configuration Reference</div>
+        <div style="font-size:9px;color:var(--color-text-secondary);line-height:1.6">
+          <strong>Lists Created:</strong><br>
+          • ZeroTrust-Validations — Control definitions and validation metadata<br>
+          • ZeroTrust-Results — Validation results with pass/fail status<br>
+          • ZeroTrust-History — Assessment history and trend tracking<br><br>
+          <strong>Columns (Validations List):</strong><br>
+          • Title, ID, Pillar, Category, Severity, Priority<br>
+          • Description, GraphAPI, PowerShell, ExpectedValue, Evidence<br>
+          • Remediation, AutoRemediationAvailable, ImpactScore<br><br>
+          <strong>Columns (Results List):</strong><br>
+          • Title, ValidationID, Status (Pass/Fail/Warning)<br>
+          • CurrentValue, TestDate, LastModified<br><br>
+          <strong>After Initialization:</strong><br>
+          • Zero Trust page will read validations from SharePoint<br>
+          • Results will persist across sessions<br>
+          • Assessment history tracked for compliance reporting
+        </div>
+      </div>
+
+      <div id="settings-zerotrust-config" style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);display:none">
+        <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">✅ Configuration Complete - Add to .env:</div>
+        <div style="background:#f5f5f5;padding:8px;border-radius:4px;font-family:monospace;font-size:9px;color:#333;white-space:pre-wrap;word-break:break-all" id="settings-zerotrust-env-output"></div>
+        <button class="btn btn-sm" id="settings-zerotrust-copy" style="margin-top:8px;font-size:9px"><i class="ti ti-copy"></i> Copy to Clipboard</button>
+      </div>
+    </div>
+
     <!-- Self Service Portal SharePoint Configuration -->
     <div class="card mb-3">
       <div class="card-title mb-3"><i class="ti ti-layout-kanban"></i> Self Service Portal — SharePoint Configuration</div>
@@ -832,6 +890,129 @@ SHAREPOINT_ENHANCED_INVESTIGATIONS_LIST_ID=${result.enhancedInvestigationsListId
     } finally {
       enhancedInitBtn.disabled = false
       enhancedInitBtn.innerHTML = '<i class="ti ti-database"></i> Initialize Enhanced Lists'
+    }
+  })
+
+  // ---- Zero Trust Assessment SharePoint Configuration ----
+  const ztInput = el.querySelector('#settings-zerotrust-site')
+  const ztTestBtn = el.querySelector('#settings-zerotrust-test')
+  const ztStatus = el.querySelector('#settings-zerotrust-status')
+  const ztInitBtn = el.querySelector('#settings-zerotrust-init')
+  const ztInitStatus = el.querySelector('#settings-zerotrust-init-status')
+  const ztConfig = el.querySelector('#settings-zerotrust-config')
+  const ztEnvOutput = el.querySelector('#settings-zerotrust-env-output')
+  const ztCopyBtn = el.querySelector('#settings-zerotrust-copy')
+
+  ztInput.value = s.zeroTrustSiteUrl || 'root'
+
+  ztTestBtn.addEventListener('click', async () => {
+    const siteUrl = ztInput.value.trim() || 'root'
+    ztTestBtn.disabled = true
+    ztTestBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Testing...'
+    ztStatus.style.display = 'block'
+    ztStatus.textContent = 'Testing connection...'
+
+    try {
+      const response = await fetch(`${api}/zero-trust/validate-sharepoint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteUrl })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        ztStatus.style.background = '#e8f5e9'
+        ztStatus.style.color = '#2e7d32'
+        ztStatus.textContent = `✓ Connected! Site: ${result.siteName || siteUrl}`
+        state.settings.zeroTrustSiteUrl = siteUrl
+        state.settings.zeroTrustSiteId = result.siteId
+        saveState()
+        showToast('Zero Trust SharePoint site configured successfully', 'success')
+      } else {
+        ztStatus.style.background = '#ffebee'
+        ztStatus.style.color = '#c62828'
+        ztStatus.textContent = `✗ Error: ${result.error || 'Could not connect to site'}`
+        showToast('SharePoint connection failed', 'error')
+      }
+    } catch (error) {
+      ztStatus.style.background = '#ffebee'
+      ztStatus.style.color = '#c62828'
+      ztStatus.textContent = `✗ Error: ${error.message}`
+      showToast('SharePoint connection error', 'error')
+    } finally {
+      ztTestBtn.disabled = false
+      ztTestBtn.innerHTML = '<i class="ti ti-check"></i> Test'
+    }
+  })
+
+  // Initialize Zero Trust Lists
+  ztInitBtn.addEventListener('click', async () => {
+    const siteUrl = ztInput.value.trim() || 'root'
+    ztInitBtn.disabled = true
+    ztInitBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Initializing...'
+    ztInitStatus.style.display = 'block'
+    ztInitStatus.textContent = 'Creating Zero Trust lists and fields...'
+
+    try {
+      const response = await fetch(`${api}/zero-trust/initialize-sharepoint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteUrl })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        ztInitStatus.style.background = '#e8f5e9'
+        ztInitStatus.style.color = '#2e7d32'
+
+        // Build detailed status message with column info
+        let statusMsg = `✓ ${result.message}`
+        if (result.columns) {
+          const valCols = result.columns['ZeroTrust-Validations']
+          const resCols = result.columns['ZeroTrust-Results']
+          const histCols = result.columns['ZeroTrust-History']
+
+          const totalCreated = (valCols?.created?.length || 0) + (resCols?.created?.length || 0) + (histCols?.created?.length || 0)
+          const totalSkipped = (valCols?.skipped?.length || 0) + (resCols?.skipped?.length || 0) + (histCols?.skipped?.length || 0)
+
+          statusMsg += `\n📋 Columns: ${totalCreated} created, ${totalSkipped} already exist`
+          statusMsg += `\n  • Validations: ${valCols?.created?.length || 0} fields`
+          statusMsg += `\n  • Results: ${resCols?.created?.length || 0} fields`
+          statusMsg += `\n  • History: ${histCols?.created?.length || 0} fields`
+        }
+        ztInitStatus.textContent = statusMsg
+
+        // Display configuration for .env file
+        if (result.siteId && result.validationsListId && result.resultsListId && result.historyListId) {
+          ztConfig.style.display = 'block'
+          ztEnvOutput.textContent = `SHAREPOINT_SITE_ID=${result.siteId}
+SHAREPOINT_ZEROTRUST_VALIDATIONS_LIST_ID=${result.validationsListId}
+SHAREPOINT_ZEROTRUST_RESULTS_LIST_ID=${result.resultsListId}
+SHAREPOINT_ZEROTRUST_HISTORY_LIST_ID=${result.historyListId}`
+
+          ztCopyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(ztEnvOutput.textContent)
+            showToast('Configuration copied to clipboard', 'success')
+          })
+        }
+
+        showToast('Zero Trust lists and columns created successfully', 'success')
+      } else {
+        ztInitStatus.style.background = '#ffebee'
+        ztInitStatus.style.color = '#c62828'
+        ztInitStatus.textContent = `✗ Error: ${result.error || 'Could not initialize lists'}`
+        showToast('List initialization failed', 'error')
+      }
+    } catch (error) {
+      ztInitStatus.style.background = '#ffebee'
+      ztInitStatus.style.color = '#c62828'
+      ztInitStatus.textContent = `✗ Error: ${error.message}`
+      showToast('List initialization error', 'error')
+    } finally {
+      ztInitBtn.disabled = false
+      ztInitBtn.innerHTML = '<i class="ti ti-database"></i> Initialize Lists'
     }
   })
 

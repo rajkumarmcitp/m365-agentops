@@ -14192,6 +14192,278 @@ app.post('/api/admin/license-config', (req, res) => {
 })
 
 // ============================================================
+// Zero Trust SharePoint Configuration Endpoints
+// ============================================================
+
+/**
+ * POST /api/zero-trust/validate-sharepoint
+ * Validate SharePoint site connection for Zero Trust backend
+ */
+app.post('/api/zero-trust/validate-sharepoint', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    let { siteUrl } = req.body
+    let site = siteUrl?.trim() || 'root'
+
+    // Normalize and parse URL
+    if (site !== 'root') {
+      console.log(`📍 Original input: ${site}`)
+
+      // If it's a full URL, extract the path
+      if (site.startsWith('http')) {
+        try {
+          const url = new URL(site)
+          const pathname = url.pathname
+          // Extract /sites/sitename format
+          const match = pathname.match(/\/sites\/([^/]+)/i)
+          if (match) {
+            site = `/sites/${match[1]}`
+          } else {
+            // Fallback: get last path segment
+            const segments = pathname.split('/').filter(p => p)
+            site = segments.length > 0 ? `/sites/${segments[segments.length - 1]}` : 'root'
+          }
+        } catch (e) {
+          console.error(`URL parsing error: ${e.message}`)
+          return res.status(400).json({
+            success: false,
+            error: `Invalid URL format: ${e.message}`,
+            hint: 'Please use one of these formats: "root", "M365-AgentOps-Prod", "/sites/M365-AgentOps-Prod", or "https://tenant.sharepoint.com/sites/M365-AgentOps-Prod"'
+          })
+        }
+      } else {
+        // Handle path or site name formats
+        site = site.replace(/\/{2,}/g, '/').trim()
+
+        if (site.startsWith('/sites/')) {
+          // Already in correct format
+        } else if (site.startsWith('sites/')) {
+          site = `/${site}`
+        } else {
+          site = `/sites/${site}`
+        }
+      }
+    }
+
+    // Final validation - ensure no double slashes
+    site = site.replace(/\/{2,}/g, '/')
+
+    console.log(`🔍 Normalized SharePoint site: ${site}`)
+
+    try {
+      // Build correct API path
+      let apiPath
+      if (site === 'root') {
+        apiPath = '/sites/root'
+      } else if (site.startsWith('/sites/')) {
+        // Non-root sites need hostname prefix for Graph API
+        apiPath = `/sites/nasstech.sharepoint.com:${site}`
+      } else {
+        apiPath = `/sites/nasstech.sharepoint.com:/sites/${site}`
+      }
+      console.log(`📡 API call: ${apiPath}`)
+      const siteData = await graphClient.api(apiPath).get()
+      console.log(`✅ SharePoint site validated: ${siteData.displayName}`)
+      res.json({
+        success: true,
+        siteId: siteData.id,
+        siteName: siteData.displayName || site,
+        siteUrl: site,
+        message: `Connected to SharePoint site: ${siteData.displayName || site}`
+      })
+    } catch (error) {
+      console.error(`❌ SharePoint validation failed for ${site}:`, error.message)
+      res.status(400).json({
+        success: false,
+        error: `Could not access SharePoint site (${site}): ${error.message}`,
+        hint: 'Please check the site URL format. Examples: "root", "/sites/M365-AgentOps", or "https://tenant.sharepoint.com/sites/M365-AgentOps"'
+      })
+    }
+  } catch (error) {
+    console.error('Error validating Zero Trust SharePoint:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/zero-trust/initialize-sharepoint
+ * Create Zero Trust lists on SharePoint with required columns
+ */
+app.post('/api/zero-trust/initialize-sharepoint', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    let { siteUrl } = req.body
+    let site = siteUrl?.trim() || 'root'
+
+    // Normalize and parse URL (same as classic version)
+    if (site !== 'root') {
+      console.log(`📍 Original input: ${site}`)
+
+      if (site.startsWith('http')) {
+        try {
+          const url = new URL(site)
+          const pathname = url.pathname
+          const match = pathname.match(/\/sites\/([^/]+)/i)
+          if (match) {
+            site = `/sites/${match[1]}`
+          } else {
+            const segments = pathname.split('/').filter(p => p)
+            site = segments.length > 0 ? `/sites/${segments[segments.length - 1]}` : 'root'
+          }
+        } catch (e) {
+          console.error(`URL parsing error: ${e.message}`)
+          return res.status(400).json({
+            success: false,
+            error: `Invalid URL format: ${e.message}`,
+            hint: 'Please use one of these formats: "root", "M365-AgentOps-Prod", "/sites/M365-AgentOps-Prod", or "https://tenant.sharepoint.com/sites/M365-AgentOps-Prod"'
+          })
+        }
+      } else {
+        site = site.replace(/\/{2,}/g, '/').trim()
+        if (site.startsWith('/sites/')) {
+          // Already correct
+        } else if (site.startsWith('sites/')) {
+          site = `/${site}`
+        } else {
+          site = `/sites/${site}`
+        }
+      }
+    }
+
+    site = site.replace(/\/{2,}/g, '/')
+    console.log(`🔍 Normalized SharePoint site: ${site}`)
+
+    // Get the site
+    let siteId
+    try {
+      let apiPath
+      if (site === 'root') {
+        apiPath = '/sites/root'
+      } else if (site.startsWith('/sites/')) {
+        apiPath = `/sites/nasstech.sharepoint.com:${site}`
+      } else {
+        apiPath = `/sites/nasstech.sharepoint.com:/sites/${site}`
+      }
+      console.log(`📡 API call: ${apiPath}`)
+      const siteData = await graphClient.api(apiPath).get()
+      siteId = siteData.id
+    } catch (error) {
+      console.error(`❌ Could not access SharePoint site (${site}):`, error.message)
+      return res.status(400).json({
+        success: false,
+        error: `Could not access SharePoint site (${site}): ${error.message}`,
+        hint: 'Please use one of these formats: "root", "M365-AgentOps-Prod", "/sites/M365-AgentOps-Prod", or "https://tenant.sharepoint.com/sites/M365-AgentOps-Prod"'
+      })
+    }
+
+    console.log(`🚀 Initializing Zero Trust lists on site: ${site} (${siteId})`)
+
+    const listConfigs = [
+      { name: 'ZeroTrust-Validations', displayName: 'ZeroTrust Validations', type: 'validations' },
+      { name: 'ZeroTrust-Results', displayName: 'ZeroTrust Results', type: 'results' },
+      { name: 'ZeroTrust-History', displayName: 'ZeroTrust History', type: 'history' }
+    ]
+
+    const createdLists = {}
+    const columnResults = {}
+
+    for (const listConfig of listConfigs) {
+      try {
+        let siteApiPath, listsApiPath
+        if (site === 'root') {
+          siteApiPath = `/sites/root`
+          listsApiPath = `/sites/root/lists`
+        } else if (site.startsWith('/sites/')) {
+          siteApiPath = `/sites/nasstech.sharepoint.com:${site}`
+          listsApiPath = `/sites/nasstech.sharepoint.com:${site}/lists`
+        } else {
+          siteApiPath = `/sites/nasstech.sharepoint.com:/sites/${site}`
+          listsApiPath = `/sites/nasstech.sharepoint.com:/sites/${site}/lists`
+        }
+
+        console.log(`📝 Creating list: ${listConfig.name}`)
+
+        const listData = {
+          displayName: listConfig.displayName,
+          list: {
+            template: 'genericList'
+          }
+        }
+
+        const newList = await graphClient.api(listsApiPath).post(listData)
+        createdLists[listConfig.name] = newList.id
+
+        console.log(`✓ List created: ${listConfig.name} (ID: ${newList.id})`)
+
+        // Wait for SharePoint to propagate list creation before adding columns
+        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        // Create columns for the list (pass siteApiPath, not listsApiPath)
+        const columns = await createListColumns(siteApiPath, newList.id, listConfig.type)
+        columnResults[listConfig.name] = columns
+
+      } catch (error) {
+        if (error.message.includes('already exists')) {
+          console.log(`⚠️ List already exists: ${listConfig.name}, attempting to retrieve...`)
+          try {
+            let siteApiPath, listsApiPath
+            if (site === 'root') {
+              siteApiPath = `/sites/root`
+              listsApiPath = `/sites/root/lists`
+            } else if (site.startsWith('/sites/')) {
+              siteApiPath = `/sites/nasstech.sharepoint.com:${site}`
+              listsApiPath = `/sites/nasstech.sharepoint.com:${site}/lists`
+            } else {
+              siteApiPath = `/sites/nasstech.sharepoint.com:/sites/${site}`
+              listsApiPath = `/sites/nasstech.sharepoint.com:/sites/${site}/lists`
+            }
+
+            const lists = await graphClient.api(listsApiPath).get()
+            const existingList = lists.value.find(l => l.displayName === listConfig.displayName)
+            if (existingList) {
+              createdLists[listConfig.name] = existingList.id
+              const columns = await createListColumns(siteApiPath, existingList.id, listConfig.type)
+              columnResults[listConfig.name] = columns
+            } else {
+              throw new Error(`List ${listConfig.name} not found`)
+            }
+          } catch (retryError) {
+            console.error(`❌ Failed to handle existing list ${listConfig.name}:`, retryError.message)
+            columnResults[listConfig.name] = { error: retryError.message, created: [], skipped: [] }
+          }
+        } else {
+          console.error(`❌ Error creating list ${listConfig.name}:`, error.message)
+          columnResults[listConfig.name] = { error: error.message, created: [], skipped: [] }
+        }
+      }
+    }
+
+    console.log(`✅ Zero Trust lists initialization complete`)
+
+    res.json({
+      success: true,
+      message: 'Zero Trust lists and columns created successfully',
+      siteId: siteId,
+      siteUrl: site,
+      validationsListId: createdLists['ZeroTrust-Validations'],
+      resultsListId: createdLists['ZeroTrust-Results'],
+      historyListId: createdLists['ZeroTrust-History'],
+      columns: columnResults,
+      envConfig: `SHAREPOINT_SITE_ID=${siteId}\nSHAREPOINT_ZEROTRUST_VALIDATIONS_LIST_ID=${createdLists['ZeroTrust-Validations']}\nSHAREPOINT_ZEROTRUST_RESULTS_LIST_ID=${createdLists['ZeroTrust-Results']}\nSHAREPOINT_ZEROTRUST_HISTORY_LIST_ID=${createdLists['ZeroTrust-History']}`
+    })
+  } catch (error) {
+    console.error('Error initializing Zero Trust lists:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// ============================================================
 // 404 Handler - MUST be last
 // ============================================================
 app.use((req, res) => {

@@ -406,23 +406,15 @@ export function buildColumnPayload(column) {
       break
     case 'multilineText':
       payload.text = {
-        allowMultipleLines: true,
-        maxLength: 10000,
-        appendChangesToExistingText: false,
-        linesForEditing: 0
+        allowMultipleLines: true
       }
       break
     case 'number':
-      payload.number = {
-        decimalPlaces: 0,
-        minimum: null,
-        maximum: null
-      }
+      payload.number = {}
       break
     case 'dateTime':
       payload.dateTime = {
-        format: 'dateTime',
-        displayAs: 'default'
+        format: 'dateTime'
       }
       break
     case 'boolean':
@@ -430,9 +422,7 @@ export function buildColumnPayload(column) {
       break
     case 'choice':
       payload.choice = {
-        choices: (column.choices || []).map(c => ({ label: c })),
-        allowMultipleSelection: false,
-        displayAs: 'dropDownMenu'
+        choices: (column.choices || []).map(c => ({ label: c }))
       }
       break
     default:
@@ -457,15 +447,230 @@ export function getColumnsForList(listType) {
       return TENANTGUARD_CORRELATIONS_COLUMNS
     case 'investigations':
       return TENANTGUARD_INVESTIGATIONS_COLUMNS
+    case 'validations':
+      return ZEROTRUST_VALIDATIONS_COLUMNS
+    case 'results':
+      return ZEROTRUST_RESULTS_COLUMNS
+    case 'history':
+      return ZEROTRUST_HISTORY_COLUMNS
     default:
       return []
   }
 }
 
+export const ZEROTRUST_VALIDATIONS_COLUMNS = [
+  {
+    name: 'ControlID',
+    type: 'text',
+    displayName: 'Control ID',
+    required: true,
+    description: 'Unique control identifier (e.g., ID-001, DEV-001, AI-006)'
+  },
+  {
+    name: 'ControlName',
+    type: 'text',
+    displayName: 'Control Name',
+    required: true,
+    description: 'Display name of the security control'
+  },
+  {
+    name: 'Pillar',
+    type: 'text',
+    displayName: 'Pillar',
+    required: true,
+    description: 'Zero Trust pillar (Identity, Device, AI, Data, Infrastructure, Application, Network, Email, Threat)'
+  },
+  {
+    name: 'Category',
+    type: 'text',
+    displayName: 'Category',
+    required: false,
+    description: 'Security category within the pillar'
+  },
+  {
+    name: 'Severity',
+    type: 'text',
+    displayName: 'Severity',
+    required: true,
+    description: 'Severity level of the control (CRITICAL, HIGH, MEDIUM, LOW, INFO)'
+  },
+  {
+    name: 'Description',
+    type: 'multilineText',
+    displayName: 'Description',
+    required: false,
+    description: 'Detailed description of what this control validates'
+  },
+  {
+    name: 'GraphAPI',
+    type: 'multilineText',
+    displayName: 'Graph API',
+    required: false,
+    description: 'Graph API queries or endpoints to use for validation'
+  },
+  {
+    name: 'PowerShell',
+    type: 'multilineText',
+    displayName: 'PowerShell',
+    required: false,
+    description: 'PowerShell commands for validation'
+  },
+  {
+    name: 'ExpectedValue',
+    type: 'multilineText',
+    displayName: 'Expected Value',
+    required: false,
+    description: 'What the correct configuration should be'
+  },
+  {
+    name: 'Remediation',
+    type: 'multilineText',
+    displayName: 'Remediation',
+    required: false,
+    description: 'Steps to remediate if validation fails'
+  },
+  {
+    name: 'Priority',
+    type: 'number',
+    displayName: 'Priority',
+    required: false,
+    description: 'Priority level (1-5, 1 = highest)'
+  },
+  {
+    name: 'ImpactScore',
+    type: 'number',
+    displayName: 'Impact Score',
+    required: false,
+    description: 'Impact score (0-100)'
+  },
+  {
+    name: 'AutoRemediationAvailable',
+    type: 'boolean',
+    displayName: 'Auto Remediation Available',
+    required: false,
+    defaultValue: false,
+    description: 'Whether this control can be auto-remediated'
+  }
+]
+
+export const ZEROTRUST_RESULTS_COLUMNS = [
+  {
+    name: 'ValidationID',
+    type: 'text',
+    displayName: 'Validation ID',
+    required: true,
+    description: 'Reference to ControlID being validated'
+  },
+  {
+    name: 'Status',
+    type: 'text',
+    displayName: 'Status',
+    required: true,
+    description: 'Validation result status (PASS, FAIL, WARNING, UNKNOWN)'
+  },
+  {
+    name: 'Evidence',
+    type: 'multilineText',
+    displayName: 'Evidence',
+    required: false,
+    description: 'JSON data collected from validation'
+  },
+  {
+    name: 'CurrentValue',
+    type: 'multilineText',
+    displayName: 'Current Value',
+    required: false,
+    description: 'Current configuration value found during validation'
+  },
+  {
+    name: 'ValidatedAt',
+    type: 'dateTime',
+    displayName: 'Validated At',
+    required: true,
+    description: 'When this validation was performed'
+  },
+  {
+    name: 'ValidationMethod',
+    type: 'text',
+    displayName: 'Validation Method',
+    required: true,
+    description: 'How the validation was performed (GraphAPI, PowerShell, Manual)'
+  },
+  {
+    name: 'ErrorMessage',
+    type: 'text',
+    displayName: 'Error Message',
+    required: false,
+    description: 'Error message if validation failed'
+  },
+  {
+    name: 'Notes',
+    type: 'multilineText',
+    displayName: 'Notes',
+    required: false,
+    description: 'Additional notes or context'
+  }
+]
+
+export const ZEROTRUST_HISTORY_COLUMNS = [
+  {
+    name: 'HistoryID',
+    type: 'text',
+    displayName: 'History ID',
+    required: true,
+    description: 'Unique history entry identifier'
+  },
+  {
+    name: 'ControlID',
+    type: 'text',
+    displayName: 'Control ID',
+    required: true,
+    description: 'Reference to the control being tracked'
+  },
+  {
+    name: 'PreviousStatus',
+    type: 'text',
+    displayName: 'Previous Status',
+    required: false,
+    description: 'Previous validation status (PASS, FAIL, WARNING, UNKNOWN)'
+  },
+  {
+    name: 'NewStatus',
+    type: 'text',
+    displayName: 'New Status',
+    required: true,
+    description: 'New validation status (PASS, FAIL, WARNING, UNKNOWN)'
+  },
+  {
+    name: 'ChangedAt',
+    type: 'dateTime',
+    displayName: 'Changed At',
+    required: true,
+    description: 'When the status changed'
+  },
+  {
+    name: 'ChangedBy',
+    type: 'text',
+    displayName: 'Changed By',
+    required: false,
+    description: 'User or system that changed the status'
+  },
+  {
+    name: 'Reason',
+    type: 'multilineText',
+    displayName: 'Reason',
+    required: false,
+    description: 'Reason for the status change'
+  }
+]
+
 export default {
   TENANTGUARD_ALERTS_COLUMNS,
   TENANTGUARD_CORRELATIONS_COLUMNS,
   TENANTGUARD_INVESTIGATIONS_COLUMNS,
+  ZEROTRUST_VALIDATIONS_COLUMNS,
+  ZEROTRUST_RESULTS_COLUMNS,
+  ZEROTRUST_HISTORY_COLUMNS,
   buildColumnPayload,
   getColumnsForList
 }
