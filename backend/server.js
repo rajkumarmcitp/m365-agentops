@@ -14699,6 +14699,227 @@ app.get('/api/zero-trust/history', async (req, res) => {
   }
 })
 
+/**
+ * POST /api/zero-trust/validate-manual
+ * Admin manually validates a control
+ */
+app.post('/api/zero-trust/validate-manual', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const { controlId, status, notes, evidence, currentValue } = req.body
+    const userId = req.headers['x-user-id'] || 'Unknown User'
+
+    if (!controlId || !status) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: controlId, status'
+      })
+    }
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_ZEROTRUST_RESULTS_LIST_ID
+
+    if (!siteId || !listId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Zero Trust SharePoint not configured'
+      })
+    }
+
+    console.log(`✏️ Manual validation for ${controlId}: ${status} by ${userId}`)
+
+    try {
+      // Update or create result with manual validation flag
+      const itemData = {
+        fields: {
+          ValidationID: controlId,
+          Status: status.toUpperCase(),
+          CurrentValue: currentValue || null,
+          Evidence: evidence ? JSON.stringify(evidence) : null,
+          ValidatedAt: new Date().toISOString(),
+          ValidationMethod: 'Manual',
+          Notes: notes || null,
+          ManuallyValidated: true,
+          ValidatedBy: userId
+        }
+      }
+
+      // Check if result already exists
+      const existing = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$filter=fields/ValidationID eq '${controlId}'`).get()
+
+      if (existing.value && existing.value.length > 0) {
+        // Update existing
+        const itemId = existing.value[0].id
+        await graphClient.api(`/sites/${siteId}/lists/${listId}/items/${itemId}`).patch(itemData)
+        console.log(`✓ Updated manual validation for ${controlId}`)
+      } else {
+        // Create new
+        await graphClient.api(`/sites/${siteId}/lists/${listId}/items`).post(itemData)
+        console.log(`✓ Created manual validation for ${controlId}`)
+      }
+
+      res.json({
+        success: true,
+        message: `Control ${controlId} marked as manually validated`,
+        controlId: controlId,
+        status: status,
+        validatedBy: userId,
+        validatedAt: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('❌ Error saving manual validation:', error.message)
+      res.status(500).json({
+        success: false,
+        error: `Failed to save manual validation: ${error.message}`
+      })
+    }
+  } catch (error) {
+    console.error('Error in POST /api/zero-trust/validate-manual:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/zero-trust/override-control
+ * Admin can override a control's status
+ */
+app.post('/api/zero-trust/override-control', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const { controlId, overrideStatus, reason, expiresIn } = req.body
+    const userId = req.headers['x-user-id'] || 'Unknown User'
+
+    if (!controlId || !overrideStatus) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: controlId, overrideStatus'
+      })
+    }
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+
+    // Note: You may need to create a new list for overrides
+    // For now, we'll store it in results with override metadata
+    const listId = process.env.SHAREPOINT_ZEROTRUST_RESULTS_LIST_ID
+
+    if (!siteId || !listId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Zero Trust SharePoint not configured'
+      })
+    }
+
+    console.log(`🔄 Override for ${controlId}: ${overrideStatus} by ${userId}`)
+
+    try {
+      const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : null
+
+      const itemData = {
+        fields: {
+          ValidationID: controlId,
+          Status: overrideStatus.toUpperCase(),
+          ValidatedAt: new Date().toISOString(),
+          ValidationMethod: 'Override',
+          Notes: `[OVERRIDE] ${reason || 'Admin override'}${expiresAt ? ` (Expires: ${expiresAt})` : ''}`,
+          OverriddenBy: userId,
+          OverriddenAt: new Date().toISOString(),
+          ExpiresAt: expiresAt
+        }
+      }
+
+      // Check if result already exists
+      const existing = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$filter=fields/ValidationID eq '${controlId}'`).get()
+
+      if (existing.value && existing.value.length > 0) {
+        const itemId = existing.value[0].id
+        await graphClient.api(`/sites/${siteId}/lists/${listId}/items/${itemId}`).patch(itemData)
+      } else {
+        await graphClient.api(`/sites/${siteId}/lists/${listId}/items`).post(itemData)
+      }
+
+      res.json({
+        success: true,
+        message: `Control ${controlId} override applied`,
+        controlId: controlId,
+        status: overrideStatus,
+        overriddenBy: userId,
+        expiresAt: expiresAt
+      })
+    } catch (error) {
+      console.error('❌ Error applying override:', error.message)
+      res.status(500).json({
+        success: false,
+        error: `Failed to apply override: ${error.message}`
+      })
+    }
+  } catch (error) {
+    console.error('Error in POST /api/zero-trust/override-control:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/zero-trust/manual-validations
+ * Get list of manually validated controls
+ */
+app.get('/api/zero-trust/manual-validations', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_ZEROTRUST_RESULTS_LIST_ID
+
+    if (!siteId || !listId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Zero Trust SharePoint not configured'
+      })
+    }
+
+    console.log(`📋 Retrieving manually validated controls...`)
+
+    try {
+      // Get all items where ManuallyValidated = true or ValidationMethod = Manual
+      const results = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$expand=fields&$filter=fields/ManuallyValidated eq true`).get()
+
+      const validations = (results.value || []).map(item => ({
+        id: item.id,
+        controlId: item.fields.ValidationID,
+        status: item.fields.Status,
+        validatedBy: item.fields.ValidatedBy,
+        validatedAt: item.fields.ValidatedAt,
+        notes: item.fields.Notes,
+        method: 'Manual'
+      }))
+
+      console.log(`✅ Retrieved ${validations.length} manually validated controls`)
+
+      res.json({
+        success: true,
+        count: validations.length,
+        validations: validations
+      })
+    } catch (error) {
+      console.error('❌ Error retrieving validations:', error.message)
+      res.status(500).json({
+        success: false,
+        error: `Failed to retrieve validations: ${error.message}`
+      })
+    }
+  } catch (error) {
+    console.error('Error in GET /api/zero-trust/manual-validations:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 // ============================================================
 // 404 Handler - MUST be last
 // ============================================================
