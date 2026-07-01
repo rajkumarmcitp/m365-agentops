@@ -750,6 +750,9 @@ function showValidationDetail(validation) {
 
         <!-- Footer Actions -->
         <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb;display:flex;gap:8px">
+          <button style="background:#7c3aed;color:white;border:none;padding:10px 16px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;flex:1;transition:background 0.2s" onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'" onclick="showManualValidationModal(${JSON.stringify(validation)})">
+            <i class="ti ti-pencil"></i> Validate Manually
+          </button>
           ${validation.autoRemediationAvailable ? `
             <button style="background:#2563eb;color:white;border:none;padding:10px 16px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;flex:1;transition:background 0.2s" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'" onclick="this.disabled=true;this.innerHTML='<span class=spinner></span> Remediating...';setTimeout(()=>{this.innerHTML='✓ Remediated';setTimeout(()=>this.closest('[role=dialog]').remove(),1500)},2000)">
               <i class="ti ti-zap"></i> Auto-Remediate
@@ -767,4 +770,136 @@ function showValidationDetail(validation) {
   modal.addEventListener('click', e => {
     if (e.target === modal) modal.remove()
   })
+}
+
+function showManualValidationModal(validation) {
+  const modal = document.createElement('div')
+  modal.style.cssText = `
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.5);
+    display:flex;align-items:center;justify-content:center;
+    z-index:10000;
+    padding:20px
+  `
+  modal.setAttribute('role', 'dialog')
+  modal.setAttribute('aria-modal', 'true')
+
+  modal.innerHTML = `
+    <div style="background:#ffffff;border-radius:8px;padding:0;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);display:flex;flex-direction:column">
+      <!-- Header -->
+      <div style="padding:20px;border-bottom:1px solid #e5e7eb;background:#f9fafb">
+        <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827">Manual Validation</h2>
+        <div style="font-size:12px;color:#6b7280;margin-top:4px">${validation.id}: ${validation.name}</div>
+        <button style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:24px;cursor:pointer;color:#6b7280" onclick="this.closest('[role=dialog]').remove()">×</button>
+      </div>
+
+      <!-- Form -->
+      <form style="padding:20px;overflow-y:auto;flex:1" onsubmit="handleManualValidation(event, '${validation.id}')">
+        <!-- Expected Value (Read-only) -->
+        <div style="margin-bottom:16px">
+          <label style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Expected Value</label>
+          <div style="font-size:13px;background:#f0fdf4;padding:12px;border-radius:4px;border-left:3px solid #22c55e;color:#111827">
+            ${validation.expectedValue || 'No expected value defined'}
+          </div>
+        </div>
+
+        <!-- Current Value -->
+        <div style="margin-bottom:16px">
+          <label style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Current Value <span style="color:#ef4444">*</span></label>
+          <input type="text" id="currentValue" placeholder="Enter what you found" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;font-family:inherit;box-sizing:border-box" required>
+          <div style="font-size:11px;color:#6b7280;margin-top:4px">Describe the current configuration or setting value</div>
+        </div>
+
+        <!-- Status -->
+        <div style="margin-bottom:16px">
+          <label style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Validation Status <span style="color:#ef4444">*</span></label>
+          <select id="status" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;font-family:inherit;box-sizing:border-box" required>
+            <option value="PASS">✓ Pass - Control is compliant</option>
+            <option value="FAIL">✗ Fail - Control is not compliant</option>
+            <option value="WARNING">⚠️ Warning - Partial compliance</option>
+          </select>
+        </div>
+
+        <!-- Notes -->
+        <div style="margin-bottom:16px">
+          <label style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Validation Notes</label>
+          <textarea id="notes" placeholder="Where did you check? Any relevant details?" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;font-family:inherit;box-sizing:border-box;min-height:80px;resize:vertical"></textarea>
+          <div style="font-size:11px;color:#6b7280;margin-top:4px">Optional: Document how you validated this control</div>
+        </div>
+
+        <!-- Evidence (JSON) -->
+        <div style="margin-bottom:20px">
+          <label style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Evidence (JSON)</label>
+          <textarea id="evidence" placeholder='{"location": "Teams Admin Center", "setting": "value"}' style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:4px;font-size:13px;font-family:monospace;box-sizing:border-box;min-height:60px;resize:vertical"></textarea>
+          <div style="font-size:11px;color:#6b7280;margin-top:4px">Optional: Structured evidence data as JSON</div>
+        </div>
+
+        <!-- Buttons -->
+        <div style="display:flex;gap:8px;border-top:1px solid #e5e7eb;padding-top:16px">
+          <button type="submit" style="background:#7c3aed;color:white;border:none;padding:10px 16px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;flex:1;transition:background 0.2s" onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
+            <i class="ti ti-check"></i> Save Validation
+          </button>
+          <button type="button" style="background:#f3f4f6;color:#111827;border:1px solid #d1d5db;padding:10px 16px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;flex:1;transition:background 0.2s" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'" onclick="this.closest('[role=dialog]').remove()">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  `
+
+  document.body.appendChild(modal)
+  modal.addEventListener('click', e => {
+    if (e.target === modal) modal.remove()
+  })
+}
+
+async function handleManualValidation(event, controlId) {
+  event.preventDefault()
+
+  const status = document.getElementById('status').value
+  const currentValue = document.getElementById('currentValue').value
+  const notes = document.getElementById('notes').value
+  const evidenceStr = document.getElementById('evidence').value
+
+  let evidence = null
+  if (evidenceStr.trim()) {
+    try {
+      evidence = JSON.parse(evidenceStr)
+    } catch (e) {
+      showToast('Invalid JSON in evidence field', 'error')
+      return
+    }
+  }
+
+  const userId = `user-${Date.now()}` // In production, get from auth context
+
+  try {
+    const response = await fetch(`${api}/zero-trust/validate-manual`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': userId
+      },
+      body: JSON.stringify({
+        controlId,
+        status,
+        currentValue,
+        notes,
+        evidence
+      })
+    })
+
+    const result = await response.json()
+
+    if (response.ok && result.success) {
+      showToast(`✓ Control ${controlId} marked as validated`, 'success')
+      document.querySelector('[role=dialog]').remove()
+      // Refresh the zero trust page to show updated status
+      setTimeout(() => location.reload(), 1000)
+    } else {
+      showToast(`Error: ${result.error || 'Validation failed'}`, 'error')
+    }
+  } catch (error) {
+    showToast(`Error: ${error.message}`, 'error')
+  }
 }
