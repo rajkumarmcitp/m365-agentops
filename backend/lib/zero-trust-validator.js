@@ -835,6 +835,186 @@ export class ZeroTrustValidator {
         }
       }
 
+      // ID-023: Guest Restrictions (guestUserRoleId)
+      if (validation.id === 'ID-023') {
+        // Verify guest user role restrictions
+        try {
+          const authPolicyResponse = await this.graphClient.api('/policies/authorizationPolicy').get()
+          const guestUserRoleId = authPolicyResponse.guestUserRoleId
+
+          result.currentValue = guestUserRoleId ? `Guest role: ${guestUserRoleId}` : 'No guest restrictions'
+          result.evidence = {
+            guestUserRoleId: guestUserRoleId,
+            hasRestrictions: !!guestUserRoleId,
+            restrictionLevel: guestUserRoleId ? 'Configured' : 'Default (Unrestricted)'
+          }
+          return guestUserRoleId ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Could not verify guest restrictions'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      // ID-024: Tenant Restrictions v2
+      if (validation.id === 'ID-024') {
+        // Verify Tenant Restrictions v2 configuration (beta)
+        try {
+          const ctaResponse = await this.graphClient.api('/beta/policies/crossTenantAccessPolicy').get()
+          const tenantRestrictions = ctaResponse ? 'Configured' : 'Not configured'
+
+          result.currentValue = tenantRestrictions
+          result.evidence = {
+            tenantRestrictionsV2Configured: !!ctaResponse,
+            policyDetails: ctaResponse?.displayName || 'Default policy',
+            restrictionEnabled: !!ctaResponse
+          }
+          return ctaResponse ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Tenant Restrictions v2 not available'
+          result.evidence = { available: false, note: 'Requires beta API' }
+          return 'warn'
+        }
+      }
+
+      // ID-025: Legacy Authentication Activity
+      if (validation.id === 'ID-025') {
+        // Detect legacy authentication (SMTP, IMAP, POP, Exchange ActiveSync)
+        try {
+          // Query for legacy auth in sign-in logs
+          const legacyApps = ['SMTP', 'IMAP', 'POP', 'Exchange ActiveSync', 'Other Clients']
+          let legacySignInCount = 0
+
+          // Try to get sign-in logs with legacy auth filter
+          try {
+            const signInLogsResponse = await this.graphClient.api('/auditLogs/signIns?$filter=clientAppUsed eq \'SMTP\' or clientAppUsed eq \'IMAP\' or clientAppUsed eq \'POP\' or clientAppUsed eq \'Exchange ActiveSync\'').get()
+            legacySignInCount = signInLogsResponse.value?.length || 0
+          } catch (e) {
+            // If audit logs aren't available, return warning
+            result.currentValue = 'Could not access sign-in logs'
+            result.evidence = { legacyAuthFound: 'Unknown', note: 'Requires AuditLog.Read.All permission' }
+            return 'warn'
+          }
+
+          result.currentValue = legacySignInCount > 0 ? `${legacySignInCount} legacy auth sign-ins detected` : 'No legacy auth activity detected'
+          result.evidence = {
+            legacySignInCount: legacySignInCount,
+            hasLegacyAuth: legacySignInCount > 0,
+            legacyApps: legacyApps,
+            expectedValue: 0
+          }
+          return legacySignInCount === 0 ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Legacy auth detection unavailable'
+          result.evidence = { available: false, error: e.message }
+          return 'warn'
+        }
+      }
+
+      // ID-026: Block Legacy Authentication
+      if (validation.id === 'ID-026') {
+        // Verify CA policy blocks legacy authentication
+        try {
+          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          // Find policy that blocks legacy clients
+          const legacyBlockPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.conditions?.clientAppTypes?.some(app =>
+              app === 'exchangeActiveSync' || app === 'other'
+            ) &&
+            p.grantControls?.builtInControls?.includes('block')
+          )
+
+          result.currentValue = legacyBlockPolicy ? 'Legacy auth blocked' : 'No legacy auth blocking policy'
+          result.evidence = {
+            hasBlockPolicy: !!legacyBlockPolicy,
+            policyName: legacyBlockPolicy?.displayName,
+            blockedAppTypes: ['exchangeActiveSync', 'other'],
+            grant: 'Block Access'
+          }
+          return legacyBlockPolicy ? 'pass' : 'fail'
+        } catch (e) {
+          result.currentValue = 'Could not verify legacy auth blocking'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      // ID-027: High Risk User Restrictions
+      if (validation.id === 'ID-027') {
+        // Verify CA policy for high risk users
+        try {
+          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          // Find policy targeting high risk users
+          const highRiskPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.conditions?.userRiskLevels?.includes('high') &&
+            (p.grantControls?.builtInControls?.includes('block') ||
+             p.grantControls?.builtInControls?.includes('mfa'))
+          )
+
+          result.currentValue = highRiskPolicy ? 'High risk user policy enforced' : 'No high risk policy'
+          result.evidence = {
+            hasPolicy: !!highRiskPolicy,
+            policyName: highRiskPolicy?.displayName,
+            targetRiskLevel: 'high',
+            grantControl: highRiskPolicy?.grantControls?.builtInControls
+          }
+          return highRiskPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Could not verify high risk policy'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      // ID-028: Risk Notifications
+      if (validation.id === 'ID-028') {
+        // Risk Notifications require Microsoft Entra configuration (not Graph)
+        result.currentValue = 'Risk notifications require manual configuration'
+        result.evidence = {
+          configurable: true,
+          method: 'Manual - Microsoft Entra admin center',
+          note: 'Not available via Microsoft Graph API',
+          manualValidationRequired: true
+        }
+        return 'warn'
+      }
+
+      // ID-029: Risky Sign-in Policy
+      if (validation.id === 'ID-029') {
+        // Verify CA policy for risky sign-ins
+        try {
+          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          // Find policy targeting risky sign-ins
+          const riskySignInPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.conditions?.signInRiskLevels?.includes('high') &&
+            (p.grantControls?.builtInControls?.includes('block') ||
+             p.grantControls?.builtInControls?.includes('mfa'))
+          )
+
+          result.currentValue = riskySignInPolicy ? 'Risky sign-in policy enforced' : 'No risky sign-in policy'
+          result.evidence = {
+            hasPolicy: !!riskySignInPolicy,
+            policyName: riskySignInPolicy?.displayName,
+            targetRiskLevels: riskySignInPolicy?.conditions?.signInRiskLevels,
+            grantControl: riskySignInPolicy?.grantControls?.builtInControls
+          }
+          return riskySignInPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Could not verify risky sign-in policy'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
       // Default for other ID- validations
       return 'warn'
     } catch (error) {
