@@ -8066,9 +8066,70 @@ app.get('/api/zero-trust/validations', async (req, res) => {
 
     const results = await validator.validateAll()
 
-    // Automatically save results to SharePoint if configured
+    // Fetch manually validated controls to merge with results
     const siteId = process.env.SHAREPOINT_SITE_ID
     const resultsListId = process.env.SHAREPOINT_ZEROTRUST_RESULTS_LIST_ID
+
+    if (siteId && resultsListId && graphClient) {
+      try {
+        console.log('📋 Fetching manually validated controls from SharePoint...')
+        // Get all manually validated items
+        const manualResults = await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items?$expand=fields&$filter=fields/ManuallyValidated eq true`).get()
+
+        if (manualResults.value && manualResults.value.length > 0) {
+          console.log(`📌 Found ${manualResults.value.length} manually validated controls`)
+
+          // Create map of manual validations
+          const manualMap = {}
+          for (const item of manualResults.value) {
+            manualMap[item.fields.ValidationID] = {
+              status: item.fields.Status,
+              evidence: item.fields.Evidence ? JSON.parse(item.fields.Evidence) : item.fields.Evidence,
+              notes: item.fields.Notes,
+              currentValue: item.fields.CurrentValue,
+              validatedBy: item.fields.ValidatedBy,
+              validatedAt: item.fields.ValidatedAt,
+              method: 'Manual'
+            }
+          }
+
+          // Merge manual validations with base results
+          if (results.validations && Array.isArray(results.validations)) {
+            for (const validation of results.validations) {
+              if (manualMap[validation.id]) {
+                const manual = manualMap[validation.id]
+                validation.status = manual.status.toLowerCase()
+                validation.evidence = manual.evidence
+                validation.notes = manual.notes
+                validation.currentValue = manual.currentValue
+                validation.validatedBy = manual.validatedBy
+                validation.validatedAt = manual.validatedAt
+                validation.method = 'Manual'
+                console.log(`✓ Applied manual validation for ${validation.id}: ${manual.status}`)
+              }
+            }
+          }
+
+          // Recalculate summary after merging
+          if (results.validations) {
+            const summary = { pass: 0, fail: 0, warn: 0 }
+            let totalScore = 0
+            for (const v of results.validations) {
+              if (v.status === 'pass') summary.pass++
+              else if (v.status === 'fail') summary.fail++
+              else if (v.status === 'warning') summary.warn++
+              totalScore += v.score || 0
+            }
+            results.summary = summary
+            results.overallScore = Math.round((summary.pass / results.validations.length) * 100)
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not fetch manual validations:', e.message)
+      }
+    }
+
+    // Automatically save new results to SharePoint if configured
     if (siteId && resultsListId && graphClient && results.validations) {
       console.log('💾 Saving validation results to SharePoint...')
       try {
@@ -8080,9 +8141,9 @@ app.get('/api/zero-trust/validations', async (req, res) => {
               Evidence: validation.evidence ? JSON.stringify(validation.evidence) : null,
               CurrentValue: validation.currentValue || null,
               ValidatedAt: new Date().toISOString(),
-              ValidationMethod: 'GraphAPI',
+              ValidationMethod: validation.method || 'GraphAPI',
               ErrorMessage: validation.error || null,
-              Notes: validation.description || null
+              Notes: validation.notes || validation.description || null
             }
           }
 
