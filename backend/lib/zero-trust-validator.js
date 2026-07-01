@@ -217,26 +217,47 @@ export class ZeroTrustValidator {
         for (const admin of adminsList) {
           try {
             const authMethods = await this.graphClient.api(`/users/${admin.id}/authentication/methods`).get()
-            const mfaMethods = authMethods.value?.filter(m =>
-              m['@odata.type'] && (
-                m['@odata.type'].includes('phoneMethods') ||
-                m['@odata.type'].includes('emailMethods') ||
-                m['@odata.type'].includes('fido2Methods') ||
-                m['@odata.type'].includes('windowsHelloMethods') ||
-                m['@odata.type'].includes('temporaryAccessPassMethods')
-              )
-            ) || []
+
+            // Log actual auth methods for debugging
+            console.log(`📌 Auth methods for ${admin.displayName}:`, JSON.stringify(authMethods.value?.map(m => m['@odata.type']) || []))
+
+            // Filter for MFA methods (exclude password-only)
+            const mfaMethods = authMethods.value?.filter(m => {
+              const type = m['@odata.type'] || ''
+              // Include MFA methods
+              const isMFA =
+                type.includes('phone') ||
+                type.includes('email') ||
+                type.includes('fido2') ||
+                type.includes('windowsHello') ||
+                type.includes('temporaryAccessPass') ||
+                type.includes('microsoftAuthenticator') ||
+                type.includes('softwareOath')
+
+              // Exclude password-only
+              const isPassword = type.includes('password')
+
+              return isMFA && !isPassword
+            }) || []
 
             const hasMFA = mfaMethods.length > 0
             if (hasMFA) adminsWithMFA++
             else adminsWithoutMFA++
+
+            // Extract method type names for display
+            const methodNames = mfaMethods.map(m => {
+              const type = m['@odata.type'] || ''
+              // Extract readable name from @odata.type like "#microsoft.graph.phoneAuthenticationMethod"
+              const match = type.match(/\.(\w+)AuthenticationMethod/)
+              return match ? match[1] : 'unknown'
+            }).join(', ')
 
             adminDetails.push({
               id: admin.id,
               displayName: admin.displayName || 'Unknown',
               userPrincipalName: admin.userPrincipalName,
               hasMFA: hasMFA,
-              mfaMethods: mfaMethods.map(m => m['@odata.type']?.split('/')?.pop() || 'unknown').join(', ')
+              mfaMethods: methodNames || 'None'
             })
           } catch (e) {
             console.warn(`⚠️ Could not check MFA for admin ${admin.id}:`, e.message)
