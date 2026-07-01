@@ -13,7 +13,13 @@ import { HOTFIXES } from './hotfixes.js'
  * Get the appropriate configuration based on NODE_ENV
  */
 function getEnvironmentConfig() {
-  const env = import.meta.env.MODE || 'development'
+  let env = 'production'
+  try {
+    env = import.meta.env.MODE || 'production'
+  } catch (e) {
+    console.warn('⚠️ import.meta.env not available, using production config')
+    env = 'production'
+  }
 
   console.log(`📋 Loading configuration for environment: ${env}`)
 
@@ -21,9 +27,15 @@ function getEnvironmentConfig() {
     return PRODUCTION_CONFIG
   } else if (env === 'staging') {
     // Staging uses production config but can be customized
+    let stagingApiBase = 'https://m365ops-staging.azurewebsites.net'
+    try {
+      stagingApiBase = import.meta.env.VITE_API_BASE || stagingApiBase
+    } catch (e) {
+      // Fall back to default
+    }
     return {
       ...PRODUCTION_CONFIG,
-      apiBase: import.meta.env.VITE_API_BASE || 'https://m365ops-staging.azurewebsites.net',
+      apiBase: stagingApiBase,
     }
   } else {
     // Development
@@ -109,11 +121,23 @@ export function isFeatureEnabled(featureName) {
 }
 
 export function isDevMode() {
-  return CONFIG.useDemo === true || import.meta.env.MODE === 'development'
+  let mode = 'production'
+  try {
+    mode = import.meta.env.MODE || 'production'
+  } catch (e) {
+    mode = 'production'
+  }
+  return CONFIG.useDemo === true || mode === 'development'
 }
 
 export function isProdMode() {
-  return CONFIG.useDemo === false && import.meta.env.MODE === 'production'
+  let mode = 'production'
+  try {
+    mode = import.meta.env.MODE || 'production'
+  } catch (e) {
+    mode = 'production'
+  }
+  return CONFIG.useDemo === false && mode === 'production'
 }
 
 export function getApiBase() {

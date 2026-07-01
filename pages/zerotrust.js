@@ -636,6 +636,17 @@ function attachZTEventListeners(el) {
       }
     })
   })
+
+  // Manual validation buttons
+  el.querySelectorAll('.btn-validate-manual').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const controlId = btn.dataset.controlId
+      const controlName = btn.dataset.controlName
+      const expectedValue = btn.dataset.expected
+      showManualValidationModal(controlId, controlName, expectedValue)
+    })
+  })
 }
 
 function showValidationDetail(validation) {
@@ -750,7 +761,7 @@ function showValidationDetail(validation) {
 
         <!-- Footer Actions -->
         <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb;display:flex;gap:8px">
-          <button style="background:#7c3aed;color:white;border:none;padding:10px 16px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;flex:1;transition:background 0.2s" onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'" onclick="showManualValidationModal(${JSON.stringify(validation)})">
+          <button class="btn-validate-manual" data-control-id="${validation.id}" data-control-name="${validation.name}" data-expected="${validation.expectedValue}" style="background:#7c3aed;color:white;border:none;padding:10px 16px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;flex:1;transition:background 0.2s" onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
             <i class="ti ti-pencil"></i> Validate Manually
           </button>
           ${validation.autoRemediationAvailable ? `
@@ -772,7 +783,7 @@ function showValidationDetail(validation) {
   })
 }
 
-function showManualValidationModal(validation) {
+function showManualValidationModal(controlId, controlName, expectedValue) {
   const modal = document.createElement('div')
   modal.style.cssText = `
     position:fixed;top:0;left:0;right:0;bottom:0;
@@ -787,19 +798,19 @@ function showManualValidationModal(validation) {
   modal.innerHTML = `
     <div style="background:#ffffff;border-radius:8px;padding:0;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);display:flex;flex-direction:column">
       <!-- Header -->
-      <div style="padding:20px;border-bottom:1px solid #e5e7eb;background:#f9fafb">
+      <div style="padding:20px;border-bottom:1px solid #e5e7eb;background:#f9fafb;position:relative">
         <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827">Manual Validation</h2>
-        <div style="font-size:12px;color:#6b7280;margin-top:4px">${validation.id}: ${validation.name}</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:4px">${controlId}: ${controlName}</div>
         <button style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:24px;cursor:pointer;color:#6b7280" onclick="this.closest('[role=dialog]').remove()">×</button>
       </div>
 
       <!-- Form -->
-      <form style="padding:20px;overflow-y:auto;flex:1" onsubmit="handleManualValidation(event, '${validation.id}')">
+      <form style="padding:20px;overflow-y:auto;flex:1" onsubmit="handleManualValidation(event, '${controlId}')">
         <!-- Expected Value (Read-only) -->
         <div style="margin-bottom:16px">
           <label style="display:block;font-size:12px;font-weight:600;color:#111827;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Expected Value</label>
           <div style="font-size:13px;background:#f0fdf4;padding:12px;border-radius:4px;border-left:3px solid #22c55e;color:#111827">
-            ${validation.expectedValue || 'No expected value defined'}
+            ${expectedValue || 'No expected value defined'}
           </div>
         </div>
 
