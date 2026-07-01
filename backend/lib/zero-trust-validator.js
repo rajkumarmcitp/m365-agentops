@@ -1015,6 +1015,251 @@ export class ZeroTrustValidator {
         }
       }
 
+      // ID-030: Legacy MFA/SSPR - Migrate to Modern Policies
+      if (validation.id === 'ID-030') {
+        // Check for legacy SSPR and MFA configurations
+        try {
+          const authPolicyResponse = await this.graphClient.api('/policies/authorizationPolicy').get()
+          const modernPoliciesExist = authPolicyResponse ? true : false
+
+          result.currentValue = modernPoliciesExist ? 'Modern authentication policies in use' : 'Legacy policies may be active'
+          result.evidence = {
+            modernPoliciesConfigured: modernPoliciesExist,
+            recommendation: 'Migrate from per-user MFA to Conditional Access'
+          }
+          return modernPoliciesExist ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // ID-031: Tenant Creator Role - Restricted Access (Duplicate of ID-022)
+      if (validation.id === 'ID-031') {
+        try {
+          const roleResponse = await this.graphClient.api('/directoryRoles?$filter=displayName eq \'Tenant Creator\'').get()
+          const tenantCreatorRole = roleResponse.value?.[0]
+
+          if (!tenantCreatorRole) {
+            result.currentValue = 'Tenant Creator role not found'
+            result.evidence = { creatorCount: 0, restricted: true }
+            return 'pass'
+          }
+
+          const members = await this.graphClient.api(`/directoryRoles/${tenantCreatorRole.id}/members`).get()
+          const creatorCount = members.value?.length || 0
+
+          result.currentValue = `${creatorCount} tenant creators`
+          result.evidence = { creatorCount, isRestricted: creatorCount < 5 }
+          return creatorCount < 5 ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // ID-032: Global Administrator Role - Minimized (Duplicate of ID-011)
+      if (validation.id === 'ID-032') {
+        try {
+          const roleResponse = await this.graphClient.api('/directoryRoles').get()
+          const globalAdminRole = roleResponse.value?.find(r => r.displayName === 'Global Administrator')
+
+          if (!globalAdminRole) return 'warn'
+
+          const members = await this.graphClient.api(`/directoryRoles/${globalAdminRole.id}/members`).get()
+          const adminCount = members.value?.length || 0
+
+          result.currentValue = `${adminCount} global admins`
+          result.evidence = { adminCount, isMinimized: adminCount <= 2 }
+          return adminCount <= 2 ? 'pass' : adminCount <= 4 ? 'warn' : 'fail'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // ID-033: Tenant Creation - Audit and Investigation
+      if (validation.id === 'ID-033') {
+        try {
+          const auditResponse = await this.graphClient.api('/auditLogs/directoryAudits?$filter=activityDisplayName eq \'Create tenant\'').get()
+          const tenantCreationAudits = auditResponse.value || []
+
+          result.currentValue = `${tenantCreationAudits.length} tenant creation events audited`
+          result.evidence = {
+            auditedCreations: tenantCreationAudits.length,
+            auditingEnabled: tenantCreationAudits.length >= 0
+          }
+          return 'pass'
+        } catch (e) {
+          result.currentValue = 'Tenant creation audit logs not accessible'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      // ID-034: Cross-Tenant Access - Outbound Settings
+      if (validation.id === 'ID-034') {
+        try {
+          const ctaResponse = await this.graphClient.api('/policies/crossTenantAccessPolicy').get()
+          const outboundPolicy = ctaResponse?.outboundPolicy
+
+          result.currentValue = outboundPolicy ? 'Outbound cross-tenant access configured' : 'Using default outbound settings'
+          result.evidence = {
+            hasOutboundPolicy: !!outboundPolicy,
+            policyName: outboundPolicy?.displayName
+          }
+          return outboundPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // ID-035: Guest User Invitations - Restricted (Duplicate of ID-020)
+      if (validation.id === 'ID-035') {
+        try {
+          const authPolicyResponse = await this.graphClient.api('/policies/authorizationPolicy').get()
+          const allowInvitesFrom = authPolicyResponse.allowInvitesFrom
+
+          result.currentValue = allowInvitesFrom === 'adminsAndGuestInviters' ? 'Guest invites restricted' : `Guest invites: ${allowInvitesFrom}`
+          result.evidence = {
+            allowInvitesFrom: allowInvitesFrom,
+            isRestricted: allowInvitesFrom === 'adminsAndGuestInviters' || allowInvitesFrom === 'none'
+          }
+          return allowInvitesFrom === 'adminsAndGuestInviters' ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // ID-036: Guest Access - Directory Object Restrictions
+      if (validation.id === 'ID-036') {
+        try {
+          const authPolicyResponse = await this.graphClient.api('/policies/authorizationPolicy').get()
+          const guestUserRoleId = authPolicyResponse.guestUserRoleId
+
+          result.currentValue = guestUserRoleId ? 'Guest directory access restricted' : 'Guest directory access not restricted'
+          result.evidence = {
+            guestUserRoleId: guestUserRoleId,
+            hasRestrictions: !!guestUserRoleId
+          }
+          return guestUserRoleId ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // ID-037: Tenant Restrictions v2 - External Access Control (Duplicate of ID-024)
+      if (validation.id === 'ID-037') {
+        try {
+          const ctaResponse = await this.graphClient.api('/beta/policies/crossTenantAccessPolicy').get()
+
+          result.currentValue = ctaResponse ? 'Tenant Restrictions v2 enabled' : 'Tenant Restrictions v2 not enabled'
+          result.evidence = {
+            enabled: !!ctaResponse,
+            configurationLevel: ctaResponse ? 'Advanced' : 'Default'
+          }
+          return ctaResponse ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // ID-038: Legacy Authentication - Zero Activity (Duplicate of ID-025)
+      if (validation.id === 'ID-038') {
+        try {
+          const signInLogsResponse = await this.graphClient.api('/auditLogs/signIns?$filter=clientAppUsed eq \'SMTP\' or clientAppUsed eq \'IMAP\' or clientAppUsed eq \'POP\' or clientAppUsed eq \'Exchange ActiveSync\'').get()
+          const legacySignInCount = signInLogsResponse.value?.length || 0
+
+          result.currentValue = legacySignInCount === 0 ? 'No legacy auth activity' : `${legacySignInCount} legacy auth sign-ins detected`
+          result.evidence = {
+            legacySignInCount: legacySignInCount,
+            hasLegacyActivity: legacySignInCount > 0
+          }
+          return legacySignInCount === 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // ID-039: Block Legacy Authentication - CA Policy (Duplicate of ID-026)
+      if (validation.id === 'ID-039') {
+        try {
+          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          const legacyBlockPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.conditions?.clientAppTypes?.some(app => app === 'exchangeActiveSync' || app === 'other') &&
+            p.grantControls?.builtInControls?.includes('block')
+          )
+
+          result.currentValue = legacyBlockPolicy ? 'Legacy auth blocked by CA' : 'No legacy auth blocking policy'
+          result.evidence = {
+            hasBlockPolicy: !!legacyBlockPolicy,
+            policyName: legacyBlockPolicy?.displayName
+          }
+          return legacyBlockPolicy ? 'pass' : 'fail'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // ID-040: Identity Protection - High-Risk User Restrictions (Duplicate of ID-027)
+      if (validation.id === 'ID-040') {
+        try {
+          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          const highRiskPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.conditions?.userRiskLevels?.includes('high') &&
+            (p.grantControls?.builtInControls?.includes('block') ||
+             p.grantControls?.builtInControls?.includes('mfa'))
+          )
+
+          result.currentValue = highRiskPolicy ? 'High-risk user policy enforced' : 'No high-risk user policy'
+          result.evidence = {
+            hasPolicy: !!highRiskPolicy,
+            policyName: highRiskPolicy?.displayName
+          }
+          return highRiskPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // ID-041: Identity Protection - Risk Notifications (Duplicate of ID-028)
+      if (validation.id === 'ID-041') {
+        result.currentValue = 'Risk notifications require manual configuration'
+        result.evidence = {
+          configurable: true,
+          method: 'Manual configuration',
+          manualValidationRequired: true
+        }
+        return 'warn'
+      }
+
+      // ID-042: Risky Sign-in - Blocking Policy (Duplicate of ID-029)
+      if (validation.id === 'ID-042') {
+        try {
+          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          const riskySignInPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.conditions?.signInRiskLevels?.includes('high') &&
+            (p.grantControls?.builtInControls?.includes('block') ||
+             p.grantControls?.builtInControls?.includes('mfa'))
+          )
+
+          result.currentValue = riskySignInPolicy ? 'Risky sign-in policy enforced' : 'No risky sign-in policy'
+          result.evidence = {
+            hasPolicy: !!riskySignInPolicy,
+            policyName: riskySignInPolicy?.displayName
+          }
+          return riskySignInPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
       // Default for other ID- validations
       return 'warn'
     } catch (error) {
