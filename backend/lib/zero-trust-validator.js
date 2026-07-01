@@ -201,9 +201,69 @@ export class ZeroTrustValidator {
         if (!globalAdminRole) return 'warn'
 
         const members = await this.graphClient.api(`/directoryRoles/${globalAdminRole.id}/members`).get()
-        result.currentValue = `${members.value?.length || 0} global admins`
-        result.evidence = { totalAdmins: members.value?.length || 0 }
-        return members.value?.length === 0 ? 'pass' : 'warn'
+        const adminsList = members.value || []
+
+        if (adminsList.length === 0) {
+          result.currentValue = 'No global admins found'
+          result.evidence = { totalAdmins: 0, adminsWithMFA: 0, adminsWithoutMFA: 0, details: [] }
+          return 'warn' // Warning: no admins to protect
+        }
+
+        // Check MFA status for each admin
+        const adminDetails = []
+        let adminsWithMFA = 0
+        let adminsWithoutMFA = 0
+
+        for (const admin of adminsList) {
+          try {
+            const authMethods = await this.graphClient.api(`/users/${admin.id}/authentication/methods`).get()
+            const mfaMethods = authMethods.value?.filter(m =>
+              m['@odata.type'] && (
+                m['@odata.type'].includes('phoneMethods') ||
+                m['@odata.type'].includes('emailMethods') ||
+                m['@odata.type'].includes('fido2Methods') ||
+                m['@odata.type'].includes('windowsHelloMethods') ||
+                m['@odata.type'].includes('temporaryAccessPassMethods')
+              )
+            ) || []
+
+            const hasMFA = mfaMethods.length > 0
+            if (hasMFA) adminsWithMFA++
+            else adminsWithoutMFA++
+
+            adminDetails.push({
+              id: admin.id,
+              displayName: admin.displayName || 'Unknown',
+              userPrincipalName: admin.userPrincipalName,
+              hasMFA: hasMFA,
+              mfaMethods: mfaMethods.map(m => m['@odata.type']?.split('/')?.pop() || 'unknown').join(', ')
+            })
+          } catch (e) {
+            console.warn(`⚠️ Could not check MFA for admin ${admin.id}:`, e.message)
+            adminDetails.push({
+              id: admin.id,
+              displayName: admin.displayName || 'Unknown',
+              userPrincipalName: admin.userPrincipalName,
+              hasMFA: false,
+              mfaMethods: 'Error checking'
+            })
+          }
+        }
+
+        const mfaPercentage = Math.round((adminsWithMFA / adminsList.length) * 100)
+        result.currentValue = `${adminsWithMFA}/${adminsList.length} global admins have MFA (${mfaPercentage}%)`
+        result.evidence = {
+          totalAdmins: adminsList.length,
+          adminsWithMFA,
+          adminsWithoutMFA,
+          mfaPercentage,
+          details: adminDetails
+        }
+
+        // Return status based on MFA coverage
+        if (mfaPercentage === 100) return 'pass'
+        if (mfaPercentage >= 80) return 'warn'
+        return 'fail'
       }
 
       if (validation.id === 'ID-002') {

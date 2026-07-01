@@ -4748,8 +4748,8 @@ ${t}`;navigator.clipboard.writeText(i).then(()=>{}).catch(()=>{})}};window.creat
         ${e.evidence?`
           <div style="margin-bottom:20px">
             <h3 style="margin:0 0 8px 0;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;letter-spacing:0.5px">Evidence Collected</h3>
-            <div style="font-size:13px;background:#f9fafb;padding:12px;border-radius:4px;line-height:1.6;color:#111827">
-              ${e.evidence}
+            <div style="font-size:12px;background:#f9fafb;padding:12px;border-radius:4px;line-height:1.6;color:#111827;font-family:monospace;white-space:pre-wrap;word-break:break-word;overflow-x:auto">
+              ${typeof e.evidence=="object"?JSON.stringify(e.evidence,null,2):e.evidence}
             </div>
           </div>
         `:""}
