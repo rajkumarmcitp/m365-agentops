@@ -454,25 +454,191 @@ export class ZeroTrustValidator {
   async validateDevice(validation, result) {
     try {
       if (validation.id === 'DEV-001') {
-        // Intune enrollment configured
+        // Intune MDM Enrollment Required
         const response = await this.graphClient.api('/deviceManagement/deviceEnrollmentConfigurations').get()
-        const hasEnrollment = response.value?.length > 0
+        const enrollmentConfigs = response.value || []
+        const platformConfigs = {}
 
-        result.currentValue = hasEnrollment ? 'Configured' : 'Not configured'
-        result.evidence = { enrollmentConfigs: response.value?.length || 0 }
-        return hasEnrollment ? 'pass' : 'fail'
+        // Categorize by platform
+        enrollmentConfigs.forEach(config => {
+          const type = config['@odata.type'] || ''
+          if (type.includes('Windows')) platformConfigs.windows = (platformConfigs.windows || 0) + 1
+          if (type.includes('iOS')) platformConfigs.ios = (platformConfigs.ios || 0) + 1
+          if (type.includes('Android')) platformConfigs.android = (platformConfigs.android || 0) + 1
+          if (type.includes('macOS')) platformConfigs.macos = (platformConfigs.macos || 0) + 1
+        })
+
+        result.currentValue = enrollmentConfigs.length > 0 ? `${enrollmentConfigs.length} enrollment configs` : 'No enrollment configured'
+        result.evidence = {
+          totalConfigs: enrollmentConfigs.length,
+          byPlatform: platformConfigs,
+          isConfigured: enrollmentConfigs.length > 0
+        }
+        return enrollmentConfigs.length > 0 ? 'pass' : 'fail'
       }
 
       if (validation.id === 'DEV-002') {
-        // Device compliance policies
+        // Device Compliance Policy Enforced
         const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
-        const hasPolicies = response.value?.length > 0
+        const policies = response.value || []
 
-        result.currentValue = `${response.value?.length || 0} compliance policies`
-        result.evidence = { policyCount: response.value?.length || 0 }
-        return hasPolicies ? 'pass' : 'fail'
+        // Count by platform
+        const byPlatform = {
+          windows: policies.filter(p => p.platform === 'windows').length,
+          android: policies.filter(p => p.platform === 'android').length,
+          ios: policies.filter(p => p.platform === 'iOS').length,
+          macos: policies.filter(p => p.platform === 'macOS').length
+        }
+
+        const totalPolicies = policies.length
+        const enabledPolicies = policies.filter(p => !p.isScheduledActionPending).length
+
+        result.currentValue = `${totalPolicies} compliance policies (${enabledPolicies} enabled)`
+        result.evidence = {
+          totalPolicies,
+          enabledPolicies,
+          byPlatform,
+          hasPolicy: totalPolicies > 0
+        }
+        return totalPolicies >= 1 ? 'pass' : 'fail'
       }
 
+      if (validation.id === 'DEV-003') {
+        // BitLocker Enabled on Windows Devices
+        const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+        const bitlockerPolicy = response.value?.find(p =>
+          p.displayName?.toLowerCase().includes('bitlocker') ||
+          p.displayName?.toLowerCase().includes('encryption')
+        )
+
+        result.currentValue = bitlockerPolicy ? 'BitLocker policy configured' : 'No BitLocker policy'
+        result.evidence = {
+          hasPolicy: !!bitlockerPolicy,
+          policyName: bitlockerPolicy?.displayName
+        }
+        return bitlockerPolicy ? 'pass' : 'warn'
+      }
+
+      if (validation.id === 'DEV-004') {
+        // Windows Defender Enabled
+        const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+        const defenderPolicy = response.value?.find(p =>
+          p.displayName?.toLowerCase().includes('defender') ||
+          p.displayName?.toLowerCase().includes('antivirus')
+        )
+
+        result.currentValue = defenderPolicy ? 'Defender policy configured' : 'No Defender policy'
+        result.evidence = {
+          hasPolicy: !!defenderPolicy,
+          policyName: defenderPolicy?.displayName
+        }
+        return defenderPolicy ? 'pass' : 'warn'
+      }
+
+      if (validation.id === 'DEV-005') {
+        // Defender for Endpoint Onboarded
+        try {
+          const response = await this.graphClient.api('/deviceManagement/windowsDefenderAdvancedThreatProtectionConfigurations').get()
+          const mdeConfigs = response.value?.length || 0
+
+          result.currentValue = mdeConfigs > 0 ? 'MDE configured' : 'MDE not configured'
+          result.evidence = { mdeConfigured: mdeConfigs > 0, configCount: mdeConfigs }
+          return mdeConfigs > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          result.currentValue = 'Could not verify MDE'
+          result.evidence = { error: 'Endpoint not available' }
+          return 'warn'
+        }
+      }
+
+      // Platform-specific compliance policies
+      if (validation.id === 'DEV-006') {
+        // Windows Compliance Policies
+        const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+        const windowsPolicies = response.value?.filter(p => p.platform === 'windows') || []
+
+        result.currentValue = `${windowsPolicies.length} Windows policies`
+        result.evidence = {
+          policyCount: windowsPolicies.length,
+          hasPolicy: windowsPolicies.length > 0,
+          policies: windowsPolicies.map(p => ({ name: p.displayName, enabled: !p.isScheduledActionPending }))
+        }
+        return windowsPolicies.length > 0 ? 'pass' : 'fail'
+      }
+
+      if (validation.id === 'DEV-007') {
+        // macOS Compliance Policies
+        const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+        const macosPolicies = response.value?.filter(p => p.platform === 'macOS') || []
+
+        result.currentValue = `${macosPolicies.length} macOS policies`
+        result.evidence = {
+          policyCount: macosPolicies.length,
+          hasPolicy: macosPolicies.length > 0
+        }
+        return macosPolicies.length > 0 ? 'pass' : 'fail'
+      }
+
+      if (validation.id === 'DEV-008') {
+        // iOS/iPadOS Compliance Policies
+        const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+        const iosPolicies = response.value?.filter(p => p.platform === 'iOS') || []
+
+        result.currentValue = `${iosPolicies.length} iOS policies`
+        result.evidence = {
+          policyCount: iosPolicies.length,
+          hasPolicy: iosPolicies.length > 0
+        }
+        return iosPolicies.length > 0 ? 'pass' : 'fail'
+      }
+
+      if (validation.id === 'DEV-009') {
+        // Android Compliance Policies
+        const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+        const androidPolicies = response.value?.filter(p => p.platform === 'android') || []
+
+        result.currentValue = `${androidPolicies.length} Android policies`
+        result.evidence = {
+          policyCount: androidPolicies.length,
+          hasPolicy: androidPolicies.length > 0
+        }
+        return androidPolicies.length > 0 ? 'pass' : 'fail'
+      }
+
+      // Mobile Application Management
+      if (validation.id === 'DEV-010') {
+        // iOS App Protection Policies
+        try {
+          const response = await this.graphClient.api('/deviceAppManagement/iosManagedAppProtections').get()
+          const policies = response.value?.length || 0
+
+          result.currentValue = `${policies} iOS MAM policies`
+          result.evidence = { policyCount: policies, hasPolicy: policies > 0 }
+          return policies > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'iOS MAM policies not available'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      if (validation.id === 'DEV-011') {
+        // Android App Protection Policies
+        try {
+          const response = await this.graphClient.api('/deviceAppManagement/androidManagedAppProtections').get()
+          const policies = response.value?.length || 0
+
+          result.currentValue = `${policies} Android MAM policies`
+          result.evidence = { policyCount: policies, hasPolicy: policies > 0 }
+          return policies > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Android MAM policies not available'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      // Default for other DEV- validations
       return 'warn'
     } catch (error) {
       console.warn(`⚠️ Device validation ${validation.id} failed:`, error.message)
