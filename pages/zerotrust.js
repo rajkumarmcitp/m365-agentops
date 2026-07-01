@@ -219,50 +219,33 @@ function renderZTOverview() {
   }
 
   return `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+    <div style="display:flex;gap:12px;margin-bottom:24px;overflow-x:auto;padding-bottom:8px;align-items:flex-start">
       ${Object.entries(summary.byPillar).map(([pillar, stats]) => {
         const total = stats.pass + stats.fail + stats.warn
         const pillarScore = Math.round((stats.pass / total) * 100) || 0
         const pillarColor = pillarScore >= 80 ? 'success' : pillarScore >= 60 ? 'warning' : 'danger'
-        const bgColor = pillarColor === 'success' ? '#f0fdf4' : pillarColor === 'warning' ? '#fefce8' : '#fef2f2'
-        const borderColor = pillarColor === 'success' ? '#86efac' : pillarColor === 'warning' ? '#fde047' : '#fca5a5'
-        const textColor = pillarColor === 'success' ? '#15803d' : pillarColor === 'warning' ? '#854d0e' : '#991b1b'
+        const scoreColor = pillarColor === 'success' ? '#16a34a' : pillarColor === 'warning' ? '#d97706' : '#dc2626'
         const icon = pillarIcons[pillar] || 'ti-shield-check'
+        const shortName = pillar.replace(' Security', '').replace(' & ', ' ').split(' ').slice(0, 2).join(' ')
 
         return `
-          <div style="background:${bgColor};border:2px solid ${borderColor};border-radius:12px;padding:20px;cursor:pointer;transition:all 200ms ease;display:flex;flex-direction:column;gap:12px"
+          <div style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:8px;border-left:3px solid ${scoreColor};cursor:pointer;transition:all 150ms ease;min-width:140px;flex-shrink:0;background:var(--color-background-secondary)"
                data-zt-pillar="${pillar}"
-               onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 16px rgba(0,0,0,0.1)'"
-               onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+               onmouseover="this.style.background='var(--color-background-primary)'"
+               onmouseout="this.style.background='var(--color-background-secondary)'">
 
-            <div style="display:flex;align-items:center;justify-content:space-between">
-              <div style="font-size:24px;color:${textColor}"><i class="ti ${icon}"></i></div>
-              <div style="font-size:32px;font-weight:700;color:${textColor}">${pillarScore}%</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="font-size:16px;color:${scoreColor}"><i class="ti ${icon}"></i></div>
+              <div style="font-size:18px;font-weight:700;color:${scoreColor}">${pillarScore}%</div>
             </div>
 
-            <div>
-              <div style="font-size:13px;font-weight:600;color:${textColor};margin-bottom:2px">${pillar}</div>
-              <div style="font-size:11px;color:${textColor};opacity:0.8">${stats.pass}/${total} controls passing</div>
+            <div style="font-size:11px;font-weight:600;color:var(--color-text-primary);line-height:1.2">${shortName}</div>
+
+            <div style="background:var(--color-border-secondary);height:4px;border-radius:2px;overflow:hidden">
+              <div style="background:${scoreColor};height:100%;width:${pillarScore}%;transition:width 300ms ease"></div>
             </div>
 
-            <div style="background:rgba(0,0,0,0.08);height:6px;border-radius:3px;overflow:hidden;margin-top:4px">
-              <div style="background:${textColor};height:100%;width:${pillarScore}%;transition:width 300ms ease"></div>
-            </div>
-
-            <div style="display:flex;gap:12px;font-size:11px;margin-top:4px">
-              <div style="display:flex;align-items:center;gap:4px">
-                <span style="color:#16a34a;font-weight:600">${stats.pass}</span>
-                <span style="color:${textColor};opacity:0.7">Pass</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:4px">
-                <span style="color:#ea580c;font-weight:600">${stats.warn}</span>
-                <span style="color:${textColor};opacity:0.7">Warn</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:4px">
-                <span style="color:#dc2626;font-weight:600">${stats.fail}</span>
-                <span style="color:${textColor};opacity:0.7">Fail</span>
-              </div>
-            </div>
+            <div style="font-size:9px;color:var(--color-text-secondary)">${stats.pass}/${total} passed</div>
           </div>
         `
       }).join('')}
@@ -321,7 +304,7 @@ function renderZTOverviewDemo() {
   }
 
   return `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+    <div style="display:flex;gap:12px;margin-bottom:24px;overflow-x:auto;padding-bottom:8px;align-items:flex-start">
       ${demoPillars.map(pillar => {
         const pass = pillar.controls.filter(c => c.status === 'pass').length
         const warn = pillar.controls.filter(c => c.status === 'warn').length
@@ -329,45 +312,28 @@ function renderZTOverviewDemo() {
         const total = pillar.controls.length
         const pillarScore = Math.round((pass / total) * 100) || 0
         const pillarColor = pillarScore >= 80 ? 'success' : pillarScore >= 60 ? 'warning' : 'danger'
-        const bgColor = pillarColor === 'success' ? '#f0fdf4' : pillarColor === 'warning' ? '#fefce8' : '#fef2f2'
-        const borderColor = pillarColor === 'success' ? '#86efac' : pillarColor === 'warning' ? '#fde047' : '#fca5a5'
-        const textColor = pillarColor === 'success' ? '#15803d' : pillarColor === 'warning' ? '#854d0e' : '#991b1b'
+        const scoreColor = pillarColor === 'success' ? '#16a34a' : pillarColor === 'warning' ? '#d97706' : '#dc2626'
         const icon = pillarIcons[pillar.name] || 'ti-shield-check'
+        const shortName = pillar.name.replace(' Security', '').replace(' & ', ' ').split(' ').slice(0, 2).join(' ')
 
         return `
-          <div style="background:${bgColor};border:2px solid ${borderColor};border-radius:12px;padding:20px;cursor:pointer;transition:all 200ms ease;display:flex;flex-direction:column;gap:12px"
+          <div style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:8px;border-left:3px solid ${scoreColor};cursor:pointer;transition:all 150ms ease;min-width:140px;flex-shrink:0;background:var(--color-background-secondary)"
                data-zt-pillar="${pillar.name}"
-               onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 16px rgba(0,0,0,0.1)'"
-               onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+               onmouseover="this.style.background='var(--color-background-primary)'"
+               onmouseout="this.style.background='var(--color-background-secondary)'">
 
-            <div style="display:flex;align-items:center;justify-content:space-between">
-              <div style="font-size:24px;color:${textColor}"><i class="ti ${icon}"></i></div>
-              <div style="font-size:32px;font-weight:700;color:${textColor}">${pillarScore}%</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="font-size:16px;color:${scoreColor}"><i class="ti ${icon}"></i></div>
+              <div style="font-size:18px;font-weight:700;color:${scoreColor}">${pillarScore}%</div>
             </div>
 
-            <div>
-              <div style="font-size:13px;font-weight:600;color:${textColor};margin-bottom:2px">${pillar.name}</div>
-              <div style="font-size:11px;color:${textColor};opacity:0.8">${pass}/${total} controls passing</div>
+            <div style="font-size:11px;font-weight:600;color:var(--color-text-primary);line-height:1.2">${shortName}</div>
+
+            <div style="background:var(--color-border-secondary);height:4px;border-radius:2px;overflow:hidden">
+              <div style="background:${scoreColor};height:100%;width:${pillarScore}%;transition:width 300ms ease"></div>
             </div>
 
-            <div style="background:rgba(0,0,0,0.08);height:6px;border-radius:3px;overflow:hidden;margin-top:4px">
-              <div style="background:${textColor};height:100%;width:${pillarScore}%;transition:width 300ms ease"></div>
-            </div>
-
-            <div style="display:flex;gap:12px;font-size:11px;margin-top:4px">
-              <div style="display:flex;align-items:center;gap:4px">
-                <span style="color:#16a34a;font-weight:600">${pass}</span>
-                <span style="color:${textColor};opacity:0.7">Pass</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:4px">
-                <span style="color:#ea580c;font-weight:600">${warn}</span>
-                <span style="color:${textColor};opacity:0.7">Warn</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:4px">
-                <span style="color:#dc2626;font-weight:600">${fail}</span>
-                <span style="color:${textColor};opacity:0.7">Fail</span>
-              </div>
-            </div>
+            <div style="font-size:9px;color:var(--color-text-secondary)">${pass}/${total} passed</div>
           </div>
         `
       }).join('')}
