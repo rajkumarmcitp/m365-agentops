@@ -547,6 +547,294 @@ export class ZeroTrustValidator {
         return adminCount <= 2 ? 'pass' : adminCount <= 4 ? 'warn' : 'fail'
       }
 
+      // ID-012: Break-Glass Accounts Configured
+      if (validation.id === 'ID-012') {
+        // Break-Glass accounts: typically named BreakGlass, Emergency, EmergencyAdmin
+        // Cloud-only, no MFA exclusions, strong permissions
+        try {
+          const response = await this.graphClient.api('/users?$filter=startsWith(displayName,\'BreakGlass\') or startsWith(displayName,\'Emergency\') or startsWith(userPrincipalName,\'breakglass\')&$select=id,displayName,userPrincipalName,accountEnabled').get()
+          const breakGlassAccounts = response.value || []
+
+          result.currentValue = `${breakGlassAccounts.length} break-glass accounts found`
+          result.evidence = {
+            breakGlassCount: breakGlassAccounts.length,
+            hasBreakGlass: breakGlassAccounts.length >= 2,
+            accounts: breakGlassAccounts.map(a => ({
+              displayName: a.displayName,
+              userPrincipalName: a.userPrincipalName,
+              enabled: a.accountEnabled
+            }))
+          }
+          return breakGlassAccounts.length >= 2 ? 'pass' : 'fail'
+        } catch (e) {
+          result.currentValue = 'Could not verify break-glass accounts'
+          result.evidence = { error: 'Search failed' }
+          return 'warn'
+        }
+      }
+
+      // ID-013: Require MFA for All Users via Conditional Access
+      if (validation.id === 'ID-013') {
+        // Verify CA policy requires MFA for all users
+        try {
+          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          // Find policy with MFA requirement for all users
+          const mfaAllUsersPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.grantControls?.builtInControls?.includes('mfa') &&
+            p.conditions?.users?.includeUsers?.includes('All')
+          )
+
+          result.currentValue = mfaAllUsersPolicy ? 'MFA required for all users' : 'No MFA enforcement for all users'
+          result.evidence = {
+            hasMFAPolicy: !!mfaAllUsersPolicy,
+            policyName: mfaAllUsersPolicy?.displayName,
+            appliesToAll: !!mfaAllUsersPolicy
+          }
+          return mfaAllUsersPolicy ? 'pass' : 'fail'
+        } catch (e) {
+          result.currentValue = 'Could not verify MFA enforcement'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      // ID-014: Admin MFA Strength Policy
+      if (validation.id === 'ID-014') {
+        // Verify CA policy enforces phishing-resistant MFA for admins
+        try {
+          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          // Find policy targeting privileged roles with phishing-resistant auth strength
+          const adminMFAPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.conditions?.roles?.includeRoles?.some(r =>
+              r.includes('Global') || r.includes('Privileged') || r.includes('Security')
+            ) &&
+            p.grantControls?.authenticationStrength?.displayName?.includes('Phishing Resistant')
+          )
+
+          const privilegedRoles = adminMFAPolicy?.conditions?.roles?.includeRoles || []
+
+          result.currentValue = adminMFAPolicy ? 'Privileged admin MFA enforced' : 'No admin MFA policy'
+          result.evidence = {
+            hasAdminPolicy: !!adminMFAPolicy,
+            policyName: adminMFAPolicy?.displayName,
+            targetRoles: privilegedRoles,
+            authStrength: adminMFAPolicy?.grantControls?.authenticationStrength?.displayName
+          }
+          return adminMFAPolicy ? 'pass' : 'fail'
+        } catch (e) {
+          result.currentValue = 'Could not verify admin MFA policy'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      // ID-015: Phishing Resistant MFA (FIDO2, Windows Hello)
+      if (validation.id === 'ID-015') {
+        // Verify CA policy requires phishing-resistant authentication
+        try {
+          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          // Find policy with phishing-resistant auth strength
+          const phishingResistantPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.grantControls?.authenticationStrength?.displayName?.toLowerCase().includes('phishing resistant')
+          )
+
+          result.currentValue = phishingResistantPolicy ? 'Phishing-resistant MFA required' : 'No phishing-resistant policy'
+          result.evidence = {
+            hasPolicy: !!phishingResistantPolicy,
+            policyName: phishingResistantPolicy?.displayName,
+            authStrength: phishingResistantPolicy?.grantControls?.authenticationStrength?.displayName,
+            acceptedMethods: ['FIDO2', 'Windows Hello', 'Passkeys', 'Certificate Based Auth']
+          }
+          return phishingResistantPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Could not verify phishing-resistant policy'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      // ID-016: Token Protection Policy
+      if (validation.id === 'ID-016') {
+        // Verify CA policy includes token protection
+        try {
+          const caResponse = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          // Find policy with token protection session controls
+          const tokenProtectionPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.sessionControls?.tokenProtection?.isEnabled === true
+          )
+
+          result.currentValue = tokenProtectionPolicy ? 'Token protection enabled' : 'Token protection not enabled'
+          result.evidence = {
+            hasTokenProtection: !!tokenProtectionPolicy,
+            policyName: tokenProtectionPolicy?.displayName,
+            requireDeviceBoundTokens: tokenProtectionPolicy?.sessionControls?.tokenProtection?.isEnabled
+          }
+          return tokenProtectionPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Could not verify token protection'
+          result.evidence = { available: false, note: 'Requires beta API' }
+          return 'warn'
+        }
+      }
+
+      // ID-017: User Risk Policy
+      if (validation.id === 'ID-017') {
+        // Verify CA policy for high/medium user risk
+        try {
+          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          // Find policy targeting user risk levels
+          const userRiskPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.conditions?.userRiskLevels?.includes('high') &&
+            (p.grantControls?.builtInControls?.includes('block') ||
+             p.grantControls?.builtInControls?.includes('mfa'))
+          )
+
+          result.currentValue = userRiskPolicy ? 'User risk policy enabled' : 'No user risk policy'
+          result.evidence = {
+            hasUserRiskPolicy: !!userRiskPolicy,
+            policyName: userRiskPolicy?.displayName,
+            targetRiskLevels: userRiskPolicy?.conditions?.userRiskLevels,
+            grantControls: userRiskPolicy?.grantControls?.builtInControls
+          }
+          return userRiskPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Could not verify user risk policy'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      // ID-018: Sign-in Risk Policy
+      if (validation.id === 'ID-018') {
+        // Verify CA policy for high/medium sign-in risk
+        try {
+          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          // Find policy targeting sign-in risk levels
+          const signInRiskPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.conditions?.signInRiskLevels?.includes('high') &&
+            (p.grantControls?.builtInControls?.includes('block') ||
+             p.grantControls?.builtInControls?.includes('mfa'))
+          )
+
+          result.currentValue = signInRiskPolicy ? 'Sign-in risk policy enabled' : 'No sign-in risk policy'
+          result.evidence = {
+            hasSignInRiskPolicy: !!signInRiskPolicy,
+            policyName: signInRiskPolicy?.displayName,
+            targetRiskLevels: signInRiskPolicy?.conditions?.signInRiskLevels,
+            grantControls: signInRiskPolicy?.grantControls?.builtInControls
+          }
+          return signInRiskPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Could not verify sign-in risk policy'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      // ID-019: PIM (Privileged Identity Management) Enabled
+      if (validation.id === 'ID-019') {
+        // Verify PIM configuration for eligible role assignments
+        try {
+          const pimResponse = await this.graphClient.api('/roleManagement/directory/roleEligibilitySchedules').get()
+          const eligibleAssignments = pimResponse.value || []
+
+          result.currentValue = eligibleAssignments.length > 0 ? 'PIM configured' : 'PIM not configured'
+          result.evidence = {
+            pimConfigured: eligibleAssignments.length > 0,
+            eligibleAssignmentCount: eligibleAssignments.length
+          }
+          return eligibleAssignments.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          result.currentValue = 'PIM not accessible'
+          result.evidence = { available: false, note: 'Requires P2 license' }
+          return 'warn'
+        }
+      }
+
+      // ID-020: Guest Access Controls (Guest Invitations)
+      if (validation.id === 'ID-020') {
+        // Verify guest invitation restrictions
+        try {
+          const authPolicyResponse = await this.graphClient.api('/policies/authorizationPolicy').get()
+          const allowInvitesFrom = authPolicyResponse.allowInvitesFrom
+
+          result.currentValue = allowInvitesFrom === 'adminsAndGuestInviters' ? 'Guest invites restricted' : `Guest invites: ${allowInvitesFrom}`
+          result.evidence = {
+            allowInvitesFrom: allowInvitesFrom,
+            isRestricted: allowInvitesFrom === 'adminsAndGuestInviters' || allowInvitesFrom === 'none'
+          }
+          return allowInvitesFrom === 'adminsAndGuestInviters' ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Could not verify guest invitation settings'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      // ID-021: Cross Tenant Access Policy
+      if (validation.id === 'ID-021') {
+        // Verify cross-tenant access restrictions
+        try {
+          const ctaResponse = await this.graphClient.api('/policies/crossTenantAccessPolicy').get()
+
+          result.currentValue = ctaResponse ? 'Cross-tenant access configured' : 'Cross-tenant access not configured'
+          result.evidence = {
+            hasPolicy: !!ctaResponse,
+            inboundPolicy: ctaResponse?.inboundPolicy?.displayName,
+            outboundPolicy: ctaResponse?.outboundPolicy?.displayName
+          }
+          return ctaResponse ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Could not verify cross-tenant access'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      // ID-022: Tenant Creator Role Minimized
+      if (validation.id === 'ID-022') {
+        // Verify Tenant Creator role has minimal members
+        try {
+          const roleResponse = await this.graphClient.api('/directoryRoles?$filter=displayName eq \'Tenant Creator\'').get()
+          const tenantCreatorRole = roleResponse.value?.[0]
+
+          if (!tenantCreatorRole) {
+            result.currentValue = 'Tenant Creator role not found'
+            result.evidence = { creatorCount: 0 }
+            return 'warn'
+          }
+
+          const members = await this.graphClient.api(`/directoryRoles/${tenantCreatorRole.id}/members`).get()
+          const creatorCount = members.value?.length || 0
+
+          result.currentValue = `${creatorCount} tenant creators`
+          result.evidence = { creatorCount, isMinimized: creatorCount < 5 }
+          return creatorCount < 5 ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Could not verify tenant creators'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
       // Default for other ID- validations
       return 'warn'
     } catch (error) {
