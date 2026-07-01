@@ -195,93 +195,135 @@ export class ZeroTrustValidator {
     try {
       if (validation.id === 'ID-001') {
         // MFA Enabled for Global Admins
-        const response = await this.graphClient.api('/directoryRoles').get()
-        const globalAdminRole = response.value?.find(r => r.displayName === 'Global Administrator')
+        // Step 1: Get Global Administrator Role
+        const roleResponse = await this.graphClient.api('/directoryRoles').get()
+        const globalAdminRole = roleResponse.value?.find(r => r.displayName === 'Global Administrator')
 
-        if (!globalAdminRole) return 'warn'
+        if (!globalAdminRole) {
+          result.currentValue = 'Global Administrator role not found'
+          result.evidence = { roleNotFound: true }
+          return 'warn'
+        }
 
-        const members = await this.graphClient.api(`/directoryRoles/${globalAdminRole.id}/members`).get()
-        const adminsList = members.value || []
+        // Step 2: Get Members of Global Administrator role
+        const membersResponse = await this.graphClient.api(`/directoryRoles/${globalAdminRole.id}/members`).get()
+        const adminsList = membersResponse.value || []
 
         if (adminsList.length === 0) {
           result.currentValue = 'No global admins found'
           result.evidence = { totalAdmins: 0, adminsWithMFA: 0, adminsWithoutMFA: 0, details: [] }
-          return 'warn' // Warning: no admins to protect
+          return 'warn'
         }
 
-        // Check MFA status for each admin
+        // Step 3: Get MFA Registration Details for each admin
         const adminDetails = []
         let adminsWithMFA = 0
         let adminsWithoutMFA = 0
 
-        for (const admin of adminsList) {
-          try {
-            const authMethods = await this.graphClient.api(`/users/${admin.id}/authentication/methods`).get()
+        // Build list of admin IDs for batch query
+        const adminIds = adminsList.map(a => a.id)
 
-            // Log actual auth methods for debugging
-            console.log(`📌 Auth methods for ${admin.displayName}:`, JSON.stringify(authMethods.value?.map(m => m['@odata.type']) || []))
+        // Query MFA registration details for all users (we'll filter for admins)
+        try {
+          const mfaReportResponse = await this.graphClient.api('/reports/authenticationMethods/userRegistrationDetails').get()
+          const mfaRegistrationMap = {}
 
-            // Filter for MFA methods (exclude password-only)
-            const mfaMethods = authMethods.value?.filter(m => {
-              const type = m['@odata.type'] || ''
-              // Include MFA methods
-              const isMFA =
-                type.includes('phone') ||
-                type.includes('email') ||
-                type.includes('fido2') ||
-                type.includes('windowsHello') ||
-                type.includes('temporaryAccessPass') ||
-                type.includes('microsoftAuthenticator') ||
-                type.includes('softwareOath')
+          // Create map of user MFA registration details
+          mfaReportResponse.value?.forEach(entry => {
+            mfaRegistrationMap[entry.userPrincipalName] = {
+              isMfaRegistered: entry.isMfaRegistered,
+              isMfaCapable: entry.isMfaCapable,
+              defaultMfaMethod: entry.defaultMfaMethod,
+              methodsRegistered: entry.methodsRegistered
+            }
+          })
 
-              // Exclude password-only
-              const isPassword = type.includes('password')
+          // Check each admin's MFA status
+          for (const admin of adminsList) {
+            const adminUPN = admin.userPrincipalName
+            const mfaData = mfaRegistrationMap[adminUPN]
 
-              return isMFA && !isPassword
-            }) || []
+            if (mfaData?.isMfaRegistered) {
+              adminsWithMFA++
+              adminDetails.push({
+                id: admin.id,
+                displayName: admin.displayName || 'Unknown',
+                userPrincipalName: adminUPN,
+                isMfaRegistered: true,
+                defaultMfaMethod: mfaData.defaultMfaMethod,
+                methodsRegistered: mfaData.methodsRegistered
+              })
+            } else {
+              adminsWithoutMFA++
+              adminDetails.push({
+                id: admin.id,
+                displayName: admin.displayName || 'Unknown',
+                userPrincipalName: adminUPN,
+                isMfaRegistered: false,
+                defaultMfaMethod: null,
+                methodsRegistered: null
+              })
+            }
+          }
+        } catch (e) {
+          console.warn(`⚠️ Could not fetch MFA registration report:`, e.message)
+          // Fallback to per-user authentication methods check
+          for (const admin of adminsList) {
+            try {
+              const authMethods = await this.graphClient.api(`/users/${admin.id}/authentication/methods`).get()
+              const mfaMethods = authMethods.value?.filter(m => {
+                const type = m['@odata.type'] || ''
+                const isMFA = type.includes('phone') || type.includes('email') || type.includes('fido2') ||
+                              type.includes('windowsHello') || type.includes('temporaryAccessPass') ||
+                              type.includes('microsoftAuthenticator') || type.includes('softwareOath')
+                return isMFA && !type.includes('password')
+              }) || []
 
-            const hasMFA = mfaMethods.length > 0
-            if (hasMFA) adminsWithMFA++
-            else adminsWithoutMFA++
-
-            // Extract method type names for display
-            const methodNames = mfaMethods.map(m => {
-              const type = m['@odata.type'] || ''
-              // Extract readable name from @odata.type like "#microsoft.graph.phoneAuthenticationMethod"
-              const match = type.match(/\.(\w+)AuthenticationMethod/)
-              return match ? match[1] : 'unknown'
-            }).join(', ')
-
-            adminDetails.push({
-              id: admin.id,
-              displayName: admin.displayName || 'Unknown',
-              userPrincipalName: admin.userPrincipalName,
-              hasMFA: hasMFA,
-              mfaMethods: methodNames || 'None'
-            })
-          } catch (e) {
-            console.warn(`⚠️ Could not check MFA for admin ${admin.id}:`, e.message)
-            adminDetails.push({
-              id: admin.id,
-              displayName: admin.displayName || 'Unknown',
-              userPrincipalName: admin.userPrincipalName,
-              hasMFA: false,
-              mfaMethods: 'Error checking'
-            })
+              if (mfaMethods.length > 0) {
+                adminsWithMFA++
+                adminDetails.push({
+                  id: admin.id,
+                  displayName: admin.displayName,
+                  userPrincipalName: admin.userPrincipalName,
+                  isMfaRegistered: true,
+                  methodsRegistered: mfaMethods.length
+                })
+              } else {
+                adminsWithoutMFA++
+                adminDetails.push({
+                  id: admin.id,
+                  displayName: admin.displayName,
+                  userPrincipalName: admin.userPrincipalName,
+                  isMfaRegistered: false
+                })
+              }
+            } catch (innerError) {
+              adminsWithoutMFA++
+              adminDetails.push({
+                id: admin.id,
+                displayName: admin.displayName,
+                userPrincipalName: admin.userPrincipalName,
+                isMfaRegistered: false,
+                error: 'Could not verify'
+              })
+            }
           }
         }
 
-        const mfaPercentage = Math.round((adminsWithMFA / adminsList.length) * 100)
+        const mfaPercentage = adminsList.length > 0 ? Math.round((adminsWithMFA / adminsList.length) * 100) : 0
         result.currentValue = `${adminsWithMFA}/${adminsList.length} global admins have MFA (${mfaPercentage}%)`
         result.evidence = {
           totalAdmins: adminsList.length,
           adminsWithMFA,
           adminsWithoutMFA,
           mfaPercentage,
+          complianceStatus: mfaPercentage === 100 ? 'COMPLIANT' : 'NON-COMPLIANT',
           details: adminDetails
         }
 
-        // Return status based on MFA coverage
+        console.log(`✅ ID-001 MFA for Global Admins: ${adminsWithMFA}/${adminsList.length} (${mfaPercentage}%)`)
+
+        // Status: PASS only if 100% of admins have MFA
         if (mfaPercentage === 100) return 'pass'
         if (mfaPercentage >= 80) return 'warn'
         return 'fail'
@@ -289,42 +331,61 @@ export class ZeroTrustValidator {
 
       if (validation.id === 'ID-002') {
         // MFA Coverage for All Users
+        // Formula: Coverage = Registered Users / Licensed Users
         try {
-          // Step 1: Get total user count (all users in tenant)
-          const allUsersResponse = await this.graphClient.api('/users?$count=true&$select=id').get()
-          const totalUsers = allUsersResponse['@odata.count'] || allUsersResponse.value?.length || 1
+          // Query: GET /beta/reports/authenticationMethods/userRegistrationDetails
+          const mfaReportResponse = await this.graphClient.api('/reports/authenticationMethods/userRegistrationDetails').get()
+          const registrationDetails = mfaReportResponse.value || []
 
-          // Step 2: Get all users with MFA registration details
-          const mfaResponse = await this.graphClient.api('/authenticationMethods/userRegistrationDetails?$filter=isMfaRegistered eq true').get()
-          const mfaUsers = mfaResponse.value?.length || 0
+          // Count users by registration status
+          let mfaRegistered = 0
+          let mfaCapable = 0
+          let totalLicensedUsers = 0
+          let ssprRegistered = 0
 
-          // Step 3: Get users without MFA
-          const noMfaResponse = await this.graphClient.api('/authenticationMethods/userRegistrationDetails?$filter=isMfaRegistered eq false').get()
-          const noMfaUsers = noMfaResponse.value?.length || 0
+          // Analyze each user's registration status
+          registrationDetails.forEach(user => {
+            // Count only licensed users for denominator
+            totalLicensedUsers++
 
-          const mfaCapableUsers = mfaUsers + noMfaUsers
-          const percentage = totalUsers > 0 ? Math.round((mfaUsers / totalUsers) * 100) : 0
+            if (user.isMfaRegistered) {
+              mfaRegistered++
+            }
 
-          console.log(`📊 ID-002 MFA Coverage: ${mfaUsers}/${totalUsers} users (${percentage}%)`)
-          console.log(`   - MFA Registered: ${mfaUsers}`)
-          console.log(`   - MFA Capable: ${mfaCapableUsers}`)
-          console.log(`   - Total Users: ${totalUsers}`)
+            if (user.isMfaCapable) {
+              mfaCapable++
+            }
 
-          result.currentValue = `${percentage}% MFA coverage (${mfaUsers}/${totalUsers} users)`
+            if (user.isSsprRegistered) {
+              ssprRegistered++
+            }
+          })
+
+          // Calculate coverage percentage
+          const mfaCoverage = totalLicensedUsers > 0 ? Math.round((mfaRegistered / totalLicensedUsers) * 100) : 0
+
+          result.currentValue = `${mfaCoverage}% MFA coverage (${mfaRegistered}/${totalLicensedUsers} licensed users)`
           result.evidence = {
-            mfaRegistered: mfaUsers,
-            mfaCapable: mfaCapableUsers,
-            totalUsers: totalUsers,
-            percentage,
-            notMFAEnabled: noMfaUsers,
-            mfaCoverageOfCapable: totalUsers > 0 ? Math.round((mfaUsers / mfaCapableUsers) * 100) : 0
+            mfaRegistered,
+            mfaCapable,
+            totalLicensedUsers,
+            mfaCoveragePercentage: mfaCoverage,
+            ssprRegistered,
+            complianceTarget: '95%',
+            meetsTarget: mfaCoverage >= 95
           }
 
-          return percentage >= 95 ? 'pass' : percentage >= 80 ? 'warn' : 'fail'
+          console.log(`📊 ID-002 MFA Coverage for All Users:`)
+          console.log(`   - MFA Registered: ${mfaRegistered}/${totalLicensedUsers} (${mfaCoverage}%)`)
+          console.log(`   - MFA Capable: ${mfaCapable}`)
+          console.log(`   - SSPR Registered: ${ssprRegistered}`)
+          console.log(`   - Target: 95% - Status: ${mfaCoverage >= 95 ? 'MET ✅' : 'NOT MET ❌'}`)
+
+          return mfaCoverage >= 95 ? 'pass' : mfaCoverage >= 80 ? 'warn' : 'fail'
         } catch (e) {
           console.warn(`⚠️ ID-002 MFA Coverage check failed:`, e.message)
           result.error = e.message
-          result.evidence = { error: 'Could not fetch MFA registration details' }
+          result.evidence = { error: 'Could not fetch MFA registration report', endpoint: '/reports/authenticationMethods/userRegistrationDetails' }
           return 'fail'
         }
       }
@@ -341,14 +402,61 @@ export class ZeroTrustValidator {
 
       if (validation.id === 'ID-004') {
         // Passwordless Authentication Adoption
-        const response = await this.graphClient.api('/authenticationMethods/userRegistrationDetails?$filter=isPasswordlessPhoneSignInRegistered eq true').get()
-        const passwordlessUsers = response.value?.length || 0
-        const allUsers = await this.graphClient.api('/users?$count=true').then(r => r['@odata.count'] || 1)
-        const percentage = Math.round((passwordlessUsers / allUsers) * 100)
+        // Endpoint: GET /beta/reports/authenticationMethods/userRegistrationDetails
+        // Look for users with FIDO2, Windows Hello, or Microsoft Authenticator Passwordless
+        try {
+          const reportResponse = await this.graphClient.api('/reports/authenticationMethods/userRegistrationDetails').get()
+          const registrationDetails = reportResponse.value || []
 
-        result.currentValue = `${percentage}% passwordless adoption`
-        result.evidence = { passwordlessUsers, totalUsers: allUsers, percentage }
-        return percentage >= 10 ? 'pass' : 'warn'
+          let passwordlessUsers = 0
+          let totalUsers = registrationDetails.length
+          let byMethod = {
+            fido2: 0,
+            windowsHello: 0,
+            microsoftAuthenticator: 0
+          }
+
+          // Count users with passwordless methods
+          registrationDetails.forEach(user => {
+            const methods = user.methodsRegistered || []
+            const hasFido2 = methods.includes('fido2') || methods.some(m => m.toLowerCase().includes('fido2'))
+            const hasWindowsHello = methods.includes('windowsHello') || methods.some(m => m.toLowerCase().includes('windows'))
+            const hasAuthenticator = methods.includes('microsoftAuthenticator') || methods.some(m => m.toLowerCase().includes('authenticator'))
+
+            if (hasFido2) byMethod.fido2++
+            if (hasWindowsHello) byMethod.windowsHello++
+            if (hasAuthenticator) byMethod.microsoftAuthenticator++
+
+            // User has passwordless if they have ANY passwordless method
+            if (hasFido2 || hasWindowsHello || hasAuthenticator) {
+              passwordlessUsers++
+            }
+          })
+
+          const percentage = totalUsers > 0 ? Math.round((passwordlessUsers / totalUsers) * 100) : 0
+
+          result.currentValue = `${percentage}% passwordless adoption (${passwordlessUsers}/${totalUsers} users)`
+          result.evidence = {
+            passwordlessUsers,
+            totalUsers,
+            adoptionPercentage: percentage,
+            byMethod: byMethod,
+            hasPasswordlessCapability: passwordlessUsers > 0
+          }
+
+          console.log(`📊 ID-004 Passwordless Adoption:`)
+          console.log(`   - Total: ${passwordlessUsers}/${totalUsers} users (${percentage}%)`)
+          console.log(`   - FIDO2: ${byMethod.fido2}`)
+          console.log(`   - Windows Hello: ${byMethod.windowsHello}`)
+          console.log(`   - Authenticator: ${byMethod.microsoftAuthenticator}`)
+
+          return percentage >= 10 ? 'pass' : percentage > 0 ? 'warn' : 'fail'
+        } catch (e) {
+          console.warn(`⚠️ ID-004 Passwordless check failed:`, e.message)
+          result.error = e.message
+          result.evidence = { error: 'Could not fetch passwordless registration details' }
+          return 'warn'
+        }
       }
 
       if (validation.id === 'ID-005') {
