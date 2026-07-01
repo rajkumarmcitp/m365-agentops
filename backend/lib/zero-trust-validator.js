@@ -1459,6 +1459,305 @@ export class ZeroTrustValidator {
         }
       }
 
+      // DEV-012: Require Compliant Devices via CA
+      if (validation.id === 'DEV-012') {
+        try {
+          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = caResponse.value || []
+
+          const compliantDevicePolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.grantControls?.builtInControls?.includes('compliantDevice')
+          )
+
+          result.currentValue = compliantDevicePolicy ? 'Compliant device CA policy enforced' : 'No compliant device policy'
+          result.evidence = {
+            hasPolicy: !!compliantDevicePolicy,
+            policyName: compliantDevicePolicy?.displayName,
+            requiresCompliance: !!compliantDevicePolicy
+          }
+          return compliantDevicePolicy ? 'pass' : 'fail'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-013: Windows Security Baselines
+      if (validation.id === 'DEV-013') {
+        try {
+          const intentsResponse = await this.graphClient.api('/deviceManagement/intents').get()
+          const policies = intentsResponse.value || []
+
+          const securityBaselines = policies.filter(p =>
+            p.displayName?.toLowerCase().includes('baseline') ||
+            p.templateId?.includes('securityBaseline')
+          )
+
+          result.currentValue = `${securityBaselines.length} security baselines configured`
+          result.evidence = {
+            baselineCount: securityBaselines.length,
+            hasBaselines: securityBaselines.length > 0,
+            baselines: securityBaselines.map(b => ({ name: b.displayName }))
+          }
+          return securityBaselines.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-014: Windows Hello for Business
+      if (validation.id === 'DEV-014') {
+        try {
+          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = configResponse.value || []
+
+          const windowsHelloPolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('windows hello') ||
+            p.description?.toLowerCase().includes('hello')
+          )
+
+          result.currentValue = windowsHelloPolicy ? 'Windows Hello configured' : 'Windows Hello not configured'
+          result.evidence = {
+            hasPolicy: !!windowsHelloPolicy,
+            policyName: windowsHelloPolicy?.name
+          }
+          return windowsHelloPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-015: Windows Firewall Policy
+      if (validation.id === 'DEV-015') {
+        try {
+          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = configResponse.value || []
+
+          const firewallPolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('firewall')
+          )
+
+          result.currentValue = firewallPolicy ? 'Windows Firewall policy configured' : 'No firewall policy'
+          result.evidence = {
+            hasPolicy: !!firewallPolicy,
+            policyName: firewallPolicy?.name
+          }
+          return firewallPolicy ? 'pass' : 'fail'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-016: BitLocker via Configuration Policy
+      if (validation.id === 'DEV-016') {
+        try {
+          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = configResponse.value || []
+
+          const bitlockerPolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('bitlocker') ||
+            p.name?.toLowerCase().includes('encryption')
+          )
+
+          result.currentValue = bitlockerPolicy ? 'BitLocker encryption policy active' : 'No BitLocker policy'
+          result.evidence = {
+            hasPolicy: !!bitlockerPolicy,
+            policyName: bitlockerPolicy?.name
+          }
+          return bitlockerPolicy ? 'pass' : 'fail'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-017: Defender Antivirus Configuration
+      if (validation.id === 'DEV-017') {
+        try {
+          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = configResponse.value || []
+
+          const defenderPolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('defender antivirus') ||
+            p.name?.toLowerCase().includes('microsoft defender')
+          )
+
+          result.currentValue = defenderPolicy ? 'Defender Antivirus configured' : 'No Defender policy'
+          result.evidence = {
+            hasPolicy: !!defenderPolicy,
+            realTimeProtection: !!defenderPolicy,
+            policyName: defenderPolicy?.name
+          }
+          return defenderPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-018: Attack Surface Reduction Rules
+      if (validation.id === 'DEV-018') {
+        try {
+          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = configResponse.value || []
+
+          const asrPolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('attack surface') ||
+            p.name?.toLowerCase().includes('asr')
+          )
+
+          result.currentValue = asrPolicy ? 'Attack Surface Reduction rules configured' : 'No ASR policy'
+          result.evidence = {
+            hasPolicy: !!asrPolicy,
+            asrEnabled: !!asrPolicy
+          }
+          return asrPolicy ? 'pass' : 'fail'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-019: Endpoint Analytics
+      if (validation.id === 'DEV-019') {
+        try {
+          const analyticsResponse = await this.graphClient.api('/deviceManagement/userExperienceAnalyticsSettings').get()
+
+          result.currentValue = analyticsResponse ? 'Endpoint Analytics enabled' : 'Endpoint Analytics disabled'
+          result.evidence = {
+            enabled: !!analyticsResponse,
+            dataCollection: analyticsResponse?.dataCollectionEnabled
+          }
+          return analyticsResponse ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-020: Terms and Conditions
+      if (validation.id === 'DEV-020') {
+        try {
+          const tcResponse = await this.graphClient.api('/deviceManagement/termsAndConditions').get()
+          const policies = tcResponse.value || []
+
+          const publishedPolicies = policies.filter(p => p.published === true)
+
+          result.currentValue = `${publishedPolicies.length} T&C policies published`
+          result.evidence = {
+            policyCount: publishedPolicies.length,
+            hasPolicy: publishedPolicies.length > 0
+          }
+          return publishedPolicies.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-021: Scope Tags Configuration
+      if (validation.id === 'DEV-021') {
+        try {
+          const scopeResponse = await this.graphClient.api('/deviceManagement/roleScopeTags').get()
+          const tags = scopeResponse.value || []
+
+          // Default tag + custom tags
+          const customTags = tags.filter(t => t.displayName !== 'Default')
+
+          result.currentValue = `${tags.length} scope tags configured`
+          result.evidence = {
+            totalTags: tags.length,
+            customTags: customTags.length,
+            hasCustomTags: customTags.length > 0
+          }
+          return customTags.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-022: Android Enterprise (Work Profile) Compliance
+      if (validation.id === 'DEV-022') {
+        try {
+          const complianceResponse = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+          const policies = complianceResponse.value || []
+
+          const androidWorkProfile = policies.find(p =>
+            p.platform === 'android' &&
+            (p.displayName?.toLowerCase().includes('work profile') ||
+             p.displayName?.toLowerCase().includes('enterprise'))
+          )
+
+          result.currentValue = androidWorkProfile ? 'Android Enterprise compliance policy exists' : 'No Android Enterprise policy'
+          result.evidence = {
+            hasPolicy: !!androidWorkProfile,
+            policyName: androidWorkProfile?.displayName
+          }
+          return androidWorkProfile ? 'pass' : 'fail'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-023: FileVault Encryption (macOS)
+      if (validation.id === 'DEV-023') {
+        try {
+          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = configResponse.value || []
+
+          const fileVaultPolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('filevault')
+          )
+
+          result.currentValue = fileVaultPolicy ? 'FileVault encryption configured' : 'No FileVault policy'
+          result.evidence = {
+            hasPolicy: !!fileVaultPolicy,
+            policyName: fileVaultPolicy?.name
+          }
+          return fileVaultPolicy ? 'pass' : 'fail'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-024: Windows LAPS Configuration
+      if (validation.id === 'DEV-024') {
+        try {
+          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = configResponse.value || []
+
+          const lapsPolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('laps')
+          )
+
+          result.currentValue = lapsPolicy ? 'Windows LAPS configured' : 'No LAPS policy'
+          result.evidence = {
+            hasPolicy: !!lapsPolicy,
+            policyName: lapsPolicy?.name
+          }
+          return lapsPolicy ? 'pass' : 'fail'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
+      // DEV-025: macOS LAPS Configuration
+      if (validation.id === 'DEV-025') {
+        try {
+          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = configResponse.value || []
+
+          const macLapsPolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('macos') &&
+            p.name?.toLowerCase().includes('laps')
+          )
+
+          result.currentValue = macLapsPolicy ? 'macOS LAPS configured' : 'No macOS LAPS policy'
+          result.evidence = {
+            hasPolicy: !!macLapsPolicy,
+            policyName: macLapsPolicy?.name
+          }
+          return macLapsPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return 'warn'
+        }
+      }
+
       // Default for other DEV- validations
       return 'warn'
     } catch (error) {
