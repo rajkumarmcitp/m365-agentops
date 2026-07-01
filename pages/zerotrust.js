@@ -206,18 +206,62 @@ function renderZTOverview() {
 
   const { summary } = realValidations
 
+  const pillarIcons = {
+    'Identity Security': 'ti-shield-check',
+    'Device & Workload': 'ti-device-laptop',
+    'Infrastructure & Workload': 'ti-building-community',
+    'Application': 'ti-app-window',
+    'Data Protection & Compliance': 'ti-lock',
+    'AI & Governance': 'ti-brain',
+    'Network & Threat Protection': 'ti-shield',
+    'Email': 'ti-mail',
+    'Threat': 'ti-alert-triangle'
+  }
+
   return `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
       ${Object.entries(summary.byPillar).map(([pillar, stats]) => {
         const total = stats.pass + stats.fail + stats.warn
         const pillarScore = Math.round((stats.pass / total) * 100) || 0
         const pillarColor = pillarScore >= 80 ? 'success' : pillarScore >= 60 ? 'warning' : 'danger'
+        const bgColor = pillarColor === 'success' ? '#f0fdf4' : pillarColor === 'warning' ? '#fefce8' : '#fef2f2'
+        const borderColor = pillarColor === 'success' ? '#86efac' : pillarColor === 'warning' ? '#fde047' : '#fca5a5'
+        const textColor = pillarColor === 'success' ? '#15803d' : pillarColor === 'warning' ? '#854d0e' : '#991b1b'
+        const icon = pillarIcons[pillar] || 'ti-shield-check'
+
         return `
-          <div class="card" style="text-align:center;cursor:pointer;transition:all 150ms ease" data-zt-pillar="${pillar}">
-            <div style="padding:16px">
-              <div style="font-size:28px;font-weight:700;color:var(--clr-${pillarColor}-text)">${pillarScore}%</div>
-              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px;font-weight:600" title="${pillar}">${pillar.replace(' Security', '')}</div>
-              <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:8px">${stats.pass}/${total} passed</div>
+          <div style="background:${bgColor};border:2px solid ${borderColor};border-radius:12px;padding:20px;cursor:pointer;transition:all 200ms ease;display:flex;flex-direction:column;gap:12px"
+               data-zt-pillar="${pillar}"
+               onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 16px rgba(0,0,0,0.1)'"
+               onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:24px;color:${textColor}"><i class="ti ${icon}"></i></div>
+              <div style="font-size:32px;font-weight:700;color:${textColor}">${pillarScore}%</div>
+            </div>
+
+            <div>
+              <div style="font-size:13px;font-weight:600;color:${textColor};margin-bottom:2px">${pillar}</div>
+              <div style="font-size:11px;color:${textColor};opacity:0.8">${stats.pass}/${total} controls passing</div>
+            </div>
+
+            <div style="background:rgba(0,0,0,0.08);height:6px;border-radius:3px;overflow:hidden;margin-top:4px">
+              <div style="background:${textColor};height:100%;width:${pillarScore}%;transition:width 300ms ease"></div>
+            </div>
+
+            <div style="display:flex;gap:12px;font-size:11px;margin-top:4px">
+              <div style="display:flex;align-items:center;gap:4px">
+                <span style="color:#16a34a;font-weight:600">${stats.pass}</span>
+                <span style="color:${textColor};opacity:0.7">Pass</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <span style="color:#ea580c;font-weight:600">${stats.warn}</span>
+                <span style="color:${textColor};opacity:0.7">Warn</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <span style="color:#dc2626;font-weight:600">${stats.fail}</span>
+                <span style="color:${textColor};opacity:0.7">Fail</span>
+              </div>
             </div>
           </div>
         `
@@ -264,19 +308,65 @@ function renderZTOverview() {
 function renderZTOverviewDemo() {
   const demoPillars = window.ztDemoPillars || []
 
+  const pillarIcons = {
+    'Identity Security': 'ti-shield-check',
+    'Device & Workload': 'ti-device-laptop',
+    'Infrastructure & Workload': 'ti-building-community',
+    'Application': 'ti-app-window',
+    'Data Protection & Compliance': 'ti-lock',
+    'AI & Governance': 'ti-brain',
+    'Network & Threat Protection': 'ti-shield',
+    'Email': 'ti-mail',
+    'Threat': 'ti-alert-triangle'
+  }
+
   return `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
       ${demoPillars.map(pillar => {
         const pass = pillar.controls.filter(c => c.status === 'pass').length
+        const warn = pillar.controls.filter(c => c.status === 'warn').length
+        const fail = pillar.controls.filter(c => c.status === 'fail').length
         const total = pillar.controls.length
         const pillarScore = Math.round((pass / total) * 100) || 0
         const pillarColor = pillarScore >= 80 ? 'success' : pillarScore >= 60 ? 'warning' : 'danger'
+        const bgColor = pillarColor === 'success' ? '#f0fdf4' : pillarColor === 'warning' ? '#fefce8' : '#fef2f2'
+        const borderColor = pillarColor === 'success' ? '#86efac' : pillarColor === 'warning' ? '#fde047' : '#fca5a5'
+        const textColor = pillarColor === 'success' ? '#15803d' : pillarColor === 'warning' ? '#854d0e' : '#991b1b'
+        const icon = pillarIcons[pillar.name] || 'ti-shield-check'
+
         return `
-          <div class="card" style="text-align:center;cursor:pointer;transition:all 150ms ease" data-zt-pillar="${pillar.name}">
-            <div style="padding:16px">
-              <div style="font-size:28px;font-weight:700;color:var(--clr-${pillarColor}-text)">${pillarScore}%</div>
-              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px;font-weight:600">${pillar.name}</div>
-              <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:8px">${pass}/${total} passed</div>
+          <div style="background:${bgColor};border:2px solid ${borderColor};border-radius:12px;padding:20px;cursor:pointer;transition:all 200ms ease;display:flex;flex-direction:column;gap:12px"
+               data-zt-pillar="${pillar.name}"
+               onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 16px rgba(0,0,0,0.1)'"
+               onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:24px;color:${textColor}"><i class="ti ${icon}"></i></div>
+              <div style="font-size:32px;font-weight:700;color:${textColor}">${pillarScore}%</div>
+            </div>
+
+            <div>
+              <div style="font-size:13px;font-weight:600;color:${textColor};margin-bottom:2px">${pillar.name}</div>
+              <div style="font-size:11px;color:${textColor};opacity:0.8">${pass}/${total} controls passing</div>
+            </div>
+
+            <div style="background:rgba(0,0,0,0.08);height:6px;border-radius:3px;overflow:hidden;margin-top:4px">
+              <div style="background:${textColor};height:100%;width:${pillarScore}%;transition:width 300ms ease"></div>
+            </div>
+
+            <div style="display:flex;gap:12px;font-size:11px;margin-top:4px">
+              <div style="display:flex;align-items:center;gap:4px">
+                <span style="color:#16a34a;font-weight:600">${pass}</span>
+                <span style="color:${textColor};opacity:0.7">Pass</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <span style="color:#ea580c;font-weight:600">${warn}</span>
+                <span style="color:${textColor};opacity:0.7">Warn</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <span style="color:#dc2626;font-weight:600">${fail}</span>
+                <span style="color:${textColor};opacity:0.7">Fail</span>
+              </div>
             </div>
           </div>
         `
