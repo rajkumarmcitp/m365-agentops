@@ -7,6 +7,7 @@
 import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
+import { DeviceCollectors } from './device-collectors.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -22,6 +23,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 export class ZeroTrustValidator {
   constructor(graphClient) {
     this.graphClient = graphClient
+    this.deviceCollectors = new DeviceCollectors(graphClient)
   }
 
   /**
@@ -29,6 +31,10 @@ export class ZeroTrustValidator {
    */
   async validateAll() {
     console.log('🔍 Starting Zero Trust validation across 80 controls...')
+
+    // Pre-collect Device security data to avoid redundant API calls
+    const deviceData = await this.deviceCollectors.collectAll()
+    console.log(`💾 Device data cached: ${deviceData.duration}ms for 7 modules`)
 
     const results = {
       timestamp: new Date().toISOString(),
@@ -40,6 +46,10 @@ export class ZeroTrustValidator {
         fail: 0,
         warn: 0,
         byPillar: {}
+      },
+      collectorMetrics: {
+        deviceDataFetchTime: deviceData.duration,
+        cacheStatus: this.deviceCollectors.getCacheStatus()
       }
     }
 
@@ -62,7 +72,7 @@ export class ZeroTrustValidator {
       }
 
       const pillarResults = await Promise.all(
-        validations.map(v => this.executeValidation(v))
+        validations.map(v => this.executeValidation(v, deviceData))
       )
 
       pillarResults.forEach(result => {
