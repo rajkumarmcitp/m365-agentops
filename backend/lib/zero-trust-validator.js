@@ -667,18 +667,224 @@ export class ZeroTrustValidator {
    */
   async validateData(validation, result) {
     try {
-      if (validation.id === 'DATA-006') {
-        // Sensitivity labels enabled
-        const response = await this.graphClient.api('/informationProtection/sensitivityLabels').get()
-        const hasLabels = response.value?.length > 0
+      if (validation.id === 'DATA-001') {
+        // DLP Policies Configured
+        try {
+          const response = await this.graphClient.api('/security/dataLossPreventionPolicies').get()
+          const policies = response.value || []
+          const enabledPolicies = policies.filter(p => !p.isDisabled).length
 
-        result.currentValue = hasLabels ? `${response.value?.length} labels` : 'No labels'
-        result.evidence = { labelCount: response.value?.length || 0 }
-        return hasLabels ? 'pass' : 'fail'
+          result.currentValue = `${policies.length} DLP policies (${enabledPolicies} enabled)`
+          result.evidence = {
+            totalPolicies: policies.length,
+            enabledPolicies: enabledPolicies,
+            hasPolicy: policies.length > 0
+          }
+          return policies.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          // Fallback if endpoint unavailable
+          result.currentValue = 'DLP endpoint not available'
+          result.evidence = { available: false }
+          return 'warn'
+        }
       }
 
+      if (validation.id === 'DATA-002') {
+        // Sensitivity Labels Configured
+        const response = await this.graphClient.api('/informationProtection/sensitivityLabels').get()
+        const labels = response.value || []
+        const enabledLabels = labels.filter(l => !l.isDisabled).length
+
+        result.currentValue = `${labels.length} sensitivity labels (${enabledLabels} enabled)`
+        result.evidence = {
+          totalLabels: labels.length,
+          enabledLabels: enabledLabels,
+          hasLabels: labels.length > 0,
+          labelNames: labels.slice(0, 5).map(l => l.displayName) // Top 5 label names
+        }
+        return labels.length > 0 ? 'pass' : 'fail'
+      }
+
+      if (validation.id === 'DATA-003') {
+        // Auto-Labeling Rules Enabled
+        try {
+          const response = await this.graphClient.api('/security/dataClassification/classifyFileExtensions').get()
+          const classifiers = response.value || []
+
+          result.currentValue = classifiers.length > 0 ? `${classifiers.length} classifiers` : 'No classifiers'
+          result.evidence = {
+            classifierCount: classifiers.length,
+            hasClassifiers: classifiers.length > 0
+          }
+          return classifiers.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Classification not available'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      if (validation.id === 'DATA-004') {
+        // SharePoint Sharing Policy Restricted
+        try {
+          const response = await this.graphClient.api('/admin/sharepoint/tenant/informationProtection').get()
+          const sharingCapabilities = response.sharingCapabilities
+
+          result.currentValue = sharingCapabilities ? `Sharing: ${sharingCapabilities}` : 'Default sharing enabled'
+          result.evidence = {
+            sharingCapabilities: sharingCapabilities,
+            isRestricted: sharingCapabilities !== 'ExistingExternalUserSharingOnly'
+          }
+          return sharingCapabilities === 'ExistingExternalUserSharingOnly' || sharingCapabilities === 'Internal' ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Could not retrieve SharePoint sharing settings'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      if (validation.id === 'DATA-005') {
+        // OneDrive Sharing Policy Restricted
+        try {
+          const response = await this.graphClient.api('/admin/sharepoint/tenant/oneDriveDefaultShareLinkSettings').get()
+          const shareLink = response.type
+
+          result.currentValue = shareLink ? `Default share link: ${shareLink}` : 'Share links enabled'
+          result.evidence = {
+            shareLinkType: shareLink,
+            isRestricted: shareLink === 'Internal' || shareLink === 'Internal'
+          }
+          return shareLink === 'Internal' ? 'pass' : 'warn'
+        } catch (e) {
+          result.currentValue = 'Could not retrieve OneDrive sharing settings'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      if (validation.id === 'DATA-006') {
+        // Sensitivity Labels Configured (Data Classification Framework)
+        const response = await this.graphClient.api('/informationProtection/sensitivityLabels').get()
+        const labels = response.value || []
+
+        result.currentValue = `${labels.length} classification labels configured`
+        result.evidence = {
+          labelCount: labels.length,
+          hasFramework: labels.length > 0,
+          labels: labels.slice(0, 10).map(l => ({
+            name: l.displayName,
+            description: l.description
+          }))
+        }
+        return labels.length >= 3 ? 'pass' : labels.length > 0 ? 'warn' : 'fail'
+      }
+
+      if (validation.id === 'DATA-007') {
+        // Sensitivity Labels Applied to Sensitive Data
+        try {
+          const response = await this.graphClient.api('/informationProtection/sensitivityLabels').get()
+          const labels = response.value?.filter(l => !l.isDisabled) || []
+
+          result.currentValue = `${labels.length} active sensitivity labels`
+          result.evidence = {
+            activeLabels: labels.length,
+            hasLabels: labels.length > 0
+          }
+          return labels.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          result.currentValue = 'Could not verify label application'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      if (validation.id === 'DATA-008') {
+        // DLP Policies Comprehensive
+        try {
+          const response = await this.graphClient.api('/security/dataLossPreventionPolicies').get()
+          const policies = response.value || []
+          const byWorkload = {}
+
+          // Categorize by workload
+          policies.forEach(p => {
+            const workloads = p.workloads || ['Unknown']
+            workloads.forEach(w => {
+              byWorkload[w] = (byWorkload[w] || 0) + 1
+            })
+          })
+
+          result.currentValue = `${policies.length} comprehensive DLP policies`
+          result.evidence = {
+            totalPolicies: policies.length,
+            byWorkload: byWorkload,
+            coverage: Object.keys(byWorkload).length > 0
+          }
+          return policies.length >= 2 ? 'pass' : policies.length > 0 ? 'warn' : 'fail'
+        } catch (e) {
+          result.currentValue = 'DLP policies not available'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      if (validation.id === 'DATA-009') {
+        // Azure Information Protection (AIP) Deployed
+        try {
+          const response = await this.graphClient.api('/compliance/labels').get()
+          const labels = response.value || []
+
+          result.currentValue = `${labels.length} compliance labels configured`
+          result.evidence = {
+            labelCount: labels.length,
+            isDeployed: labels.length > 0
+          }
+          return labels.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          result.currentValue = 'Compliance labels not available'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      if (validation.id === 'DATA-014') {
+        // Retention Policies Applied
+        try {
+          const response = await this.graphClient.api('/compliance/retentionPolicies').get()
+          const policies = response.value || []
+
+          result.currentValue = `${policies.length} retention policies configured`
+          result.evidence = {
+            policyCount: policies.length,
+            hasPolicy: policies.length > 0
+          }
+          return policies.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          result.currentValue = 'Retention policies endpoint not available'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      if (validation.id === 'DATA-016') {
+        // Conditional Access - Unmanaged Device Data Blocking
+        const response = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+        const blockPolicy = response.value?.find(p =>
+          p.displayName?.toLowerCase().includes('unmanaged') ||
+          p.displayName?.toLowerCase().includes('block')
+        )
+
+        result.currentValue = blockPolicy ? 'Unmanaged device policy active' : 'No blocking policy'
+        result.evidence = {
+          hasPolicy: !!blockPolicy,
+          policyName: blockPolicy?.displayName
+        }
+        return blockPolicy ? 'pass' : 'fail'
+      }
+
+      // Default for other DATA- validations
       return 'warn'
     } catch (error) {
+      console.warn(`⚠️ Data validation ${validation.id} failed:`, error.message)
       result.error = error.message
       return 'warn'
     }
