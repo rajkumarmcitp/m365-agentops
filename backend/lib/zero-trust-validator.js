@@ -311,11 +311,102 @@ export class ZeroTrustValidator {
 
       if (validation.id === 'ID-004') {
         // Passwordless Authentication Adoption
-        const response = await this.graphClient.api('/users?$select=id&$count=true').get()
-        // This is a simplified check - in production, would query FIDO2/Hello registration
-        result.currentValue = 'Passwordless methods available'
-        result.evidence = { hasPasswordlessSupport: true }
-        return 'warn' // Requires manual verification
+        const response = await this.graphClient.api('/authenticationMethods/userRegistrationDetails?$filter=isPasswordlessPhoneSignInRegistered eq true').get()
+        const passwordlessUsers = response.value?.length || 0
+        const allUsers = await this.graphClient.api('/users?$count=true').then(r => r['@odata.count'] || 1)
+        const percentage = Math.round((passwordlessUsers / allUsers) * 100)
+
+        result.currentValue = `${percentage}% passwordless adoption`
+        result.evidence = { passwordlessUsers, totalUsers: allUsers, percentage }
+        return percentage >= 10 ? 'pass' : 'warn'
+      }
+
+      if (validation.id === 'ID-005') {
+        // Conditional Access Policies Enabled
+        const response = await this.graphClient.api('/identity/conditionalAccess/policies?$filter=state eq \'enabled\'').get()
+        const enabledCount = response.value?.length || 0
+
+        result.currentValue = `${enabledCount} CA policies enabled`
+        result.evidence = { enabledPolicies: enabledCount, hasMinimum: enabledCount >= 3 }
+        return enabledCount >= 3 ? 'pass' : enabledCount > 0 ? 'warn' : 'fail'
+      }
+
+      if (validation.id === 'ID-006') {
+        // MFA Required for All Users via CA
+        const response = await this.graphClient.api('/identity/conditionalAccess/policies?$filter=state eq \'enabled\'').get()
+        const mfaPolicy = response.value?.find(p =>
+          p.displayName?.toLowerCase().includes('mfa') ||
+          p.displayName?.toLowerCase().includes('multi-factor')
+        )
+
+        result.currentValue = mfaPolicy ? 'MFA policy enabled' : 'No MFA policy found'
+        result.evidence = { hasMFAPolicy: !!mfaPolicy, policyName: mfaPolicy?.displayName }
+        return mfaPolicy ? 'pass' : 'fail'
+      }
+
+      if (validation.id === 'ID-007') {
+        // Require Compliant Devices via CA
+        const response = await this.graphClient.api('/identity/conditionalAccess/policies?$filter=state eq \'enabled\'').get()
+        const compliancePolicy = response.value?.find(p =>
+          p.displayName?.toLowerCase().includes('compliant') ||
+          p.displayName?.toLowerCase().includes('device')
+        )
+
+        result.currentValue = compliancePolicy ? 'Device compliance policy enabled' : 'No device policy found'
+        result.evidence = { hasDevicePolicy: !!compliancePolicy, policyName: compliancePolicy?.displayName }
+        return compliancePolicy ? 'pass' : 'fail'
+      }
+
+      if (validation.id === 'ID-008') {
+        // Risk-Based Access via Identity Protection
+        try {
+          const response = await this.graphClient.api('/identity/riskDetection').get()
+          const riskDetections = response.value?.length || 0
+
+          result.currentValue = riskDetections > 0 ? `${riskDetections} risk events detected` : 'No risk events'
+          result.evidence = { riskEventsDetected: riskDetections, hasRiskDetection: riskDetections > 0 }
+          return riskDetections >= 0 ? 'pass' : 'warn'
+        } catch (e) {
+          // Risk Detection endpoint may require premium license
+          result.currentValue = 'Risk detection endpoint not available'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      if (validation.id === 'ID-009') {
+        // Sign-in Risk Detection Enabled
+        try {
+          const response = await this.graphClient.api('/identity/riskDetection').get()
+          const signInRisks = response.value?.filter(r => r.riskEventType?.includes('sign')) || []
+
+          result.currentValue = signInRisks.length > 0 ? 'Sign-in risk detection active' : 'No sign-in risks detected'
+          result.evidence = { signInRisksDetected: signInRisks.length }
+          return 'pass'
+        } catch (e) {
+          result.currentValue = 'Risk detection not available'
+          result.evidence = { available: false }
+          return 'warn'
+        }
+      }
+
+      if (validation.id === 'ID-011') {
+        // Global Admin Count Minimized
+        const response = await this.graphClient.api('/directoryRoles').get()
+        const globalAdminRole = response.value?.find(r => r.displayName === 'Global Administrator')
+
+        if (!globalAdminRole) {
+          result.currentValue = 'Could not find Global Admin role'
+          result.evidence = { adminCount: 0 }
+          return 'warn'
+        }
+
+        const members = await this.graphClient.api(`/directoryRoles/${globalAdminRole.id}/members`).get()
+        const adminCount = members.value?.length || 0
+
+        result.currentValue = `${adminCount} global admins found`
+        result.evidence = { adminCount, isMinimized: adminCount <= 2 }
+        return adminCount <= 2 ? 'pass' : adminCount <= 4 ? 'warn' : 'fail'
       }
 
       // Default for other ID- validations
