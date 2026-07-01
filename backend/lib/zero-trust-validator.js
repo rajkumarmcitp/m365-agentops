@@ -289,14 +289,44 @@ export class ZeroTrustValidator {
 
       if (validation.id === 'ID-002') {
         // MFA Coverage for All Users
-        const response = await this.graphClient.api('/authenticationMethods/userRegistrationDetails?$filter=isMfaCapable eq true').get()
-        const mfaUsers = response.value?.filter(u => u.isMfaRegistered).length || 0
-        const totalUsers = response.value?.length || 1
-        const percentage = Math.round((mfaUsers / totalUsers) * 100)
+        try {
+          // Step 1: Get total user count (all users in tenant)
+          const allUsersResponse = await this.graphClient.api('/users?$count=true&$select=id').get()
+          const totalUsers = allUsersResponse['@odata.count'] || allUsersResponse.value?.length || 1
 
-        result.currentValue = `${percentage}% MFA coverage`
-        result.evidence = { mfaUsers, totalUsers, percentage }
-        return percentage >= 95 ? 'pass' : percentage >= 80 ? 'warn' : 'fail'
+          // Step 2: Get all users with MFA registration details
+          const mfaResponse = await this.graphClient.api('/authenticationMethods/userRegistrationDetails?$filter=isMfaRegistered eq true').get()
+          const mfaUsers = mfaResponse.value?.length || 0
+
+          // Step 3: Get users without MFA
+          const noMfaResponse = await this.graphClient.api('/authenticationMethods/userRegistrationDetails?$filter=isMfaRegistered eq false').get()
+          const noMfaUsers = noMfaResponse.value?.length || 0
+
+          const mfaCapableUsers = mfaUsers + noMfaUsers
+          const percentage = totalUsers > 0 ? Math.round((mfaUsers / totalUsers) * 100) : 0
+
+          console.log(`📊 ID-002 MFA Coverage: ${mfaUsers}/${totalUsers} users (${percentage}%)`)
+          console.log(`   - MFA Registered: ${mfaUsers}`)
+          console.log(`   - MFA Capable: ${mfaCapableUsers}`)
+          console.log(`   - Total Users: ${totalUsers}`)
+
+          result.currentValue = `${percentage}% MFA coverage (${mfaUsers}/${totalUsers} users)`
+          result.evidence = {
+            mfaRegistered: mfaUsers,
+            mfaCapable: mfaCapableUsers,
+            totalUsers: totalUsers,
+            percentage,
+            notMFAEnabled: noMfaUsers,
+            mfaCoverageOfCapable: totalUsers > 0 ? Math.round((mfaUsers / mfaCapableUsers) * 100) : 0
+          }
+
+          return percentage >= 95 ? 'pass' : percentage >= 80 ? 'warn' : 'fail'
+        } catch (e) {
+          console.warn(`⚠️ ID-002 MFA Coverage check failed:`, e.message)
+          result.error = e.message
+          result.evidence = { error: 'Could not fetch MFA registration details' }
+          return 'fail'
+        }
       }
 
       if (validation.id === 'ID-003') {
