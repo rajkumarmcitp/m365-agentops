@@ -12,11 +12,13 @@ const router = express.Router()
 
 /**
  * Middleware: Allow Graph API access (PRODUCTION - Auth via Azure AD groups)
+ * VERSION: 2024-07-02-FINAL
  */
 function requireSuperAdmin(req, res, next) {
   // In production, auth is handled via Azure AD group membership
   // The role is determined by /api/user/role endpoint based on AZURE_GROUP_* env vars
   // Allow all authenticated requests - backend role validation is in place
+  console.log('✅ Graph API: Allowing request (Auth middleware - Version 2024-07-02-FINAL)')
   next()
 }
 
