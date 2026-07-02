@@ -11,6 +11,17 @@ import { unifiedGraphClient } from '../lib/graph-client-unified.js'
 const router = express.Router()
 
 /**
+ * TEST: Health check to verify code deployment
+ */
+router.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Graph API test endpoint - deployment successful!',
+    timestamp: new Date().toISOString()
+  })
+})
+
+/**
  * Middleware: Allow Graph API access (Auth removed for demo/testing)
  */
 function requireSuperAdmin(req, res, next) {
