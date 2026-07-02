@@ -28,11 +28,16 @@ function requireSuperAdmin(req, res, next) {
     'rajkdura@nastech-solutions.com' // Production account
   ]
 
+  // Debug: log all headers
   console.log('🔐 Graph API Auth Check:', {
     userId: userId || '(none)',
     userRole: userRole || '(none)',
-    isSuperAdmin: superAdminAccounts.includes(userId),
-    allowedAccounts: superAdminAccounts
+    isSuperAdmin: userId ? superAdminAccounts.includes(userId) : false,
+    allowedAccounts: superAdminAccounts,
+    allHeaders: Object.fromEntries(
+      Object.entries(req.headers)
+        .filter(([k]) => k.toLowerCase().includes('user') || k.toLowerCase().includes('authorization'))
+    )
   })
 
   if (userRole === 'super') {
