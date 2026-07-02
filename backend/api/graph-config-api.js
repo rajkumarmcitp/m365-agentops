@@ -11,23 +11,33 @@ import { unifiedGraphClient } from '../lib/graph-client-unified.js'
 const router = express.Router()
 
 /**
- * TEST: Health check to verify code deployment
- */
-router.get('/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Graph API test endpoint - deployment successful!',
-    timestamp: new Date().toISOString()
-  })
-})
-
-/**
- * Middleware: Allow Graph API access (Auth removed for demo/testing)
+ * Middleware: Check Super Admin or Admin role
  */
 function requireSuperAdmin(req, res, next) {
-  // DEMO MODE: Allow all requests for testing
-  // In production, implement proper authentication here
-  next()
+  const userRole = req.get('X-User-Role')
+  const userId = req.get('X-User-Id')
+
+  // Allow if user has super or admin role
+  if (userRole === 'super' || userRole === 'admin') {
+    return next()
+  }
+
+  // Also allow if user ID is 'aisha' (demo account)
+  const superAdminAccounts = ['aisha']
+  if (superAdminAccounts.includes(userId)) {
+    return next()
+  }
+
+  // Deny access
+  return res.status(403).json({
+    success: false,
+    error: 'Graph API access requires admin or super role',
+    debug: {
+      userId: userId || '(no header)',
+      userRole: userRole || '(no header)',
+      message: 'User must have admin or super role'
+    }
+  })
 }
 
 /**
