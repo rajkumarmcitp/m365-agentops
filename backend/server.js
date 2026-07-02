@@ -6,6 +6,9 @@ import { dirname, join } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+// Load environment variables BEFORE importing modules that use process.env
+dotenv.config({ path: join(__dirname, '..', '.env') })
 import { ClientSecretCredential } from '@azure/identity'
 import { Client } from '@microsoft/microsoft-graph-client'
 import { validateServiceRequest } from './agent.js'
@@ -110,9 +113,10 @@ import graphConfigApiRouter from './api/graph-config-api.js'
 import { unifiedGraphClient } from './lib/graph-client-unified.js'
 import { graphConfigService } from './services/graph-config-service.js'
 
-dotenv.config({ path: join(__dirname, '..', '.env') })
-
 import { randomUUID } from 'crypto'
+
+// Reload credentials after dotenv.config() has loaded environment variables
+graphConfigService.reloadCredentials()
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -310,7 +314,7 @@ app.use((req, res, next) => {
   }
 
   res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS, PUT, DELETE')
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Id')
   res.header('Access-Control-Max-Age', '3600')
 
   if (req.method === 'OPTIONS') {

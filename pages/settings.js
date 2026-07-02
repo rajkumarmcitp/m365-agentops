@@ -18,94 +18,125 @@ function renderSettings(el) {
   el.innerHTML = `
     <div class="page-header">
       <div class="page-title"><i class="ti ti-adjustments-horizontal"></i> Admin Settings</div>
-      <div class="page-subtitle">Configure application display, agent behaviour, and self-service portal</div>
+      <div class="page-subtitle">Setup wizard organized by implementation phases</div>
     </div>
 
-    <!-- M365 Config display preferences -->
-    <div class="card mb-3">
-      <div class="card-title mb-3"><i class="ti ti-settings-2"></i> M365 Config — Display Preferences</div>
-      <div id="settings-ps-wrap" style="margin-bottom:14px"></div>
-      <div id="settings-result-wrap" style="margin-bottom:14px"></div>
-      <div id="settings-expand-wrap" style="margin-bottom:4px"></div>
-    </div>
-
-    <!-- Config Agent -->
-    <div class="card mb-3">
-      <div class="card-title mb-3"><i class="ti ti-robot"></i> Config Agent</div>
-      <div class="form-group">
-        <label class="form-label">Scan frequency</label>
-        <select class="form-select" id="settings-schedule">
-          <option value="daily-0800" ${s.agentSchedule === 'daily-0800' ? 'selected' : ''}>Daily at 08:00</option>
-          <option value="every-6h" ${s.agentSchedule === 'every-6h' ? 'selected' : ''}>Every 6 hours</option>
-          <option value="weekly" ${s.agentSchedule === 'weekly' ? 'selected' : ''}>Weekly</option>
-        </select>
+    <!-- PHASE 1: INITIAL SETUP -->
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px">1</div>
+        <div style="font-size:14px;font-weight:600;color:var(--color-text-primary)">Phase 1: Initial Setup</div>
       </div>
-      <div id="settings-alert-fail-wrap" style="margin-bottom:10px"></div>
-      <div class="form-group">
-        <label class="form-label">Alert email</label>
-        <input type="email" class="form-input" id="settings-alert-email" value="${s.agentAlertEmail}">
+
+      <!-- Platform display -->
+      <div class="card mb-3">
+        <div class="card-title mb-3"><i class="ti ti-layout-dashboard"></i> Platform Display</div>
+        <div id="settings-graph-health-wrap" style="margin-bottom:14px"></div>
+        <div id="settings-zt-score-wrap" style="margin-bottom:14px"></div>
+        <div id="settings-cfg-score-wrap" style="margin-bottom:4px"></div>
+      </div>
+
+      <!-- M365 Config display preferences -->
+      <div class="card mb-3">
+        <div class="card-title mb-3"><i class="ti ti-settings-2"></i> M365 Config — Display Preferences</div>
+        <div id="settings-ps-wrap" style="margin-bottom:14px"></div>
+        <div id="settings-result-wrap" style="margin-bottom:14px"></div>
+        <div id="settings-expand-wrap" style="margin-bottom:4px"></div>
       </div>
     </div>
 
-    <!-- TenantGuard AI Investigation -->
-    <div class="card mb-3">
-      <div class="card-header">
-        <span class="card-title"><i class="ti ti-robot"></i> TenantGuard — AI Investigation Agent</span>
-        <span id="claude-status-badge" class="badge info">Loading...</span>
+    <!-- PHASE 2: CORE AGENT CONFIGURATION -->
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%);color:white;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px">2</div>
+        <div style="font-size:14px;font-weight:600;color:var(--color-text-primary)">Phase 2: Core Agent Configuration</div>
       </div>
 
-      <div class="alert-banner info mb-3" style="margin-top:8px">
-        <i class="ti ti-info-circle"></i>
-        <span>
-          <strong>Optional:</strong> Configure your Claude API key to enable AI-powered security investigations.
-          Without this, the system uses intelligent mock responses.
-          <a href="https://console.anthropic.com" target="_blank" style="color:var(--clr-primary);text-decoration:underline">Get your API key →</a>
-        </span>
+      <!-- Config Agent -->
+      <div class="card mb-3">
+        <div class="card-title mb-3"><i class="ti ti-robot"></i> Config Agent — Scan Settings</div>
+        <div class="form-group">
+          <label class="form-label">Scan frequency</label>
+          <select class="form-select" id="settings-schedule">
+            <option value="daily-0800" ${s.agentSchedule === 'daily-0800' ? 'selected' : ''}>Daily at 08:00</option>
+            <option value="every-6h" ${s.agentSchedule === 'every-6h' ? 'selected' : ''}>Every 6 hours</option>
+            <option value="weekly" ${s.agentSchedule === 'weekly' ? 'selected' : ''}>Weekly</option>
+          </select>
+        </div>
+        <div id="settings-alert-fail-wrap" style="margin-bottom:10px"></div>
+        <div class="form-group">
+          <label class="form-label">Alert email</label>
+          <input type="email" class="form-input" id="settings-alert-email" value="${s.agentAlertEmail}">
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 3: AUTHENTICATION & AI -->
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="background:linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);color:white;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px">3</div>
+        <div style="font-size:14px;font-weight:600;color:var(--color-text-primary)">Phase 3: Authentication & AI</div>
       </div>
 
-      <div id="claude-settings-section">
-        <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-          <div class="form-group">
-            <label class="form-label">Claude API Key</label>
-            <input type="password" class="form-input" id="settings-claude-key" placeholder="sk-..." style="font-family:monospace">
-            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">
-              Your API key is stored securely and never shared. Get one free at console.anthropic.com
+      <!-- TenantGuard AI Investigation -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-brain"></i> TenantGuard — AI Investigation Agent</span>
+          <span id="claude-status-badge" class="badge info">Loading...</span>
+        </div>
+
+        <div class="alert-banner info mb-3" style="margin-top:8px">
+          <i class="ti ti-info-circle"></i>
+          <span>
+            <strong>Optional:</strong> Configure your Claude API key to enable AI-powered security investigations.
+            Without this, the system uses intelligent mock responses.
+            <a href="https://console.anthropic.com" target="_blank" style="color:var(--clr-primary);text-decoration:underline">Get your API key →</a>
+          </span>
+        </div>
+
+        <div id="claude-settings-section">
+          <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+            <div class="form-group">
+              <label class="form-label">Claude API Key</label>
+              <input type="password" class="form-input" id="settings-claude-key" placeholder="sk-..." style="font-family:monospace">
+              <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">
+                Your API key is stored securely and never shared. Get one free at console.anthropic.com
+              </div>
             </div>
-          </div>
 
-          <div class="form-group" style="margin-top:12px">
-            <label class="form-label">About Claude Integration</label>
-            <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.6">
-              <strong>What it does:</strong> Enables real Claude AI to analyze security incidents, answer questions naturally, and generate incident reports.<br>
-              <strong>Cost:</strong> ~$0.19 per investigation (Sonnet) or $0.57 (Opus). Free tier: $5 credits.<br>
-              <strong>Without it:</strong> System uses intelligent mock responses (fully functional, good for testing).<br>
-              <strong>Status:</strong> <span id="claude-mode-text">Checking...</span>
+            <div class="form-group" style="margin-top:12px">
+              <label class="form-label">About Claude Integration</label>
+              <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.6">
+                <strong>What it does:</strong> Enables real Claude AI to analyze security incidents, answer questions naturally, and generate incident reports.<br>
+                <strong>Cost:</strong> ~$0.19 per investigation (Sonnet) or $0.57 (Opus). Free tier: $5 credits.<br>
+                <strong>Without it:</strong> System uses intelligent mock responses (fully functional, good for testing).<br>
+                <strong>Status:</strong> <span id="claude-mode-text">Checking...</span>
+              </div>
             </div>
-          </div>
 
-          <div style="display:flex;gap:8px;margin-top:12px">
-            <button class="btn btn-primary" id="claude-save-btn">
-              <i class="ti ti-device-floppy"></i> Save API Key
-            </button>
-            <button class="btn btn-danger" id="claude-remove-btn" style="display:none">
-              <i class="ti ti-trash"></i> Remove API Key
-            </button>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="btn btn-primary" id="claude-save-btn">
+                <i class="ti ti-device-floppy"></i> Save API Key
+              </button>
+              <button class="btn btn-danger" id="claude-remove-btn" style="display:none">
+                <i class="ti ti-trash"></i> Remove API Key
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Platform display -->
-    <div class="card mb-3">
-      <div class="card-title mb-3"><i class="ti ti-layout-dashboard"></i> Platform Display</div>
-      <div id="settings-graph-health-wrap" style="margin-bottom:14px"></div>
-      <div id="settings-zt-score-wrap" style="margin-bottom:14px"></div>
-      <div id="settings-cfg-score-wrap" style="margin-bottom:4px"></div>
-    </div>
+    <!-- PHASE 4: SHAREPOINT FOUNDATION -->
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="background:linear-gradient(135deg, #fa709a 0%, #fee140 100%);color:white;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px">4</div>
+        <div style="font-size:14px;font-weight:600;color:var(--color-text-primary)">Phase 4: SharePoint Foundation</div>
+      </div>
 
-    <!-- Change Intelligence Configuration -->
-    <div class="card mb-3">
-      <div class="card-title mb-3"><i class="ti ti-antenna"></i> Change Intelligence Configuration</div>
+      <!-- Change Intelligence Configuration -->
+      <div class="card mb-3">
+        <div class="card-title mb-3"><i class="ti ti-antenna"></i> Change Intelligence Configuration</div>
       <div style="padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
         <div style="margin-bottom:14px">
           <label class="form-label">Announcement Sync Period</label>
@@ -143,9 +174,16 @@ function renderSettings(el) {
       </div>
     </div>
 
-    <!-- Service Health Messages Configuration -->
-    <div class="card mb-3">
-      <div class="card-title mb-3"><i class="ti ti-heartbeat"></i> Service Health Monitoring</div>
+    <!-- PHASE 5: CORE INTEGRATIONS -->
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="background:linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);color:#333;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px">5</div>
+        <div style="font-size:14px;font-weight:600;color:var(--color-text-primary)">Phase 5: Core Integrations</div>
+      </div>
+
+      <!-- Service Health Messages Configuration -->
+      <div class="card mb-3">
+        <div class="card-title mb-3"><i class="ti ti-heartbeat"></i> Service Health Monitoring</div>
 
       <!-- Service Health Enabled Toggle -->
       <div style="margin-bottom:16px;padding:12px;background:var(--color-background-secondary);border-radius:4px;border-left:3px solid #ff9800">
@@ -229,73 +267,18 @@ function renderSettings(el) {
         </div>
       </div>
     </div>
-
-    <!-- License Management Configuration -->
-    <div class="card mb-3">
-      <div class="card-title mb-3"><i class="ti ti-license"></i> License Management — Group-Based Assignment</div>
-      <div style="background:#e3f2fd;border-left:4px solid #2196f3;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#1565c0">
-        <i class="ti ti-info-circle"></i>
-        <strong>Configure groups for license assignment:</strong> When a group is configured, approved license requests will add users to that group instead of direct assignment. The license will be assigned automatically via dynamic group licensing.
-      </div>
-      <div id="license-config-wrap"></div>
     </div>
 
-    <!-- Tenant Guard Enhanced SharePoint Configuration -->
-    <div class="card mb-3">
-      <div class="card-title mb-3"><i class="ti ti-alert-triangle"></i> Tenant Guard Enhanced — SharePoint Configuration</div>
-      <div style="background:#f3e5f5;border-left:4px solid #9c27b0;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#6a1b9a">
-        <i class="ti ti-info-circle"></i>
-        <strong>Configuration:</strong> Specify the SharePoint site where P1/P2 priority alerts, correlations, and investigations will be stored (Enhanced dashboard). This is required for real-time alert synchronization.
+    <!-- PHASE 6: ADVANCED INTEGRATIONS -->
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="background:linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%);color:white;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px">6</div>
+        <div style="font-size:14px;font-weight:600;color:var(--color-text-primary)">Phase 6: Advanced Integrations</div>
       </div>
 
-      <div style="margin-bottom:14px">
-        <label class="form-label">SharePoint Site URL</label>
-        <div style="display:flex;gap:8px">
-          <input type="text" class="form-input" id="settings-tenantguard-enhanced-site" placeholder="e.g., root or /sites/Security" style="flex:1">
-          <button class="btn" id="settings-tenantguard-enhanced-test" style="white-space:nowrap"><i class="ti ti-check"></i> Test</button>
-        </div>
-        <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px">
-          Enter "root" for tenant root site, or "/sites/SiteName" for a specific site. Lists will be created here: TenantGuard-Enhanced-Alerts, TenantGuard-Enhanced-Correlations, TenantGuard-Enhanced-Investigations
-        </div>
-      </div>
-      <div id="settings-tenantguard-enhanced-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none">
-        Status will appear here
-      </div>
-
-      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
-        <button class="btn btn-primary" id="settings-tenantguard-enhanced-init" style="white-space:nowrap"><i class="ti ti-database"></i> Initialize Enhanced Lists</button>
-        <div style="font-size:10px;color:var(--color-text-tertiary)">Creates P1/P2 priority alert lists with all required fields</div>
-      </div>
-      <div id="settings-tenantguard-enhanced-init-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none;margin-top:8px">
-        Initialization status will appear here
-      </div>
-
-      <div style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-        <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">📋 Configuration Reference</div>
-        <div style="font-size:9px;color:var(--color-text-secondary);line-height:1.6">
-          <strong>Lists Created:</strong><br>
-          • TenantGuard-Enhanced-Alerts — P1/P2 priority security events<br>
-          • TenantGuard-Enhanced-Correlations — Grouped alert patterns<br>
-          • TenantGuard-Enhanced-Investigations — Investigation logs<br><br>
-          <strong>Alert Priority Filter:</strong><br>
-          Only P1 (Critical) and P2 (High) priority alerts are stored<br><br>
-          <strong>After Initialization:</strong><br>
-          • Site ID and List IDs will be displayed below<br>
-          • Copy these values to your <code style="background:#f5f5f5;padding:2px 4px;border-radius:2px">.env</code> file<br>
-          • Restart backend to activate SharePoint storage
-        </div>
-      </div>
-
-      <div id="settings-tenantguard-enhanced-config" style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);display:none">
-        <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">✅ Configuration Ready - Add to .env:</div>
-        <div style="background:#f5f5f5;padding:8px;border-radius:4px;font-family:monospace;font-size:9px;color:#333;white-space:pre-wrap;word-break:break-all" id="settings-tenantguard-enhanced-env-output"></div>
-        <button class="btn btn-sm" id="settings-tenantguard-enhanced-copy" style="margin-top:8px;font-size:9px"><i class="ti ti-copy"></i> Copy to Clipboard</button>
-      </div>
-    </div>
-
-    <!-- Zero Trust Assessment SharePoint Configuration -->
-    <div class="card mb-3">
-      <div class="card-title mb-3"><i class="ti ti-lock-check"></i> Zero Trust Assessment — SharePoint Configuration</div>
+      <!-- Zero Trust Assessment SharePoint Configuration -->
+      <div class="card mb-3">
+        <div class="card-title mb-3"><i class="ti ti-lock-check"></i> Zero Trust Assessment — SharePoint Configuration</div>
       <div style="background:#e8f5e9;border-left:4px solid #4caf50;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#2e7d32">
         <i class="ti ti-info-circle"></i>
         <strong>Configuration:</strong> Specify the SharePoint site where Zero Trust compliance validations, control results, and assessment history will be stored. Required for persistent data storage.
@@ -349,11 +332,64 @@ function renderSettings(el) {
         <div style="background:#f5f5f5;padding:8px;border-radius:4px;font-family:monospace;font-size:9px;color:#333;white-space:pre-wrap;word-break:break-all" id="settings-zerotrust-env-output"></div>
         <button class="btn btn-sm" id="settings-zerotrust-copy" style="margin-top:8px;font-size:9px"><i class="ti ti-copy"></i> Copy to Clipboard</button>
       </div>
-    </div>
+      </div>
 
-    <!-- Self Service Portal SharePoint Configuration -->
-    <div class="card mb-3">
-      <div class="card-title mb-3"><i class="ti ti-layout-kanban"></i> Self Service Portal — SharePoint Configuration</div>
+      <!-- Tenant Guard Enhanced SharePoint Configuration -->
+      <div class="card mb-3">
+        <div class="card-title mb-3"><i class="ti ti-alert-triangle"></i> Tenant Guard Enhanced — SharePoint Configuration</div>
+        <div style="background:#f3e5f5;border-left:4px solid #9c27b0;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#6a1b9a">
+          <i class="ti ti-info-circle"></i>
+          <strong>Configuration:</strong> Specify the SharePoint site where P1/P2 priority alerts, correlations, and investigations will be stored (Enhanced dashboard). This is required for real-time alert synchronization.
+        </div>
+
+        <div style="margin-bottom:14px">
+          <label class="form-label">SharePoint Site URL</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" class="form-input" id="settings-tenantguard-enhanced-site" placeholder="e.g., root or /sites/Security" style="flex:1">
+            <button class="btn" id="settings-tenantguard-enhanced-test" style="white-space:nowrap"><i class="ti ti-check"></i> Test</button>
+          </div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px">
+            Enter "root" for tenant root site, or "/sites/SiteName" for a specific site. Lists will be created here: TenantGuard-Enhanced-Alerts, TenantGuard-Enhanced-Correlations, TenantGuard-Enhanced-Investigations
+          </div>
+        </div>
+        <div id="settings-tenantguard-enhanced-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none">
+          Status will appear here
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+          <button class="btn btn-primary" id="settings-tenantguard-enhanced-init" style="white-space:nowrap"><i class="ti ti-database"></i> Initialize Enhanced Lists</button>
+          <div style="font-size:10px;color:var(--color-text-tertiary)">Creates P1/P2 priority alert lists with all required fields</div>
+        </div>
+        <div id="settings-tenantguard-enhanced-init-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none;margin-top:8px">
+          Initialization status will appear here
+        </div>
+
+        <div style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">📋 Configuration Reference</div>
+          <div style="font-size:9px;color:var(--color-text-secondary);line-height:1.6">
+            <strong>Lists Created:</strong><br>
+            • TenantGuard-Enhanced-Alerts — P1/P2 priority security events<br>
+            • TenantGuard-Enhanced-Correlations — Grouped alert patterns<br>
+            • TenantGuard-Enhanced-Investigations — Investigation logs<br><br>
+            <strong>Alert Priority Filter:</strong><br>
+            Only P1 (Critical) and P2 (High) priority alerts are stored<br><br>
+            <strong>After Initialization:</strong><br>
+            • Site ID and List IDs will be displayed below<br>
+            • Copy these values to your <code style="background:#f5f5f5;padding:2px 4px;border-radius:2px">.env</code> file<br>
+            • Restart backend to activate SharePoint storage
+          </div>
+        </div>
+
+        <div id="settings-tenantguard-enhanced-config" style="margin-top:12px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);display:none">
+          <div style="font-size:10px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">✅ Configuration Ready - Add to .env:</div>
+          <div style="background:#f5f5f5;padding:8px;border-radius:4px;font-family:monospace;font-size:9px;color:#333;white-space:pre-wrap;word-break:break-all" id="settings-tenantguard-enhanced-env-output"></div>
+          <button class="btn btn-sm" id="settings-tenantguard-enhanced-copy" style="margin-top:8px;font-size:9px"><i class="ti ti-copy"></i> Copy to Clipboard</button>
+        </div>
+      </div>
+
+      <!-- Self Service Portal SharePoint Configuration -->
+      <div class="card mb-3">
+        <div class="card-title mb-3"><i class="ti ti-layout-kanban"></i> Self Service Portal — SharePoint Configuration</div>
       <div style="background:#e3f2fd;border-left:4px solid #2196f3;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#1565c0">
         <strong>Configuration:</strong> Specify the SharePoint site where Self Service Portal requests, approvals, and audit logs will be stored.
       </div>
@@ -379,9 +415,28 @@ function renderSettings(el) {
       <div id="settings-selfservice-init-status" style="padding:8px;background:#f0f0f0;border-radius:4px;font-size:10px;color:#666;display:none;margin-top:8px">
         Initialization status will appear here
       </div>
+      </div>
+    </div>
     </div>
 
-    <!-- Task Resolution Approvers -->
+    <!-- PHASE 7: GOVERNANCE & WORKFLOWS -->
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="background:linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);color:white;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px">7</div>
+        <div style="font-size:14px;font-weight:600;color:var(--color-text-primary)">Phase 7: Governance & Workflows</div>
+      </div>
+
+      <!-- License Management Configuration -->
+      <div class="card mb-3">
+        <div class="card-title mb-3"><i class="ti ti-license"></i> License Management — Group-Based Assignment</div>
+        <div style="background:#e3f2fd;border-left:4px solid #2196f3;padding:10px;border-radius:4px;margin-bottom:12px;font-size:10px;color:#1565c0">
+          <i class="ti ti-info-circle"></i>
+          <strong>Configure groups for license assignment:</strong> When a group is configured, approved license requests will add users to that group instead of direct assignment. The license will be assigned automatically via dynamic group licensing.
+        </div>
+        <div id="license-config-wrap"></div>
+      </div>
+
+      <!-- Task Resolution Approvers -->
     <div class="card mb-3">
       <div style="margin-top:0">
         <label class="form-label">Task Resolution Approvers</label>
@@ -407,8 +462,9 @@ function renderSettings(el) {
         </div>
       </div>
     </div>
+    </div>
 
-<!-- Self-Service Portal Management -->
+    <!-- Self-Service Portal Management -->
     <div class="card mb-3">
       <div class="card-header">
         <span class="card-title"><i class="ti ti-grid-dots"></i> Self-Service Portal Management</span>

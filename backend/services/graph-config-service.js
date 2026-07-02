@@ -95,6 +95,28 @@ class GraphConfigService {
   }
 
   /**
+   * Reload credentials from environment variables
+   * Call this after dotenv.config() loads
+   */
+  reloadCredentials() {
+    const newClientId = process.env.AZURE_CLIENT_ID || ''
+    const newClientSecret = process.env.AZURE_CLIENT_SECRET || ''
+    const newTenantId = process.env.AZURE_TENANT_ID || ''
+
+    const changed =
+      newClientId !== this.config.credentials.clientId ||
+      newClientSecret !== this.config.credentials.clientSecret ||
+      newTenantId !== this.config.credentials.tenantId
+
+    if (changed) {
+      this.config.credentials.clientId = newClientId
+      this.config.credentials.clientSecret = newClientSecret
+      this.config.credentials.tenantId = newTenantId
+      console.log('✅ Graph API credentials reloaded from environment')
+    }
+  }
+
+  /**
    * Initialize the service (validate credentials)
    */
   async init() {
