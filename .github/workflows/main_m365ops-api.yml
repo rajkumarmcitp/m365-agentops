@@ -71,5 +71,5 @@ jobs:
         with:
           app-name: 'm365ops-api'
           slot-name: 'Production'
-          package: .
+          package: node-app
           
