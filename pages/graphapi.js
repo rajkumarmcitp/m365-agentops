@@ -2,6 +2,422 @@ import { state } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
 
+async function loadGraphApiData() {
+  const el = document.getElementById('page-graphapi')
+
+  try {
+    const [configRes, healthRes, statsRes, endpointsRes, permissionsRes, historyRes] = await Promise.all([
+      fetch('/api/graph/config').then(r => r.json()),
+      fetch('/api/graph/config/health').then(r => r.json()),
+      fetch('/api/graph/config/stats').then(r => r.json()),
+      fetch('/api/graph/config/endpoints').then(r => r.json()),
+      fetch('/api/graph/config/permissions').then(r => r.json()),
+      fetch('/api/graph/config/history?limit=15').then(r => r.json())
+    ])
+
+    const config = configRes.data || {}
+    const health = healthRes.data || {}
+    const stats = statsRes.data?.configService || {}
+    const endpoints = endpointsRes.data || {}
+    const perms = permissionsRes.data || {}
+    const history = historyRes.data || []
+
+    renderGraphApiPage(el, config, health, stats, endpoints, perms, history)
+  } catch (error) {
+    console.error('Failed to load Graph API data:', error)
+    showToast('Failed to load Graph API configuration', 'error')
+    renderGraphApiPage(el, {}, {}, {}, {}, {}, [])
+  }
+}
+
+function formatTime(isoString) {
+  const date = new Date(isoString)
+  return date.toLocaleTimeString('en-US', { hour12: false })
+}
+
+function getHealthStatusBadge(status) {
+  const statusMap = {
+    'connected': { class: 'success', icon: 'ti-circle-check' },
+    'initializing': { class: 'warning', icon: 'ti-hourglass' },
+    'error': { class: 'danger', icon: 'ti-circle-x' },
+    'disconnected': { class: 'secondary', icon: 'ti-wifi-off' }
+  }
+  const s = statusMap[status] || statusMap['disconnected']
+  return `<span class="badge ${s.class}"><i class="ti ${s.icon}"></i> ${status}</span>`
+}
+
+function renderGraphApiPage(el, config, health, stats, endpoints, perms, history) {
+  const statusColor = health.status === 'connected' ? 'success' : health.status === 'initializing' ? 'warning' : 'danger'
+  const lastRefresh = health.lastTokenRefresh ? new Date(health.lastTokenRefresh).toLocaleString() : 'Never'
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div class="page-title"><i class="ti ti-api"></i> Graph API Configuration</div>
+      <div class="page-subtitle">Microsoft Graph API connection and permissions</div>
+    </div>
+
+    <div class="alert-banner ${statusColor} mb-3">
+      <i class="ti ${health.status === 'connected' ? 'ti-circle-check' : health.status === 'initializing' ? 'ti-hourglass' : 'ti-circle-x'}"></i>
+      <strong>${health.status ? health.status.charAt(0).toUpperCase() + health.status.slice(1) : 'Unknown'}</strong>
+      — Last token refresh: ${formatTime(health.lastTokenRefresh) || 'Never'}
+      <span class="badge ${statusColor}" style="margin-left:auto">Live</span>
+    </div>
+
+    <div class="tabs" id="graph-tabs">
+      <button class="tab-btn active" data-tab="reg">App Registration</button>
+      <button class="tab-btn" data-tab="perms">Permissions</button>
+      <button class="tab-btn" data-tab="stats">Statistics</button>
+      <button class="tab-btn" data-tab="endpoints">Endpoints</button>
+      <button class="tab-btn" data-tab="throttle">Throttling</button>
+      <button class="tab-btn" data-tab="logs">Audit Trail</button>
+    </div>
+
+    <div class="tab-panel active" id="graph-tab-reg">
+      <div class="card">
+        <div class="card-title mb-3"><i class="ti ti-apps"></i> App Registration</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Client ID</label>
+            <div style="display:flex;gap:6px">
+              <input type="text" class="form-input monospace" value="${config.credentials?.clientId || '—'}" readonly>
+              <button class="btn btn-icon copy-val" data-val="${config.credentials?.clientId || ''}"><i class="ti ti-copy"></i></button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tenant ID</label>
+            <div style="display:flex;gap:6px">
+              <input type="text" class="form-input monospace" value="${config.credentials?.tenantId || '—'}" readonly>
+              <button class="btn btn-icon copy-val" data-val="${config.credentials?.tenantId || ''}"><i class="ti ti-copy"></i></button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Client Secret</label>
+            <div style="display:flex;gap:6px">
+              <input type="password" class="form-input monospace" id="graph-secret" value="${config.credentials?.clientSecret || '•••••••••'}" readonly>
+              <button class="btn btn-icon" id="graph-secret-toggle"><i class="ti ti-eye"></i></button>
+              <button class="btn btn-icon" id="graph-rotate-secret" title="Rotate secret"><i class="ti ti-refresh"></i></button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Redirect URI</label>
+            <input type="text" class="form-input monospace" value="${config.credentials?.redirectUri || '—'}" readonly>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn btn-primary" id="graph-test-conn"><i class="ti ti-wifi-check"></i> Test connection</button>
+          <button class="btn" id="graph-refresh-token"><i class="ti ti-refresh"></i> Refresh token</button>
+          <button class="btn" id="graph-clear-cache"><i class="ti ti-trash"></i> Clear cache</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="graph-tab-perms">
+      <div class="card mb-3">
+        <div class="card-title mb-3">Application Permissions (${perms.app?.length || 0})</div>
+        <table>
+          <thead><tr><th style="width:40%">Permission</th><th style="width:60%">Description</th></tr></thead>
+          <tbody>
+            ${(perms.app || []).slice(0, 10).map(perm => `
+              <tr>
+                <td class="monospace" style="font-size:10px">${perm}</td>
+                <td style="font-size:11px;color:var(--color-text-secondary)">Application permission</td>
+              </tr>
+            `).join('')}
+            ${(!perms.app || perms.app.length === 0) ? '<tr><td colspan="2" style="text-align:center;color:var(--color-text-secondary)">No permissions configured</td></tr>' : ''}
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title mb-3">Delegated Permissions (${perms.delegated?.length || 0})</div>
+        <table>
+          <thead><tr><th style="width:40%">Permission</th><th style="width:60%">Description</th></tr></thead>
+          <tbody>
+            ${(perms.delegated || []).map(perm => `
+              <tr>
+                <td class="monospace" style="font-size:10px">${perm}</td>
+                <td style="font-size:11px;color:var(--color-text-secondary)">Delegated permission</td>
+              </tr>
+            `).join('')}
+            ${(!perms.delegated || perms.delegated.length === 0) ? '<tr><td colspan="2" style="text-align:center;color:var(--color-text-secondary)">No permissions configured</td></tr>' : ''}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="graph-tab-stats">
+      <div class="grid-2 mb-3">
+        <div class="stat-card">
+          <div class="stat-label">Total Requests</div>
+          <div class="stat-value">${stats.totalRequests || 0}</div>
+          <div class="stat-detail">${stats.successRate || 0}% success rate</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cache Hit Rate</div>
+          <div class="stat-value">${stats.cacheHitRate || '0'}%</div>
+          <div class="stat-detail">${stats.cachedResponses || 0} cached responses</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Latency</div>
+          <div class="stat-value">${stats.avgLatency || '—'}</div>
+          <div class="stat-detail">Min: ${stats.minLatency || '—'} / Max: ${stats.maxLatency || '—'}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Throttled Requests</div>
+          <div class="stat-value">${stats.throttledRequests || 0}</div>
+          <div class="stat-detail">${stats.failedRequests || 0} failed</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title mb-3">Health Status</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">Status</div>
+            <div>${getHealthStatusBadge(health.status)}</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">Error Count</div>
+            <div style="font-size:18px;font-weight:600;color:${health.errorCount > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">${health.errorCount || 0}</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">Success Count</div>
+            <div style="font-size:18px;font-weight:600;color:var(--color-success)">${health.successCount || 0}</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">Uptime</div>
+            <div style="font-size:12px">${health.uptime ? Math.floor(health.uptime / 3600000) + 'h' : '—'}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="graph-tab-endpoints">
+      <div class="card">
+        <div class="card-title mb-3">Graph API Endpoints by Category</div>
+        ${Object.entries(endpoints).map(([section, eps]) => `
+          <div class="section-heading">${section}</div>
+          ${(eps || []).map(ep => `
+            <div class="graph-endpoint-row">
+              <span class="method-badge ${ep.method}">${ep.method}</span>
+              <span class="graph-path">${ep.path}</span>
+              <span style="flex:1;font-size:10px;color:var(--color-text-secondary)">${ep.description}</span>
+            </div>
+          `).join('')}
+        `).join('')}
+        ${Object.keys(endpoints).length === 0 ? '<p style="color:var(--color-text-secondary);text-align:center;padding:20px">No endpoints loaded</p>' : ''}
+      </div>
+    </div>
+
+    <div class="tab-panel" id="graph-tab-throttle">
+      <div class="card">
+        <div class="card-title mb-3">Throttling Configuration</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Max retries</label>
+            <input type="number" class="form-input" id="throttle-max-retries" value="${config.throttling?.maxRetries || 3}" min="1" max="10">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Backoff interval (ms)</label>
+            <input type="number" class="form-input" id="throttle-backoff" value="${config.throttling?.backoffInterval || 1000}" min="500">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Retry strategy</label>
+            <select class="form-select" id="throttle-strategy">
+              <option value="exponential" ${config.throttling?.strategy === 'exponential' ? 'selected' : ''}>Exponential backoff</option>
+              <option value="linear" ${config.throttling?.strategy === 'linear' ? 'selected' : ''}>Linear backoff</option>
+              <option value="fixed" ${config.throttling?.strategy === 'fixed' ? 'selected' : ''}>Fixed interval</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Concurrent requests</label>
+            <input type="number" class="form-input" id="throttle-concurrent" value="${config.throttling?.maxConcurrent || 4}" min="1" max="20">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cache TTL (ms)</label>
+            <input type="number" class="form-input" id="cache-ttl" value="${config.cache?.ttl || 1800000}" min="60000">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cache enabled</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cache-enabled" ${config.cache?.enabled ? 'checked' : ''}>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="throttle-save"><i class="ti ti-device-floppy"></i> Save throttling config</button>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="graph-tab-logs">
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr>
+            <th style="width:15%">Action</th>
+            <th style="width:20%">Changes</th>
+            <th style="width:15%">Status</th>
+            <th style="width:35%">Time</th>
+            <th style="width:15%">Source</th>
+          </tr></thead>
+          <tbody>
+            ${history.length > 0 ? history.map(entry => `
+              <tr>
+                <td style="font-size:11px;font-weight:500">${entry.action}</td>
+                <td style="font-size:10px;color:var(--color-text-secondary)">${Object.keys(entry.changes || {}).join(', ') || '—'}</td>
+                <td><span class="badge ${entry.status === 'success' ? 'success' : 'warning'}">${entry.status}</span></td>
+                <td class="monospace" style="font-size:10px">${formatTime(entry.timestamp)}</td>
+                <td style="font-size:10px;color:var(--color-text-secondary)">${entry.source || 'api'}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--color-text-secondary);padding:20px">No audit history available</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+
+  setupEventHandlers(el, config)
+}
+
+function setupEventHandlers(el, config) {
+  el.querySelectorAll('#graph-tabs .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el.querySelectorAll('#graph-tabs .tab-btn').forEach(b => b.classList.remove('active'))
+      el.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'))
+      btn.classList.add('active')
+      el.querySelector(`#graph-tab-${btn.dataset.tab}`).classList.add('active')
+    })
+  })
+
+  el.querySelectorAll('.copy-val').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.val) {
+        navigator.clipboard.writeText(btn.dataset.val)
+        showToast('Copied to clipboard', 'success')
+      }
+    })
+  })
+
+  el.querySelector('#graph-secret-toggle')?.addEventListener('click', () => {
+    const inp = el.querySelector('#graph-secret')
+    inp.type = inp.type === 'password' ? 'text' : 'password'
+  })
+
+  el.querySelector('#graph-test-conn')?.addEventListener('click', async () => {
+    const btn = el.querySelector('#graph-test-conn')
+    btn.disabled = true
+    btn.innerHTML = '<i class="ti ti-hourglass"></i> Testing...'
+    try {
+      const res = await fetch('/api/graph/config/test', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        showToast(`✓ Connected as ${data.user || 'user'} (${data.latency}ms)`, 'success')
+      } else {
+        showToast(`✗ Connection failed: ${data.message}`, 'error')
+      }
+    } catch (error) {
+      showToast('Connection test failed: ' + error.message, 'error')
+    } finally {
+      btn.disabled = false
+      btn.innerHTML = '<i class="ti ti-wifi-check"></i> Test connection'
+    }
+  })
+
+  el.querySelector('#graph-refresh-token')?.addEventListener('click', async () => {
+    const btn = el.querySelector('#graph-refresh-token')
+    btn.disabled = true
+    btn.innerHTML = '<i class="ti ti-hourglass"></i> Refreshing...'
+    try {
+      const res = await fetch('/api/graph/config/refresh-token', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        showToast('Token refreshed successfully', 'success')
+      } else {
+        showToast('Token refresh failed: ' + data.message, 'error')
+      }
+    } catch (error) {
+      showToast('Token refresh failed: ' + error.message, 'error')
+    } finally {
+      btn.disabled = false
+      btn.innerHTML = '<i class="ti ti-refresh"></i> Refresh token'
+    }
+  })
+
+  el.querySelector('#graph-clear-cache')?.addEventListener('click', async () => {
+    const btn = el.querySelector('#graph-clear-cache')
+    btn.disabled = true
+    try {
+      const res = await fetch('/api/graph/config/clear-cache', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        showToast('Cache cleared successfully', 'success')
+      } else {
+        showToast('Failed to clear cache', 'error')
+      }
+    } catch (error) {
+      showToast('Cache clear failed: ' + error.message, 'error')
+    } finally {
+      btn.disabled = false
+    }
+  })
+
+  el.querySelector('#graph-rotate-secret')?.addEventListener('click', () => {
+    const newSecret = prompt('Enter new client secret:')
+    if (newSecret) {
+      fetch('/api/graph/config/rotate-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientSecret: newSecret })
+      }).then(r => r.json()).then(data => {
+        if (data.success) {
+          showToast('Credentials rotated successfully', 'success')
+        } else {
+          showToast('Failed to rotate credentials: ' + data.error, 'error')
+        }
+      }).catch(error => {
+        showToast('Error: ' + error.message, 'error')
+      })
+    }
+  })
+
+  el.querySelector('#throttle-save')?.addEventListener('click', async () => {
+    const btn = el.querySelector('#throttle-save')
+    btn.disabled = true
+    btn.innerHTML = '<i class="ti ti-hourglass"></i> Saving...'
+    try {
+      const res = await fetch('/api/graph/config/throttling', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maxRetries: parseInt(el.querySelector('#throttle-max-retries').value),
+          backoffInterval: parseInt(el.querySelector('#throttle-backoff').value),
+          strategy: el.querySelector('#throttle-strategy').value,
+          maxConcurrent: parseInt(el.querySelector('#throttle-concurrent').value)
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToast('Throttling configuration saved', 'success')
+        const cacheRes = await fetch('/api/graph/config/cache', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ttl: parseInt(el.querySelector('#cache-ttl').value),
+            enabled: el.querySelector('#cache-enabled').checked
+          })
+        })
+        if (cacheRes.ok) {
+          showToast('Cache configuration saved', 'success')
+        }
+      } else {
+        showToast('Failed to save: ' + data.error, 'error')
+      }
+    } catch (error) {
+      showToast('Save failed: ' + error.message, 'error')
+    } finally {
+      btn.disabled = false
+      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save throttling config'
+    }
+  })
+}
+
 export function initGraphApi() {
   const el = document.getElementById('page-graphapi')
   if (!el) return
@@ -23,227 +439,11 @@ export function initGraphApi() {
       <div class="page-title"><i class="ti ti-api"></i> Graph API Configuration</div>
       <div class="page-subtitle">Microsoft Graph API connection and permissions</div>
     </div>
-
-    <div class="alert-banner success mb-3">
-      <i class="ti ti-circle-check"></i>
-      <strong>Connected</strong> — Graph API connection is active. Last token refresh: 14 min ago.
-      <span class="badge success" style="margin-left:auto">Live</span>
-    </div>
-
-    <div class="tabs" id="graph-tabs">
-      <button class="tab-btn active" data-tab="reg">App Registration</button>
-      <button class="tab-btn" data-tab="perms">Permissions</button>
-      <button class="tab-btn" data-tab="endpoints">Endpoints</button>
-      <button class="tab-btn" data-tab="throttle">Throttling</button>
-      <button class="tab-btn" data-tab="logs">Logs</button>
-    </div>
-
-    <div class="tab-panel active" id="graph-tab-reg">
-      <div class="card">
-        <div class="card-title mb-3"><i class="ti ti-apps"></i> App Registration</div>
-        <div class="grid-2">
-          <div class="form-group">
-            <label class="form-label">Client ID</label>
-            <div style="display:flex;gap:6px">
-              <input type="text" class="form-input monospace" value="a1b2c3d4-e5f6-7890-abcd-ef1234567890" readonly>
-              <button class="btn btn-icon copy-val" data-val="a1b2c3d4-e5f6-7890-abcd-ef1234567890"><i class="ti ti-copy"></i></button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Tenant ID</label>
-            <div style="display:flex;gap:6px">
-              <input type="text" class="form-input monospace" value="9f8e7d6c-5b4a-3210-fedc-ba9876543210" readonly>
-              <button class="btn btn-icon copy-val" data-val="9f8e7d6c-5b4a-3210-fedc-ba9876543210"><i class="ti ti-copy"></i></button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Client Secret</label>
-            <div style="display:flex;gap:6px">
-              <input type="password" class="form-input monospace" id="graph-secret" value="•••••••••••••••••••••••••••••">
-              <button class="btn btn-icon" id="graph-secret-toggle"><i class="ti ti-eye"></i></button>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-              <span class="badge warning"><i class="ti ti-clock"></i> Expires in 47 days</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Redirect URI</label>
-            <input type="text" class="form-input monospace" value="https://m365agentops.contoso.com/auth/callback" readonly>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:4px">
-          <button class="btn btn-primary" id="graph-save"><i class="ti ti-device-floppy"></i> Save</button>
-          <button class="btn" id="graph-refresh-token"><i class="ti ti-refresh"></i> Refresh token</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="tab-panel" id="graph-tab-perms">
-      <div class="card mb-3">
-        <div class="card-title mb-3">Application Permissions</div>
-        <table>
-          <thead><tr><th style="width:35%">Permission</th><th style="width:45%">Description</th><th style="width:20%">Enabled</th></tr></thead>
-          <tbody>
-            ${[
-              ['User.Read.All', 'Read all users'],
-              ['Group.ReadWrite.All', 'Read and write all groups'],
-              ['Mail.ReadWrite', 'Read and write all mailboxes'],
-              ['Directory.Read.All', 'Read directory data'],
-              ['AuditLog.Read.All', 'Read audit log data'],
-              ['Policy.Read.All', 'Read all policies'],
-              ['DeviceManagementConfiguration.Read.All', 'Read Intune device configuration'],
-            ].map(([perm, desc]) => `
-              <tr>
-                <td class="monospace" style="font-size:10px">${perm}</td>
-                <td style="font-size:11px;color:var(--color-text-secondary)">${desc}</td>
-                <td>
-                  <label class="toggle-switch">
-                    <input type="checkbox" checked>
-                    <span class="toggle-track"></span>
-                  </label>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        <button class="btn btn-primary mt-3" id="graph-grant-consent"><i class="ti ti-shield-check"></i> Grant admin consent</button>
-      </div>
-      <div class="card">
-        <div class="card-title mb-3">Delegated Permissions</div>
-        <table>
-          <thead><tr><th style="width:35%">Permission</th><th style="width:45%">Description</th><th style="width:20%">Enabled</th></tr></thead>
-          <tbody>
-            ${[
-              ['User.Read', 'Read signed-in user profile'],
-              ['openid', 'OpenID Connect sign-in'],
-              ['offline_access', 'Maintain access offline'],
-            ].map(([perm, desc]) => `
-              <tr>
-                <td class="monospace" style="font-size:10px">${perm}</td>
-                <td style="font-size:11px;color:var(--color-text-secondary)">${desc}</td>
-                <td>
-                  <label class="toggle-switch">
-                    <input type="checkbox" checked>
-                    <span class="toggle-track"></span>
-                  </label>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="tab-panel" id="graph-tab-endpoints">
-      <div class="card">
-        <div class="card-title mb-3">Graph API Endpoints</div>
-        ${[
-          { section: 'Groups', endpoints: [
-            { method: 'GET', path: '/v1.0/groups', desc: 'List all groups' },
-            { method: 'POST', path: '/v1.0/groups', desc: 'Create a new group' },
-            { method: 'PATCH', path: '/v1.0/groups/{id}', desc: 'Update group properties' },
-          ]},
-          { section: 'Mailbox', endpoints: [
-            { method: 'GET', path: '/v1.0/users/{id}/mailboxSettings', desc: 'Get mailbox settings' },
-            { method: 'POST', path: '/v1.0/users/{id}/sendMail', desc: 'Send a message' },
-          ]},
-          { section: 'Identity', endpoints: [
-            { method: 'GET', path: '/v1.0/users', desc: 'List all users' },
-            { method: 'GET', path: '/v1.0/identity/conditionalAccess/policies', desc: 'List CA policies' },
-          ]},
-        ].map(section => `
-          <div class="section-heading">${section.section}</div>
-          ${section.endpoints.map(ep => `
-            <div class="graph-endpoint-row">
-              <span class="method-badge ${ep.method}">${ep.method}</span>
-              <span class="graph-path">${ep.path}</span>
-              <span style="flex:1;font-size:10px;color:var(--color-text-secondary)">${ep.desc}</span>
-              <div class="status-dot active" title="Online"></div>
-            </div>
-          `).join('')}
-        `).join('')}
-      </div>
-    </div>
-
-    <div class="tab-panel" id="graph-tab-throttle">
-      <div class="card">
-        <div class="card-title mb-3">Throttling Configuration</div>
-        <div class="grid-2">
-          <div class="form-group">
-            <label class="form-label">Max retries</label>
-            <input type="number" class="form-input" value="3" min="1" max="10">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Backoff interval (ms)</label>
-            <input type="number" class="form-input" value="1000" min="500">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Retry strategy</label>
-            <select class="form-select"><option>Exponential backoff</option><option>Linear backoff</option><option>Fixed interval</option></select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Concurrent requests</label>
-            <input type="number" class="form-input" value="4" min="1" max="20">
-          </div>
-        </div>
-        <button class="btn btn-primary" id="throttle-save"><i class="ti ti-device-floppy"></i> Save throttling config</button>
-      </div>
-    </div>
-
-    <div class="tab-panel" id="graph-tab-logs">
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th style="width:10%">Status</th>
-            <th style="width:8%">Method</th>
-            <th style="width:40%">Endpoint</th>
-            <th style="width:25%">Description</th>
-            <th style="width:17%">Time</th>
-          </tr></thead>
-          <tbody>
-            ${[
-              { status: 200, method: 'GET', path: '/v1.0/groups', desc: 'List groups', time: '08:47:12' },
-              { status: 201, method: 'POST', path: '/v1.0/groups', desc: 'Create group: marketing-emea', time: '08:45:58' },
-              { status: 200, method: 'GET', path: '/v1.0/users', desc: 'List users (all)', time: '08:45:03' },
-              { status: 429, method: 'GET', path: '/v1.0/auditLogs/signIns', desc: 'Throttled — retrying', time: '08:44:21' },
-            ].map(log => `
-              <tr>
-                <td><span class="badge ${log.status >= 400 ? 'danger' : log.status >= 200 && log.status < 300 ? 'success' : 'warning'}">${log.status}</span></td>
-                <td class="monospace" style="font-size:10px">${log.method}</td>
-                <td class="graph-path">${log.path}</td>
-                <td style="font-size:10px;color:var(--color-text-secondary)">${log.desc}</td>
-                <td class="monospace" style="font-size:10px">${log.time}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
+    <div style="padding:20px;text-align:center">
+      <i class="ti ti-loader" style="animation:spin 1s linear infinite;font-size:24px"></i>
+      <p style="margin-top:12px;color:var(--color-text-secondary)">Loading Graph API configuration...</p>
     </div>
   `
 
-  el.querySelectorAll('#graph-tabs .tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      el.querySelectorAll('#graph-tabs .tab-btn').forEach(b => b.classList.remove('active'))
-      el.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'))
-      btn.classList.add('active')
-      el.querySelector(`#graph-tab-${btn.dataset.tab}`).classList.add('active')
-    })
-  })
-
-  el.querySelectorAll('.copy-val').forEach(btn => {
-    btn.addEventListener('click', () => {
-      navigator.clipboard.writeText(btn.dataset.val)
-      showToast('Copied to clipboard.', 'success')
-    })
-  })
-
-  el.querySelector('#graph-secret-toggle')?.addEventListener('click', () => {
-    const inp = el.querySelector('#graph-secret')
-    inp.type = inp.type === 'password' ? 'text' : 'password'
-  })
-
-  el.querySelector('#graph-save')?.addEventListener('click', () => showToast('Configuration saved.', 'success'))
-  el.querySelector('#graph-refresh-token')?.addEventListener('click', () => showToast('Token refreshed successfully.', 'success'))
-  el.querySelector('#graph-grant-consent')?.addEventListener('click', () => showToast('Admin consent granted for all permissions.', 'success'))
-  el.querySelector('#throttle-save')?.addEventListener('click', () => showToast('Throttling configuration saved.', 'success'))
+  loadGraphApiData()
 }

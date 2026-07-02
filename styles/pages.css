@@ -801,6 +801,108 @@
 /* ---- Message Center / Change Intelligence Expand/Collapse ---- */
 /* CSS rules removed to allow inline styles to control display */
 
+/* ---- Graph API Configuration Page ---- */
+.stat-card {
+  padding: 16px;
+  background: var(--color-background-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.stat-detail {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.graph-endpoint-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  transition: background-color var(--transition);
+}
+
+.graph-endpoint-row:last-child {
+  border-bottom: none;
+}
+
+.graph-endpoint-row:hover {
+  background-color: var(--color-background-secondary);
+}
+
+.method-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 24px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.method-badge.GET {
+  background: var(--clr-info-bg);
+  color: var(--clr-info-text);
+}
+
+.method-badge.POST {
+  background: var(--clr-success-bg);
+  color: var(--clr-success-text);
+}
+
+.method-badge.PATCH {
+  background: var(--clr-warning-bg);
+  color: var(--clr-warning-text);
+}
+
+.method-badge.PUT {
+  background: var(--clr-warning-bg);
+  color: var(--clr-warning-text);
+}
+
+.method-badge.DELETE {
+  background: var(--clr-danger-bg);
+  color: var(--clr-danger-text);
+}
+
+.graph-path {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  color: var(--color-text-primary);
+  flex-shrink: 0;
+  min-width: 200px;
+}
+
+.section-heading {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  margin: 16px 0 8px 0;
+  padding: 0 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 @media (max-width: 640px) {
 /* Small cards on mobile */
   .dash-cards-row {

@@ -106,6 +106,9 @@ import {
   setControlValidationMethod, clearControlValidationMethod, getCustomMethodControls,
   isPowerShellEnabled, setPowerShellEnabled, resetValidationConfig, exportConfig
 } from './validation-config.js'
+import graphConfigApiRouter from './api/graph-config-api.js'
+import { unifiedGraphClient } from './lib/graph-client-unified.js'
+import { graphConfigService } from './services/graph-config-service.js'
 
 dotenv.config({ path: join(__dirname, '..', '.env') })
 
@@ -363,6 +366,10 @@ if (isValidCredentials) {
 
       // Initialize Self Service Executor with Graph client
       setExecutorGraphClient(graphClient)
+
+      // Initialize Unified Graph Client for centralized Graph API access
+      await unifiedGraphClient.init()
+      console.log('✓ Unified Graph Client initialized')
     })().catch(error => {
       console.warn('⚠️ Graph Client initialization failed:', error.message)
       console.warn('⚠️ Will use simulated data for endpoints')
@@ -8048,8 +8055,8 @@ import { ZT_PILLARS } from '../data/zt-pillars.js'
 let ztValidator = null
 
 function initZeroTrustValidator() {
-  if (!ztValidator && graphClient) {
-    ztValidator = new ZeroTrustValidator(graphClient)
+  if (!ztValidator) {
+    ztValidator = new ZeroTrustValidator()
   }
   return ztValidator
 }
@@ -14980,6 +14987,11 @@ app.get('/api/zero-trust/manual-validations', async (req, res) => {
     res.status(500).json({ success: false, error: error.message })
   }
 })
+
+// ============================================================
+// Graph API Configuration Routes
+// ============================================================
+app.use('/api/graph', graphConfigApiRouter)
 
 // ============================================================
 // 404 Handler - MUST be last

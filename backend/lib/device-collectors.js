@@ -4,11 +4,14 @@
  * Optimized module-based collectors that fetch Graph API data once
  * and distribute results across multiple controls, reducing API calls
  * and improving validation performance.
+ *
+ * Uses centralized UnifiedGraphClient for all Graph API calls (Phase 5).
  */
 
+import { unifiedGraphClient } from './graph-client-unified.js'
+
 export class DeviceCollectors {
-  constructor(graphClient) {
-    this.graphClient = graphClient
+  constructor() {
     this.cache = {}
   }
 
@@ -20,7 +23,7 @@ export class DeviceCollectors {
     if (this.cache.conditionalAccess) return this.cache.conditionalAccess
 
     try {
-      const response = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+      const response = await unifiedGraphClient.get('/identity/conditionalAccess/policies')
       const policies = response.value || []
 
       const data = {
@@ -58,7 +61,7 @@ export class DeviceCollectors {
     if (this.cache.compliance) return this.cache.compliance
 
     try {
-      const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+      const response = await unifiedGraphClient.get('/deviceManagement/deviceCompliancePolicies')
       const policies = response.value || []
 
       const data = {
@@ -103,7 +106,7 @@ export class DeviceCollectors {
     if (this.cache.configuration) return this.cache.configuration
 
     try {
-      const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+      const response = await unifiedGraphClient.get('/deviceManagement/configurationPolicies')
       const policies = response.value || []
 
       const data = {
@@ -161,7 +164,7 @@ export class DeviceCollectors {
     if (this.cache.enrollment) return this.cache.enrollment
 
     try {
-      const response = await this.graphClient.api('/deviceManagement/deviceEnrollmentConfigurations').get()
+      const response = await unifiedGraphClient.get('/deviceManagement/deviceEnrollmentConfigurations')
       const configs = response.value || []
 
       const data = {
@@ -193,8 +196,8 @@ export class DeviceCollectors {
 
     try {
       const [iosResponse, androidResponse] = await Promise.all([
-        this.graphClient.api('/deviceAppManagement/iosManagedAppProtections').get().catch(e => ({ value: [], error: e.message })),
-        this.graphClient.api('/deviceAppManagement/androidManagedAppProtections').get().catch(e => ({ value: [], error: e.message }))
+        unifiedGraphClient.get('/deviceAppManagement/iosManagedAppProtections').catch(e => ({ value: [], error: e.message })),
+        unifiedGraphClient.get('/deviceAppManagement/androidManagedAppProtections').catch(e => ({ value: [], error: e.message }))
       ])
 
       const data = {
@@ -228,8 +231,8 @@ export class DeviceCollectors {
 
     try {
       const [intentsResponse, mdeResponse] = await Promise.all([
-        this.graphClient.api('/deviceManagement/intents').get().catch(e => ({ value: [], error: e.message })),
-        this.graphClient.api('/deviceManagement/windowsDefenderAdvancedThreatProtectionConfigurations').get().catch(e => ({ value: [], error: e.message }))
+        unifiedGraphClient.get('/deviceManagement/intents').catch(e => ({ value: [], error: e.message })),
+        unifiedGraphClient.get('/deviceManagement/windowsDefenderAdvancedThreatProtectionConfigurations').catch(e => ({ value: [], error: e.message }))
       ])
 
       const intents = intentsResponse.value || []
@@ -264,9 +267,9 @@ export class DeviceCollectors {
 
     try {
       const [tagsResponse, tcResponse, analyticsResponse] = await Promise.all([
-        this.graphClient.api('/deviceManagement/roleScopeTags').get().catch(e => ({ value: [], error: e.message })),
-        this.graphClient.api('/deviceManagement/termsAndConditions').get().catch(e => ({ value: [], error: e.message })),
-        this.graphClient.api('/deviceManagement/userExperienceAnalyticsSettings').get().catch(e => ({ error: e.message }))
+        unifiedGraphClient.get('/deviceManagement/roleScopeTags').catch(e => ({ value: [], error: e.message })),
+        unifiedGraphClient.get('/deviceManagement/termsAndConditions').catch(e => ({ value: [], error: e.message })),
+        unifiedGraphClient.get('/deviceManagement/userExperienceAnalyticsSettings').catch(e => ({ error: e.message }))
       ])
 
       const tags = tagsResponse.value || []
