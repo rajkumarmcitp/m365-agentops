@@ -15026,3 +15026,6 @@ app.use((req, res) => {
     path: req.path
   })
 })
+
+// Export app for Azure Static Web Apps
+export default app
