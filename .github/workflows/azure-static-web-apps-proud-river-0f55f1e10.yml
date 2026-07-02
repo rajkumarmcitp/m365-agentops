@@ -25,6 +25,17 @@ jobs:
           node-version: '18'
       - name: Install dependencies
         run: npm install
+      - name: Create backend .env file
+        run: |
+          cat > backend/.env << 'EOF'
+          AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}
+          AZURE_REDIRECT_URI=https://proud-river-0f55f1e10.7.azurestaticapps.net/auth/callback
+          SHAREPOINT_SITE_ID=${{ secrets.SHAREPOINT_SITE_ID }}
+          NODE_ENV=production
+          PORT=7071
+          EOF
       - name: Build app
         run: npm run build
       - name: Build And Deploy
