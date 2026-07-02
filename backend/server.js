@@ -14995,6 +14995,16 @@ app.get('/api/zero-trust/manual-validations', async (req, res) => {
 // ============================================================
 // Graph API Configuration Routes
 // ============================================================
+// Root health check endpoint for Azure SWA
+app.get('/', (req, res) => {
+  res.json({
+    service: 'M365 AgentOps Backend',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  })
+})
+
 // Health check endpoint for monitoring
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
