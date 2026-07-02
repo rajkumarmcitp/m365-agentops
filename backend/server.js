@@ -14995,9 +14995,16 @@ app.get('/api/zero-trust/manual-validations', async (req, res) => {
 // ============================================================
 // Graph API Configuration Routes
 // ============================================================
+// Health check endpoint for monitoring
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
 // In Azure SWA, the backend receives requests with /api prefix stripped
 // So /api/graph/config becomes /graph/config at the backend
+// Register both paths to handle different SWA routing behaviors
 app.use('/graph', graphConfigApiRouter)
+app.use('/api/graph', graphConfigApiRouter)
 
 // ============================================================
 // 404 Handler - MUST be last
