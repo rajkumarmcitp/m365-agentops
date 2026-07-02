@@ -28,6 +28,13 @@ function requireSuperAdmin(req, res, next) {
     'rajkdura@nastech-solutions.com' // Production account
   ]
 
+  console.log('🔐 Graph API Auth Check:', {
+    userId: userId || '(none)',
+    userRole: userRole || '(none)',
+    isSuperAdmin: superAdminAccounts.includes(userId),
+    allowedAccounts: superAdminAccounts
+  })
+
   if (userRole === 'super') {
     user.role = 'super'
   } else if (superAdminAccounts.includes(userId)) {
@@ -37,7 +44,12 @@ function requireSuperAdmin(req, res, next) {
   if (user.role !== 'super') {
     return res.status(403).json({
       success: false,
-      error: 'Super Admin access required'
+      error: 'Super Admin access required',
+      debug: {
+        userId: userId || '(no header)',
+        userRole: userRole || '(no header)',
+        allowedAccounts: superAdminAccounts
+      }
     })
   }
   next()
