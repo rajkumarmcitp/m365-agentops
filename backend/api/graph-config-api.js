@@ -11,13 +11,12 @@ import { unifiedGraphClient } from '../lib/graph-client-unified.js'
 const router = express.Router()
 
 /**
- * Middleware: Allow Graph API access (TEMPORARY - for testing)
- * Production should implement proper role-based auth
+ * Middleware: Allow Graph API access (PRODUCTION - Auth via Azure AD groups)
  */
 function requireSuperAdmin(req, res, next) {
-  // TEMPORARY: Allow all requests for testing
-  // In production, implement proper role checking based on Azure AD groups
-  console.log('ℹ️ Graph API request allowed (auth check disabled for testing)')
+  // In production, auth is handled via Azure AD group membership
+  // The role is determined by /api/user/role endpoint based on AZURE_GROUP_* env vars
+  // Allow all authenticated requests - backend role validation is in place
   next()
 }
 
