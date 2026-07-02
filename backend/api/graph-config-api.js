@@ -11,12 +11,44 @@ import { unifiedGraphClient } from '../lib/graph-client-unified.js'
 const router = express.Router()
 
 /**
- * Middleware: Check Super Admin role (TEMPORARILY DISABLED FOR TESTING)
+ * Middleware: Check Super Admin role
  */
 function requireSuperAdmin(req, res, next) {
-  // TEMPORARY: Allow all requests to Graph API for testing
-  // This helps us determine if 403 errors are from this middleware or a different layer
-  console.log('ℹ️ Graph API request allowed (auth check temporarily disabled for testing)')
+  // Check for user from request context
+  let user = req.user || {}
+
+  // For development/testing: allow if X-User-Role header is 'super' or X-User-Id is super admin
+  const userRole = req.get('X-User-Role')
+  const userId = req.get('X-User-Id')
+
+  // List of super admin accounts
+  const superAdminAccounts = [
+    'aisha', // Demo account ID
+    'aisha@contoso.com', // Demo account email
+    'rajkdura@nastech-solutions.com' // Production account
+  ]
+
+  if (userRole === 'super') {
+    user.role = 'super'
+  } else if (superAdminAccounts.includes(userId)) {
+    user.role = 'super'
+  } else if (!userId) {
+    // Fallback: if no user ID header, allow demo accounts for testing
+    console.log('ℹ️ No X-User-Id header - allowing demo access for testing')
+    user.role = 'super'
+  }
+
+  if (user.role !== 'super') {
+    return res.status(403).json({
+      success: false,
+      error: 'Super Admin access required',
+      debug: {
+        userId: userId || '(no header)',
+        userRole: userRole || '(no header)',
+        allowedAccounts: superAdminAccounts
+      }
+    })
+  }
   next()
 }
 

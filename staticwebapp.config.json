@@ -1,6 +1,11 @@
 {
   "routes": [
     {
+      "route": "/api/*",
+      "allowedRoles": ["authenticated", "anonymous"],
+      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    },
+    {
       "route": "/*",
       "serve": "/index.html",
       "statusCode": 200
@@ -16,9 +21,10 @@
       "https://m365ops-api.azurewebsites.net",
       "https://proud-river-0f55f1e10.7.azurestaticapps.net"
     ],
-    "allowedMethods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    "allowedHeaders": ["Content-Type", "Authorization", "X-User-Id"],
-    "exposeHeaders": ["Content-Type"]
+    "allowedMethods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    "allowedHeaders": ["Content-Type", "Authorization", "X-User-Id", "X-User-Role"],
+    "exposeHeaders": ["Content-Type"],
+    "maxAge": 600
   },
   "mimeTypes": {
     ".js": "text/javascript; charset=utf-8",
