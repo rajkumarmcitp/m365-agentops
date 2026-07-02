@@ -567,21 +567,9 @@ async function initializeTenantGuard() {
     // Use manual sync via POST /api/tenantguard/sync instead
     // startTenantGuardAutoSync(5)
 
-    // Run initial sync on startup to populate real alerts
-    console.log('🔄 Running initial sync on startup...')
-    await runTenantGuardSync()
-
-    // Re-run correlation analysis after real alerts are loaded
-    console.log('🔗 Analyzing correlations from real alerts...')
-    try {
-      const { CorrelationEngine } = await import('./tenantguard/correlation-engine.js')
-      const engine = new CorrelationEngine()
-      engine.analyzeAlerts()
-    } catch (corrError) {
-      console.error('⚠️ Could not analyze correlations:', corrError.message)
-    }
-
-    console.log('✅ TenantGuard ready - POST /api/tenantguard/sync for manual sync')
+    // Skip initial sync on startup to avoid deployment timeout
+    // Use POST /api/tenantguard/sync for manual sync instead
+    console.log('✅ TenantGuard initialized - use POST /api/tenantguard/sync for data sync')
   } catch (error) {
     console.error('❌ TenantGuard initialization failed:', error.message)
   }
