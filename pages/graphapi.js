@@ -5,11 +5,11 @@ import { skeletonLoader } from '../lib/skeleton-loader.js'
 // Determine API base URL - use App Service in production, local in dev
 function getApiBaseUrl() {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    // Local development - use relative path
-    return ''
+    // Local development - use backend port 3000
+    return 'http://localhost:3000'
   }
-  // Production - use App Service URL
-  return 'https://m365ops-api.azurewebsites.net'
+  // Production - use relative paths (SWA will route to backend)
+  return ''
 }
 
 const API_BASE = getApiBaseUrl()

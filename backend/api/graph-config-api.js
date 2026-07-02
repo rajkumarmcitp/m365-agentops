@@ -23,7 +23,8 @@ function requireSuperAdmin(req, res, next) {
 
   // List of super admin accounts
   const superAdminAccounts = [
-    'aisha', // Demo account
+    'aisha', // Demo account ID
+    'aisha@contoso.com', // Demo account email
     'rajkdura@nastech-solutions.com' // Production account
   ]
 
