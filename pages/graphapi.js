@@ -8,8 +8,8 @@ function getApiBaseUrl() {
     // Local development - use backend port 3000
     return 'http://localhost:3000'
   }
-  // Production - use relative paths (SWA will route to backend)
-  return ''
+  // Production - use App Service backend URL (matches api-client.js)
+  return 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
 }
 
 const API_BASE = getApiBaseUrl()
