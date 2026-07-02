@@ -23,8 +23,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: npm install
+      - name: Install backend dependencies
+        run: cd backend && npm install && cd ..
       - name: Create backend .env file
         run: |
           cat > backend/.env << 'EOF'
