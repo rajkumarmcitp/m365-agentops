@@ -600,6 +600,20 @@ app.get('/api/health', (req, res) => {
 })
 
 /**
+ * GET /api/deployment-test
+ * Simple test to verify if latest deployment is active
+ */
+app.get('/api/deployment-test', (req, res) => {
+  res.json({
+    success: true,
+    deployed: true,
+    version: '2026-07-02-FINAL-WORKING',
+    timestamp: new Date().toISOString(),
+    message: 'Latest deployment is running'
+  })
+})
+
+/**
  * GET /api/tenantguard/health
  * Diagnostic health check for TenantGuard (tests Graph API connection)
  */
