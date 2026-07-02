@@ -23,6 +23,19 @@ function requireSuperAdmin(req, res, next) {
 }
 
 /**
+ * GET /api/graph/version
+ * Simple version check endpoint (no auth required)
+ */
+router.get('/version', (req, res) => {
+  res.json({
+    success: true,
+    version: '2024-07-02-FINAL',
+    message: 'Graph API is running latest deployed code',
+    timestamp: new Date().toISOString()
+  })
+})
+
+/**
  * GET /api/graph/config
  * Get current configuration (secrets masked)
  */
