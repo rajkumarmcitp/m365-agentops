@@ -17,14 +17,19 @@ function requireSuperAdmin(req, res, next) {
   // Check for user from request context
   let user = req.user || {}
 
-  // For development/testing: allow if X-User-Role header is 'super' or X-User-Id is 'aisha' (super admin)
+  // For development/testing: allow if X-User-Role header is 'super' or X-User-Id is super admin
   const userRole = req.get('X-User-Role')
   const userId = req.get('X-User-Id')
 
+  // List of super admin accounts
+  const superAdminAccounts = [
+    'aisha', // Demo account
+    'rajkdura@nastech-solutions.com' // Production account
+  ]
+
   if (userRole === 'super') {
     user.role = 'super'
-  } else if (userId === 'aisha') {
-    // Aisha is the super admin in demo users
+  } else if (superAdminAccounts.includes(userId)) {
     user.role = 'super'
   }
 
