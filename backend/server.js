@@ -314,7 +314,7 @@ app.use((req, res, next) => {
   }
 
   res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS, PUT, DELETE')
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Id')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Id, X-User-Role')
   res.header('Access-Control-Max-Age', '3600')
 
   if (req.method === 'OPTIONS') {
