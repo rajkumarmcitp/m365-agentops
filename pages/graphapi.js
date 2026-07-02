@@ -20,8 +20,7 @@ async function loadGraphApiData() {
   try {
     const headers = {
       'Content-Type': 'application/json',
-      'X-User-Id': state.currentUser?.id || state.currentUser?.email || 'aisha',
-      'X-User-Role': state.currentUser?.role || 'user'
+      'X-User-Id': state.currentUser?.id || state.currentUser?.email || 'aisha'
     }
 
     const [configRes, healthRes, statsRes, endpointsRes, permissionsRes, historyRes] = await Promise.all([
