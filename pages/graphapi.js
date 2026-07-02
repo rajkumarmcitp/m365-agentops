@@ -2,6 +2,18 @@ import { state } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
 
+// Determine API base URL - use App Service in production, local in dev
+function getApiBaseUrl() {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // Local development - use relative path
+    return ''
+  }
+  // Production - use App Service URL
+  return 'https://m365ops-api.azurewebsites.net'
+}
+
+const API_BASE = getApiBaseUrl()
+
 async function loadGraphApiData() {
   const el = document.getElementById('page-graphapi')
 
@@ -12,12 +24,12 @@ async function loadGraphApiData() {
     }
 
     const [configRes, healthRes, statsRes, endpointsRes, permissionsRes, historyRes] = await Promise.all([
-      fetch('/api/graph/config', { headers }).then(r => r.json()),
-      fetch('/api/graph/config/health', { headers }).then(r => r.json()),
-      fetch('/api/graph/config/stats', { headers }).then(r => r.json()),
-      fetch('/api/graph/config/endpoints', { headers }).then(r => r.json()),
-      fetch('/api/graph/config/permissions', { headers }).then(r => r.json()),
-      fetch('/api/graph/config/history?limit=15', { headers }).then(r => r.json())
+      fetch(`${API_BASE}/api/graph/config`, { headers }).then(r => r.json()),
+      fetch(`${API_BASE}/api/graph/config/health`, { headers }).then(r => r.json()),
+      fetch(`${API_BASE}/api/graph/config/stats`, { headers }).then(r => r.json()),
+      fetch(`${API_BASE}/api/graph/config/endpoints`, { headers }).then(r => r.json()),
+      fetch(`${API_BASE}/api/graph/config/permissions`, { headers }).then(r => r.json()),
+      fetch(`${API_BASE}/api/graph/config/history?limit=15`, { headers }).then(r => r.json())
     ])
 
     const config = configRes.data || {}
@@ -310,7 +322,7 @@ function setupEventHandlers(el, config) {
     btn.disabled = true
     btn.innerHTML = '<i class="ti ti-hourglass"></i> Testing...'
     try {
-      const res = await fetch('/api/graph/config/test', {
+      const res = await fetch(`${API_BASE}/api/graph/config/test`, {
         method: 'POST',
         headers: { 'X-User-Id': state.currentUser?.id || 'aisha' }
       })
@@ -333,7 +345,7 @@ function setupEventHandlers(el, config) {
     btn.disabled = true
     btn.innerHTML = '<i class="ti ti-hourglass"></i> Refreshing...'
     try {
-      const res = await fetch('/api/graph/config/refresh-token', { method: 'POST', headers: { 'X-User-Id': state.currentUser?.id || 'aisha' } })
+      const res = await fetch(`${API_BASE}/api/graph/config/refresh-token`, { method: 'POST', headers: { 'X-User-Id': state.currentUser?.id || 'aisha' } })
       const data = await res.json()
       if (data.success) {
         showToast('Token refreshed successfully', 'success')
@@ -352,7 +364,7 @@ function setupEventHandlers(el, config) {
     const btn = el.querySelector('#graph-clear-cache')
     btn.disabled = true
     try {
-      const res = await fetch('/api/graph/config/clear-cache', { method: 'POST', headers: { 'X-User-Id': state.currentUser?.id || 'aisha' } })
+      const res = await fetch(`${API_BASE}/api/graph/config/clear-cache`, { method: 'POST', headers: { 'X-User-Id': state.currentUser?.id || 'aisha' } })
       const data = await res.json()
       if (data.success) {
         showToast('Cache cleared successfully', 'success')
@@ -369,7 +381,7 @@ function setupEventHandlers(el, config) {
   el.querySelector('#graph-rotate-secret')?.addEventListener('click', () => {
     const newSecret = prompt('Enter new client secret:')
     if (newSecret) {
-      fetch('/api/graph/config/rotate-credentials', {
+      fetch(`${API_BASE}/api/graph/config/rotate-credentials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.id || 'aisha' },
         body: JSON.stringify({ clientSecret: newSecret })
@@ -390,7 +402,7 @@ function setupEventHandlers(el, config) {
     btn.disabled = true
     btn.innerHTML = '<i class="ti ti-hourglass"></i> Saving...'
     try {
-      const res = await fetch('/api/graph/config/throttling', {
+      const res = await fetch(`${API_BASE}/api/graph/config/throttling`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.id || 'aisha' },
         body: JSON.stringify({
@@ -403,7 +415,7 @@ function setupEventHandlers(el, config) {
       const data = await res.json()
       if (data.success) {
         showToast('Throttling configuration saved', 'success')
-        const cacheRes = await fetch('/api/graph/config/cache', {
+        const cacheRes = await fetch(`${API_BASE}/api/graph/config/cache`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.id || 'aisha' },
           body: JSON.stringify({
