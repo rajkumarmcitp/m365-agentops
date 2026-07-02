@@ -20,7 +20,7 @@ async function loadGraphApiData() {
   try {
     const headers = {
       'Content-Type': 'application/json',
-      'X-User-Id': state.currentUser?.id || 'aisha'
+      'X-User-Id': state.currentUser?.email || state.currentUser?.id || 'aisha'
     }
 
     const [configRes, healthRes, statsRes, endpointsRes, permissionsRes, historyRes] = await Promise.all([
@@ -324,7 +324,7 @@ function setupEventHandlers(el, config) {
     try {
       const res = await fetch(`${API_BASE}/api/graph/config/test`, {
         method: 'POST',
-        headers: { 'X-User-Id': state.currentUser?.id || 'aisha' }
+        headers: { 'X-User-Id': state.currentUser?.email || state.currentUser?.id || 'aisha' }
       })
       const data = await res.json()
       if (data.success) {
@@ -383,7 +383,7 @@ function setupEventHandlers(el, config) {
     if (newSecret) {
       fetch(`${API_BASE}/api/graph/config/rotate-credentials`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.id || 'aisha' },
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.email || state.currentUser?.id || 'aisha' },
         body: JSON.stringify({ clientSecret: newSecret })
       }).then(r => r.json()).then(data => {
         if (data.success) {
@@ -404,7 +404,7 @@ function setupEventHandlers(el, config) {
     try {
       const res = await fetch(`${API_BASE}/api/graph/config/throttling`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.id || 'aisha' },
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.email || state.currentUser?.id || 'aisha' },
         body: JSON.stringify({
           maxRetries: parseInt(el.querySelector('#throttle-max-retries').value),
           backoffInterval: parseInt(el.querySelector('#throttle-backoff').value),
@@ -417,7 +417,7 @@ function setupEventHandlers(el, config) {
         showToast('Throttling configuration saved', 'success')
         const cacheRes = await fetch(`${API_BASE}/api/graph/config/cache`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.id || 'aisha' },
+          headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.email || state.currentUser?.id || 'aisha' },
           body: JSON.stringify({
             ttl: parseInt(el.querySelector('#cache-ttl').value),
             enabled: el.querySelector('#cache-enabled').checked
