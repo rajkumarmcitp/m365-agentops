@@ -29,7 +29,7 @@ async function loadGraphApiData() {
       fetch(`${API_BASE}/api/graph/config/health`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/graph/config/stats`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/graph/config/endpoints`, { headers }).then(r => r.json()),
-      fetch(`${API_BASE}/api/graph/config/permissions`, { headers }).then(r => r.json()),
+      fetch(`${API_BASE}/api/graph/consented-permissions`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/graph/config/history?limit=15`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/setup/config`, { headers }).then(r => r.json()).catch(() => ({ success: false }))
     ])
@@ -152,33 +152,45 @@ function renderGraphApiPage(el, config, health, stats, endpoints, perms, history
     </div>
 
     <div class="tab-panel" id="graph-tab-perms">
+      ${perms.message ? `
+        <div class="card mb-3" style="background:var(--color-background-secondary);border-left:3px solid var(--color-warning);padding:12px">
+          <div style="font-size:11px;color:var(--color-text-secondary)"><i class="ti ti-info-circle"></i> ${perms.message}</div>
+        </div>
+      ` : ''}
+      ${perms.displayName ? `
+        <div class="card mb-3">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">Connected App</div>
+          <div style="font-size:13px;font-weight:500">${perms.displayName}</div>
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">App ID: <span class="monospace">${perms.appId}</span></div>
+        </div>
+      ` : ''}
       <div class="card mb-3">
         <div class="card-title mb-3">Application Permissions (${perms.app?.length || 0})</div>
         <table>
-          <thead><tr><th style="width:40%">Permission</th><th style="width:60%">Description</th></tr></thead>
+          <thead><tr><th style="width:40%">Permission</th><th style="width:60%">Status</th></tr></thead>
           <tbody>
-            ${(perms.app || []).slice(0, 10).map(perm => `
+            ${(perms.app || []).slice(0, 15).map(perm => `
               <tr>
                 <td class="monospace" style="font-size:10px">${perm}</td>
-                <td style="font-size:11px;color:var(--color-text-secondary)">Application permission</td>
+                <td style="font-size:11px"><span class="badge success"><i class="ti ti-circle-check"></i> Consented</span></td>
               </tr>
             `).join('')}
-            ${(!perms.app || perms.app.length === 0) ? '<tr><td colspan="2" style="text-align:center;color:var(--color-text-secondary)">No permissions configured</td></tr>' : ''}
+            ${(!perms.app || perms.app.length === 0) ? '<tr><td colspan="2" style="text-align:center;color:var(--color-text-secondary)">No application permissions consented</td></tr>' : ''}
           </tbody>
         </table>
       </div>
       <div class="card">
         <div class="card-title mb-3">Delegated Permissions (${perms.delegated?.length || 0})</div>
         <table>
-          <thead><tr><th style="width:40%">Permission</th><th style="width:60%">Description</th></tr></thead>
+          <thead><tr><th style="width:40%">Permission</th><th style="width:60%">Status</th></tr></thead>
           <tbody>
             ${(perms.delegated || []).map(perm => `
               <tr>
                 <td class="monospace" style="font-size:10px">${perm}</td>
-                <td style="font-size:11px;color:var(--color-text-secondary)">Delegated permission</td>
+                <td style="font-size:11px"><span class="badge success"><i class="ti ti-circle-check"></i> Consented</span></td>
               </tr>
             `).join('')}
-            ${(!perms.delegated || perms.delegated.length === 0) ? '<tr><td colspan="2" style="text-align:center;color:var(--color-text-secondary)">No permissions configured</td></tr>' : ''}
+            ${(!perms.delegated || perms.delegated.length === 0) ? '<tr><td colspan="2" style="text-align:center;color:var(--color-text-secondary)">No delegated permissions consented</td></tr>' : ''}
           </tbody>
         </table>
       </div>

@@ -7,6 +7,7 @@
 import express from 'express'
 import { graphConfigService } from '../services/graph-config-service.js'
 import { unifiedGraphClient } from '../lib/graph-client-unified.js'
+import { getSetupConfig } from '../tenantguard/setup-config-service.js'
 
 const router = express.Router()
 
@@ -350,6 +351,104 @@ router.get('/config/permissions', requireSuperAdmin, (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/graph/consented-permissions
+ * Fetch actual consented permissions from Azure AD for the configured app
+ * Uses the Client ID from setup config to query the service principal
+ */
+router.get('/consented-permissions', requireSuperAdmin, async (req, res) => {
+  try {
+    // Get setup config to find the Client ID
+    const setupConfig = await getSetupConfig()
+    const clientId = setupConfig.steps?.Step2?.clientId || setupConfig.steps?.['Step 2']?.clientId
+
+    if (!clientId) {
+      console.warn('⚠️ No Client ID configured in setup')
+      return res.json({
+        success: true,
+        data: {
+          app: [],
+          delegated: [],
+          source: 'none',
+          message: 'No Client ID configured. Complete setup wizard Step 2 to configure Client ID.'
+        }
+      })
+    }
+
+    // Query service principal for the app
+    const servicePrincipals = await unifiedGraphClient
+      .api('/servicePrincipals')
+      .filter(`appId eq '${clientId}'`)
+      .select('id,appId,displayName,appRoles,oauth2PermissionScopes')
+      .get()
+
+    if (!servicePrincipals.value || servicePrincipals.value.length === 0) {
+      console.warn(`⚠️ Service principal not found for app ${clientId}`)
+      return res.json({
+        success: true,
+        data: {
+          app: [],
+          delegated: [],
+          source: 'not-found',
+          message: `Service principal not found for app ${clientId}. Grant admin consent in Step 3 to register the app.`
+        }
+      })
+    }
+
+    const sp = servicePrincipals.value[0]
+
+    // Extract app permissions (from appRoles)
+    const appPerms = (sp.appRoles || [])
+      .filter(role => role.isEnabled)
+      .map(role => role.value)
+
+    // Extract delegated permissions (from oauth2PermissionScopes)
+    const delegatedPerms = (sp.oauth2PermissionScopes || [])
+      .filter(scope => scope.isEnabled)
+      .map(scope => scope.value)
+
+    // Query OAuth2 permission grants to get actual consented delegated permissions
+    const grants = await unifiedGraphClient
+      .api(`/servicePrincipals/${sp.id}/oauth2PermissionGrants`)
+      .get()
+
+    const consentedDelegated = new Set()
+    if (grants.value) {
+      for (const grant of grants.value) {
+        if (grant.scope) {
+          // scope is a space-separated string of permission names
+          const perms = grant.scope.split(' ').filter(p => p.trim())
+          perms.forEach(p => consentedDelegated.add(p))
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        app: appPerms,
+        delegated: Array.from(consentedDelegated),
+        source: 'consented',
+        servicePrincipalId: sp.id,
+        appId: sp.appId,
+        displayName: sp.displayName,
+        timestamp: new Date().toISOString()
+      }
+    })
+  } catch (error) {
+    console.error('❌ Failed to fetch consented permissions:', error.message)
+    res.json({
+      success: true,
+      data: {
+        app: [],
+        delegated: [],
+        source: 'error',
+        error: error.message
+      }
     })
   }
 })
