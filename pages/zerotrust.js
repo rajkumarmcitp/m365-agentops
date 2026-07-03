@@ -1,16 +1,17 @@
 /**
  * Zero Trust Compliance Page with Progressive Lazy Loading
  *
- * Loading Strategy (3-Phase):
+ * Loading Strategy (2-Phase - No Demo Data):
  * 1. Skeleton (Immediate): Show loading UI instantly
- * 2. Summary (Fast, <3s): Load pillar scores and overview cards
- * 3. Details (Background): Load full validations, trends, actions async
+ * 2. Real Data (Async): Load all validations/trends/actions
+ *    - Render with real data once ready
+ *    - Never show demo/partial data
  *
  * Benefits:
- * - Page shows content in <500ms instead of waiting for all data
- * - User can browse tabs while detailed data loads
- * - Pillar data lazy-loaded when tab is clicked (not preloaded)
- * - Graceful fallback to demo data if API is slow
+ * - Skeleton visible in <100ms (no blank screen)
+ * - Real data only - no stale/demo data displayed
+ * - Pillar details load on-demand when tab clicked
+ * - Better perceived performance
  */
 
 import { showToast } from '../components/toast.js'
@@ -22,56 +23,22 @@ let realValidations = null
 let realTrends = null
 let priorityActions = null
 let activeTab = 'overview'
-let lazyLoadedPillars = {} // Cache loaded pillar data
+let lazyLoadedPillars = {}
 
 export function initZeroTrust() {
   const el = document.getElementById('page-zerotrust')
   if (!el) return
 
-  // Show skeleton/loading state immediately
+  // Show skeleton immediately (no data yet)
   renderZeroTrustSkeleton(el)
 
-  // Phase 1: Load pillar summary data quickly (lightweight)
-  loadZeroTrustSummary(el)
-
-  // Phase 2: Fetch detailed validation data in background
-  loadZeroTrustDetailsAsync(el)
+  // Load real data in background (no demo data shown)
+  loadZeroTrustData(el)
 }
 
-/**
- * Phase 1: Load pillar summary (fast, immediate)
- * Shows basic stats and pillar cards from CFG/demo data
- */
-async function loadZeroTrustSummary(el) {
+async function loadZeroTrustData(el) {
   try {
-    // Start loading detailed data in background
-    console.log('📊 Loading Zero Trust summary...')
-
-    // Try to get summary quickly (should be cached)
-    const validationsResult = await Promise.race([
-      callAPI('/zero-trust/validations'),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
-    ]).catch(() => null)
-
-    if (validationsResult?.success) {
-      realValidations = validationsResult.data
-      console.log(`✅ Summary loaded: ${realValidations.totalValidations} validations`)
-    }
-
-    renderZeroTrustSummary(el)
-  } catch (error) {
-    console.warn('⚠️ Summary load timed out, showing demo pillars')
-    renderZeroTrustSummary(el)
-  }
-}
-
-/**
- * Phase 2: Load detailed data asynchronously
- * Fetches full validations, trends, priority actions in background
- */
-async function loadZeroTrustDetailsAsync(el) {
-  try {
-    console.log('🔍 Loading detailed Zero Trust data in background...')
+    console.log('🔍 Loading Zero Trust validation data...')
 
     // Fetch all data in parallel
     const [validationsResult, trendsResult, actionsResult] = await Promise.all([
@@ -82,7 +49,7 @@ async function loadZeroTrustDetailsAsync(el) {
 
     if (validationsResult.success && validationsResult.data) {
       realValidations = validationsResult.data
-      console.log(`✅ Loaded detailed validations (${realValidations.totalValidations} controls)`)
+      console.log(`✅ Loaded ${realValidations.totalValidations} validations`)
     }
 
     if (trendsResult.success && trendsResult.data) {
@@ -95,88 +62,39 @@ async function loadZeroTrustDetailsAsync(el) {
       console.log(`✅ Loaded ${priorityActions.length} priority actions`)
     }
 
-    // Re-render with detailed data if already showing
-    if (el.querySelector('#zt-content')) {
-      renderZeroTrustWithData(el)
-    }
+    // Render with real data only (no demo data fallback)
+    renderZeroTrustWithData(el)
   } catch (error) {
-    console.warn('⚠️ Failed to fetch detailed Zero Trust data:', error.message)
+    console.warn('⚠️ Failed to fetch Zero Trust data:', error.message)
+    // Show error message, not demo data
+    renderZeroTrustError(el, error.message)
   }
 }
 
-/**
- * Phase 1 Render: Show pillar summary cards (fast, instant)
- */
-function renderZeroTrustSummary(el) {
-  if (!realValidations) {
-    // Use demo pillars if no data yet
-    renderZeroTrustWithDemoData(el)
-    return
-  }
-
-  const { totalValidations, summary, overallScore } = realValidations
-  const scoreColor = overallScore >= 80 ? 'success' : overallScore >= 60 ? 'warning' : 'danger'
-
+function renderZeroTrustError(el, errorMsg) {
   el.innerHTML = `
     <div class="page-header">
       <div>
         <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
-        <div class="page-subtitle">${totalValidations} security controls validated across 7 pillars</div>
-      </div>
-      <div class="page-actions">
-        <button class="btn" id="zt-rescan"><i class="ti ti-refresh"></i> Refresh</button>
-        <button class="btn btn-primary"><i class="ti ti-download"></i> Export</button>
+        <div class="page-subtitle">Unable to load validation data</div>
       </div>
     </div>
 
-    <!-- KPI Row -->
-    <div class="kpi-row">
-      ${renderZTKPIs(overallScore, scoreColor, totalValidations, summary)}
-    </div>
-
-    <!-- Tab Navigation -->
-    <div style="border:0.5px solid var(--color-border-secondary);border-radius:8px;background:var(--color-background-primary);padding:12px;margin-bottom:16px">
-      <div class="tabs" id="zt-tabs" style="margin-bottom:0;padding-bottom:0">
-        <button class="tab-btn active" data-zt-tab="overview">
-          <i class="ti ti-layout-grid"></i><span>Overview</span>
-        </button>
-        <button class="tab-btn" data-zt-tab="identity">
-          <i class="ti ti-fingerprint"></i><span>Identity</span>
-        </button>
-        <button class="tab-btn" data-zt-tab="device">
-          <i class="ti ti-device-mobile"></i><span>Device</span>
-        </button>
-        <button class="tab-btn" data-zt-tab="application">
-          <i class="ti ti-app-window"></i><span>Application</span>
-        </button>
-        <button class="tab-btn" data-zt-tab="data">
-          <i class="ti ti-database"></i><span>Data</span>
-        </button>
-        <button class="tab-btn" data-zt-tab="infrastructure">
-          <i class="ti ti-server"></i><span>Infrastructure</span>
-        </button>
-        <button class="tab-btn" data-zt-tab="threat">
-          <i class="ti ti-shield-alert"></i><span>Threat</span>
-        </button>
-        <button class="tab-btn" data-zt-tab="ai">
-          <i class="ti ti-brain"></i><span>AI Security</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Tab Content (loaded on-demand) -->
-    <div id="zt-content">
-      <div class="card" style="text-align:center;padding:20px;color:var(--color-text-secondary)">
-        <div style="font-size:11px;margin-bottom:8px"><i class="ti ti-hourglass"></i> Loading content...</div>
+    <div style="margin-top:20px">
+      <div class="card" style="background:var(--color-background-secondary);border-left:3px solid var(--color-warning);padding:16px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:8px"><i class="ti ti-alert-circle"></i> Failed to load Zero Trust data</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.6">
+          ${errorMsg}
+          <br><br>
+          <button class="btn btn-small" id="zt-retry"><i class="ti ti-refresh"></i> Retry</button>
+        </div>
       </div>
     </div>
   `
 
-  // Render initial tab content
-  renderZTTabContent(el)
-
-  // Attach event listeners
-  attachZTEventListeners(el)
+  el.querySelector('#zt-retry')?.addEventListener('click', () => {
+    initZeroTrust()
+  })
 }
 
 function renderZeroTrustSkeleton(el) {
@@ -192,7 +110,7 @@ function renderZeroTrustSkeleton(el) {
 
 function renderZeroTrustWithData(el) {
   if (!realValidations) {
-    renderZeroTrustWithDemoData(el)
+    console.warn('⚠️ No real data available yet')
     return
   }
 
@@ -298,6 +216,16 @@ function renderZTTabContent(el) {
   const contentEl = el.querySelector('#zt-content')
   if (!contentEl) return
 
+  // Only render if real data is available
+  if (!realValidations) {
+    contentEl.innerHTML = `
+      <div class="card" style="text-align:center;padding:20px;color:var(--color-text-secondary)">
+        <div style="font-size:11px"><i class="ti ti-hourglass"></i> Loading validation data...</div>
+      </div>
+    `
+    return
+  }
+
   const pillarsMap = {
     identity: 'Identity Security',
     device: 'Device Security',
@@ -308,21 +236,13 @@ function renderZTTabContent(el) {
     ai: 'AI Security & Governance'
   }
 
-  // Use real validations if available, otherwise use demo data
-  const isDemo = !realValidations
-
   if (activeTab === 'overview') {
-    contentEl.innerHTML = isDemo ? renderZTOverviewDemo() : renderZTOverview()
+    contentEl.innerHTML = renderZTOverview()
   } else {
     const pillarName = pillarsMap[activeTab]
-    if (isDemo) {
-      const demoP = window.ztDemoPillars.find(p => p.name === pillarName)
-      contentEl.innerHTML = renderZTPillarContentDemo(demoP || {})
-    } else {
-      const pillarStats = realValidations.summary.byPillar[pillarName]
-      const pillarValidations = realValidations.validations.filter(v => v.pillar === pillarName)
-      contentEl.innerHTML = renderZTPillarContent(pillarName, pillarStats, pillarValidations)
-    }
+    const pillarStats = realValidations.summary.byPillar[pillarName]
+    const pillarValidations = realValidations.validations.filter(v => v.pillar === pillarName)
+    contentEl.innerHTML = renderZTPillarContent(pillarName, pillarStats, pillarValidations)
   }
 }
 
