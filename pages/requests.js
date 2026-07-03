@@ -7,7 +7,7 @@ import { showToast } from '../components/toast.js'
 import { api, callAPI } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { state } from '../app.js'
-import { skeletonLoader } from '../lib/skeleton-loader.js'
+import { customSkeleton } from '../lib/skeleton-custom.js'
 import {
   notifyRequestApproved,
   notifyRequestRejected
@@ -86,7 +86,11 @@ export async function initRequests() {
   }
 
   renderSkeleton(el)
-  await loadSelfServiceRequests(el)
+
+  // Load real data with 300ms minimum skeleton display
+  setTimeout(() => {
+    loadSelfServiceRequests(el)
+  }, 300)
 }
 
 async function loadSelfServiceRequests(el) {
@@ -156,13 +160,13 @@ function applyFilters(el) {
 }
 
 function renderSkeleton(el) {
-  el.innerHTML = `
-    <div>
-      ${skeletonLoader.renderPageHeader('Service Requests', 'Manage and approve all self-service requests', true)}
-      ${skeletonLoader.renderMetricsRowSkeleton(4)}
-      ${skeletonLoader.renderTableSkeleton(7, 8)}
-    </div>
-  `
+  el.innerHTML = customSkeleton.renderPageWithTable(
+    '<i class="ti ti-inbox"></i> Service Requests',
+    'Manage and approve all self-service requests',
+    4,
+    ['Request ID', 'Service', 'Operation', 'Status', 'Priority', 'Created', 'Requested By'],
+    8
+  )
 }
 
 function renderErrorState(el) {

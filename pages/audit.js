@@ -1,4 +1,4 @@
-import { skeletonLoader } from '../lib/skeleton-loader.js'
+import { customSkeleton } from '../lib/skeleton-custom.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -6,16 +6,19 @@ export function initAudit() {
   const el = document.getElementById('page-audit')
   if (!el) return
 
-  // Show skeleton immediately
-  el.innerHTML = `
-    <div>
-      ${skeletonLoader.renderPageHeader('Audit Log', 'Real Azure AD and security event audit trail', true)}
-      ${skeletonLoader.renderMetricsRowSkeleton(3)}
-      ${skeletonLoader.renderTableSkeleton(5, 10)}
-    </div>
-  `
+  // Show skeleton immediately with actual table headers
+  el.innerHTML = customSkeleton.renderPageWithTable(
+    '<i class="ti ti-database"></i> Audit Log',
+    'Real Azure AD and security event audit trail',
+    3,
+    ['Time', 'Event', 'User', 'Category', 'Severity'],
+    10
+  )
 
-  loadAuditContent(el)
+  // Load real data with 300ms minimum skeleton display
+  setTimeout(() => {
+    loadAuditContent(el)
+  }, 300)
 }
 
 async function loadAuditContent(el) {

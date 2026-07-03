@@ -6,7 +6,7 @@
 import { state, go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { callAPI } from '../lib/api-client.js'
-import { skeletonLoader } from '../lib/skeleton-loader.js'
+import { customSkeleton } from '../lib/skeleton-custom.js'
 
 let viewMode = 'queue'  // 'queue' | 'detail'
 let selectedRequestId = null
@@ -34,18 +34,20 @@ async function render(el) {
 // APPROVAL QUEUE VIEW
 // ============================================================
 async function renderApprovalQueue(el) {
-  // Show skeleton immediately
-  el.innerHTML = `
-    <div>
-      ${skeletonLoader.renderPageHeader('Approval Queue', 'Review and approve self-service requests', true)}
-      ${skeletonLoader.renderMetricsRowSkeleton(4)}
-      ${skeletonLoader.renderTableSkeleton(7, 8)}
-    </div>
-  `
+  // Show skeleton immediately with actual table headers
+  el.innerHTML = customSkeleton.renderPageWithTable(
+    '<i class="ti ti-clipboard-check"></i> Approval Queue',
+    'Review and approve self-service requests',
+    4,
+    ['Request ID', 'Service', 'Operation', 'Status', 'Priority', 'Submitted By', 'Created'],
+    8
+  )
 
-  try {
-    // Load all self-service requests
-    const response = await callAPI('/self-service/requests')
+  // Load real data with 300ms minimum skeleton display
+  setTimeout(async () => {
+    try {
+      // Load all self-service requests
+      const response = await callAPI('/self-service/requests')
     if (response.success) {
       allRequests = response.data || []
       applyFilter()
@@ -53,20 +55,21 @@ async function renderApprovalQueue(el) {
     } else {
       throw new Error(response.error || 'Failed to load requests')
     }
-  } catch (error) {
-    console.error('Error loading approvals:', error)
-    showToast('Failed to load requests: ' + error.message, 'error')
-    el.querySelector('[class="page-header"]').insertAdjacentHTML('afterend', `
-      <div class="alert-banner danger" style="margin:16px">
-        <i class="ti ti-alert-triangle"></i>
-        <span>${error.message}</span>
-      </div>
-    `)
-  }
+    } catch (error) {
+      console.error('Error loading approvals:', error)
+      showToast('Failed to load requests: ' + error.message, 'error')
+      el.querySelector('[class="page-header"]')?.insertAdjacentHTML('afterend', `
+        <div class="alert-banner danger" style="margin:16px">
+          <i class="ti ti-alert-triangle"></i>
+          <span>${error.message}</span>
+        </div>
+      `)
+    }
 
-  el.querySelector('#queue-refresh')?.addEventListener('click', async () => {
-    await renderApprovalQueue(el)
-  })
+    el.querySelector('#queue-refresh')?.addEventListener('click', async () => {
+      await renderApprovalQueue(el)
+    })
+  }, 300)
 }
 
 function applyFilter() {
