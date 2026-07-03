@@ -32,8 +32,10 @@ export function initZeroTrust() {
   // Show skeleton immediately (no data yet)
   renderZeroTrustSkeleton(el)
 
-  // Load real data in background (no demo data shown)
-  loadZeroTrustData(el)
+  // Load real data in background with minimum skeleton display time
+  setTimeout(() => {
+    loadZeroTrustData(el)
+  }, 300)
 }
 
 async function loadZeroTrustData(el) {
@@ -99,11 +101,71 @@ function renderZeroTrustError(el, errorMsg) {
 
 function renderZeroTrustSkeleton(el) {
   el.innerHTML = `
-    <div>
-      ${skeletonLoader.renderPageHeader('Zero Trust Compliance', 'Validating 80 security controls...', true)}
-      ${skeletonLoader.renderMetricsRowSkeleton(5)}
-      ${skeletonLoader.renderCardGridSkeleton(2, 3)}
-      ${skeletonLoader.renderTableSkeleton(10)}
+    <div style="animation:fadeIn 200ms ease-in">
+      <div class="page-header" style="margin-bottom:20px">
+        <div>
+          <div class="page-title" style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:300px;height:32px;border-radius:4px;margin-bottom:8px"></div>
+          <div class="page-subtitle" style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:400px;height:16px;border-radius:4px"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px">
+        ${Array(5).fill(0).map(() => `
+          <div class="kpi-tile" style="padding:16px;background:var(--color-background-secondary);border-radius:8px;height:120px">
+            <div style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:60px;height:28px;border-radius:4px;margin-bottom:12px"></div>
+            <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:100%;height:12px;border-radius:4px;margin-bottom:8px"></div>
+            <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:80%;height:12px;border-radius:4px"></div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px">
+        ${Array(6).fill(0).map(() => `
+          <div class="card" style="padding:16px;height:200px">
+            <div style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:150px;height:20px;border-radius:4px;margin-bottom:16px"></div>
+            <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:100%;height:12px;border-radius:4px;margin-bottom:8px"></div>
+            <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:100%;height:12px;border-radius:4px;margin-bottom:8px"></div>
+            <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:80%;height:12px;border-radius:4px"></div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:16px;border-bottom:1px solid var(--color-border-secondary);background:var(--color-background-secondary)">
+          <div style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:150px;height:16px;border-radius:4px"></div>
+        </div>
+        <table style="width:100%">
+          <thead><tr style="border-bottom:1px solid var(--color-border-secondary)">
+            ${Array(5).fill(0).map(() => `
+              <th style="padding:12px;text-align:left">
+                <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:80px;height:12px;border-radius:4px"></div>
+              </th>
+            `).join('')}
+          </tr></thead>
+          <tbody>
+            ${Array(10).fill(0).map(() => `
+              <tr style="border-bottom:0.5px solid var(--color-border-secondary)">
+                ${Array(5).fill(0).map(() => `
+                  <td style="padding:12px">
+                    <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:100%;height:12px;border-radius:4px"></div>
+                  </td>
+                `).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <style>
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      </style>
     </div>
   `
 }
