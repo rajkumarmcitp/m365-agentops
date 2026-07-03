@@ -549,7 +549,7 @@ function renderAdminSettingsStep() {
       </div>
       <div class="step-header">
         <h2 style="margin:8px 0 4px 0;color:#E65100"><i class="ti ti-users"></i> Admin Settings</h2>
-        <p style="margin:4px 0 0 0">Configure roles, email, and administrative settings</p>
+        <p style="margin:4px 0 0 0">Configure super admin email and SharePoint site for initial setup</p>
       </div>
 
       <div class="step-body">
@@ -557,7 +557,7 @@ function renderAdminSettingsStep() {
           <div style="display:flex;gap:12px;align-items:flex-start">
             <i class="ti ti-info-circle" style="color:#E65100;font-size:18px;flex-shrink:0"></i>
             <div style="font-size:12px;line-height:1.6;color:var(--color-text-secondary)">
-              <strong style="color:#E65100">Final Configuration:</strong> Set up administrative roles, email notifications, and security settings to control who can access what in M365 AgentOps.
+              <strong style="color:#E65100">Final Setup Step:</strong> Configure the super admin email and SharePoint site location. Learn about the role hierarchy that controls access. Advanced security settings can be configured in Admin Settings after onboarding.
             </div>
           </div>
         </div>
@@ -617,21 +617,12 @@ function renderAdminSettingsStep() {
           </div>
         </div>
 
-        <div class="form-section">
-          <h3>Additional Settings</h3>
-          <div style="display:grid;gap:12px">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-              <input type="checkbox" id="enable-two-factor" checked>
-              <span>Require two-factor authentication for Super Admins</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-              <input type="checkbox" id="enable-audit-logs" checked>
-              <span>Enable audit logging for all changes</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-              <input type="checkbox" id="enable-notifications" checked>
-              <span>Enable email notifications for alerts</span>
-            </label>
+        <div class="form-section" style="background:rgba(76, 175, 80, 0.08);border:1px solid rgba(76, 175, 80, 0.2);padding:12px;border-radius:6px">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <i class="ti ti-info-circle" style="color:#2E7D32;flex-shrink:0;margin-top:2px"></i>
+            <div style="font-size:12px;line-height:1.6;color:var(--color-text-secondary)">
+              <strong style="color:#2E7D32">Advanced Settings Available:</strong> Configure 2FA, audit logging, email notifications, and other security settings in the Admin Settings page after setup completes.
+            </div>
           </div>
         </div>
 
@@ -702,13 +693,16 @@ function renderVerificationStep() {
             </div>
 
             <div class="next-steps">
-              <h4>Next Steps:</h4>
-              <ul style="padding-left:20px;font-size:12px;line-height:1.8">
-                <li>Invite your team members and assign roles</li>
-                <li>Configure data collection for your organization</li>
-                <li>Set up alerting and notifications</li>
-                <li>Review the compliance dashboard</li>
+              <h4>Recommended Next Steps:</h4>
+              <ul style="padding-left:20px;font-size:12px;line-height:1.8;margin-bottom:16px">
+                <li style="margin-bottom:4px">Visit <strong>Admin Settings</strong> to configure advanced security options (2FA, audit logging, notifications)</li>
+                <li style="margin-bottom:4px">Invite your team members and assign their roles</li>
+                <li style="margin-bottom:4px">Configure data collection and monitoring settings</li>
+                <li>Review the Zero Trust Assessment and compliance dashboards</li>
               </ul>
+              <a href="#" onclick="go('settings')" class="btn btn-primary" style="width:100%;padding:10px;text-align:center;margin-top:12px">
+                <i class="ti ti-adjustments-horizontal"></i> Go to Admin Settings
+              </a>
             </div>
           </div>
         </div>
