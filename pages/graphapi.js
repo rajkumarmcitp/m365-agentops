@@ -126,6 +126,9 @@ function renderGraphApiPage(el, config, health, stats, endpoints, perms, history
           <button class="btn" id="graph-refresh-token"><i class="ti ti-refresh"></i> Refresh token</button>
           <button class="btn" id="graph-clear-cache"><i class="ti ti-trash"></i> Clear cache</button>
         </div>
+        <div id="graph-status-display" style="margin-top:12px;padding:10px;border-radius:4px;background:#f5f5f5;border-left:3px solid #ccc;min-height:20px;font-size:12px;color:#666">
+          <span style="color:#999">Status: Waiting for action...</span>
+        </div>
       </div>
     </div>
 
@@ -320,8 +323,13 @@ function setupEventHandlers(el, config) {
 
   el.querySelector('#graph-test-conn')?.addEventListener('click', async () => {
     const btn = el.querySelector('#graph-test-conn')
+    const statusDisplay = el.querySelector('#graph-status-display')
     btn.disabled = true
     btn.innerHTML = '<i class="ti ti-hourglass"></i> Testing...'
+    statusDisplay.innerHTML = '<span style="color:#ff9800">⏳ Testing connection...</span>'
+    statusDisplay.style.borderLeftColor = '#ff9800'
+    statusDisplay.style.background = '#fff3e0'
+
     try {
       const res = await fetch(`${API_BASE}/api/graph/config/test`, {
         method: 'POST',
@@ -333,7 +341,9 @@ function setupEventHandlers(el, config) {
       })
 
       if (!res.ok) {
-        showToast(`Connection failed: HTTP ${res.status}`, 'error')
+        statusDisplay.innerHTML = `<span style="color:#d32f2f">❌ Connection failed: HTTP ${res.status}</span>`
+        statusDisplay.style.borderLeftColor = '#d32f2f'
+        statusDisplay.style.background = '#ffebee'
         return
       }
 
@@ -341,13 +351,19 @@ function setupEventHandlers(el, config) {
       console.log('Test connection response:', data)
 
       if (data.success) {
-        showToast(`✓ Connected (${data.latency}ms)`, 'success')
+        statusDisplay.innerHTML = `<span style="color:#388e3c">✅ Connected successfully</span><br><small style="color:#666">Latency: ${data.latency}ms | ${new Date(data.timestamp).toLocaleString()}</small>`
+        statusDisplay.style.borderLeftColor = '#388e3c'
+        statusDisplay.style.background = '#e8f5e9'
       } else {
-        showToast(`✗ ${data.message || 'Connection failed'}`, 'error')
+        statusDisplay.innerHTML = `<span style="color:#d32f2f">❌ ${data.message || 'Connection failed'}</span>`
+        statusDisplay.style.borderLeftColor = '#d32f2f'
+        statusDisplay.style.background = '#ffebee'
       }
     } catch (error) {
       console.error('Test connection error:', error)
-      showToast('Connection test failed: ' + error.message, 'error')
+      statusDisplay.innerHTML = `<span style="color:#d32f2f">❌ Connection test failed: ${error.message}</span>`
+      statusDisplay.style.borderLeftColor = '#d32f2f'
+      statusDisplay.style.background = '#ffebee'
     } finally {
       btn.disabled = false
       btn.innerHTML = '<i class="ti ti-wifi-check"></i> Test connection'
@@ -356,18 +372,29 @@ function setupEventHandlers(el, config) {
 
   el.querySelector('#graph-refresh-token')?.addEventListener('click', async () => {
     const btn = el.querySelector('#graph-refresh-token')
+    const statusDisplay = el.querySelector('#graph-status-display')
     btn.disabled = true
     btn.innerHTML = '<i class="ti ti-hourglass"></i> Refreshing...'
+    statusDisplay.innerHTML = '<span style="color:#ff9800">⏳ Refreshing token...</span>'
+    statusDisplay.style.borderLeftColor = '#ff9800'
+    statusDisplay.style.background = '#fff3e0'
+
     try {
       const res = await fetch(`${API_BASE}/api/graph/config/refresh-token`, { method: 'POST', headers: { 'X-User-Id': state.currentUser?.id || 'aisha', 'X-User-Role': state.currentUser?.role || 'user' } })
       const data = await res.json()
       if (data.success) {
-        showToast('Token refreshed successfully', 'success')
+        statusDisplay.innerHTML = `<span style="color:#388e3c">✅ Token refreshed successfully</span><br><small style="color:#666">Last refresh: ${new Date(data.lastRefresh || Date.now()).toLocaleString()}</small>`
+        statusDisplay.style.borderLeftColor = '#388e3c'
+        statusDisplay.style.background = '#e8f5e9'
       } else {
-        showToast('Token refresh failed: ' + data.message, 'error')
+        statusDisplay.innerHTML = `<span style="color:#d32f2f">❌ Token refresh failed: ${data.message || 'Unknown error'}</span>`
+        statusDisplay.style.borderLeftColor = '#d32f2f'
+        statusDisplay.style.background = '#ffebee'
       }
     } catch (error) {
-      showToast('Token refresh failed: ' + error.message, 'error')
+      statusDisplay.innerHTML = `<span style="color:#d32f2f">❌ Token refresh failed: ${error.message}</span>`
+      statusDisplay.style.borderLeftColor = '#d32f2f'
+      statusDisplay.style.background = '#ffebee'
     } finally {
       btn.disabled = false
       btn.innerHTML = '<i class="ti ti-refresh"></i> Refresh token'
