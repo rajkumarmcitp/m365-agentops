@@ -102,58 +102,128 @@ function renderZeroTrustError(el, errorMsg) {
 function renderZeroTrustSkeleton(el) {
   el.innerHTML = `
     <div style="animation:fadeIn 200ms ease-in">
+      <!-- Page Header -->
       <div class="page-header" style="margin-bottom:20px">
         <div>
-          <div class="page-title" style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:300px;height:32px;border-radius:4px;margin-bottom:8px"></div>
-          <div class="page-subtitle" style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:400px;height:16px;border-radius:4px"></div>
+          <div class="page-title" style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <i class="ti ti-lock-check"></i> Zero Trust Compliance
+          </div>
+          <div class="page-subtitle" style="color:var(--color-text-secondary)">Loading validation data...</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn" disabled><i class="ti ti-refresh"></i> Refresh</button>
+          <button class="btn btn-primary" disabled><i class="ti ti-download"></i> Export</button>
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px">
-        ${Array(5).fill(0).map(() => `
-          <div class="kpi-tile" style="padding:16px;background:var(--color-background-secondary);border-radius:8px;height:120px">
-            <div style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:60px;height:28px;border-radius:4px;margin-bottom:12px"></div>
-            <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:100%;height:12px;border-radius:4px;margin-bottom:8px"></div>
-            <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:80%;height:12px;border-radius:4px"></div>
+      <!-- KPI Row -->
+      <div class="kpi-row" style="margin-bottom:24px">
+        <div class="kpi-tile sec-kpi-primary">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:52px;height:52px;background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:50%"></div>
+            <div>
+              <div style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:60px;height:24px;border-radius:4px;margin-bottom:4px"></div>
+              <div style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Compliance</div>
+            </div>
+          </div>
+        </div>
+        <div class="kpi-tile">
+          <div style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:50px;height:28px;border-radius:4px;margin-bottom:8px"></div>
+          <div style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Failed</div>
+        </div>
+        <div class="kpi-tile">
+          <div style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:50px;height:28px;border-radius:4px;margin-bottom:8px"></div>
+          <div style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Warnings</div>
+        </div>
+        <div class="kpi-tile">
+          <div style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:50px;height:28px;border-radius:4px;margin-bottom:8px"></div>
+          <div style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Passed</div>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div style="border:0.5px solid var(--color-border-secondary);border-radius:8px;background:var(--color-background-primary);padding:12px;margin-bottom:16px">
+        <div class="tabs" style="margin-bottom:0;padding-bottom:0">
+          <button class="tab-btn active" disabled>
+            <i class="ti ti-layout-grid"></i><span>Overview</span>
+          </button>
+          <button class="tab-btn" disabled>
+            <i class="ti ti-fingerprint"></i><span>Identity</span>
+          </button>
+          <button class="tab-btn" disabled>
+            <i class="ti ti-device-mobile"></i><span>Device</span>
+          </button>
+          <button class="tab-btn" disabled>
+            <i class="ti ti-app-window"></i><span>Application</span>
+          </button>
+          <button class="tab-btn" disabled>
+            <i class="ti ti-database"></i><span>Data</span>
+          </button>
+          <button class="tab-btn" disabled>
+            <i class="ti ti-server"></i><span>Infrastructure</span>
+          </button>
+          <button class="tab-btn" disabled>
+            <i class="ti ti-shield-alert"></i><span>Threat</span>
+          </button>
+          <button class="tab-btn" disabled>
+            <i class="ti ti-brain"></i><span>AI Security</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Pillar Cards (Overview Content) -->
+      <div style="display:flex;gap:12px;margin-bottom:24px;overflow-x:auto;padding-bottom:8px">
+        ${Array(7).fill(0).map(() => `
+          <div style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:8px;border-left:3px solid var(--color-border-secondary);background:var(--color-background-secondary);min-width:140px;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:40px;height:20px;border-radius:4px"></div>
+            </div>
+            <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:100px;height:12px;border-radius:4px"></div>
+            <div style="background:var(--color-border-secondary);height:4px;border-radius:2px;overflow:hidden">
+              <div style="background:var(--color-border-secondary);height:100%;width:0%"></div>
+            </div>
           </div>
         `).join('')}
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px">
-        ${Array(6).fill(0).map(() => `
-          <div class="card" style="padding:16px;height:200px">
-            <div style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:150px;height:20px;border-radius:4px;margin-bottom:16px"></div>
-            <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:100%;height:12px;border-radius:4px;margin-bottom:8px"></div>
-            <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:100%;height:12px;border-radius:4px;margin-bottom:8px"></div>
-            <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:80%;height:12px;border-radius:4px"></div>
-          </div>
-        `).join('')}
-      </div>
-
+      <!-- Priority Actions / Validation Table -->
       <div class="card" style="padding:0;overflow:hidden">
-        <div style="padding:16px;border-bottom:1px solid var(--color-border-secondary);background:var(--color-background-secondary)">
-          <div style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:150px;height:16px;border-radius:4px"></div>
+        <div class="card-header" style="padding:16px">
+          <span class="card-title"><i class="ti ti-alert-circle"></i> Priority Actions</span>
         </div>
-        <table style="width:100%">
-          <thead><tr style="border-bottom:1px solid var(--color-border-secondary)">
-            ${Array(5).fill(0).map(() => `
-              <th style="padding:12px;text-align:left">
-                <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:80px;height:12px;border-radius:4px"></div>
-              </th>
-            `).join('')}
-          </tr></thead>
-          <tbody>
-            ${Array(10).fill(0).map(() => `
-              <tr style="border-bottom:0.5px solid var(--color-border-secondary)">
-                ${Array(5).fill(0).map(() => `
+        <div style="overflow-x:auto">
+          <table style="width:100%">
+            <thead><tr style="border-bottom:1px solid var(--color-border-secondary)">
+              <th style="width:12%;padding:12px;text-align:left;font-weight:600;font-size:11px">Severity</th>
+              <th style="width:35%;padding:12px;text-align:left;font-weight:600;font-size:11px">Control</th>
+              <th style="width:15%;padding:12px;text-align:left;font-weight:600;font-size:11px">Pillar</th>
+              <th style="width:25%;padding:12px;text-align:left;font-weight:600;font-size:11px">Status</th>
+              <th style="width:8%;padding:12px;text-align:right;font-weight:600;font-size:11px"></th>
+            </tr></thead>
+            <tbody>
+              ${Array(10).fill(0).map(() => `
+                <tr style="border-bottom:0.5px solid var(--color-border-secondary)">
                   <td style="padding:12px">
-                    <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:100%;height:12px;border-radius:4px"></div>
+                    <div style="background:linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:50px;height:16px;border-radius:4px"></div>
                   </td>
-                `).join('')}
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+                  <td style="padding:12px">
+                    <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:90%;height:12px;border-radius:4px;margin-bottom:6px"></div>
+                    <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:70%;height:10px;border-radius:4px"></div>
+                  </td>
+                  <td style="padding:12px">
+                    <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:80px;height:12px;border-radius:4px"></div>
+                  </td>
+                  <td style="padding:12px">
+                    <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:60px;height:12px;border-radius:4px"></div>
+                  </td>
+                  <td style="padding:12px;text-align:right">
+                    <div style="background:linear-gradient(90deg, #f0f0f0 25%, #f9f9f9 50%, #f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;width:40px;height:16px;border-radius:4px;margin-left:auto"></div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <style>
