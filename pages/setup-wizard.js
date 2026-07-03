@@ -5,13 +5,15 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const wizardState = {
   currentStep: 1,
-  totalSteps: 5,
+  totalSteps: 7,
   completed: {
     1: false,
     2: false,
     3: false,
     4: false,
-    5: false
+    5: false,
+    6: false,
+    7: false
   },
   formData: {
     azureClientId: '',
@@ -25,7 +27,16 @@ const wizardState = {
     superAdminEmail: '',
     twoFactorRequired: true,
     auditLoggingEnabled: true,
-    emailNotificationsEnabled: true
+    emailNotificationsEnabled: true,
+    // Service Configuration
+    selectedServices: [],
+    serviceConfigs: {
+      changeIntelligence: { enabled: false, siteUrl: '' },
+      serviceHealth: { enabled: false, siteUrl: '' },
+      zeroTrust: { enabled: false, siteUrl: '' },
+      tenantGuard: { enabled: false, siteUrl: '' },
+      selfService: { enabled: false, siteUrl: '' }
+    }
   }
 }
 
@@ -96,6 +107,20 @@ const steps = [
     icon: 'check-circle',
     description: 'Test and verify all connections',
     optional: false
+  },
+  {
+    num: 6,
+    title: 'Service Configuration',
+    icon: 'settings',
+    description: 'Configure optional services (Change Intelligence, Zero Trust, etc.)',
+    optional: true
+  },
+  {
+    num: 7,
+    title: 'List Initialization',
+    icon: 'clipboard-list',
+    description: 'Auto-create SharePoint lists and columns for selected services',
+    optional: true
   }
 ]
 
@@ -147,6 +172,10 @@ function renderStepContent(step) {
       return renderAdminSettingsStep()
     case 5:
       return renderVerificationStep()
+    case 6:
+      return renderServiceConfigStep()
+    case 7:
+      return renderListInitializationStep()
     default:
       return ''
   }
@@ -711,6 +740,131 @@ function renderVerificationStep() {
   `
 }
 
+function renderServiceConfigStep() {
+  return `
+    <div class="wizard-step-content">
+      <div style="margin-bottom:16px;padding:8px 12px;background:rgba(244, 67, 54, 0.1);border-radius:4px;display:inline-block">
+        <span style="font-size:11px;font-weight:600;color:#D32F2F">STEP 6 OF 7 (OPTIONAL)</span>
+      </div>
+      <div class="step-header">
+        <h2 style="margin:8px 0 4px 0;color:#D32F2F"><i class="ti ti-settings"></i> Service Configuration</h2>
+        <p style="margin:4px 0 0 0">Select which services to initialize with SharePoint lists</p>
+      </div>
+
+      <div class="step-body">
+        <div style="background:linear-gradient(135deg, rgba(244, 67, 54, 0.12) 0%, rgba(211, 47, 47, 0.08) 100%);border:1px solid rgba(244, 67, 54, 0.2);padding:14px;border-radius:6px;margin-bottom:24px">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <i class="ti ti-info-circle" style="color:#D32F2F;font-size:18px;flex-shrink:0"></i>
+            <div style="font-size:12px;line-height:1.6;color:var(--color-text-secondary)">
+              <strong style="color:#D32F2F">Optional Services:</strong> These services are optional. Select only the services you need. SharePoint lists and columns will be auto-created for selected services.
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Choose Services to Initialize</h3>
+          <div style="display:grid;gap:12px">
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--color-border-primary);border-radius:6px;cursor:pointer">
+              <input type="checkbox" class="service-checkbox" data-service="changeIntelligence" style="cursor:pointer;width:18px;height:18px">
+              <div>
+                <div style="font-weight:500;font-size:13px">Change Intelligence</div>
+                <div style="font-size:11px;color:var(--color-text-tertiary)">Service Health announcements and incident tracking</div>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--color-border-primary);border-radius:6px;cursor:pointer">
+              <input type="checkbox" class="service-checkbox" data-service="serviceHealth" style="cursor:pointer;width:18px;height:18px">
+              <div>
+                <div style="font-weight:500;font-size:13px">Service Health</div>
+                <div style="font-size:11px;color:var(--color-text-tertiary)">Monitor and track M365 service status</div>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--color-border-primary);border-radius:6px;cursor:pointer">
+              <input type="checkbox" class="service-checkbox" data-service="zeroTrust" style="cursor:pointer;width:18px;height:18px">
+              <div>
+                <div style="font-weight:500;font-size:13px">Zero Trust Assessment</div>
+                <div style="font-size:11px;color:var(--color-text-tertiary)">Security compliance validations and results</div>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--color-border-primary);border-radius:6px;cursor:pointer">
+              <input type="checkbox" class="service-checkbox" data-service="tenantGuard" style="cursor:pointer;width:18px;height:18px">
+              <div>
+                <div style="font-weight:500;font-size:13px">TenantGuard Enhanced</div>
+                <div style="font-size:11px;color:var(--color-text-tertiary)">Priority alerts, correlations, and investigations</div>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--color-border-primary);border-radius:6px;cursor:pointer">
+              <input type="checkbox" class="service-checkbox" data-service="selfService" style="cursor:pointer;width:18px;height:18px">
+              <div>
+                <div style="font-weight:500;font-size:13px">Self Service Portal</div>
+                <div style="font-size:11px;color:var(--color-text-tertiary)">Portal requests, workflows, and approvals</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-section" style="border-top:1px solid var(--color-border-primary);padding-top:20px;margin-top:20px">
+          <h3 style="margin-top:0;font-size:14px">Continue to List Initialization</h3>
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:14px">Click below to auto-create SharePoint lists and columns for the selected services.</p>
+          <button class="btn btn-primary" onclick="window.saveServiceConfigStep()" style="width:100%;padding:12px 16px;font-size:13px;font-weight:500;background:#D32F2F;border-color:#D32F2F">
+            <i class="ti ti-arrow-right"></i> Complete Step 6 → Step 7
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderListInitializationStep() {
+  return `
+    <div class="wizard-step-content">
+      <div style="margin-bottom:16px;padding:8px 12px;background:rgba(76, 175, 80, 0.1);border-radius:4px;display:inline-block">
+        <span style="font-size:11px;font-weight:600;color:#2E7D32">STEP 7 OF 7 (FINAL)</span>
+      </div>
+      <div class="step-header">
+        <h2 style="margin:8px 0 4px 0;color:#2E7D32"><i class="ti ti-clipboard-list"></i> List Initialization</h2>
+        <p style="margin:4px 0 0 0">Auto-create SharePoint lists and columns for selected services</p>
+      </div>
+
+      <div class="step-body">
+        <div style="background:linear-gradient(135deg, rgba(76, 175, 80, 0.12) 0%, rgba(56, 142, 60, 0.08) 100%);border:1px solid rgba(76, 175, 80, 0.2);padding:14px;border-radius:6px;margin-bottom:24px">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <i class="ti ti-sparkles" style="color:#2E7D32;font-size:18px;flex-shrink:0"></i>
+            <div style="font-size:12px;line-height:1.6;color:var(--color-text-secondary)">
+              <strong style="color:#2E7D32">Auto-Initialize:</strong> Click the button below to automatically create SharePoint lists and columns for the services you selected. This typically takes 30-60 seconds.
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Selected Services to Initialize</h3>
+          <div id="selected-services-list" style="display:grid;gap:8px;margin-bottom:16px">
+            <p style="color:var(--color-text-secondary);font-size:12px">Loading selected services...</p>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <button class="btn btn-primary" onclick="window.initializeSelectedLists()" id="init-lists-btn" style="width:100%;padding:12px 16px;font-size:13px;font-weight:500;background:#2E7D32;border-color:#2E7D32">
+            <i class="ti ti-rocket"></i> Initialize SharePoint Lists
+          </button>
+          <div id="initialization-status" style="margin-top:12px;padding:12px;border-radius:6px;display:none"></div>
+        </div>
+
+        <div class="form-section" style="border-top:1px solid var(--color-border-primary);padding-top:20px;margin-top:20px">
+          <h3 style="margin-top:0;font-size:14px">Complete Setup</h3>
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:14px">Once initialization is complete, your M365 AgentOps is fully configured and ready to use.</p>
+          <button class="btn btn-primary" onclick="window.completeSetup()" style="width:100%;padding:12px 16px;font-size:13px;font-weight:500;background:#2E7D32;border-color:#2E7D32">
+            <i class="ti ti-check-circle"></i> Complete Setup & Finish
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+}
+
 function attachEventListeners() {
   window.setWizardStep = setWizardStep
   window.nextWizardStep = nextWizardStep
@@ -720,6 +874,8 @@ function attachEventListeners() {
   window.testGraphConnection = testGraphConnection
   window.grantAdminConsent = grantAdminConsent
   window.runVerification = runVerification
+  window.saveServiceConfigStep = saveServiceConfigStep
+  window.initializeSelectedLists = initializeSelectedLists
   window.completeSetup = completeSetup
 }
 
@@ -1145,6 +1301,89 @@ function runVerification() {
   setTimeout(() => {
     document.getElementById('verification-summary').style.display = 'block'
   }, 3500)
+}
+
+function saveServiceConfigStep() {
+  // Get selected services from checkboxes
+  const checkboxes = document.querySelectorAll('.service-checkbox:checked')
+  const selectedServices = Array.from(checkboxes).map(cb => cb.dataset.service)
+
+  // Update wizard state
+  wizardState.formData.selectedServices = selectedServices
+
+  // Show selected services in next step
+  const statusDiv = document.getElementById('selected-services-list')
+  if (statusDiv && selectedServices.length > 0) {
+    statusDiv.innerHTML = selectedServices.map(service => {
+      const labels = {
+        changeIntelligence: 'Change Intelligence',
+        serviceHealth: 'Service Health',
+        zeroTrust: 'Zero Trust Assessment',
+        tenantGuard: 'TenantGuard Enhanced',
+        selfService: 'Self Service Portal'
+      }
+      return `<div style="padding:8px;background:rgba(244,67,54,0.1);border-left:4px solid #D32F2F;border-radius:4px"><span style="font-size:12px">${labels[service]}</span></div>`
+    }).join('')
+  }
+
+  // Move to next step
+  window.setWizardStep(7)
+}
+
+async function initializeSelectedLists() {
+  const btn = document.getElementById('init-lists-btn')
+  const statusDiv = document.getElementById('initialization-status')
+
+  try {
+    btn.disabled = true
+    btn.style.opacity = '0.6'
+    statusDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--color-text-secondary);font-size:12px"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> Initializing SharePoint lists...</div>`
+    statusDiv.style.display = 'block'
+
+    const response = await fetch(`${API_URL}/api/setup/initialize-services`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        services: wizardState.formData.selectedServices
+      })
+    })
+
+    const data = await response.json()
+
+    if (data.success) {
+      statusDiv.innerHTML = `
+        <div style="background:rgba(76, 175, 80, 0.1);border:1px solid rgba(76, 175, 80, 0.3);padding:12px;border-radius:6px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+            <i class="ti ti-check-circle" style="color:var(--color-success)"></i>
+            <strong>✅ SharePoint lists initialized successfully!</strong>
+          </div>
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-top:8px;padding-left:24px">
+            ${data.message || 'All selected services are ready to use.'}
+          </div>
+        </div>
+      `
+      showToast('SharePoint lists created successfully', 'success')
+    } else {
+      throw new Error(data.error || 'Failed to initialize lists')
+    }
+  } catch (error) {
+    console.error('Error initializing lists:', error)
+    statusDiv.innerHTML = `
+      <div style="background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239, 68, 68, 0.3);padding:12px;border-radius:6px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+          <i class="ti ti-alert-circle" style="color:var(--color-error)"></i>
+          <strong>❌ Initialization failed</strong>
+        </div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:8px;padding-left:24px">
+          ${error.message}
+        </div>
+      </div>
+    `
+    showToast('Failed to initialize lists: ' + error.message, 'error')
+  } finally {
+    btn.disabled = false
+    btn.style.opacity = '1'
+  }
 }
 
 async function completeSetup() {
