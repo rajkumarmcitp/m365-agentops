@@ -326,17 +326,27 @@ function setupEventHandlers(el, config) {
       const res = await fetch(`${API_BASE}/api/graph/config/test`, {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'X-User-Id': state.currentUser?.id || state.currentUser?.email || 'aisha',
           'X-User-Role': state.currentUser?.role || 'user'
         }
       })
+
+      if (!res.ok) {
+        showToast(`Connection failed: HTTP ${res.status}`, 'error')
+        return
+      }
+
       const data = await res.json()
+      console.log('Test connection response:', data)
+
       if (data.success) {
-        showToast(`✓ Connected as ${data.user || 'user'} (${data.latency}ms)`, 'success')
+        showToast(`✓ Connected (${data.latency}ms)`, 'success')
       } else {
-        showToast(`✗ Connection failed: ${data.message}`, 'error')
+        showToast(`✗ ${data.message || 'Connection failed'}`, 'error')
       }
     } catch (error) {
+      console.error('Test connection error:', error)
       showToast('Connection test failed: ' + error.message, 'error')
     } finally {
       btn.disabled = false
