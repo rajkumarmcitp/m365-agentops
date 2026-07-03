@@ -325,7 +325,10 @@ function setupEventHandlers(el, config) {
     try {
       const res = await fetch(`${API_BASE}/api/graph/config/test`, {
         method: 'POST',
-        headers: { 'X-User-Id': state.currentUser?.email || state.currentUser?.id || 'aisha' }
+        headers: {
+          'X-User-Id': state.currentUser?.id || state.currentUser?.email || 'aisha',
+          'X-User-Role': state.currentUser?.role || 'user'
+        }
       })
       const data = await res.json()
       if (data.success) {
@@ -346,7 +349,7 @@ function setupEventHandlers(el, config) {
     btn.disabled = true
     btn.innerHTML = '<i class="ti ti-hourglass"></i> Refreshing...'
     try {
-      const res = await fetch(`${API_BASE}/api/graph/config/refresh-token`, { method: 'POST', headers: { 'X-User-Id': state.currentUser?.id || 'aisha' } })
+      const res = await fetch(`${API_BASE}/api/graph/config/refresh-token`, { method: 'POST', headers: { 'X-User-Id': state.currentUser?.id || 'aisha', 'X-User-Role': state.currentUser?.role || 'user' } })
       const data = await res.json()
       if (data.success) {
         showToast('Token refreshed successfully', 'success')
@@ -365,7 +368,7 @@ function setupEventHandlers(el, config) {
     const btn = el.querySelector('#graph-clear-cache')
     btn.disabled = true
     try {
-      const res = await fetch(`${API_BASE}/api/graph/config/clear-cache`, { method: 'POST', headers: { 'X-User-Id': state.currentUser?.id || 'aisha' } })
+      const res = await fetch(`${API_BASE}/api/graph/config/clear-cache`, { method: 'POST', headers: { 'X-User-Id': state.currentUser?.id || 'aisha', 'X-User-Role': state.currentUser?.role || 'user' } })
       const data = await res.json()
       if (data.success) {
         showToast('Cache cleared successfully', 'success')
@@ -384,7 +387,7 @@ function setupEventHandlers(el, config) {
     if (newSecret) {
       fetch(`${API_BASE}/api/graph/config/rotate-credentials`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.email || state.currentUser?.id || 'aisha' },
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.email || state.currentUser?.id || 'aisha', 'X-User-Role': state.currentUser?.role || 'user' },
         body: JSON.stringify({ clientSecret: newSecret })
       }).then(r => r.json()).then(data => {
         if (data.success) {
@@ -405,7 +408,7 @@ function setupEventHandlers(el, config) {
     try {
       const res = await fetch(`${API_BASE}/api/graph/config/throttling`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.email || state.currentUser?.id || 'aisha' },
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.email || state.currentUser?.id || 'aisha', 'X-User-Role': state.currentUser?.role || 'user' },
         body: JSON.stringify({
           maxRetries: parseInt(el.querySelector('#throttle-max-retries').value),
           backoffInterval: parseInt(el.querySelector('#throttle-backoff').value),
@@ -418,7 +421,7 @@ function setupEventHandlers(el, config) {
         showToast('Throttling configuration saved', 'success')
         const cacheRes = await fetch(`${API_BASE}/api/graph/config/cache`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.email || state.currentUser?.id || 'aisha' },
+          headers: { 'Content-Type': 'application/json', 'X-User-Id': state.currentUser?.email || state.currentUser?.id || 'aisha', 'X-User-Role': state.currentUser?.role || 'user' },
           body: JSON.stringify({
             ttl: parseInt(el.querySelector('#cache-ttl').value),
             enabled: el.querySelector('#cache-enabled').checked
