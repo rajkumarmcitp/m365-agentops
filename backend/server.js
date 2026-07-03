@@ -112,6 +112,11 @@ import {
 import graphConfigApiRouter from './api/graph-config-api.js'
 import { unifiedGraphClient } from './lib/graph-client-unified.js'
 import { graphConfigService } from './services/graph-config-service.js'
+import {
+  setSetupConfigGraphClient, initializeSetupConfigList, saveSetupStep,
+  getSetupConfig, completeSetup, testSetupConnection
+} from './tenantguard/setup-config-service.js'
+import { updateAppServiceConfig, verifyAppService } from './services/app-service-config.js'
 
 import { randomUUID } from 'crypto'
 
@@ -374,6 +379,11 @@ if (isValidCredentials) {
       // Initialize Unified Graph Client for centralized Graph API access
       await unifiedGraphClient.init()
       console.log('✓ Unified Graph Client initialized')
+
+      // Initialize Setup Configuration Service
+      setSetupConfigGraphClient(graphClient)
+      await initializeSetupConfigList()
+      console.log('✓ Setup Configuration service initialized')
     })().catch(error => {
       console.warn('⚠️ Graph Client initialization failed:', error.message)
       console.warn('⚠️ Will use simulated data for endpoints')
@@ -12729,6 +12739,355 @@ app.get('/api/tenantguard/dashboard', async (req, res) => {
       success: false,
       error: error.message,
       timestamp: new Date().toISOString()
+    })
+  }
+})
+
+// ============================================================
+// Setup Wizard Configuration Endpoints
+// ============================================================
+
+/**
+ * GET /api/setup/config
+ * Get current setup configuration and status
+ */
+app.get('/api/setup/config', async (req, res) => {
+  try {
+    const config = await getSetupConfig()
+    res.json({
+      success: true,
+      ...config
+    })
+  } catch (error) {
+    console.error('❌ Error getting setup config:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/setup/save-step
+ * Save a setup wizard step to SharePoint
+ */
+app.post('/api/setup/save-step', async (req, res) => {
+  try {
+    const { step, tenantId, clientId, clientSecret, redirectUri, roleSuper, roleAdmin, roleManager, graphApiPermissions, superAdminEmail, twoFactorRequired, auditLoggingEnabled, emailNotificationsEnabled, completedSteps } = req.body
+
+    if (!step) {
+      return res.status(400).json({
+        success: false,
+        error: 'Step parameter is required'
+      })
+    }
+
+    const stepData = {
+      step,
+      tenantId,
+      clientId,
+      clientSecret,
+      redirectUri,
+      roleSuper,
+      roleAdmin,
+      roleManager,
+      graphApiPermissions,
+      superAdminEmail,
+      twoFactorRequired,
+      auditLoggingEnabled,
+      emailNotificationsEnabled,
+      setupStatus: completedSteps && completedSteps.length === 5 ? 'Complete' : 'In-Progress',
+      completedSteps
+    }
+
+    const result = await saveSetupStep(stepData)
+    res.json({
+      success: true,
+      message: `Step "${step}" saved successfully`,
+      itemId: result.id
+    })
+  } catch (error) {
+    console.error('❌ Error saving setup step:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/setup/test-connection
+ * Test Azure AD credentials
+ */
+app.post('/api/setup/test-connection', async (req, res) => {
+  try {
+    const { clientId, clientSecret, tenantId } = req.body
+
+    if (!clientId || !clientSecret || !tenantId) {
+      return res.status(400).json({
+        success: false,
+        error: 'clientId, clientSecret, and tenantId are required'
+      })
+    }
+
+    const result = await testSetupConnection(clientId, clientSecret, tenantId)
+    res.json(result)
+  } catch (error) {
+    console.error('❌ Error testing setup connection:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/setup/test-graph-api
+ * Test Graph API permissions
+ */
+app.post('/api/setup/test-graph-api', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(503).json({
+        success: false,
+        error: 'Graph API not configured'
+      })
+    }
+
+    // Try to call a basic Graph API endpoint to verify permissions
+    const org = await graphClient.api('/organization').select('id,displayName').get()
+
+    res.json({
+      success: true,
+      message: 'Graph API connection successful',
+      organization: org.value[0]?.displayName || 'Unknown'
+    })
+  } catch (error) {
+    console.error('❌ Error testing Graph API:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      details: 'Failed to connect to Graph API. Please verify permissions are granted.'
+    })
+  }
+})
+
+/**
+ * POST /api/setup/admin-consent
+ * Initiate admin consent flow for Graph API permissions
+ */
+app.post('/api/setup/admin-consent', async (req, res) => {
+  try {
+    const clientId = process.env.AZURE_CLIENT_ID
+    const tenantId = process.env.AZURE_TENANT_ID
+    const redirectUri = process.env.AZURE_REDIRECT_URI || 'http://localhost:5173/auth/callback'
+
+    if (!clientId || !tenantId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Azure AD credentials not configured'
+      })
+    }
+
+    // Build the admin consent URL
+    const permissions = [
+      'Application.Read.All',
+      'AuditLog.Read.All',
+      'Device.Read.All',
+      'DeviceManagementApps.Read.All',
+      'DeviceManagementConfiguration.Read.All',
+      'DeviceManagementManagedDevices.Read.All',
+      'DeviceManagementRBAC.Read.All',
+      'DeviceManagementScripts.Read.All',
+      'DeviceManagementServiceConfig.Read.All',
+      'Directory.Read.All',
+      'Directory.ReadWrite.All',
+      'Domain.Read.All',
+      'Files.Read.All',
+      'Group.ReadWrite.All',
+      'GroupMember.Read.All',
+      'GroupMember.ReadWrite.All',
+      'IdentityRiskEvent.Read.All',
+      'Mail.ReadWrite',
+      'Mail.Send',
+      'Organization.Read.All',
+      'Policy.Read.All',
+      'SecurityActions.Read.All',
+      'SecurityEvents.Read.All',
+      'ServiceHealth.Read.All',
+      'ServiceMessage.Read.All',
+      'Sites.FullControl.All',
+      'Sites.Manage.All',
+      'Sites.ReadWrite.All',
+      'Team.Create',
+      'Team.ReadBasic.All',
+      'TeamMember.ReadWrite.All',
+      'TeamworkTag.Read.All',
+      'ThreatAssessment.Read.All',
+      'User.Read.All',
+      'User.ReadWrite.All',
+      'UserAuthenticationMethod.Read.All',
+      'Exchange.ManageAsApp'
+    ]
+
+    const scopes = permissions.map(p => `https://graph.microsoft.com/.default`).join(' ')
+
+    // Build Azure AD authorization URL with admin_consent
+    const authUrl = new URL(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize`)
+    authUrl.searchParams.append('client_id', clientId)
+    authUrl.searchParams.append('response_type', 'code')
+    authUrl.searchParams.append('redirect_uri', redirectUri)
+    authUrl.searchParams.append('scope', scopes)
+    authUrl.searchParams.append('prompt', 'admin_consent')
+
+    res.json({
+      success: true,
+      authUrl: authUrl.toString()
+    })
+  } catch (error) {
+    console.error('❌ Error initiating admin consent:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/setup/verify-admin-consent
+ * Verify if admin consent was granted
+ */
+app.post('/api/setup/verify-admin-consent', async (req, res) => {
+  try {
+    // In a real implementation, this would check the consent status
+    // For now, we'll check if the Graph API client has permissions
+    if (!graphClient) {
+      return res.json({
+        consentGranted: false,
+        message: 'Graph client not configured'
+      })
+    }
+
+    try {
+      // Try to fetch organization to verify permissions
+      const org = await graphClient.api('/organization').select('id').get()
+      res.json({
+        consentGranted: true,
+        message: 'Admin consent verified'
+      })
+    } catch (error) {
+      res.json({
+        consentGranted: false,
+        message: 'Permissions not yet granted',
+        error: error.message
+      })
+    }
+  } catch (error) {
+    console.error('❌ Error verifying admin consent:', error.message)
+    res.status(500).json({
+      consentGranted: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/setup/complete
+ * Mark setup as complete
+ */
+app.post('/api/setup/complete', async (req, res) => {
+  try {
+    const { superAdminEmail } = req.body
+
+    if (!superAdminEmail) {
+      return res.status(400).json({
+        success: false,
+        error: 'superAdminEmail is required'
+      })
+    }
+
+    const result = await completeSetup(superAdminEmail)
+    res.json({
+      success: true,
+      message: 'Setup completed successfully',
+      email: superAdminEmail
+    })
+  } catch (error) {
+    console.error('❌ Error completing setup:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/setup/deploy-config
+ * Deploy setup configuration to App Service environment variables
+ */
+app.post('/api/setup/deploy-config', async (req, res) => {
+  try {
+    const {
+      clientId,
+      clientSecret,
+      tenantId,
+      redirectUri,
+      sharePointSiteId
+    } = req.body
+
+    if (!clientId || !clientSecret || !tenantId || !redirectUri || !sharePointSiteId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required configuration fields'
+      })
+    }
+
+    console.log('🚀 Deploying configuration to App Service...')
+
+    const result = await updateAppServiceConfig({
+      clientId,
+      clientSecret,
+      tenantId,
+      redirectUri,
+      sharePointSiteId
+    })
+
+    if (result.skipped) {
+      return res.json({
+        success: true,
+        message: 'Setup complete (App Service update skipped - not configured)',
+        skipped: true
+      })
+    }
+
+    res.json({
+      success: result.success,
+      message: result.message,
+      appService: result.appService,
+      settingsUpdated: result.settingsUpdated,
+      error: result.error
+    })
+  } catch (error) {
+    console.error('❌ Error deploying configuration:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/setup/verify-app-service
+ * Verify if App Service is configured and accessible
+ */
+app.get('/api/setup/verify-app-service', async (req, res) => {
+  try {
+    const result = await verifyAppService()
+    res.json(result)
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
     })
   }
 })

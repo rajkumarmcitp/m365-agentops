@@ -32,8 +32,9 @@ const NAV_ITEMS = {
     { id: 'settings', label: 'Admin Settings',   icon: 'ti-adjustments-horizontal' },
   ],
   super: [
-    { id: 'graphapi', label: 'Graph API',       icon: 'ti-api',      badge: 'Live', badgeCls: 'green' },
-    { id: 'sso',      label: 'SSO / Entra ID',  icon: 'ti-key' },
+    { id: 'setup-wizard', label: 'Setup Wizard',  icon: 'ti-sparkles' },
+    { id: 'graphapi',     label: 'Graph API',     icon: 'ti-api',      badge: 'Live', badgeCls: 'green' },
+    { id: 'sso',          label: 'SSO / Entra ID',icon: 'ti-key' },
   ],
 }
 

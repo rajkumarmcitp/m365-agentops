@@ -24,6 +24,7 @@ import { initMyReqs } from './pages/myreqs.js'
 import { initChat } from './pages/chat.js'
 import { initGraphApi } from './pages/graphapi.js'
 import { initSso } from './pages/sso.js'
+import { initSetupWizard } from './pages/setup-wizard.js'
 import { initAudit } from './pages/audit.js'
 import { initSettings } from './pages/settings.js'
 import { initMsgCenter } from './pages/msgcenter.js'
@@ -149,6 +150,11 @@ export function hasAccess(pageId) {
     return ['super', 'admin'].includes(state.currentUser.role)
   }
 
+  // Special case: setup-wizard is available for super/admin users
+  if (pageId === 'setup-wizard') {
+    return ['super', 'admin'].includes(state.currentUser.role)
+  }
+
   return state.currentUser.navAccess.includes(pageId)
 }
 
@@ -184,6 +190,7 @@ const PAGE_INIT = {
   chat: initChat,
   graphapi: initGraphApi,
   sso: initSso,
+  'setup-wizard': initSetupWizard,
   audit: initAudit,
   settings: initSettings,
 }
@@ -191,6 +198,7 @@ const PAGE_INIT = {
 // Export configuration utilities
 export { CONFIG, isFeatureEnabled, isProdMode, isDevMode, getHotfixStatus }
 
+// Expose go to window for console access
 export async function go(pageId) {
   if (!hasAccess(pageId)) {
     showToast('You do not have access to that page.', 'error')
@@ -434,8 +442,8 @@ async function doLoginWithEntraID(account) {
 
   // Determine nav access based on role
   const roleNavAccess = {
-    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'audit', 'settings'],
-    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings'],
+    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'setup-wizard', 'audit', 'settings'],
+    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'setup-wizard', 'audit', 'settings'],
     manager: ['requests', 'msgcenter', 'tasks', 'portal', 'myreqs', 'myaccount', 'chat'],
     user: ['portal', 'myreqs', 'myaccount', 'chat']
   }
@@ -445,6 +453,11 @@ async function doLoginWithEntraID(account) {
   // Ensure user-investigation is available for super/admin users
   if (['super', 'admin'].includes(role) && !navAccess.includes('user-investigation')) {
     navAccess = [...navAccess, 'user-investigation']
+  }
+
+  // Ensure setup-wizard is available for super/admin users
+  if (['super', 'admin'].includes(role) && !navAccess.includes('setup-wizard')) {
+    navAccess = [...navAccess, 'setup-wizard']
   }
 
   const entraUser = {
@@ -506,10 +519,17 @@ function renderAllPages() {
   const pages = [
     'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','privaccts','m365config',
     'msgcenter','messages','tasks','applications','intune','licenses','agents','approvals','portal','myreqs','myaccount','chat',
-    'graphapi','sso','audit','settings'
+    'graphapi','sso','setup-wizard','audit','settings'
   ]
   return pages.map(p => `<div class="page" id="page-${p}"></div>`).join('')
 }
+
+// ============================================================
+// Expose to window for console access
+// ============================================================
+window.go = go
+window.setupWizard = () => go('setup-wizard')
+window.state = state
 
 // ============================================================
 // Boot

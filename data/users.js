@@ -9,7 +9,7 @@ export const USERS = [
     navAccess: [
       'dashboard', 'requests', 'security', 'tenantguard', 'tenantguard-enhanced', 'zerotrust', 'privaccts',
       'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'messages', 'applications', 'intune',
-      'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings'
+      'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings', 'setup-wizard'
     ],
     isDemoAccount: true,
   },
@@ -43,7 +43,7 @@ export const USERS = [
       'dashboard', 'requests', 'security', 'tenantguard', 'tenantguard-enhanced', 'zerotrust', 'privaccts',
       'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'messages', 'applications', 'intune',
       'portal', 'myreqs', 'myaccount', 'chat',
-      'audit', 'settings'
+      'audit', 'settings', 'setup-wizard'
     ],
   },
   {
@@ -58,7 +58,7 @@ export const USERS = [
       'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'messages', 'applications', 'intune',
       'portal', 'myreqs', 'myaccount', 'chat',
       'audit', 'settings',
-      'graphapi', 'sso'
+      'graphapi', 'sso', 'setup-wizard'
     ],
   },
 ]
