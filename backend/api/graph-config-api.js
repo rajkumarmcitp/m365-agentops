@@ -11,14 +11,32 @@ import { unifiedGraphClient } from '../lib/graph-client-unified.js'
 const router = express.Router()
 
 /**
- * Middleware: Allow Graph API access (PRODUCTION - Auth via Azure AD groups)
- * VERSION: 2024-07-02-FINAL
+ * Middleware: Enforce Super Admin/Admin access control
+ * Graph API configuration is sensitive - only Super Admins and Admins can modify
+ * Roles determined by Azure AD group membership via /api/user/role endpoint
  */
 function requireSuperAdmin(req, res, next) {
-  // In production, auth is handled via Azure AD group membership
-  // The role is determined by /api/user/role endpoint based on AZURE_GROUP_* env vars
-  // Allow all authenticated requests - backend role validation is in place
-  console.log('✅ Graph API: Allowing request (Auth middleware - Version 2024-07-02-FINAL)')
+  const userRole = req.headers['x-user-role']
+  const userId = req.headers['x-user-id']
+
+  if (!userRole) {
+    console.warn(`⚠️ Graph API: No user role provided from X-User-Role header`)
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized: Missing user role'
+    })
+  }
+
+  // Allow 'super' and 'admin' roles, deny 'manager' and 'user'
+  if (userRole !== 'super' && userRole !== 'admin') {
+    console.warn(`⚠️ Graph API: Access denied for user ${userId} with role '${userRole}'`)
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden: Graph API configuration requires Admin access'
+    })
+  }
+
+  console.log(`✅ Graph API: Access granted for user ${userId} with role '${userRole}'`)
   next()
 }
 
