@@ -2,10 +2,8 @@ import { state } from '../app.js'
 import { showToast } from '../components/toast.js'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-const TEST_MODE = import.meta.env.VITE_TEST_MODE === 'true'
 
 const wizardState = {
-  testMode: TEST_MODE,
   currentStep: 1,
   totalSteps: 5,
   completed: {
@@ -104,14 +102,6 @@ const steps = [
 function renderWizard(container) {
   container.innerHTML = `
     <div class="setup-wizard-wrapper">
-      ${wizardState.testMode ? `
-        <div style="background:#FFF3E0;border-bottom:2px solid #FF9800;padding:12px 16px;display:flex;align-items:center;gap:10px">
-          <i class="ti ti-alert-triangle" style="color:#E65100;font-size:18px"></i>
-          <div style="font-size:12px;color:#E65100">
-            <strong>TEST MODE ENABLED</strong> - Data will be saved to test lists. This does not affect production configuration.
-          </div>
-        </div>
-      ` : ''}
       <div class="setup-wizard-header">
         <div style="display:flex;align-items:center;gap:12px">
           <i class="ti ti-sparkles" style="font-size:28px;color:var(--color-primary)"></i>
