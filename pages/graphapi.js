@@ -24,13 +24,14 @@ async function loadGraphApiData() {
       'X-User-Role': state.currentUser?.role || 'user'
     }
 
-    const [configRes, healthRes, statsRes, endpointsRes, permissionsRes, historyRes] = await Promise.all([
+    const [configRes, healthRes, statsRes, endpointsRes, permissionsRes, historyRes, setupRes] = await Promise.all([
       fetch(`${API_BASE}/api/graph/config`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/graph/config/health`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/graph/config/stats`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/graph/config/endpoints`, { headers }).then(r => r.json()),
       fetch(`${API_BASE}/api/graph/config/permissions`, { headers }).then(r => r.json()),
-      fetch(`${API_BASE}/api/graph/config/history?limit=15`, { headers }).then(r => r.json())
+      fetch(`${API_BASE}/api/graph/config/history?limit=15`, { headers }).then(r => r.json()),
+      fetch(`${API_BASE}/api/setup/config`, { headers }).then(r => r.json()).catch(() => ({ success: false }))
     ])
 
     const config = configRes.data || {}
@@ -39,12 +40,13 @@ async function loadGraphApiData() {
     const endpoints = endpointsRes.data || {}
     const perms = permissionsRes.data || {}
     const history = historyRes.data || []
+    const setupConfig = setupRes.success ? setupRes : { success: false }
 
-    renderGraphApiPage(el, config, health, stats, endpoints, perms, history)
+    renderGraphApiPage(el, config, health, stats, endpoints, perms, history, setupConfig)
   } catch (error) {
     console.error('Failed to load Graph API data:', error)
     showToast('Failed to load Graph API configuration', 'error')
-    renderGraphApiPage(el, {}, {}, {}, {}, {}, [])
+    renderGraphApiPage(el, {}, {}, {}, {}, {}, [], { success: false })
   }
 }
 
@@ -64,7 +66,7 @@ function getHealthStatusBadge(status) {
   return `<span class="badge ${s.class}"><i class="ti ${s.icon}"></i> ${status}</span>`
 }
 
-function renderGraphApiPage(el, config, health, stats, endpoints, perms, history) {
+function renderGraphApiPage(el, config, health, stats, endpoints, perms, history, setupConfig = { success: false }) {
   const statusColor = health.status === 'connected' ? 'success' : health.status === 'initializing' ? 'warning' : 'danger'
   const lastRefresh = health.lastTokenRefresh ? new Date(health.lastTokenRefresh).toLocaleString() : 'Never'
 
@@ -80,6 +82,23 @@ function renderGraphApiPage(el, config, health, stats, endpoints, perms, history
       — Last token refresh: ${formatTime(health.lastTokenRefresh) || 'Never'}
       <span class="badge ${statusColor}" style="margin-left:auto">Live</span>
     </div>
+
+    ${setupConfig.success ? `
+      <div style="background:linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.05) 100%);border:1px solid rgba(76, 175, 80, 0.2);padding:14px;border-radius:6px;margin-bottom:16px">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <i class="ti ti-check-circle" style="color:#2E7D32;font-size:20px;flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px;color:#2E7D32;margin-bottom:6px">Setup Wizard Configuration Complete</div>
+            <div style="font-size:12px;line-height:1.6;color:var(--color-text-secondary)">
+              Your M365 AgentOps has been configured via the Setup Wizard. Graph API is using the credentials and permissions configured in Step 3.
+              ${setupConfig.completedSteps && setupConfig.completedSteps.length > 0 ? `
+                <br><strong>Completed Steps:</strong> ${setupConfig.completedSteps.join(', ')}
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    ` : ''}
 
     <div class="tabs" id="graph-tabs">
       <button class="tab-btn active" data-tab="reg">App Registration</button>

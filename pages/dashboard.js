@@ -46,6 +46,7 @@ function renderDashboardSkeleton(el) {
       </div>
     </div>
 
+    <div id="setup-status-banner" style="background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);padding:14px;border-radius:6px;margin-bottom:20px;display:none"></div>
 
     <!-- 📊 Critical Alerts Section -->
     <div style="margin-bottom:20px">
@@ -120,11 +121,17 @@ async function loadDashboardData(el) {
     console.log('📡 Fetching dashboard data...')
 
     // Fetch all data in parallel
-    const [devicesResult, usersResult, scoreResult] = await Promise.all([
+    const [devicesResult, usersResult, scoreResult, setupResult] = await Promise.all([
       getDevices().catch(e => { console.warn('⚠️ Devices fetch failed:', e.message); return {} }),
       getUsers().catch(e => { console.warn('⚠️ Users fetch failed:', e.message); return {} }),
-      getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return {} })
+      getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return {} }),
+      fetch('/api/setup/config').then(r => r.json()).catch(e => { console.warn('⚠️ Setup config fetch failed:', e.message); return { success: false } })
     ])
+
+    // Check setup status and show banner if incomplete
+    if (setupResult.success && setupResult.completedSteps && setupResult.completedSteps.length < 5) {
+      updateSetupBanner(el, setupResult)
+    }
 
     // Update KPI tiles
     updateKpiTiles(el, devicesResult, usersResult, scoreResult)
@@ -136,6 +143,33 @@ async function loadDashboardData(el) {
   } catch (error) {
     console.error('❌ Error loading dashboard data:', error)
   }
+}
+
+function updateSetupBanner(el, setupConfig) {
+  const banner = el.querySelector('#setup-status-banner')
+  if (!banner) return
+
+  const completedCount = setupConfig.completedSteps?.length || 0
+  const progressPercent = (completedCount / 5) * 100
+
+  banner.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px">
+      <i class="ti ti-sparkles" style="color:#FF9800;font-size:20px"></i>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:13px">Setup Wizard in Progress</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">
+          ${completedCount} of 5 steps completed
+          <div style="background:rgba(0,0,0,0.1);height:4px;border-radius:2px;margin-top:4px">
+            <div style="background:#FF9800;height:100%;border-radius:2px;width:${progressPercent}%"></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="go('setup-wizard')" style="flex-shrink:0">
+        Continue Setup <i class="ti ti-arrow-right"></i>
+      </button>
+    </div>
+  `
+  banner.style.display = 'block'
 }
 
 function updateKpiTiles(el, devicesResult, usersResult, scoreResult) {
