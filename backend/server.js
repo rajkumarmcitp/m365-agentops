@@ -7513,6 +7513,267 @@ app.get('/api/tenantguard/users/:userId/investigation', async (req, res) => {
 
 /**
  * ============================================================
+ * User Investigation - Category 1: Actions by User
+ * ============================================================
+ */
+
+/**
+ * GET /api/user-investigation/signin-logs
+ * Get user sign-in logs from audit logs
+ */
+app.get('/api/user-investigation/signin-logs', async (req, res) => {
+  try {
+    const { userPrincipalName, startDate, endDate } = req.query
+
+    if (!userPrincipalName) {
+      return res.status(400).json({ success: false, error: 'userPrincipalName required' })
+    }
+
+    let signInLogs = []
+    if (graphClient) {
+      try {
+        const start = startDate ? new Date(startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        const signIns = await graphClient
+          .api('/auditLogs/signIns')
+          .filter(`userPrincipalName eq '${userPrincipalName}' and createdDateTime gt ${start.toISOString()}`)
+          .top(20)
+          .get()
+
+        signInLogs = (signIns.value || []).map(s => ({
+          timestamp: s.createdDateTime,
+          location: s.location?.city ? `${s.location.city}, ${s.location.state}` : 'Unknown',
+          device: s.deviceDetail?.displayName || s.deviceDetail?.operatingSystem || 'Unknown',
+          os: s.deviceDetail?.operatingSystem || 'Unknown',
+          browser: s.deviceDetail?.browser || 'Unknown',
+          status: s.status?.errorCode === 0 ? 'Success' : 'Failed',
+          riskLevel: s.riskLevelDuringSignIn || 'Low'
+        }))
+      } catch (error) {
+        console.warn('⚠️ Error fetching sign-in logs:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: signInLogs })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/user-investigation/risk-detections
+ * Get risk detections for user
+ */
+app.get('/api/user-investigation/risk-detections', async (req, res) => {
+  try {
+    const { userId } = req.query
+
+    let riskDetections = []
+    if (graphClient && userId) {
+      try {
+        const risks = await graphClient
+          .api('/identityProtection/riskDetections')
+          .filter(`userId eq '${userId}'`)
+          .top(20)
+          .get()
+
+        riskDetections = (risks.value || []).map(r => ({
+          detectionType: r.detectionType || 'Unknown',
+          riskLevel: r.riskLevel || 'Low',
+          riskState: r.riskState || 'Unknown',
+          location: r.location?.city || 'Unknown',
+          detectionTime: r.detectedDateTime || r.createdDateTime
+        }))
+      } catch (error) {
+        console.warn('⚠️ Error fetching risk detections:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: riskDetections })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/user-investigation/registered-devices
+ * Get devices registered by user
+ */
+app.get('/api/user-investigation/registered-devices', async (req, res) => {
+  try {
+    const { userId } = req.query
+
+    let devices = []
+    if (graphClient && userId) {
+      try {
+        const userDevices = await graphClient
+          .api(`/users/${userId}/registeredDevices`)
+          .top(20)
+          .get()
+
+        devices = (userDevices.value || []).map(d => ({
+          name: d.displayName || 'Unknown',
+          id: d.id,
+          os: d.operatingSystem || 'Unknown',
+          type: d.deviceType || 'Unknown'
+        }))
+      } catch (error) {
+        console.warn('⚠️ Error fetching registered devices:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: devices })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/user-investigation/managed-devices
+ * Get Intune-managed devices
+ */
+app.get('/api/user-investigation/managed-devices', async (req, res) => {
+  try {
+    const { userPrincipalName } = req.query
+
+    let devices = []
+    if (graphClient && userPrincipalName) {
+      try {
+        const managedDevices = await graphClient
+          .api('/deviceManagement/managedDevices')
+          .filter(`userPrincipalName eq '${userPrincipalName}'`)
+          .top(20)
+          .get()
+
+        devices = (managedDevices.value || []).map(d => ({
+          name: d.deviceName || 'Unknown',
+          complianceState: d.complianceState || 'Unknown',
+          encrypted: d.isEncrypted ? 'Yes' : 'No',
+          lastSync: d.lastSyncDateTime,
+          managed: 'Yes'
+        }))
+      } catch (error) {
+        console.warn('⚠️ Error fetching managed devices:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: devices })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/user-investigation/oauth-consent
+ * Get OAuth permissions granted by user
+ */
+app.get('/api/user-investigation/oauth-consent', async (req, res) => {
+  try {
+    const { userId } = req.query
+
+    let grants = []
+    if (graphClient && userId) {
+      try {
+        const oauthGrants = await graphClient
+          .api('/oauth2PermissionGrants')
+          .filter(`principalId eq '${userId}'`)
+          .top(20)
+          .get()
+
+        grants = (oauthGrants.value || []).map(g => ({
+          appName: g.clientAppId || 'Unknown',
+          permissions: g.scope || 'N/A',
+          consentType: g.consentType || 'Unknown',
+          grantedDate: g.createdDateTime
+        }))
+      } catch (error) {
+        console.warn('⚠️ Error fetching OAuth consent:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: grants })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/user-investigation/security-alerts
+ * Get security alerts involving user
+ */
+app.get('/api/user-investigation/security-alerts', async (req, res) => {
+  try {
+    const { userPrincipalName } = req.query
+
+    let alerts = []
+    if (graphClient && userPrincipalName) {
+      try {
+        const securityAlerts = await graphClient
+          .api('/security/alerts_v2')
+          .filter(`userStates/any(u:u/userPrincipalName eq '${userPrincipalName}')`)
+          .top(20)
+          .get()
+
+        alerts = (securityAlerts.value || []).map(a => ({
+          title: a.title || 'Unknown Alert',
+          severity: a.severity || 'Unknown',
+          status: a.status || 'Unknown',
+          detectionSource: a.detectionSource || 'Unknown',
+          createdTime: a.createdDateTime
+        }))
+      } catch (error) {
+        console.warn('⚠️ Error fetching security alerts:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: alerts })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * ============================================================
+ * User Investigation - Category 2: Actions on User Account
+ * ============================================================
+ */
+
+/**
+ * GET /api/user-investigation/account-changes
+ * Get account changes from directory audit
+ */
+app.get('/api/user-investigation/account-changes', async (req, res) => {
+  try {
+    const { userId } = req.query
+
+    let changes = []
+    if (graphClient && userId) {
+      try {
+        const audits = await graphClient
+          .api('/auditLogs/directoryAudits')
+          .filter(`targetResources/any(t:t/id eq '${userId}')`)
+          .top(50)
+          .get()
+
+        changes = (audits.value || []).map(a => ({
+          action: a.activityDisplayName || a.category || 'Unknown',
+          initiatedBy: a.initiatedBy?.user?.userPrincipalName || 'System',
+          timestamp: a.createdDateTime,
+          status: a.result === 'Success' ? 'Success' : 'Failed',
+          details: a.targetResources?.[0]?.modifiedProperties?.map(p => `${p.displayName}: ${p.oldValue} → ${p.newValue}`).join('; ') || 'N/A'
+        }))
+      } catch (error) {
+        console.warn('⚠️ Error fetching account changes:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: changes })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * ============================================================
  * Data Persistence Endpoints
  * ============================================================
  */

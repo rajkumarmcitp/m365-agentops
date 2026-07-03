@@ -294,34 +294,85 @@ function renderUserInvestigation(el) {
         <div id="user-summary" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px"></div>
       </div>
 
-      <!-- Application Access -->
-      <div class="card mb-3">
-        <div class="card-title mb-3"><i class="ti ti-apps"></i> Application Access (${'-7d to today'}) </div>
-        <div id="applications-section"></div>
+      <!-- ===== CATEGORY 1: ACTIONS PERFORMED BY THE USER ===== -->
+      <div style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:16px;margin-bottom:16px;background:var(--color-background-secondary)">
+        <h3 style="margin:0 0 16px 0;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--color-info)">
+          <i class="ti ti-user-check"></i>
+          Actions Performed by the User (What did the user do?)
+        </h3>
+
+        <!-- Sign-in Activity -->
+        <div class="card mb-3">
+          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-login"></i> Sign-in Activity</div>
+          <div id="signin-logs-section" style="font-size:11px"></div>
+        </div>
+
+        <!-- Risk Detections -->
+        <div class="card mb-3">
+          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-alert-triangle"></i> Risk Detections</div>
+          <div id="risk-detections-section" style="font-size:11px"></div>
+        </div>
+
+        <!-- Devices Used -->
+        <div class="card mb-3">
+          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-device-laptop"></i> Devices Used</div>
+          <div id="devices-section" style="font-size:11px"></div>
+        </div>
+
+        <!-- OAuth Permissions -->
+        <div class="card mb-3">
+          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-key"></i> OAuth Permissions Granted</div>
+          <div id="oauth-consent-section" style="font-size:11px"></div>
+        </div>
+
+        <!-- Security Alerts -->
+        <div class="card mb-3">
+          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-bell-alert"></i> Security Alerts</div>
+          <div id="security-alerts-section" style="font-size:11px"></div>
+        </div>
       </div>
 
-      <!-- Sign-in Activity -->
-      <div class="card mb-3">
-        <div class="card-title mb-3"><i class="ti ti-login"></i> Recent Sign-in Activity</div>
-        <div id="signin-logs-section"></div>
+      <!-- ===== CATEGORY 2: ACTIONS PERFORMED ON USER ACCOUNT ===== -->
+      <div style="border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:16px;margin-bottom:16px;background:var(--color-background-secondary)">
+        <h3 style="margin:0 0 16px 0;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--color-warning)">
+          <i class="ti ti-user-edit"></i>
+          Actions Performed on User Account (What happened to the user's account?)
+        </h3>
+
+        <!-- Account Changes -->
+        <div class="card">
+          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-clipboard-list"></i> Account Changes</div>
+          <div id="account-changes-section" style="font-size:11px"></div>
+        </div>
       </div>
 
-      <!-- Audit Actions -->
-      <div class="card mb-3">
-        <div class="card-title mb-3"><i class="ti ti-clipboard-list"></i> Audit Actions</div>
-        <div id="audit-logs-section"></div>
-      </div>
+      <!-- ===== ADDITIONAL SECTIONS (LEGACY) ===== -->
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--color-border-secondary)">
+        <h3 style="font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:12px">Additional Investigation Data</h3>
 
-      <!-- Actions on Other Accounts -->
-      <div class="card mb-3">
-        <div class="card-title mb-3"><i class="ti ti-users-group"></i> Actions on Other Accounts</div>
-        <div id="other-accounts-section"></div>
-      </div>
+        <!-- Application Access -->
+        <div class="card mb-3">
+          <div class="card-title mb-3"><i class="ti ti-apps"></i> Application Access</div>
+          <div id="applications-section"></div>
+        </div>
 
-      <!-- Risk Timeline -->
-      <div class="card mb-3">
-        <div class="card-title mb-3"><i class="ti ti-timeline"></i> Risk Timeline</div>
-        <div id="timeline-section"></div>
+        <!-- Audit Actions -->
+        <div class="card mb-3">
+          <div class="card-title mb-3"><i class="ti ti-clipboard-list"></i> Audit Actions</div>
+          <div id="audit-logs-section"></div>
+        </div>
+
+        <!-- Actions on Other Accounts -->
+        <div class="card mb-3">
+          <div class="card-title mb-3"><i class="ti ti-users-group"></i> Actions on Other Accounts</div>
+          <div id="other-accounts-section"></div>
+        </div>
+
+        <!-- Risk Timeline -->
+        <div class="card mb-3">
+          <div class="card-title mb-3"><i class="ti ti-timeline"></i> Risk Timeline</div>
+          <div id="timeline-section"></div>
+        </div>
       </div>
     </div>
 
