@@ -2,7 +2,7 @@ import { go, state } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { getSecurityScore, getIncidents, getDevices, getIdentityPosture, callAPI } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
-import { skeletonLoader } from '../lib/skeleton-loader.js'
+import { customSkeleton } from '../lib/skeleton-custom.js'
 import {
   IDENTITY,
   INCIDENTS as DEMO_INCIDENTS,
@@ -73,18 +73,15 @@ export async function initSecurity() {
     return
   }
 
-  // Show skeleton immediately
+  // Show skeleton immediately (no demo data)
   renderSecuritySkeleton(el)
 
-  // Render immediately with skeleton - no waiting for data
-  render(el)
-
-  // Load all data in background (non-blocking)
+  // Load all data in background with 300ms minimum skeleton display
   console.log('📡 Loading security data in background...')
-  loadAllDataAsync(el)
-
-  // Wire up tab click handlers for lazy loading
-  wireTabHandlers(el)
+  setTimeout(() => {
+    // Load all data first, then render
+    loadAllDataAsync(el)
+  }, 300)
 }
 
 // Load all data in background without blocking initial render
@@ -176,6 +173,9 @@ async function loadAllDataAsync(el) {
     // Re-render with fresh data
     console.log('🔄 Re-rendering with all security data...')
     render(el)
+
+    // Wire up tab click handlers for lazy loading
+    wireTabHandlers(el)
   } catch (error) {
     console.error('❌ Error loading data:', error.message)
   }
@@ -267,12 +267,12 @@ function renderSecuritySkeleton(el) {
     </style>
     <div class="page-header">
       <div>
-        <div class="page-title skeleton-animate" style="width:350px;height:28px;border-radius:4px;margin-bottom:8px"></div>
-        <div class="page-subtitle skeleton-animate" style="width:450px;height:16px;border-radius:4px"></div>
+        <div class="page-title"><i class="ti ti-shield-exclamation"></i> Security Command Center</div>
+        <div class="page-subtitle">Single-pane-of-glass across Identity, Email, Endpoint, Apps & Data · Loading...</div>
       </div>
       <div class="page-actions" style="display:flex;gap:8px">
-        <div class="skeleton-animate" style="width:80px;height:32px;border-radius:4px"></div>
-        <div class="skeleton-animate" style="width:100px;height:32px;border-radius:4px"></div>
+        <button class="btn" disabled><i class="ti ti-refresh"></i> Refresh</button>
+        <button class="btn btn-primary" disabled><i class="ti ti-download"></i> Export report</button>
       </div>
     </div>
 
@@ -286,10 +286,17 @@ function renderSecuritySkeleton(el) {
       `).join('')}
     </div>
 
-    <div style="border-bottom:0.5px solid var(--color-border-secondary);margin-bottom:16px;display:flex;gap:8px;padding-bottom:12px;overflow-x:auto">
-      ${Array(8).fill(0).map(() => `
-        <div class="skeleton-animate" style="width:120px;height:20px;border-radius:4px;flex-shrink:0"></div>
-      `).join('')}
+    <div style="border:0.5px solid var(--color-border-secondary);border-radius:8px;background:var(--color-background-primary);padding:12px;margin-bottom:16px">
+      <div style="display:flex;gap:8px;padding-bottom:12px;overflow-x:auto;margin-bottom:4px">
+        ${['Executive', 'Secure Score', 'Identity', 'Email', 'Endpoint', 'Teams', 'SharePoint'].map(label => `
+          <button class="tab-btn" disabled style="white-space:nowrap">${label}</button>
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:8px;overflow-x:auto">
+        ${['Data Protection', 'Priv. Access', 'Guests', 'Incidents', 'Security Copilot', 'API Reference'].map(label => `
+          <button class="tab-btn" disabled style="white-space:nowrap">${label}</button>
+        `).join('')}
+      </div>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:16px">
