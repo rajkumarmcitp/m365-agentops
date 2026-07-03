@@ -287,14 +287,9 @@ function renderSecuritySkeleton(el) {
     </div>
 
     <div style="border:0.5px solid var(--color-border-secondary);border-radius:8px;background:var(--color-background-primary);padding:12px;margin-bottom:16px">
-      <div style="display:flex;gap:8px;padding-bottom:12px;overflow-x:auto;margin-bottom:4px">
-        ${['Executive', 'Secure Score', 'Identity', 'Email', 'Endpoint', 'Teams', 'SharePoint'].map(label => `
-          <button class="tab-btn" disabled style="white-space:nowrap">${label}</button>
-        `).join('')}
-      </div>
-      <div style="display:flex;gap:8px;overflow-x:auto">
-        ${['Data Protection', 'Priv. Access', 'Guests', 'Incidents', 'Security Copilot', 'API Reference'].map(label => `
-          <button class="tab-btn" disabled style="white-space:nowrap">${label}</button>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${['Executive', 'Secure Score', 'Identity', 'Email', 'Endpoint', 'Teams', 'SharePoint', 'Data Protection', 'Priv. Access', 'Guests', 'Incidents', 'Security Copilot', 'API Reference'].map(label => `
+          <button class="tab-btn" disabled style="white-space:nowrap;flex-shrink:0">${label}</button>
         `).join('')}
       </div>
     </div>
@@ -334,23 +329,13 @@ function render(el) {
       ${topFiveKpi()}
     </div>
 
-    <!-- Internal sub-navigation - Boxed container -->
+    <!-- Internal sub-navigation - Responsive tabs -->
     <div style="border:0.5px solid var(--color-border-secondary);border-radius:8px;background:var(--color-background-primary);padding:12px;margin-bottom:16px">
-      <!-- Row 1 -->
-      <div class="tabs" id="sec-subnav-row1" style="margin-bottom:4px;padding-bottom:0">
-        ${SEC_TABS_ROW1.map(t => `
-          <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
+      <div class="tabs" id="sec-subnav" style="margin-bottom:0;padding-bottom:0;display:flex;flex-wrap:wrap;gap:4px">
+        ${SEC_TABS.map(t => `
+          <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}" style="flex-shrink:0;white-space:nowrap">
             <i class="ti ${t.icon}"></i><span>${t.label}</span>
             ${t.id === 'identity' && realIdentityPosture.highRiskUsers > 0 ? `<span class="sec-tab-badge red">${realIdentityPosture.highRiskUsers}</span>` : ''}
-          </button>
-        `).join('')}
-      </div>
-
-      <!-- Row 2 -->
-      <div class="tabs" id="sec-subnav-row2" style="margin-bottom:0;padding-bottom:0">
-        ${SEC_TABS_ROW2.map(t => `
-          <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
-            <i class="ti ${t.icon}"></i><span>${t.label}</span>
             ${t.id === 'incidents' && critCount > 0 ? `<span class="sec-tab-badge red">${critCount}</span>` : ''}
           </button>
         `).join('')}
@@ -361,11 +346,11 @@ function render(el) {
     <div id="sec-content" style="margin-top:16px">${renderSection()}</div>
   `
 
-  el.querySelectorAll('#sec-subnav-row1 .tab-btn, #sec-subnav-row2 .tab-btn').forEach(btn => {
+  el.querySelectorAll('#sec-subnav .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeSection = btn.dataset.sec
       render(el)
-      el.querySelector('#sec-subnav-row1')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      el.querySelector('#sec-subnav')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     })
   })
 
