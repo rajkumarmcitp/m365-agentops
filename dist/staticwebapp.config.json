@@ -1,0 +1,32 @@
+{
+  "routes": [
+    {
+      "route": "/api/*",
+      "allowedRoles": ["authenticated", "anonymous"]
+    },
+    {
+      "route": "/*",
+      "serve": "/index.html",
+      "statusCode": 200
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/api/*", "/assets/*", "*.svg", "*.png", "*.jpg", "*.gif", "*.json"]
+  },
+  "cors": {
+    "allowedOrigins": [
+      "https://m365ops.azurestaticapps.net",
+      "https://m365ops-api.azurewebsites.net",
+      "https://proud-river-0f55f1e10.7.azurestaticapps.net"
+    ],
+    "allowedMethods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    "allowedHeaders": ["Content-Type", "Authorization", "X-User-Id", "X-User-Role"],
+    "exposeHeaders": ["Content-Type"],
+    "maxAge": 600
+  },
+  "mimeTypes": {
+    ".js": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8"
+  }
+}

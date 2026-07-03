@@ -111,6 +111,7 @@ import {
 } from './validation-config.js'
 import graphConfigApiRouter from './api/graph-config-api.js'
 import { unifiedGraphClient } from './lib/graph-client-unified.js'
+import AzureAuditService from './services/azure-audit-service.js'
 import { graphConfigService } from './services/graph-config-service.js'
 import {
   setSetupConfigGraphClient, initializeSetupConfigList, saveSetupStep,
@@ -936,6 +937,81 @@ app.get('/api/audit-logs/export', async (req, res) => {
     }
   } catch (error) {
     console.error('✗ Export error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// ============================================================
+// Azure AD Audit Logs (Real Tenant Events)
+// ============================================================
+app.get('/api/azure-audit-logs', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '50'), 200)
+
+    const logs = await AzureAuditService.getCombinedAuditLogs(limit)
+
+    // Calculate statistics
+    const stats = {
+      total: logs.length,
+      byCategory: {},
+      bySeverity: {}
+    }
+
+    logs.forEach(log => {
+      stats.byCategory[log.category] = (stats.byCategory[log.category] || 0) + 1
+      stats.bySeverity[log.severity] = (stats.bySeverity[log.severity] || 0) + 1
+    })
+
+    res.json({
+      success: true,
+      data: logs,
+      stats
+    })
+  } catch (error) {
+    console.error('❌ Failed to fetch Azure AD audit logs:', error.message)
+
+    if (error.statusCode === 401 || error.message?.includes('Unauthorized')) {
+      return res.json({
+        success: true,
+        data: [],
+        error: 'Not configured',
+        message: 'Azure AD connection not configured. Complete setup wizard Step 2-3 to enable Graph API.'
+      })
+    }
+
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+app.get('/api/azure-audit-logs/directory', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '50'), 200)
+    const logs = await AzureAuditService.getDirectoryAudits({ limit })
+
+    res.json({
+      success: true,
+      data: logs
+    })
+  } catch (error) {
+    console.error('❌ Failed to fetch directory audits:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+app.get('/api/azure-audit-logs/signin', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '50'), 200)
+    const logs = await AzureAuditService.getSignInLogs({ limit })
+
+    res.json({
+      success: true,
+      data: logs
+    })
+  } catch (error) {
+    console.error('❌ Failed to fetch sign-in logs:', error.message)
     res.status(500).json({ success: false, error: error.message })
   }
 })
