@@ -330,6 +330,26 @@ app.use((req, res, next) => {
 })
 
 app.use(express.json({ limit: '50mb' }))
+app.use(express.urlencoded({ limit: '50mb', extended: true }))
+
+// ============================================================
+// CORS Configuration
+// ============================================================
+app.use(cors({
+  origin: [
+    'http://localhost:5173',    // Vite dev server
+    'http://localhost:5174',    // Vite fallback port
+    'http://localhost:5175',    // Vite fallback port 2
+    'http://localhost:3000',    // Backend itself
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'http://127.0.0.1:5175',
+    'http://127.0.0.1:3000'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}))
 
 // ============================================================
 // Azure Identity & Graph Client Setup
@@ -7679,12 +7699,37 @@ app.get('/api/user-investigation/oauth-consent', async (req, res) => {
           .top(20)
           .get()
 
-        grants = (oauthGrants.value || []).map(g => ({
-          appName: g.clientAppId || 'Unknown',
-          permissions: g.scope || 'N/A',
-          consentType: g.consentType || 'Unknown',
-          grantedDate: g.createdDateTime
-        }))
+        // Fetch app details for each grant
+        const grantsWithAppNames = await Promise.all(
+          (oauthGrants.value || []).map(async (g) => {
+            let appName = 'Unknown Application'
+            try {
+              // Try to get app details from service principal
+              const appDetails = await graphClient
+                .api(`/servicePrincipals`)
+                .filter(`appId eq '${g.clientAppId}'`)
+                .select('displayName,appId')
+                .get()
+
+              if (appDetails.value && appDetails.value.length > 0) {
+                appName = appDetails.value[0].displayName || 'Unknown Application'
+              }
+            } catch (error) {
+              // Fallback to just using the app ID if lookup fails
+              console.warn(`⚠️ Could not fetch app name for ${g.clientAppId}:`, error.message)
+            }
+
+            return {
+              appName: appName,
+              appId: g.clientAppId,
+              permissions: g.scope || 'N/A',
+              consentType: g.consentType || 'Unknown',
+              grantedDate: g.createdDateTime
+            }
+          })
+        )
+
+        grants = grantsWithAppNames
       } catch (error) {
         console.warn('⚠️ Error fetching OAuth consent:', error.message)
       }
@@ -7739,7 +7784,10 @@ app.get('/api/user-investigation/security-alerts', async (req, res) => {
 
 /**
  * GET /api/user-investigation/account-changes
- * Get account changes from directory audit
+ * Get account changes from directory audit with proper normalization
+ *
+ * Uses Microsoft Graph: /auditLogs/directoryAudits
+ * Filters by targetResources/any(t:t/id eq '{UserId}')
  */
 app.get('/api/user-investigation/account-changes', async (req, res) => {
   try {
@@ -7748,29 +7796,466 @@ app.get('/api/user-investigation/account-changes', async (req, res) => {
     let changes = []
     if (graphClient && userId) {
       try {
+        // Fetch last 90 days of directory audits for this user
+        const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+
+        console.log(`🔍 Fetching account changes for userId: ${userId}`)
+
+        // Get user's email/UPN for better matching
+        let userUPN = null
+        try {
+          const user = await graphClient.api(`/users/${userId}`).get()
+          userUPN = user.userPrincipalName || user.mail
+          console.log(`👤 User UPN resolved: ${userUPN}`)
+        } catch (e) {
+          console.warn(`⚠️ Could not resolve user UPN: ${e.message}`)
+        }
+
+        // Fetch recent audits without filtering (more reliable)
+        // Then filter in application since targetResources fields vary by activity type
         const audits = await graphClient
           .api('/auditLogs/directoryAudits')
-          .filter(`targetResources/any(t:t/id eq '${userId}')`)
-          .top(50)
+          .orderby('activityDateTime desc')
+          .top(500)
           .get()
 
-        changes = (audits.value || []).map(a => ({
-          action: a.activityDisplayName || a.category || 'Unknown',
-          initiatedBy: a.initiatedBy?.user?.userPrincipalName || 'System',
-          timestamp: a.createdDateTime,
-          status: a.result === 'Success' ? 'Success' : 'Failed',
-          details: a.targetResources?.[0]?.modifiedProperties?.map(p => `${p.displayName}: ${p.oldValue} → ${p.newValue}`).join('; ') || 'N/A'
-        }))
+        console.log(`📊 Raw audits fetched: ${(audits.value || []).length} total records`)
+
+        // Filter in application - more reliable than Graph OData filters
+        // because targetResources stores different fields depending on activity type
+        const userAudits = (audits.value || []).filter(a => {
+          if (!a.targetResources || a.targetResources.length === 0) return false
+
+          return a.targetResources.some(t =>
+            t.id === userId ||
+            t.userPrincipalName === userId ||
+            t.userPrincipalName === userUPN ||
+            (userUPN && t.userPrincipalName?.toLowerCase() === userUPN.toLowerCase()) ||
+            t.displayName === userId
+          )
+        })
+
+        console.log(`✓ Filtered to user: ${userAudits.length} records`)
+        console.log(`📝 Checking against: userId=${userId}, userUPN=${userUPN}`)
+
+        if (userAudits.length > 0) {
+          console.log(`📋 Sample audit activities:`, userAudits.slice(0, 3).map(a => a.activityDisplayName))
+        } else {
+          console.log(`❌ No audits matched. First 3 targetResources from raw data:`)
+          audits.value?.slice(0, 3).forEach((a, i) => {
+            console.log(`  Audit ${i}: activities=${a.activityDisplayName}, targets=${a.targetResources?.map(t => `${t.userPrincipalName || t.displayName || t.id}`).join(', ')}`)
+          })
+        }
+
+        // Categorize activity
+        function categorizeActivity(displayName) {
+          const name = displayName?.toLowerCase() || ''
+
+          if (name.includes('password') || name.includes('reset')) return 'Identity Changes'
+          if (name.includes('authentication') || name.includes('mfa') || name.includes('authenticator')) return 'Authentication Changes'
+          if (name.includes('role') && (name.includes('add') || name.includes('remove'))) return 'Privilege Changes'
+          if (name.includes('group') && (name.includes('member') || name.includes('add') || name.includes('remove'))) return 'Group Changes'
+          if (name.includes('license')) return 'License Changes'
+          if (name.includes('app') || name.includes('owner') || name.includes('application')) return 'Application Changes'
+          if (name.includes('conditional') || name.includes('policy') || name.includes('security')) return 'Security Changes'
+          if (name.includes('create') || name.includes('delete') || name.includes('restore')) return 'Account Lifecycle'
+          if (name.includes('enable') || name.includes('disable')) return 'Identity Changes'
+          if (name.includes('update') && name.includes('user')) return 'Identity Changes'
+
+          return 'Other Changes'
+        }
+
+        // Normalize audit records
+        changes = userAudits.map(a => {
+          const modifiedProps = a.targetResources?.[0]?.modifiedProperties || []
+          const oldValue = modifiedProps.length > 0 ? modifiedProps[0].oldValue : null
+          const newValue = modifiedProps.length > 0 ? modifiedProps[0].newValue : null
+
+          return {
+            // Core investigation fields
+            id: a.id,
+            eventTime: a.activityDateTime,
+            action: a.activityDisplayName || 'Unknown',
+            category: categorizeActivity(a.activityDisplayName),
+
+            // Actor information
+            actor: a.initiatedBy?.user?.displayName || 'System',
+            actorUpn: a.initiatedBy?.user?.userPrincipalName || 'system',
+            actorType: a.initiatedBy?.user ? 'User' : 'System',
+
+            // Target information
+            targetUser: a.targetResources?.[0]?.userPrincipalName || userId,
+            targetType: a.targetResources?.[0]?.type || 'User',
+
+            // Operation details
+            result: a.result === 'Success' ? 'Success' : 'Failed',
+            operationType: a.operationType || 'Update',
+            service: a.loggedByService || 'Microsoft Entra ID',
+
+            // Change details
+            beforeValue: oldValue,
+            afterValue: newValue,
+            allModifiedProperties: modifiedProps.map(p => ({
+              name: p.displayName,
+              before: p.oldValue,
+              after: p.newValue
+            })),
+
+            // Correlation
+            correlationId: a.correlationId,
+
+            // Raw for debugging
+            raw: {
+              activityDisplayName: a.activityDisplayName,
+              category: a.category,
+              result: a.result,
+              loggedByService: a.loggedByService
+            }
+          }
+        })
+      } catch (graphError) {
+        console.error('❌ Graph API Error fetching account changes:', graphError.message)
+        if (graphError.statusCode === 401 || graphError.statusCode === 403) {
+          console.error('⚠️ Permission denied! Ensure app has AuditLog.Read.All permission')
+        }
+      }
+    } else {
+      console.warn('⚠️ GraphClient not initialized or userId missing', { hasGraphClient: !!graphClient, userId })
+    }
+
+    if (changes.length === 0) {
+      console.log('📭 No account changes found for this user in the past 90 days')
+    }
+
+    res.json({
+      success: true,
+      data: changes,
+      metadata: {
+        total: changes.length,
+        source: 'Microsoft Graph /auditLogs/directoryAudits',
+        endpoint: `/auditLogs/directoryAudits?$filter=targetResources/any(t:t/id eq '${userId}')`
+      }
+    })
+  } catch (error) {
+    console.error('❌ Account changes endpoint error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/user-investigation/user-profile
+ * Get detailed user profile information
+ */
+app.get('/api/user-investigation/user-profile', async (req, res) => {
+  try {
+    const { userId } = req.query
+    let profile = {}
+
+    if (graphClient && userId) {
+      try {
+        const user = await graphClient
+          .api(`/users/${userId}`)
+          .get()
+
+        profile = {
+          displayName: user.displayName,
+          userPrincipalName: user.userPrincipalName,
+          id: user.id,
+          mail: user.mail,
+          department: user.department,
+          jobTitle: user.jobTitle,
+          accountEnabled: user.accountEnabled,
+          createdDateTime: user.createdDateTime,
+          lastPasswordChangeDateTime: user.lastPasswordChangeDateTime,
+          companyName: user.companyName,
+          officeLocation: user.officeLocation,
+          employeeId: user.employeeId,
+          userType: user.userType,
+          usageLocation: user.usageLocation,
+          mobilePhone: user.mobilePhone
+        }
       } catch (error) {
-        console.warn('⚠️ Error fetching account changes:', error.message)
+        console.warn('⚠️ Error fetching user profile:', error.message)
       }
     }
 
-    res.json({ success: true, data: changes })
+    res.json({ success: true, data: profile })
   } catch (error) {
     res.status(500).json({ success: false, error: error.message })
   }
 })
+
+/**
+ * GET /api/user-investigation/user-groups
+ * Get user's group memberships
+ */
+app.get('/api/user-investigation/user-groups', async (req, res) => {
+  try {
+    const { userId } = req.query
+    let groups = []
+
+    if (graphClient && userId) {
+      try {
+        const memberships = await graphClient
+          .api(`/users/${userId}/memberOf`)
+          .top(50)
+          .get()
+
+        groups = (memberships.value || []).map(g => ({
+          id: g.id,
+          displayName: g.displayName,
+          type: g['@odata.type']?.split('.').pop() || 'Group',
+          description: g.description || 'N/A'
+        }))
+      } catch (error) {
+        console.warn('⚠️ Error fetching user groups:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: groups })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/user-investigation/directory-roles
+ * Get user's directory roles
+ */
+app.get('/api/user-investigation/directory-roles', async (req, res) => {
+  try {
+    const { userId } = req.query
+    let roles = []
+
+    if (graphClient && userId) {
+      try {
+        const directoryRoles = await graphClient
+          .api(`/users/${userId}/memberOf/microsoft.graph.directoryRole`)
+          .get()
+
+        roles = (directoryRoles.value || []).map(r => ({
+          id: r.id,
+          displayName: r.displayName,
+          description: r.description || 'N/A'
+        }))
+      } catch (error) {
+        console.warn('⚠️ Error fetching directory roles:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: roles })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/user-investigation/authentication-methods
+ * Get user's authentication methods
+ */
+app.get('/api/user-investigation/authentication-methods', async (req, res) => {
+  try {
+    const { userId } = req.query
+    let methods = []
+
+    if (graphClient && userId) {
+      try {
+        const authMethods = await graphClient
+          .api(`/users/${userId}/authentication/methods`)
+          .get()
+
+        methods = (authMethods.value || []).map(m => ({
+          id: m.id,
+          displayName: m.displayName || m['@odata.type']?.split('.').pop() || 'Unknown',
+          type: m['@odata.type'] || 'Unknown',
+          isRegistered: m.isRegistered !== false
+        }))
+      } catch (error) {
+        console.warn('⚠️ Error fetching authentication methods:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: methods })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/user-investigation/mailbox-settings
+ * Get user's mailbox settings
+ */
+app.get('/api/user-investigation/mailbox-settings', async (req, res) => {
+  try {
+    const { userId } = req.query
+    let settings = {}
+
+    if (graphClient && userId) {
+      try {
+        const mailbox = await graphClient
+          .api(`/users/${userId}/mailboxSettings`)
+          .get()
+
+        settings = {
+          timeZone: mailbox.timeZone || 'N/A',
+          language: mailbox.language?.locale || 'N/A',
+          dateFormat: mailbox.dateFormat || 'N/A',
+          timeFormat: mailbox.timeFormat || 'N/A',
+          automaticRepliesSetting: mailbox.automaticRepliesSetting?.status || 'Disabled',
+          workingHours: mailbox.workingHours ? {
+            daysOfWeek: mailbox.workingHours.daysOfWeek?.join(', ') || 'N/A',
+            startTime: mailbox.workingHours.startTime || 'N/A',
+            endTime: mailbox.workingHours.endTime || 'N/A'
+          } : 'N/A'
+        }
+      } catch (error) {
+        console.warn('⚠️ Error fetching mailbox settings:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: settings })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/user-investigation/risky-users
+ * Get risky user status
+ */
+app.get('/api/user-investigation/risky-users', async (req, res) => {
+  try {
+    const { userId } = req.query
+    let riskyUser = null
+
+    if (graphClient && userId) {
+      try {
+        const riskyUsers = await graphClient
+          .api('/identityProtection/riskyUsers')
+          .filter(`id eq '${userId}'`)
+          .get()
+
+        if (riskyUsers.value && riskyUsers.value.length > 0) {
+          const user = riskyUsers.value[0]
+          riskyUser = {
+            id: user.id,
+            userPrincipalName: user.userPrincipalName,
+            riskLevel: user.riskLevel,
+            riskState: user.riskState,
+            riskDetail: user.riskDetail,
+            isDeleted: user.isDeleted,
+            isProcessing: user.isProcessing
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Error fetching risky user:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: riskyUser || {} })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/user-investigation/enterprise-apps
+ * Get enterprise applications owned or assigned to user
+ */
+app.get('/api/user-investigation/enterprise-apps', async (req, res) => {
+  try {
+    const { userId } = req.query
+    let apps = []
+
+    if (graphClient && userId) {
+      try {
+        const servicePrincipals = await graphClient
+          .api('/servicePrincipals')
+          .filter(`owners/any(o:o/id eq '${userId}')`)
+          .top(20)
+          .get()
+
+        apps = (servicePrincipals.value || []).map(sp => ({
+          id: sp.id,
+          displayName: sp.displayName,
+          appId: sp.appId,
+          servicePrincipalType: sp.servicePrincipalType,
+          createdDateTime: sp.createdDateTime
+        }))
+      } catch (error) {
+        console.warn('⚠️ Error fetching enterprise apps:', error.message)
+      }
+    }
+
+    res.json({ success: true, data: apps })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/user-investigation/analysis
+ * Generate AI-powered investigation analysis
+ * Uses POST to allow larger payloads (data sent in request body)
+ */
+app.post('/api/user-investigation/analysis', async (req, res) => {
+  try {
+    // Import the investigation agent
+    const investigationAgent = await import('../lib/investigation-agent.js');
+
+    // Get investigation data from request body
+    const investigationData = req.body;
+
+    if (!investigationData || Object.keys(investigationData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Investigation data required'
+      });
+    }
+
+    // Generate analysis using the investigation agent
+    const analysisResult = await investigationAgent.generateInvestigationAnalysis(investigationData);
+
+    if (analysisResult.success) {
+      // Parse the summary into structured sections
+      const parsed = investigationAgent.parseInvestigationAnalysis(analysisResult.analysis.summary);
+
+      res.json({
+        success: true,
+        analysis: {
+          summary: analysisResult.analysis.summary,
+          parsed: parsed,
+          timestamp: analysisResult.timestamp,
+          usage: analysisResult.analysis.usage
+        }
+      });
+    } else {
+      // Return 200 even for fallback analysis (API key not configured)
+      res.json({
+        success: false,
+        error: analysisResult.error,
+        analysis: analysisResult.analysis
+      });
+    }
+  } catch (error) {
+    console.error('Analysis endpoint error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/user-investigation/analysis (legacy support)
+ * Deprecated: Use POST for large payloads
+ */
+app.get('/api/user-investigation/analysis', async (req, res) => {
+  res.status(400).json({
+    success: false,
+    error: 'Use POST /api/user-investigation/analysis instead (GET has URL length limitations)'
+  });
+});
 
 /**
  * ============================================================
