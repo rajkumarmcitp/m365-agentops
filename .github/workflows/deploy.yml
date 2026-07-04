@@ -41,6 +41,13 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Stop App Service before deployment
+        run: |
+          az webapp stop \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_APP_SERVICE }}
+          sleep 5
+
       - name: Deploy to App Service
         run: |
           az webapp deployment source config-zip \
@@ -48,9 +55,9 @@ jobs:
             --name ${{ env.AZURE_APP_SERVICE }} \
             --src deploy.zip
 
-      - name: Restart App Service
+      - name: Start App Service
         run: |
-          az webapp restart \
+          az webapp start \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_APP_SERVICE }}
 
