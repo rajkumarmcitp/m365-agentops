@@ -407,7 +407,7 @@ function renderUserInvestigation(el) {
         <!-- Account Changes -->
         <div class="card mb-3">
           <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-clipboard-list"></i> Account Changes</div>
-          <div id="account-changes-section" style="font-size:11px"></div>
+          <div id="account-changes-section" style="font-size:11px;display:block"></div>
         </div>
 
         <!-- Risk Detections -->
@@ -482,13 +482,13 @@ function renderUserInvestigation(el) {
         <!-- Account Changes (Structured Table) -->
         <div class="card mb-3">
           <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-user-edit"></i> Administrative Changes</div>
-          <div id="account-changes-section" style="font-size:11px"></div>
+          <div id="account-changes-section" style="font-size:11px;display:block"></div>
         </div>
 
         <!-- Actions on Other Accounts -->
         <div class="card mb-3">
           <div class="card-title mb-3"><i class="ti ti-users-group"></i> Actions on Other Accounts</div>
-          <div id="other-accounts-section" style="font-size:11px"></div>
+          <div id="other-accounts-section" style="font-size:11px;display:block"></div>
         </div>
 
         <!-- Mailbox Settings -->
