@@ -950,12 +950,8 @@ function renderInvestigation(el, data) {
 
   el.querySelector('#other-accounts-section').innerHTML = othersHtml
 
-  // Admin Changes (Account Changes)
-  const adminChangesData = (data.accountChanges || []).filter(c =>
-    (c.action || '').toLowerCase().includes('role') ||
-    (c.action || '').toLowerCase().includes('admin') ||
-    (c.action || '').toLowerCase().includes('license')
-  )
+  // Admin Changes (Account Changes) - show all account changes
+  const adminChangesData = (data.accountChanges || [])
 
   const adminChangesHtml = adminChangesData.length > 0 ? `
     <div style="overflow-x:auto">
