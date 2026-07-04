@@ -950,6 +950,43 @@ function renderInvestigation(el, data) {
 
   el.querySelector('#other-accounts-section').innerHTML = othersHtml
 
+  // Admin Changes (Account Changes)
+  const adminChangesData = (data.accountChanges || []).filter(c =>
+    (c.action || '').toLowerCase().includes('role') ||
+    (c.action || '').toLowerCase().includes('admin') ||
+    (c.action || '').toLowerCase().includes('license')
+  )
+
+  const adminChangesHtml = adminChangesData.length > 0 ? `
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Action</th>
+            <th>Target</th>
+            <th>Modified By</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${adminChangesData.map(change => `
+            <tr>
+              <td>${formatTime(change.createdDateTime || change.eventTime)}</td>
+              <td><strong>${change.action}</strong></td>
+              <td>${change.target || 'N/A'}</td>
+              <td>${change.actor || change.initiatedBy || 'System'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  ` : '<div style="padding:20px;text-align:center;color:var(--color-text-secondary)">No admin changes found</div>'
+
+  const accountChangesSection = el.querySelector('#account-changes-section')
+  if (accountChangesSection) {
+    accountChangesSection.innerHTML = adminChangesHtml
+  }
+
   // Timeline
   const timelineHtml = `
     <div style="position:relative;padding:20px 0">
