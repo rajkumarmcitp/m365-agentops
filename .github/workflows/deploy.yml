@@ -30,9 +30,9 @@ jobs:
       - name: Create deployment package
         run: |
           mkdir -p deploy-staging
-          cp -r backend lib deploy-staging/
+          cp -r backend lib node_modules deploy-staging/
           cd deploy-staging
-          zip -r ../deploy.zip . -x "*/node_modules/*"
+          zip -r ../deploy.zip . > /dev/null 2>&1
           cd ..
           ls -lh deploy.zip
 
