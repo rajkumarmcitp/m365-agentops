@@ -5,10 +5,11 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "npm install && node server.js",
     "dev": "node server.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3",
     "@azure/identity": "^3.4.0",
     "@microsoft/microsoft-graph-client": "^3.0.4",
     "cors": "^2.8.5",
