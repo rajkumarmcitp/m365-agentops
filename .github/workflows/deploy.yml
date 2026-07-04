@@ -43,10 +43,12 @@ jobs:
 
       - name: Stop App Service before deployment
         run: |
+          echo "Stopping app service..."
           az webapp stop \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_APP_SERVICE }}
-          sleep 5
+          echo "Waiting for stop..."
+          sleep 10
 
       - name: Deploy to App Service
         run: |
