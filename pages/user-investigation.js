@@ -1031,9 +1031,12 @@ function setupInvestigationTabs(el) {
   const tabs = el.querySelectorAll('.investigation-tab')
   const tabContents = el.querySelectorAll('.investigation-tab-content')
 
+  console.log('🔧 Setting up tabs. Found:', tabs.length, 'tabs and', tabContents.length, 'content divs')
+
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       const tabName = tab.getAttribute('data-tab')
+      console.log('📌 Clicked tab:', tabName)
 
       // Deactivate all tabs
       tabs.forEach(t => {
@@ -1052,8 +1055,10 @@ function setupInvestigationTabs(el) {
 
       // Show matching content
       const activeContent = el.querySelector(`.investigation-tab-content[data-tab="${tabName}"]`)
+      console.log('📍 Active content found?', !!activeContent)
       if (activeContent) {
         activeContent.style.display = 'block'
+        console.log('✅ Set display:block for', tabName)
       }
     })
   })
