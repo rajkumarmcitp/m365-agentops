@@ -1085,7 +1085,7 @@ async function generateAIAnalysis(el, data) {
     // Use backend App Service URL directly (Static Web App Free SKU doesn't support backend linking)
     const backendUrl = window.location.hostname === 'localhost'
       ? 'http://localhost:3000/api/user-investigation/analysis'
-      : 'https://m365ops-api.azurewebsites.net/api/user-investigation/analysis'
+      : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net/api/user-investigation/analysis'
 
     const analysisResponse = await fetch(backendUrl, {
       method: 'POST',
