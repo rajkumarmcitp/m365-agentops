@@ -43,11 +43,18 @@ export function initAgents() {
 async function loadAndRenderAgents(el) {
   try {
     const response = await fetch('/api/agents/all')
+
+    if (!response.ok) {
+      console.warn('API responded with status:', response.status)
+      renderDemoAgents(el)
+      return
+    }
+
     const result = await response.json()
 
-    if (!result.success) {
-      showToast('Failed to load agents', 'error')
-      renderBlankAgents(el)
+    if (!result.success || !result.data) {
+      console.warn('API returned invalid response:', result)
+      renderDemoAgents(el)
       return
     }
 
@@ -55,7 +62,8 @@ async function loadAndRenderAgents(el) {
     renderProductionAgents(el, agentsData)
   } catch (error) {
     console.error('Error loading agents:', error)
-    renderBlankAgents(el)
+    // Fallback to demo agents when API fails
+    renderDemoAgents(el)
   }
 }
 
@@ -67,58 +75,94 @@ function renderDemoAgents(el) {
         <div class="page-subtitle">Automated intelligence agents managing your M365 tenant</div>
       </div>
       <div class="page-actions">
-        <button class="btn btn-primary"><i class="ti ti-plus"></i> Deploy agent</button>
+        <button class="btn btn-primary" id="configure-all-btn"><i class="ti ti-settings"></i> Configure</button>
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:8px;margin-bottom:16px;font-size:11px;color:var(--color-text-primary)">
       <span class="status-dot active pulse"></span>
-      <span><strong style="color:var(--color-text-secondary)">Demo Mode</strong> · Showing sample agents</span>
+      <span><strong>Demo Mode</strong> · Showing sample agents (API unavailable)</span>
     </div>
 
     <div class="agents-grid" id="agents-grid"></div>
+
+    <!-- Configuration Modal -->
+    <div id="config-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center" hidden>
+      <div style="background:var(--color-background-primary);border-radius:12px;width:90%;max-width:900px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+        <div style="padding:20px;border-bottom:1px solid var(--color-border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--color-background-primary);z-index:10">
+          <div>
+            <div style="font-size:16px;font-weight:700">Configure All Agents</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Update schedules and notifications for all agents</div>
+          </div>
+          <button id="close-config-modal" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--color-text-secondary)">✕</button>
+        </div>
+        <div style="padding:20px;text-align:center;color:var(--color-text-secondary)">
+          <p>Configuration is available in production with full Graph API integration.</p>
+        </div>
+      </div>
+    </div>
   `
 
   const grid = el.querySelector('#agents-grid')
-  AGENTS.forEach(agent => {
+
+  // Render demo agents in production card format
+  const agentsList = ['security', 'config', 'approval', 'execution', 'audit', 'compliance']
+
+  agentsList.forEach(agentId => {
+    const config = AGENT_CONFIGS[agentId]
+    const agent = AGENTS.find(a => a.id === agentId)
+
+    if (!config || !agent) return
+
     const statusDotCls = agent.status === 'active' ? 'active pulse' : agent.status === 'alert' ? 'alert pulse' : 'idle'
     const statusColor = agent.status === 'active' ? 'var(--clr-success-text)' : agent.status === 'alert' ? 'var(--clr-danger-text)' : 'var(--color-text-tertiary)'
+
     const card = document.createElement('div')
     card.className = 'agent-card'
+    card.style.cursor = 'pointer'
+
     card.innerHTML = `
-      <div class="agent-icon" style="background:${agent.bg};color:${agent.color}">
-        <i class="ti ${agent.icon}"></i>
+      <div class="card-header">
+        <div style="display:flex;align-items:flex-start;gap:12px;flex:1">
+          <div style="background:${config.bg};color:${config.color};width:36px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ${config.icon}" style="font-size:18px"></i>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="agent-name">${config.name}</div>
+            <div class="agent-desc">${config.desc}</div>
+          </div>
+        </div>
       </div>
-      <div class="agent-name">${agent.name}</div>
-      <div class="agent-desc">${agent.desc}</div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-        <div class="status-dot ${statusDotCls}"></div>
-        <span style="font-size:11px;font-weight:600;color:${statusColor}">${agent.statusLabel}</span>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px;padding-bottom:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+        <div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-bottom:6px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Status</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div class="status-dot ${statusDotCls}"></div>
+            <span style="font-size:12px;font-weight:600;color:${statusColor}">${agent.statusLabel}</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-bottom:6px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px">Metrics</div>
+          <div class="agent-stat">${agent.statLabel}</div>
+        </div>
       </div>
-      <div class="agent-stat">
-        <i class="ti ${agent.statIcon}" style="font-size:12px;color:${agent.color}"></i>
-        ${agent.statLabel}
-      </div>
-      <div style="display:flex;gap:6px;margin-top:12px">
-        <button class="btn btn-xs btn-primary agent-configure" data-id="${agent.id}"><i class="ti ti-settings"></i> Configure</button>
-        ${agent.status !== 'idle' ? `<button class="btn btn-xs agent-pause" data-id="${agent.id}"><i class="ti ti-player-pause"></i> Pause</button>` : `<button class="btn btn-xs btn-success agent-start" data-id="${agent.id}"><i class="ti ti-player-play"></i> Start</button>`}
-      </div>
+
+      <div style="font-size:10px;color:var(--color-text-tertiary)">📅 Last run: ${new Date().toLocaleString()}</div>
     `
+
     grid.appendChild(card)
   })
 
-  el.querySelectorAll('.agent-configure').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.id
-      if (id === 'config') await go('m365config')
-      else showToast(`Opening configuration for ${AGENTS.find(a => a.id === id)?.name}...`, 'info')
-    })
+  // Configure button handler
+  el.querySelector('#configure-all-btn')?.addEventListener('click', () => {
+    const modal = el.querySelector('#config-modal')
+    modal.style.display = 'flex'
   })
-  el.querySelectorAll('.agent-pause').forEach(btn => {
-    btn.addEventListener('click', () => showToast('Agent paused.', 'warning'))
-  })
-  el.querySelectorAll('.agent-start').forEach(btn => {
-    btn.addEventListener('click', () => showToast('Agent started.', 'success'))
+
+  el.querySelector('#close-config-modal')?.addEventListener('click', () => {
+    const modal = el.querySelector('#config-modal')
+    modal.style.display = 'none'
   })
 }
 
