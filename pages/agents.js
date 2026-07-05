@@ -74,9 +74,6 @@ function renderDemoAgents(el) {
         <div class="page-title"><i class="ti ti-robot"></i> AI Agents</div>
         <div class="page-subtitle">Automated intelligence agents managing your M365 tenant</div>
       </div>
-      <div class="page-actions">
-        <button class="btn btn-primary" id="configure-all-btn"><i class="ti ti-settings"></i> Configure</button>
-      </div>
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:8px;margin-bottom:16px;font-size:11px;color:var(--color-text-primary)">
@@ -85,22 +82,6 @@ function renderDemoAgents(el) {
     </div>
 
     <div class="agents-grid" id="agents-grid"></div>
-
-    <!-- Configuration Modal -->
-    <div id="config-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center" hidden>
-      <div style="background:var(--color-background-primary);border-radius:12px;width:90%;max-width:900px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
-        <div style="padding:20px;border-bottom:1px solid var(--color-border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--color-background-primary);z-index:10">
-          <div>
-            <div style="font-size:16px;font-weight:700">Configure All Agents</div>
-            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Update schedules and notifications for all agents</div>
-          </div>
-          <button id="close-config-modal" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--color-text-secondary)">✕</button>
-        </div>
-        <div style="padding:20px;text-align:center;color:var(--color-text-secondary)">
-          <p>Configuration is available in production with full Graph API integration.</p>
-        </div>
-      </div>
-    </div>
   `
 
   const grid = el.querySelector('#agents-grid')
@@ -154,16 +135,6 @@ function renderDemoAgents(el) {
     grid.appendChild(card)
   })
 
-  // Configure button handler
-  el.querySelector('#configure-all-btn')?.addEventListener('click', () => {
-    const modal = el.querySelector('#config-modal')
-    modal.style.display = 'flex'
-  })
-
-  el.querySelector('#close-config-modal')?.addEventListener('click', () => {
-    const modal = el.querySelector('#config-modal')
-    modal.style.display = 'none'
-  })
 }
 
 function renderProductionAgents(el, agentsData) {
