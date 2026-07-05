@@ -17,6 +17,7 @@ import { initM365Config } from './pages/m365config.js'
 import { initPrivAccts } from './pages/privaccts.js'
 import { initLicenses } from './pages/licenses.js'
 import { initAgents } from './pages/agents.js'
+import { initAgentDetails } from './pages/agent-details.js'
 import { initApprovals } from './pages/approvals.js'
 import { initAgent } from './pages/agent.js'
 import { initPortal } from './pages/portal.js'
@@ -155,6 +156,11 @@ export function hasAccess(pageId) {
     return ['super', 'admin'].includes(state.currentUser.role)
   }
 
+  // Special case: agent-details is available for admin users (detail view)
+  if (pageId === 'agent-details') {
+    return ['super', 'admin'].includes(state.currentUser.role)
+  }
+
   return state.currentUser.navAccess.includes(pageId)
 }
 
@@ -182,6 +188,7 @@ const PAGE_INIT = {
   privaccts: initPrivAccts,
   licenses: initLicenses,
   agents: initAgents,
+  'agent-details': initAgentDetails,
   approvals: initApprovals,
   agent: initAgent,  // Phase 3 - Agent Processing Queue
   portal: initPortal,
@@ -518,7 +525,7 @@ function renderShell() {
 function renderAllPages() {
   const pages = [
     'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','privaccts','m365config',
-    'msgcenter','messages','tasks','applications','intune','licenses','agents','approvals','portal','myreqs','myaccount','chat',
+    'msgcenter','messages','tasks','applications','intune','licenses','agents','agent-details','approvals','portal','myreqs','myaccount','chat',
     'graphapi','sso','setup-wizard','audit','settings'
   ]
   return pages.map(p => `<div class="page" id="page-${p}"></div>`).join('')

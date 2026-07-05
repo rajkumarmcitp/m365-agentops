@@ -24,6 +24,7 @@ import { initDatabase, getDatabase } from './tenantguard/database.js'
 import { startAuditCollectionJob } from './tenantguard/jobs.js'
 import { startCorrelationJobs } from './tenantguard/correlation-jobs.js'
 import { storeAlertToSharePoint, storeCorrelationToSharePoint } from './tenantguard/sharepoint-sync.js'
+import { localAIAgent } from './local-ai-agent.js'
 import {
   getEmailThreatDataFromGraph,
   getComplianceDataFromGraph,
@@ -118,6 +119,19 @@ import {
   getSetupConfig, completeSetup, testSetupConnection
 } from './tenantguard/setup-config-service.js'
 import { updateAppServiceConfig, verifyAppService } from './services/app-service-config.js'
+import {
+  getSecurityAgentData, getConfigAgentData, getApprovalAgentData,
+  getExecutionAgentData, getAuditAgentData, getComplianceAgentData,
+  pauseAgent, resumeAgent, triggerAgentScan, getAllAgentsData
+} from './agents-service.js'
+import {
+  initializeAgentScheduler, getAgentExecutionHistory, getRecentAlerts,
+  manualExecuteAgent, manualExecuteAllAgents, updateSchedule
+} from './agents-scheduler.js'
+import {
+  getAgentConfig, getAllAgentConfig, updateAgentConfig,
+  SCHEDULE_PRESETS, NOTIFICATION_CHANNELS
+} from './agents-config.js'
 
 import { randomUUID } from 'crypto'
 
@@ -606,6 +620,13 @@ async function initializeTenantGuard() {
   }
 }
 
+// Initialize Agent Scheduler
+try {
+  initializeAgentScheduler()
+} catch (error) {
+  console.error('❌ Agent Scheduler initialization failed:', error.message)
+}
+
 // ============================================================
 // Health Check
 // ============================================================
@@ -726,6 +747,300 @@ app.get('/api/tenantguard/health', async (req, res) => {
       error: error.message,
       checks: diagnostics.checks
     })
+  }
+})
+
+// ============================================================
+// AI Agents - Automated intelligence agents
+// ============================================================
+
+/**
+ * GET /api/agents/all
+ * Get data for all agents
+ */
+app.get('/api/agents/all', async (req, res) => {
+  try {
+    const agentsData = await getAllAgentsData()
+    res.json({ success: true, data: agentsData })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/agents/security
+ * Get Security Agent data (risky users, detections)
+ */
+app.get('/api/agents/security', async (req, res) => {
+  try {
+    const data = await getSecurityAgentData()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/agents/config
+ * Get Config Agent data (CIS control scan results)
+ */
+app.get('/api/agents/config', async (req, res) => {
+  try {
+    const data = await getConfigAgentData()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/agents/approval
+ * Get Approval Agent data
+ */
+app.get('/api/agents/approval', async (req, res) => {
+  try {
+    const data = await getApprovalAgentData()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/agents/execution
+ * Get Execution Agent data
+ */
+app.get('/api/agents/execution', async (req, res) => {
+  try {
+    const data = await getExecutionAgentData()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/agents/audit
+ * Get Audit Agent data
+ */
+app.get('/api/agents/audit', async (req, res) => {
+  try {
+    const data = await getAuditAgentData()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/agents/compliance
+ * Get Compliance Agent data
+ */
+app.get('/api/agents/compliance', async (req, res) => {
+  try {
+    const data = await getComplianceAgentData()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/agents/:id/pause
+ * Pause an agent
+ */
+app.post('/api/agents/:id/pause', async (req, res) => {
+  try {
+    const { id } = req.params
+    const result = pauseAgent(id)
+    res.json({ success: result.success, message: result.message })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/agents/:id/resume
+ * Resume an agent
+ */
+app.post('/api/agents/:id/resume', async (req, res) => {
+  try {
+    const { id } = req.params
+    const result = resumeAgent(id)
+    res.json({ success: result.success, message: result.message })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/agents/:id/scan
+ * Trigger an agent scan
+ */
+app.post('/api/agents/:id/scan', async (req, res) => {
+  try {
+    const { id } = req.params
+    const data = await triggerAgentScan(id)
+    res.json({ success: !data.error, data })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/agents/:id/history
+ * Get execution history for an agent
+ */
+app.get('/api/agents/:id/history', async (req, res) => {
+  try {
+    const { id } = req.params
+    const limit = parseInt(req.query.limit) || 20
+    const history = getAgentExecutionHistory(id).slice(-limit)
+    res.json({ success: true, data: history })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/agents/alerts/recent
+ * Get recent alerts from all agents
+ */
+app.get('/api/agents/alerts/recent', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20
+    const alerts = getRecentAlerts(null, limit)
+    res.json({ success: true, data: alerts })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/agents/:id/execute-now
+ * Manually execute an agent immediately
+ */
+app.post('/api/agents/:id/execute-now', async (req, res) => {
+  try {
+    const { id } = req.params
+    const result = await manualExecuteAgent(id)
+    res.json({ success: result.status === 'SUCCESS', data: result })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/agents/execute-all-now
+ * Manually execute all agents immediately
+ */
+app.post('/api/agents/execute-all-now', async (req, res) => {
+  try {
+    const results = await manualExecuteAllAgents()
+    res.json({ success: true, data: results })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/agents/chat
+ * Chat with local AI agent about agent data (no API key required)
+ */
+app.post('/api/agents/chat', async (req, res) => {
+  try {
+    const { agentId, agentData, userMessage } = req.body
+
+    // Train agent with current data
+    localAIAgent.train(agentData)
+
+    // Generate response based on user question
+    const response = localAIAgent.respond(userMessage, agentData)
+
+    res.json({ success: true, response })
+  } catch (error) {
+    console.error('Chat error:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate response'
+    })
+  }
+})
+
+/**
+ * GET /api/agents/:id/config
+ * Get configuration for an agent
+ */
+app.get('/api/agents/:id/config', async (req, res) => {
+  try {
+    const { id } = req.params
+    const config = getAgentConfig(id)
+    if (!config) {
+      return res.status(404).json({ success: false, error: 'Agent not found' })
+    }
+    res.json({ success: true, data: config })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/agents/config/all
+ * Get all agent configurations
+ */
+app.get('/api/agents/config/all', async (req, res) => {
+  try {
+    const config = getAllAgentConfig()
+    res.json({ success: true, data: config })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * PUT /api/agents/:id/config
+ * Update configuration for an agent
+ */
+app.put('/api/agents/:id/config', async (req, res) => {
+  try {
+    const { id } = req.params
+    const updates = req.body
+
+    // Update config
+    const updatedConfig = updateAgentConfig(id, updates)
+
+    // Update scheduler if schedule changed
+    if (updates.schedule) {
+      updateSchedule(id, updates.schedule)
+    }
+
+    res.json({ success: true, data: updatedConfig })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/agents/config/presets
+ * Get available schedule presets
+ */
+app.get('/api/agents/config/presets', async (req, res) => {
+  try {
+    res.json({ success: true, data: SCHEDULE_PRESETS })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/agents/config/notification-channels
+ * Get available notification channels
+ */
+app.get('/api/agents/config/notification-channels', async (req, res) => {
+  try {
+    res.json({ success: true, data: NOTIFICATION_CHANNELS })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
   }
 })
 
