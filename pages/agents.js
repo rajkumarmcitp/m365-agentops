@@ -2,6 +2,7 @@ import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { go } from '../app.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
+import { callAPI } from '../lib/api-client.js'
 
 const AGENT_CONFIGS = {
   security: { name: 'Security Agent', desc: 'Monitors risky sign-ins, triggers automated responses to identity threats.', icon: 'ti-shield-exclamation', bg: '#FCEBEB', color: '#A32D2D' },
@@ -42,15 +43,7 @@ export function initAgents() {
 
 async function loadAndRenderAgents(el) {
   try {
-    const response = await fetch('/api/agents/all')
-
-    if (!response.ok) {
-      console.warn('API responded with status:', response.status)
-      renderDemoAgents(el)
-      return
-    }
-
-    const result = await response.json()
+    const result = await callAPI('/agents/all')
 
     if (!result.success || !result.data) {
       console.warn('API returned invalid response:', result)

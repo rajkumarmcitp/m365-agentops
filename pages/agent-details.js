@@ -1,5 +1,6 @@
 import { showToast } from '../components/toast.js'
 import { go } from '../app.js'
+import { callAPI } from '../lib/api-client.js'
 
 export async function initAgentDetails() {
   console.log('🚀 initAgentDetails called!')
@@ -37,9 +38,8 @@ export async function initAgentDetails() {
   }
 
   try {
-    console.log(`Fetching /api/agents/${agentId}`)
-    const response = await fetch(`/api/agents/${agentId}`)
-    const result = await response.json()
+    console.log(`Fetching agent data: ${agentId}`)
+    const result = await callAPI(`/agents/${agentId}`)
     console.log('Agent data received:', result)
 
     if (result.success && result.data) {
@@ -432,17 +432,11 @@ async function sendAIMessage(inputEl, messagesDiv, agentId, agentData) {
 
   try {
     // Call backend API
-    const response = await fetch('/api/agents/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        agentId,
-        agentData,
-        userMessage: message
-      })
+    const result = await callAPI('/agents/chat', 'POST', {
+      agentId,
+      agentData,
+      userMessage: message
     })
-
-    const result = await response.json()
 
     // Remove loading indicator
     messagesDiv.removeChild(loadingDiv)
