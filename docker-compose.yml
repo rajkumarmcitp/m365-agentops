@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  m365-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: m365-agentops-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - AZURE_TENANT_ID=b9cc8284-05ed-452f-877a-970779430dcb
+      - AZURE_CLIENT_ID=04d3be8d-d433-4367-893e-eccc82190a11
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+      - FRONTEND_URL=http://localhost:5174
+      - PORT=3000
+      - NODE_ENV=development
+      - SHAREPOINT_SITE_NAME=M365-AgentOps
+      - SHAREPOINT_SITE_ID=b60085d7-b9c8-41a3-8789-bab376d0c84f
+      - SHAREPOINT_TENANTGUARD_ALERTS_LIST_ID=0484becf-3cfb-413a-ad4f-6fab18dc7424
+      - SHAREPOINT_TENANTGUARD_CORRELATIONS_LIST_ID=55929daa-8f9b-4b04-90b4-0f2c024e6f62
+      - SHAREPOINT_TENANTGUARD_INVESTIGATIONS_LIST_ID=b4835149-7775-4cad-987d-212698dc8201
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - m365-network
+
+networks:
+  m365-network:
+    driver: bridge
