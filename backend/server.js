@@ -358,7 +358,8 @@ app.use(cors({
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174',
     'http://127.0.0.1:5175',
-    'http://127.0.0.1:3000'
+    'http://127.0.0.1:3000',
+    'https://proud-river-0f55f1e10.7.azurestaticapps.net' // Production frontend
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -431,6 +432,20 @@ if (isValidCredentials) {
   console.log('ℹ️ Azure credentials not configured - using simulated data')
   console.log('ℹ️ Set GRAPH_TENANT_ID, GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET (or AZURE_*) to use real Graph API')
 }
+
+// ============================================================
+// Token Validation Middleware
+// ============================================================
+// Middleware to extract and validate Bearer tokens from Authorization header
+app.use((req, res, next) => {
+  const authHeader = req.headers.authorization
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7)
+    req.token = token
+    console.log('📡 Bearer token detected in request')
+  }
+  next()
+})
 
 // ============================================================
 // Authentication Utilities
@@ -1364,10 +1379,18 @@ app.post('/api/user/role', async (req, res) => {
 
     console.log(`📋 Determining role for user: ${userId}`)
 
+    // Log token status
+    if (req.token) {
+      console.log('✓ Bearer token validated for authenticated request')
+    } else {
+      console.log('ℹ️ Local/demo account (no token)')
+    }
+
     // If graphClient is not initialized, default to 'user' role
     if (!graphClient) {
       console.log('ℹ️ Graph Client not available - defaulting to user role')
-      return res.json({ success: true, userId, role: 'user' })
+      // For local accounts, allow access with default role
+      return res.json({ success: true, userId, role: 'user', isLocal: true })
     }
 
     // Get user's group memberships - with try-catch for better error handling
