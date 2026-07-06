@@ -643,7 +643,7 @@ function renderGraphApiStep() {
       </div>
       <div class="step-header">
         <h2 style="margin:8px 0 4px 0;color:#00796B"><i class="ti ti-api"></i> Graph API Setup</h2>
-        <p style="margin:4px 0 0 0">Grant 40 permissions to access M365 data securely</p>
+        <p style="margin:4px 0 0 0">Grant 41 permissions to access M365 data securely</p>
       </div>
 
       <div class="step-body">
@@ -666,7 +666,7 @@ function renderGraphApiStep() {
           <div style="display:flex;gap:14px;align-items:flex-start">
             <div style="font-size:32px;line-height:1">🔐</div>
             <div style="flex:1">
-              <div style="font-weight:600;font-size:14px;margin-bottom:4px;color:#00796B">40 Required Permissions</div>
+              <div style="font-weight:600;font-size:14px;margin-bottom:4px;color:#00796B">41 Required Permissions</div>
               <div style="font-size:12px;line-height:1.6;color:var(--color-text-secondary)">These permissions enable M365 AgentOps to securely access compliance, security, and operational data from your organization. Admin consent required.</div>
             </div>
           </div>
@@ -675,7 +675,7 @@ function renderGraphApiStep() {
         <div class="form-section">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
             <h3 style="margin:0">Required Permissions</h3>
-            <span style="background:#3B82F6;color:white;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600">40 Total</span>
+            <span style="background:#3B82F6;color:white;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600">41 Total</span>
           </div>
 
           <div style="margin-bottom:16px;padding:12px;background:rgba(34, 197, 94, 0.1);border-left:4px solid #22C55E;border-radius:4px;display:flex;gap:8px">
@@ -687,7 +687,7 @@ function renderGraphApiStep() {
 
           <div style="margin-bottom:20px">
             <div style="background:rgba(59, 130, 246, 0.08);padding:12px;border-radius:6px;margin-bottom:12px">
-              <h4 style="margin:0 0 12px 0;font-size:12px;font-weight:600">📊 Microsoft Graph (39 Permissions)</h4>
+              <h4 style="margin:0 0 12px 0;font-size:12px;font-weight:600">📊 Microsoft Graph (40 Permissions)</h4>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px">
                 ${[
                   { name: 'Application.Read.All', type: 'Application' },
@@ -707,6 +707,7 @@ function renderGraphApiStep() {
                   { name: 'GroupMember.Read.All', type: 'Application' },
                   { name: 'GroupMember.ReadWrite.All', type: 'Application' },
                   { name: 'IdentityRiskEvent.Read.All', type: 'Application' },
+                  { name: 'IdentityRiskyUser.Read.All', type: 'Application' },
                   { name: 'Mail.ReadWrite', type: 'Application' },
                   { name: 'Mail.Send', type: 'Application' },
                   { name: 'Organization.Read.All', type: 'Application' },
@@ -728,7 +729,8 @@ function renderGraphApiStep() {
                   { name: 'UserAuthenticationMethod.Read.All', type: 'Application' },
                   { name: 'email', type: 'Delegated' },
                   { name: 'openid', type: 'Delegated' },
-                  { name: 'profile', type: 'Delegated' }
+                  { name: 'profile', type: 'Delegated' },
+                  { name: 'User.Read', type: 'Delegated' }
                 ].map(perm => `
                   <div style="padding:8px;background:white;border:1px solid var(--color-border-primary);border-radius:4px;display:flex;align-items:center;gap:6px">
                     <i class="ti ti-check" style="color:var(--color-success);flex-shrink:0"></i>
@@ -779,7 +781,7 @@ function renderGraphApiStep() {
             <div style="display:flex;gap:10px;align-items:flex-start">
               <i class="ti ti-lock" style="color:var(--color-primary);margin-top:2px;font-size:16px"></i>
               <div style="font-size:12px;line-height:1.5;color:var(--color-text-secondary)">
-                <strong style="color:var(--color-text-primary)">Global Admin Required:</strong> Login with your global administrator account to grant consent for all 40 permissions at once. This requires admin privileges.
+                <strong style="color:var(--color-text-primary)">Global Admin Required:</strong> Login with your global administrator account to grant consent for all 41 permissions at once. This requires admin privileges.
               </div>
             </div>
           </div>
@@ -1228,7 +1230,7 @@ async function validateExistingApp() {
     if (isConfigured) {
       showToast('App is fully configured and ready!', 'success')
     } else {
-      showToast(`App configured with ${data.permissionCount} of 40 permissions`, 'warning')
+      showToast(`App configured with ${data.permissionCount} of 41 permissions`, 'warning')
     }
   } catch (error) {
     console.error('Error validating app:', error)
@@ -1639,7 +1641,7 @@ async function grantAdminConsent() {
                   <strong>✅ Admin consent granted successfully!</strong>
                 </div>
                 <div style="font-size:11px;color:var(--color-text-secondary);padding-left:24px">
-                  <div>✓ All 40 permissions approved</div>
+                  <div>✓ All 41 permissions approved</div>
                   <div>✓ Ready to deploy</div>
                 </div>
               </div>

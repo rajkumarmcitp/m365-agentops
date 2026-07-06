@@ -14346,14 +14346,14 @@ app.post('/api/setup/check-app-permissions', async (req, res) => {
     }
 
     const requiredPermissions = [
-      // Microsoft Graph - Application permissions (35)
+      // Microsoft Graph - Application permissions (36)
       'Application.Read.All', 'AuditLog.Read.All', 'Device.Read.All',
       'DeviceManagementApps.Read.All', 'DeviceManagementConfiguration.Read.All',
       'DeviceManagementManagedDevices.Read.All', 'DeviceManagementRBAC.Read.All',
       'DeviceManagementScripts.Read.All', 'DeviceManagementServiceConfig.Read.All',
       'Directory.Read.All', 'Directory.ReadWrite.All', 'Domain.Read.All',
       'Files.Read.All', 'Group.ReadWrite.All', 'GroupMember.Read.All',
-      'GroupMember.ReadWrite.All', 'IdentityRiskEvent.Read.All',
+      'GroupMember.ReadWrite.All', 'IdentityRiskEvent.Read.All', 'IdentityRiskyUser.Read.All',
       'Mail.ReadWrite', 'Mail.Send', 'Organization.Read.All',
       'Policy.Read.All', 'SecurityActions.Read.All', 'SecurityEvents.Read.All',
       'ServiceHealth.Read.All', 'ServiceMessage.Read.All',
@@ -14361,8 +14361,8 @@ app.post('/api/setup/check-app-permissions', async (req, res) => {
       'Team.Create', 'Team.ReadBasic.All', 'TeamMember.ReadWrite.All',
       'TeamworkTag.Read.All', 'ThreatAssessment.Read.All',
       'User.Read.All', 'User.ReadWrite.All', 'UserAuthenticationMethod.Read.All',
-      // Microsoft Graph - Delegated permissions (3)
-      'email', 'openid', 'profile',
+      // Microsoft Graph - Delegated permissions (4)
+      'email', 'openid', 'profile', 'User.Read',
       // Exchange Online - Application permissions (1)
       'Exchange.ManageAsApp'
     ]
