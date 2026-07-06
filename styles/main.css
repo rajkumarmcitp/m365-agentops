@@ -778,6 +778,28 @@ tr:hover td { background: var(--color-background-secondary); }
   color: var(--color-text-primary);
 }
 
+/* Filter bar - search, category, severity, export in a row */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.filter-bar > .form-input,
+.filter-bar > .form-select {
+  flex: 1;
+  min-width: 150px;
+  width: auto !important;
+}
+
+.filter-bar > .btn,
+.filter-bar > button {
+  flex: 0 0 auto;
+  width: auto !important;
+}
+
 .filter-btn.active {
   background: var(--clr-primary);
   color: white;
