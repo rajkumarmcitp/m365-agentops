@@ -8,6 +8,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // Load environment variables BEFORE importing modules that use process.env
+// Load from backend/.env first (has role group IDs), then fallback to root .env
+dotenv.config({ path: join(__dirname, '.env') })
 dotenv.config({ path: join(__dirname, '..', '.env') })
 import { ClientSecretCredential } from '@azure/identity'
 import { Client } from '@microsoft/microsoft-graph-client'
