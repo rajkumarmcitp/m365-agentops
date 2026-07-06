@@ -9,6 +9,28 @@ let groupLicensing = []
 let complianceData = {}
 let activeTab = 'summary'
 
+// Helper function to check if license is free
+function isFreeLicense(licenseName) {
+  if (!licenseName) return false
+  return licenseName.toLowerCase().includes('free')
+}
+
+// Get filtered licenses (exclude free licenses for KPI calculations)
+function getFilteredLicensesForKPI() {
+  return realLicenses.filter(l => !isFreeLicense(l.name))
+}
+
+// Calculate KPI summary from filtered licenses
+function calculateKPISummary() {
+  const filtered = getFilteredLicensesForKPI()
+  const total = filtered.reduce((sum, l) => sum + (l.total || 0), 0)
+  const consumed = filtered.reduce((sum, l) => sum + (l.consumed || 0), 0)
+  const available = filtered.reduce((sum, l) => sum + (l.available || 0), 0)
+  const utilizationPct = total > 0 ? Math.round((consumed / total) * 100) : 0
+
+  return { total, consumed, available, utilizationPct }
+}
+
 const TABS = [
   { id: 'summary', label: 'Executive Summary', icon: 'ti-layout-dashboard' },
   { id: 'inventory', label: 'License Inventory', icon: 'ti-box' },
@@ -439,6 +461,9 @@ function render(el) {
 }
 
 function renderTab(tabId) {
+  // Recalculate KPI summary excluding free licenses before rendering
+  licenseSummary = calculateKPISummary()
+
   switch(tabId) {
     case 'summary': return renderExecutiveSummary()
     case 'inventory': return renderInventory()
@@ -476,7 +501,7 @@ function renderExecutiveSummary() {
       <div class="card-header">
         <span class="card-title"><i class="ti ti-heart-handshake"></i> Licensing Health Overview</span>
       </div>
-      ${realLicenses.map(l => `
+      ${getFilteredLicensesForKPI().map(l => `
         <div style="padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between">
           <div style="flex:1">
             <div style="font-weight:600;font-size:11px">${l.name || '—'}</div>
@@ -522,7 +547,7 @@ function renderInventory() {
           <th style="padding:12px;text-align:center;font-weight:600;font-size:11px;width:19%">Status</th>
         </tr></thead>
         <tbody>
-          ${realLicenses.map(l => `
+          ${getFilteredLicensesForKPI().map(l => `
             <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
               <td style="padding:12px"><strong style="font-size:11px">${l.name || '—'}</strong></td>
               <td style="padding:12px;text-align:center">${(l.total || 0).toLocaleString()}</td>
@@ -548,7 +573,7 @@ function renderInventory() {
 function renderServicePlans() {
   return `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:16px">
-      ${realLicenses.map(l => `
+      ${getFilteredLicensesForKPI().map(l => `
         <div class="card">
           <div class="card-header">
             <span class="card-title">${l.name || '—'}</span>
