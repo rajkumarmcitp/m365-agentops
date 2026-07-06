@@ -1349,49 +1349,72 @@ async function testSsoConnection() {
 
 async function testGraphConnection() {
   const resultDiv = document.getElementById('graph-test-result')
-  resultDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--color-text-secondary);font-size:12px"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> Testing Graph API connection...</div>`
+  resultDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--color-text-secondary);font-size:12px"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> Checking app permissions...</div>`
+  resultDiv.style.display = 'block'
 
   try {
-    const response = await fetch(`${API_URL}/api/setup/test-graph-api`, {
+    // First, check what permissions the app has
+    const permResponse = await fetch(`${API_URL}/api/setup/check-app-permissions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     })
 
-    const data = await response.json()
+    const permData = await permResponse.json()
 
-    if (data.success) {
+    if (permData.permissionsGranted === permData.permissionsRequired) {
+      // All permissions granted
       resultDiv.innerHTML = `
         <div style="background:rgba(34, 197, 94, 0.1);border:1px solid rgba(34, 197, 94, 0.3);padding:12px;border-radius:6px">
           <div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:8px">
             <i class="ti ti-check-circle" style="color:var(--color-success)"></i>
-            <strong>✅ Graph API connection successful!</strong>
+            <strong>✅ All permissions granted!</strong>
           </div>
           <div style="font-size:11px;color:var(--color-text-secondary);padding-left:24px">
-            <div>✓ 7 of 7 permissions granted</div>
-            <div>✓ Organization: ${data.organization}</div>
+            <div>✓ ${permData.permissionsGranted} of ${permData.permissionsRequired} permissions configured</div>
+            <div>✓ Graph API ready</div>
           </div>
         </div>
       `
-      showToast('Graph API connection verified', 'success')
-    } else {
+      showToast('All Graph API permissions verified', 'success')
+    } else if (permData.permissionsGranted > 0) {
+      // Some permissions granted
       resultDiv.innerHTML = `
-        <div style="background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239, 68, 68, 0.3);padding:12px;border-radius:6px;display:flex;align-items:center;gap:8px">
-          <i class="ti ti-alert-circle" style="color:var(--color-error)"></i>
-          <div style="font-size:12px">
-            <strong>❌ Connection failed!</strong>
-            <div style="color:var(--color-text-secondary);margin-top:4px">${data.error || 'Unknown error'}</div>
+        <div style="background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);padding:12px;border-radius:6px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:8px">
+            <i class="ti ti-alert-circle" style="color:#FF9800"></i>
+            <strong>⚠️ Permissions partially configured</strong>
+          </div>
+          <div style="font-size:11px;color:var(--color-text-secondary);padding-left:24px">
+            <div>✓ ${permData.permissionsGranted} of ${permData.permissionsRequired} permissions granted (${permData.percentComplete}%)</div>
+            <div>✗ ${permData.missingPermissions.length} permissions still needed</div>
+            <div style="margin-top:6px"><strong>Missing:</strong> ${permData.missingPermissions.slice(0, 3).join(', ')}${permData.missingPermissions.length > 3 ? ', ...' : ''}</div>
           </div>
         </div>
       `
-      showToast('Graph API test failed: ' + data.error, 'error')
+      showToast(`${permData.permissionsGranted} of ${permData.permissionsRequired} permissions granted`, 'warning')
+    } else {
+      // No permissions granted
+      resultDiv.innerHTML = `
+        <div style="background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239, 68, 68, 0.3);padding:12px;border-radius:6px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:8px">
+            <i class="ti ti-alert-circle" style="color:var(--color-error)"></i>
+            <strong>❌ No permissions granted yet</strong>
+          </div>
+          <div style="font-size:11px;color:var(--color-text-secondary);padding-left:24px">
+            <div>0 of ${permData.permissionsRequired} permissions configured</div>
+            <div>Please grant admin consent above</div>
+          </div>
+        </div>
+      `
+      showToast('No permissions granted. Please grant admin consent.', 'warning')
     }
   } catch (error) {
-    console.error('Error testing Graph API:', error)
+    console.error('Error checking permissions:', error)
     resultDiv.innerHTML = `
       <div style="background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239, 68, 68, 0.3);padding:12px;border-radius:6px;display:flex;align-items:center;gap:8px">
         <i class="ti ti-alert-circle" style="color:var(--color-error)"></i>
         <div style="font-size:12px">
-          <strong>❌ Error testing Graph API</strong>
+          <strong>❌ Error checking permissions</strong>
           <div style="color:var(--color-text-secondary);margin-top:4px">${error.message}</div>
         </div>
       </div>

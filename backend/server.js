@@ -14150,6 +14150,121 @@ app.post('/api/setup/test-graph-api', async (req, res) => {
 })
 
 /**
+ * POST /api/setup/check-app-permissions
+ * Check what permissions the app has vs. required permissions
+ */
+app.post('/api/setup/check-app-permissions', async (req, res) => {
+  try {
+    const clientId = process.env.AZURE_CLIENT_ID
+    const tenantId = process.env.AZURE_TENANT_ID
+
+    if (!clientId || !tenantId || !graphClient) {
+      return res.status(400).json({
+        success: false,
+        error: 'Azure AD credentials or Graph client not configured'
+      })
+    }
+
+    const requiredPermissions = [
+      'Application.Read.All', 'AuditLog.Read.All', 'Device.Read.All',
+      'DeviceManagementApps.Read.All', 'DeviceManagementConfiguration.Read.All',
+      'DeviceManagementManagedDevices.Read.All', 'DeviceManagementRBAC.Read.All',
+      'DeviceManagementScripts.Read.All', 'DeviceManagementServiceConfig.Read.All',
+      'Directory.Read.All', 'Directory.ReadWrite.All', 'Domain.Read.All',
+      'Files.Read.All', 'Group.ReadWrite.All', 'GroupMember.Read.All',
+      'GroupMember.ReadWrite.All', 'IdentityRiskEvent.Read.All',
+      'Mail.ReadWrite', 'Mail.Send', 'Organization.Read.All',
+      'Policy.Read.All', 'SecurityActions.Read.All', 'SecurityEvents.Read.All',
+      'ServiceHealth.Read.All', 'ServiceMessage.Read.All',
+      'Sites.FullControl.All', 'Sites.Manage.All', 'Sites.ReadWrite.All',
+      'Team.Create', 'Team.ReadBasic.All', 'TeamMember.ReadWrite.All',
+      'TeamworkTag.Read.All', 'ThreatAssessment.Read.All',
+      'User.Read.All', 'User.ReadWrite.All', 'UserAuthenticationMethod.Read.All',
+      'Exchange.ManageAsApp'
+    ]
+
+    try {
+      // Get the service principal for this app
+      const spFilter = `appId eq '${clientId}'`
+      const sp = await graphClient.api(`/servicePrincipals?$filter=${encodeURIComponent(spFilter)}`).get()
+
+      if (!sp.value || sp.value.length === 0) {
+        return res.json({
+          success: true,
+          permissionsGranted: 0,
+          permissionsRequired: requiredPermissions.length,
+          grantedPermissions: [],
+          missingPermissions: requiredPermissions,
+          message: 'App not found. Please register the app in Azure AD first.'
+        })
+      }
+
+      const servicePrincipal = sp.value[0]
+
+      // Get oauth2PermissionGrants (delegated permissions)
+      const delegated = await graphClient.api(`/servicePrincipals/${servicePrincipal.id}/oauth2PermissionGrants`).get()
+      const delegatedPerms = delegated.value?.map(p => p.scope?.split(' ') || []).flat() || []
+
+      // Get appRoleAssignments (application permissions)
+      const appRoles = await graphClient.api(`/servicePrincipals/${servicePrincipal.id}/appRoleAssignments`).get()
+
+      // Get the app roles from the Graph service principal
+      const graphSp = await graphClient.api(`/servicePrincipals?$filter=appId eq '00000003-0000-0000-c000-000000000007'`).get()
+      const grantedAppRoles = new Set()
+
+      if (appRoles.value) {
+        appRoles.value.forEach(assignment => {
+          const appRole = graphSp.value?.[0]?.appRoles?.find(r => r.id === assignment.appRoleId)
+          if (appRole) {
+            grantedAppRoles.add(appRole.value)
+          }
+        })
+      }
+
+      // Also check Exchange.ManageAsApp in Exchange Online
+      const exchangeSp = await graphClient.api(`/servicePrincipals?$filter=appId eq 'e06cf3f6-a6f6-401b-b0a0-eb8d0e46304e'`).get()
+      const exchangeAppRoles = new Set()
+
+      const exchangeAssignments = await graphClient.api(`/servicePrincipals/${servicePrincipal.id}/appRoleAssignments?$filter=resourceId eq '${exchangeSp.value?.[0]?.id}'`).get()
+      if (exchangeAssignments.value) {
+        exchangeAssignments.value.forEach(assignment => {
+          const appRole = exchangeSp.value?.[0]?.appRoles?.find(r => r.id === assignment.appRoleId)
+          if (appRole) {
+            exchangeAppRoles.add(appRole.value)
+          }
+        })
+      }
+
+      const grantedPermissions = Array.from(grantedAppRoles).concat(Array.from(exchangeAppRoles))
+      const missingPermissions = requiredPermissions.filter(p => !grantedPermissions.includes(p))
+
+      res.json({
+        success: true,
+        permissionsGranted: grantedPermissions.length,
+        permissionsRequired: requiredPermissions.length,
+        grantedPermissions: grantedPermissions,
+        missingPermissions: missingPermissions,
+        percentComplete: Math.round((grantedPermissions.length / requiredPermissions.length) * 100)
+      })
+    } catch (error) {
+      console.error('Error checking permissions:', error.message)
+      res.json({
+        success: false,
+        error: error.message,
+        permissionsGranted: 0,
+        permissionsRequired: requiredPermissions.length
+      })
+    }
+  } catch (error) {
+    console.error('❌ Error in check-app-permissions:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
  * POST /api/setup/admin-consent
  * Initiate admin consent flow for Graph API permissions
  */
