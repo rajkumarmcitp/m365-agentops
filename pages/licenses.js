@@ -586,6 +586,17 @@ function renderInventory() {
   `
 }
 
+function getStatusColor(status) {
+  if (!status) return 'var(--clr-success-text)'
+  switch (status.toLowerCase()) {
+    case 'enabled': return 'var(--clr-success-text)'
+    case 'pendingactivation': return 'var(--clr-warning-text)'
+    case 'pendingprovisioning': return 'var(--clr-warning-text)'
+    case 'disabled': return 'var(--clr-danger-text)'
+    default: return 'var(--color-text-secondary)'
+  }
+}
+
 function renderServicePlans() {
   return `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:16px">
@@ -599,21 +610,22 @@ function renderServicePlans() {
             ${(l.total || 0).toLocaleString()} licenses | ${(l.consumed || 0).toLocaleString()} assigned
           </div>
           <div style="padding:12px">
-            <div style="font-weight:600;font-size:10px;margin-bottom:8px">Included Services:</div>
-            <div style="display:grid;gap:6px">
-              <div style="display:flex;align-items:center;gap:6px;font-size:10px">
-                <i class="ti ti-circle-filled" style="color:var(--clr-success-text);font-size:6px"></i> Exchange Online
+            <div style="font-weight:600;font-size:10px;margin-bottom:8px">Service Plans (${(l.servicePlans || []).length}):</div>
+            ${(l.servicePlans || []).length > 0 ? `
+              <div style="display:grid;gap:6px;max-height:250px;overflow-y:auto">
+                ${(l.servicePlans || []).map(sp => `
+                  <div style="display:flex;align-items:flex-start;gap:6px;font-size:9px;padding:4px 0">
+                    <i class="ti ti-circle-filled" style="color:${getStatusColor(sp.provisioningStatus)};font-size:5px;margin-top:2px;flex-shrink:0"></i>
+                    <div style="flex:1;word-break:break-word">
+                      <div style="font-weight:500">${sp.serviceName || '—'}</div>
+                      <div style="color:var(--color-text-tertiary);font-size:8px">${sp.provisioningStatus || 'Unknown'}</div>
+                    </div>
+                  </div>
+                `).join('')}
               </div>
-              <div style="display:flex;align-items:center;gap:6px;font-size:10px">
-                <i class="ti ti-circle-filled" style="color:var(--clr-success-text);font-size:6px"></i> Teams
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;font-size:10px">
-                <i class="ti ti-circle-filled" style="color:var(--clr-success-text);font-size:6px"></i> SharePoint Online
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;font-size:10px">
-                <i class="ti ti-circle-filled" style="color:var(--clr-success-text);font-size:6px"></i> OneDrive for Business
-              </div>
-            </div>
+            ` : `
+              <div style="color:var(--color-text-tertiary);font-size:9px">No service plans found</div>
+            `}
           </div>
         </div>
       `).join('')}

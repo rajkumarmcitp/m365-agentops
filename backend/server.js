@@ -3055,7 +3055,7 @@ app.get('/api/licenses', async (req, res) => {
 
       return {
         id: sku.id,
-        skuId: sku.id,  // Include skuId for matching in group licensing
+        skuId: sku.id,
         skuPartNumber: sku.skuPartNumber,
         name: sku.skuPartNumber || sku.skuId || 'Unknown License',
         total: consumed,
@@ -3063,7 +3063,11 @@ app.get('/api/licenses', async (req, res) => {
         available: Math.max(0, available),
         status: status,
         statusCls: statusCls,
-        utilizationPct: Math.round(utilizationPct)
+        utilizationPct: Math.round(utilizationPct),
+        servicePlans: (sku.servicePlans || []).map(sp => ({
+          serviceName: sp.serviceName,
+          provisioningStatus: sp.provisioningStatus
+        }))
       }
     })
 
