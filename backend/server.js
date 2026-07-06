@@ -3405,13 +3405,13 @@ app.get('/api/licenses/compliance', async (req, res) => {
 
     const complianceData = {
       disabledUsersWithLicenses: disabledUsersWithLicenses.length,
-      disabledUsersDetail: disabledUsersWithLicenses.slice(0, 10),
+      disabledUsersDetail: disabledUsersWithLicenses,
       guestUsersWithPremium: guestUsersWithPremium.length,
-      guestUsersDetail: guestUsersWithPremium.slice(0, 10),
+      guestUsersDetail: guestUsersWithPremium,
       inactiveUsers: totalInactiveCount,
-      inactiveUsersDetail: inactiveUsers.slice(0, 10),
+      inactiveUsersDetail: inactiveUsers,
       overlicensedUsers: overlicensedUsers.length,
-      overlicensedDetail: overlicensedUsers.slice(0, 10),
+      overlicensedDetail: overlicensedUsers,
       costOptimization: {
         potentialSavings: Math.round(potentialSavings),
         overlicensedCount: overlicensedUsers.length,

@@ -9,6 +9,14 @@ let groupLicensing = []
 let complianceData = {}
 let activeTab = 'summary'
 
+// Pagination state for compliance findings
+let compliancePagination = {
+  disabled: { currentPage: 1, pageSize: 10 },
+  inactive: { currentPage: 1, pageSize: 10 },
+  guest: { currentPage: 1, pageSize: 10 },
+  overlicense: { currentPage: 1, pageSize: 10 }
+}
+
 // Helper function to check if license is free
 function isFreeLicense(licenseName) {
   if (!licenseName) return false
@@ -447,6 +455,14 @@ function render(el) {
   el.querySelectorAll('.license-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeTab = btn.dataset.tab
+      if (activeTab === 'compliance') {
+        compliancePagination = {
+          disabled: { currentPage: 1, pageSize: 10 },
+          inactive: { currentPage: 1, pageSize: 10 },
+          guest: { currentPage: 1, pageSize: 10 },
+          overlicense: { currentPage: 1, pageSize: 10 }
+        }
+      }
       render(el)
     })
   })
@@ -735,9 +751,72 @@ function renderGroups() {
   `
 }
 
+function getPaginatedData(data, paginationKey) {
+  const page = compliancePagination[paginationKey]
+  const items = data || []
+  const totalPages = Math.ceil(items.length / page.pageSize)
+  const startIdx = (page.currentPage - 1) * page.pageSize
+  const endIdx = startIdx + page.pageSize
+  const pageItems = items.slice(startIdx, endIdx)
+
+  return {
+    items: pageItems,
+    currentPage: page.currentPage,
+    totalPages: Math.max(1, totalPages),
+    totalItems: items.length,
+    startIdx: startIdx + 1,
+    endIdx: Math.min(endIdx, items.length)
+  }
+}
+
+function createPaginationHTML(paginationKey, label) {
+  const page = compliancePagination[paginationKey]
+  const { totalPages, currentPage, totalItems } = getPaginatedData([], paginationKey)
+
+  if (totalPages <= 1) return ''
+
+  return `
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;font-size:10px;color:var(--color-text-secondary)">
+      <button onclick="window.compliancePrevPage('${paginationKey}')" class="btn-sm" style="padding:4px 8px;${currentPage === 1 ? 'opacity:0.5;cursor:not-allowed' : ''}">${currentPage === 1 ? '← Prev' : '← Previous'}</button>
+      <span>${getPaginatedData([], paginationKey).startIdx}-${getPaginatedData([], paginationKey).endIdx} of ${totalItems} users</span>
+      <button onclick="window.complianceNextPage('${paginationKey}')" class="btn-sm" style="padding:4px 8px;${currentPage === totalPages ? 'opacity:0.5;cursor:not-allowed' : ''}">${currentPage === totalPages ? 'Next →' : 'Next →'}</button>
+    </div>
+  `
+}
+
+window.compliancePrevPage = function(paginationKey) {
+  if (compliancePagination[paginationKey].currentPage > 1) {
+    compliancePagination[paginationKey].currentPage--
+    const contentEl = document.getElementById('tab-content')
+    if (contentEl) {
+      contentEl.innerHTML = renderCompliance()
+    }
+  }
+}
+
+window.complianceNextPage = function(paginationKey) {
+  const data = paginationKey === 'disabled' ? complianceData.disabledUsersDetail :
+               paginationKey === 'inactive' ? complianceData.inactiveUsersDetail :
+               paginationKey === 'guest' ? complianceData.guestUsersDetail :
+               complianceData.overlicensedDetail
+  const totalPages = Math.ceil((data || []).length / compliancePagination[paginationKey].pageSize)
+  if (compliancePagination[paginationKey].currentPage < totalPages) {
+    compliancePagination[paginationKey].currentPage++
+    const contentEl = document.getElementById('tab-content')
+    if (contentEl) {
+      contentEl.innerHTML = renderCompliance()
+    }
+  }
+}
+
 function renderCompliance() {
   const scores = complianceData.scores || { utilization: 0, costOptimization: 0, securityCoverage: 0, compliance: 0 }
   const costOpt = complianceData.costOptimization || {}
+
+  const disabledPaginated = getPaginatedData(complianceData.disabledUsersDetail || [], 'disabled')
+  const inactivePaginated = getPaginatedData(complianceData.inactiveUsersDetail || [], 'inactive')
+  const guestPaginated = getPaginatedData(complianceData.guestUsersDetail || [], 'guest')
+  const overlicensePaginated = getPaginatedData(complianceData.overlicensedDetail || [], 'overlicense')
 
   return `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:24px">
@@ -820,9 +899,10 @@ function renderCompliance() {
           <div style="padding:12px;background:rgba(239, 68, 68, 0.05);border-radius:6px;border-left:3px solid var(--clr-danger-text)">
             <div style="font-weight:600;font-size:11px">🚫 Disabled Users with Active Licenses</div>
             <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${complianceData.disabledUsersWithLicenses} users wasting licenses</div>
-            ${(complianceData.disabledUsersDetail || []).length > 0 ? `
+            ${disabledPaginated.totalItems > 0 ? `
             <div style="margin-top:8px;font-size:10px;border-top:1px solid rgba(239, 68, 68, 0.2);padding-top:8px">
-              ${(complianceData.disabledUsersDetail || []).map(u => `<div style="padding:4px 0"><strong>${u.displayName}</strong> (${u.licenseCount} license${u.licenseCount !== 1 ? 's' : ''})</div>`).join('')}
+              ${disabledPaginated.items.map(u => `<div style="padding:4px 0"><strong>${u.displayName}</strong> (${u.licenseCount} license${u.licenseCount !== 1 ? 's' : ''})</div>`).join('')}
+              ${createPaginationHTML('disabled', 'Disabled Users')}
             </div>
             ` : ''}
           </div>
@@ -832,9 +912,10 @@ function renderCompliance() {
           <div style="padding:12px;background:rgba(250, 190, 88, 0.05);border-radius:6px;border-left:3px solid var(--clr-warning-text)">
             <div style="font-weight:600;font-size:11px">⏱️ Inactive Users (90+ days)</div>
             <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${complianceData.inactiveUsers} users with no activity but consuming licenses</div>
-            ${(complianceData.inactiveUsersDetail || []).length > 0 ? `
+            ${inactivePaginated.totalItems > 0 ? `
             <div style="margin-top:8px;font-size:10px;border-top:1px solid rgba(250, 190, 88, 0.2);padding-top:8px">
-              ${(complianceData.inactiveUsersDetail || []).map(u => `<div style="padding:4px 0"><strong>${u.displayName}</strong> • Last sign-in: ${u.lastSignIn} (${u.licenseCount} license${u.licenseCount !== 1 ? 's' : ''})</div>`).join('')}
+              ${inactivePaginated.items.map(u => `<div style="padding:4px 0"><strong>${u.displayName}</strong> • Last sign-in: ${u.lastSignIn} (${u.licenseCount} license${u.licenseCount !== 1 ? 's' : ''})</div>`).join('')}
+              ${createPaginationHTML('inactive', 'Inactive Users')}
             </div>
             ` : ''}
           </div>
@@ -844,9 +925,10 @@ function renderCompliance() {
           <div style="padding:12px;background:rgba(59, 130, 246, 0.05);border-radius:6px;border-left:3px solid var(--clr-info-text)">
             <div style="font-weight:600;font-size:11px">👥 Guest Users with Premium Licenses</div>
             <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${complianceData.guestUsersWithPremium} external users consuming premium licenses</div>
-            ${(complianceData.guestUsersDetail || []).length > 0 ? `
+            ${guestPaginated.totalItems > 0 ? `
             <div style="margin-top:8px;font-size:10px;border-top:1px solid rgba(59, 130, 246, 0.2);padding-top:8px">
-              ${(complianceData.guestUsersDetail || []).map(u => `<div style="padding:4px 0"><strong>${u.displayName}</strong> (${u.licenseCount} license${u.licenseCount !== 1 ? 's' : ''})</div>`).join('')}
+              ${guestPaginated.items.map(u => `<div style="padding:4px 0"><strong>${u.displayName}</strong> (${u.licenseCount} license${u.licenseCount !== 1 ? 's' : ''})</div>`).join('')}
+              ${createPaginationHTML('guest', 'Guest Users')}
             </div>
             ` : ''}
           </div>
@@ -856,9 +938,10 @@ function renderCompliance() {
           <div style="padding:12px;background:rgba(168, 85, 247, 0.05);border-radius:6px;border-left:3px solid var(--clr-warning-text)">
             <div style="font-weight:600;font-size:11px">📦 Overlicensed Users</div>
             <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${complianceData.overlicensedUsers} users with redundant license combinations</div>
-            ${(complianceData.overlicensedDetail || []).length > 0 ? `
+            ${overlicensePaginated.totalItems > 0 ? `
             <div style="margin-top:8px;font-size:10px;border-top:1px solid rgba(168, 85, 247, 0.2);padding-top:8px">
-              ${(complianceData.overlicensedDetail || []).map(u => `<div style="padding:4px 0"><strong>${u.displayName}</strong> (${u.licenseCount} licenses: ${u.licenses.join(', ')})</div>`).join('')}
+              ${overlicensePaginated.items.map(u => `<div style="padding:4px 0"><strong>${u.displayName}</strong> (${u.licenseCount} licenses: ${u.licenses.join(', ')})</div>`).join('')}
+              ${createPaginationHTML('overlicense', 'Overlicensed Users')}
             </div>
             ` : ''}
           </div>
