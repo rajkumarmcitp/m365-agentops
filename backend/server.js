@@ -14231,25 +14231,29 @@ app.post('/api/setup/validate-existing-app', async (req, res) => {
         })
       }
 
-      // Extract redirect URIs
+      // Extract redirect URIs from multiple possible locations
       const redirectUris = new Set()
-      const webRedirects = appRegistration.web?.redirectUris || []
+      const webRedirects = appRegistration.web?.redirectUris || appRegistration.replyUrls || []
       const publicRedirects = appRegistration.publicClient?.redirectUris || []
+      const spaRedirects = appRegistration.spa?.redirectUris || []
 
       webRedirects.forEach(uri => redirectUris.add(uri))
       publicRedirects.forEach(uri => redirectUris.add(uri))
+      spaRedirects.forEach(uri => redirectUris.add(uri))
 
       // Get required resource access (permissions)
       const requiredResourceAccess = appRegistration.requiredResourceAccess || []
 
-      // Find Microsoft Graph resource
+      // Find Microsoft Graph resource (try both production and alternative IDs)
       const graphResource = requiredResourceAccess.find(r =>
-        r.resourceAppId === '00000003-0000-0000-c000-000000000007'
+        r.resourceAppId === '00000003-0000-0000-c000-000000000000' || // Production Graph API
+        r.resourceAppId === '00000003-0000-0000-c000-000000000007'    // Alternative Graph API
       )
 
-      // Find Exchange Online resource
+      // Find Exchange Online resource (try both IDs)
       const exchangeResource = requiredResourceAccess.find(r =>
-        r.resourceAppId === 'e06cf3f6-a6f6-401b-b0a0-eb8d0e46304e'
+        r.resourceAppId === '00000002-0000-0ff1-ce00-000000000000' || // Exchange Online
+        r.resourceAppId === 'e06cf3f6-a6f6-401b-b0a0-eb8d0e46304e'    // Alternative
       )
 
       const graphPermissions = graphResource?.resourceAccess || []
@@ -14260,7 +14264,11 @@ app.post('/api/setup/validate-existing-app', async (req, res) => {
       const delegatedPermissions = graphPermissions.filter(p => p.type === 'Scope').map(p => p.id)
 
       // Get permission names from Graph service principal
-      const graphSp = allSps.value?.find(sp => sp.appId === '00000003-0000-0000-c000-000000000007')
+      const graphSp = allSps.value?.find(sp =>
+        sp.appId === '00000003-0000-0000-c000-000000000000' ||
+        sp.appId === '00000003-0000-0000-c000-000000000007'
+      )
+
       const permissionNames = new Set()
 
       if (graphSp?.appRoles) {
@@ -14280,7 +14288,11 @@ app.post('/api/setup/validate-existing-app', async (req, res) => {
       }
 
       // Get Exchange permission names
-      const exchangeSp = allSps.value?.find(sp => sp.appId === 'e06cf3f6-a6f6-401b-b0a0-eb8d0e46304e')
+      const exchangeSp = allSps.value?.find(sp =>
+        sp.appId === '00000002-0000-0ff1-ce00-000000000000' ||
+        sp.appId === 'e06cf3f6-a6f6-401b-b0a0-eb8d0e46304e'
+      )
+
       if (exchangeSp?.appRoles) {
         exchangePermissions.forEach(perm => {
           const role = exchangeSp.appRoles.find(r => r.id === perm.id)
