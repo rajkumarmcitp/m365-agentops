@@ -429,11 +429,16 @@ async function doLoginWithEntraID(account) {
   let role = 'user' // default role
   try {
     console.log(`📡 Determining role for user: ${account.localAccountId}`)
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+    const token = await getAccessToken()
     const response = await fetch(
-      'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net/api/user/role',
+      `${apiUrl}/api/user/role`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
         body: JSON.stringify({ userId: account.localAccountId })
       }
     )
