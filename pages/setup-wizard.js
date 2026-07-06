@@ -729,8 +729,7 @@ function renderGraphApiStep() {
                   { name: 'UserAuthenticationMethod.Read.All', type: 'Application' },
                   { name: 'email', type: 'Delegated' },
                   { name: 'openid', type: 'Delegated' },
-                  { name: 'profile', type: 'Delegated' },
-                  { name: 'User.Read', type: 'Delegated' }
+                  { name: 'profile', type: 'Delegated' }
                 ].map(perm => `
                   <div style="padding:8px;background:white;border:1px solid var(--color-border-primary);border-radius:4px;display:flex;align-items:center;gap:6px">
                     <i class="ti ti-check" style="color:var(--color-success);flex-shrink:0"></i>

@@ -14154,6 +14154,26 @@ app.post('/api/setup/test-graph-api', async (req, res) => {
  * Validate an existing app registration with its current configuration
  */
 app.post('/api/setup/validate-existing-app', async (req, res) => {
+  // Define required permissions (same as check-app-permissions)
+  const requiredPermissions = [
+    'Application.Read.All', 'AuditLog.Read.All', 'Device.Read.All',
+    'DeviceManagementApps.Read.All', 'DeviceManagementConfiguration.Read.All',
+    'DeviceManagementManagedDevices.Read.All', 'DeviceManagementRBAC.Read.All',
+    'DeviceManagementScripts.Read.All', 'DeviceManagementServiceConfig.Read.All',
+    'Directory.Read.All', 'Directory.ReadWrite.All', 'Domain.Read.All',
+    'Files.Read.All', 'Group.ReadWrite.All', 'GroupMember.Read.All',
+    'GroupMember.ReadWrite.All', 'IdentityRiskEvent.Read.All', 'IdentityRiskyUser.Read.All',
+    'Mail.ReadWrite', 'Mail.Send', 'Organization.Read.All',
+    'Policy.Read.All', 'SecurityActions.Read.All', 'SecurityEvents.Read.All',
+    'ServiceHealth.Read.All', 'ServiceMessage.Read.All',
+    'Sites.FullControl.All', 'Sites.Manage.All', 'Sites.ReadWrite.All',
+    'Team.Create', 'Team.ReadBasic.All', 'TeamMember.ReadWrite.All',
+    'TeamworkTag.Read.All', 'ThreatAssessment.Read.All',
+    'User.Read.All', 'User.ReadWrite.All', 'UserAuthenticationMethod.Read.All',
+    'email', 'openid', 'profile',
+    'Exchange.ManageAsApp'
+  ]
+
   try {
     const clientId = process.env.AZURE_CLIENT_ID
     const tenantId = process.env.AZURE_TENANT_ID
@@ -14217,7 +14237,7 @@ app.post('/api/setup/validate-existing-app', async (req, res) => {
           redirectUris: [],
           configuredPermissions: [],
           permissionCount: 0,
-          requiredPermissions: 40,
+          requiredPermissions: 41,
           isConfigured: false,
           message: 'App found but cannot read full configuration. Please configure permissions manually.'
         })
@@ -14310,8 +14330,8 @@ app.post('/api/setup/validate-existing-app', async (req, res) => {
         redirectUris: Array.from(redirectUris),
         configuredPermissions: Array.from(permissionNames),
         permissionCount: permissionNames.size,
-        requiredPermissions: 40,
-        isConfigured: permissionNames.size >= 40
+        requiredPermissions: requiredPermissions.length,
+        isConfigured: permissionNames.size >= requiredPermissions.length
       })
     } catch (error) {
       console.error('Error validating app:', error.message)
@@ -14361,8 +14381,8 @@ app.post('/api/setup/check-app-permissions', async (req, res) => {
       'Team.Create', 'Team.ReadBasic.All', 'TeamMember.ReadWrite.All',
       'TeamworkTag.Read.All', 'ThreatAssessment.Read.All',
       'User.Read.All', 'User.ReadWrite.All', 'UserAuthenticationMethod.Read.All',
-      // Microsoft Graph - Delegated permissions (4)
-      'email', 'openid', 'profile', 'User.Read',
+      // Microsoft Graph - Delegated permissions (3)
+      'email', 'openid', 'profile',
       // Exchange Online - Application permissions (1)
       'Exchange.ManageAsApp'
     ]
@@ -14479,44 +14499,26 @@ app.post('/api/setup/admin-consent', async (req, res) => {
       })
     }
 
-    // Build the admin consent URL
+    // Build the admin consent URL - same as check-app-permissions
     const permissions = [
-      'Application.Read.All',
-      'AuditLog.Read.All',
-      'Device.Read.All',
-      'DeviceManagementApps.Read.All',
-      'DeviceManagementConfiguration.Read.All',
-      'DeviceManagementManagedDevices.Read.All',
-      'DeviceManagementRBAC.Read.All',
-      'DeviceManagementScripts.Read.All',
-      'DeviceManagementServiceConfig.Read.All',
-      'Directory.Read.All',
-      'Directory.ReadWrite.All',
-      'Domain.Read.All',
-      'Files.Read.All',
-      'Group.ReadWrite.All',
-      'GroupMember.Read.All',
-      'GroupMember.ReadWrite.All',
-      'IdentityRiskEvent.Read.All',
-      'Mail.ReadWrite',
-      'Mail.Send',
-      'Organization.Read.All',
-      'Policy.Read.All',
-      'SecurityActions.Read.All',
-      'SecurityEvents.Read.All',
-      'ServiceHealth.Read.All',
-      'ServiceMessage.Read.All',
-      'Sites.FullControl.All',
-      'Sites.Manage.All',
-      'Sites.ReadWrite.All',
-      'Team.Create',
-      'Team.ReadBasic.All',
-      'TeamMember.ReadWrite.All',
-      'TeamworkTag.Read.All',
-      'ThreatAssessment.Read.All',
-      'User.Read.All',
-      'User.ReadWrite.All',
-      'UserAuthenticationMethod.Read.All',
+      // Microsoft Graph - Application permissions (36)
+      'Application.Read.All', 'AuditLog.Read.All', 'Device.Read.All',
+      'DeviceManagementApps.Read.All', 'DeviceManagementConfiguration.Read.All',
+      'DeviceManagementManagedDevices.Read.All', 'DeviceManagementRBAC.Read.All',
+      'DeviceManagementScripts.Read.All', 'DeviceManagementServiceConfig.Read.All',
+      'Directory.Read.All', 'Directory.ReadWrite.All', 'Domain.Read.All',
+      'Files.Read.All', 'Group.ReadWrite.All', 'GroupMember.Read.All',
+      'GroupMember.ReadWrite.All', 'IdentityRiskEvent.Read.All', 'IdentityRiskyUser.Read.All',
+      'Mail.ReadWrite', 'Mail.Send', 'Organization.Read.All',
+      'Policy.Read.All', 'SecurityActions.Read.All', 'SecurityEvents.Read.All',
+      'ServiceHealth.Read.All', 'ServiceMessage.Read.All',
+      'Sites.FullControl.All', 'Sites.Manage.All', 'Sites.ReadWrite.All',
+      'Team.Create', 'Team.ReadBasic.All', 'TeamMember.ReadWrite.All',
+      'TeamworkTag.Read.All', 'ThreatAssessment.Read.All',
+      'User.Read.All', 'User.ReadWrite.All', 'UserAuthenticationMethod.Read.All',
+      // Microsoft Graph - Delegated permissions (3)
+      'email', 'openid', 'profile',
+      // Exchange Online - Application permissions (1)
       'Exchange.ManageAsApp'
     ]
 
