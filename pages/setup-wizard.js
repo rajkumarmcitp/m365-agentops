@@ -550,7 +550,7 @@ function renderSsoStep() {
   return `
     <div class="wizard-step-content">
       <div style="margin-bottom:16px;padding:8px 12px;background:rgba(156, 39, 176, 0.1);border-radius:4px;display:inline-block">
-        <span style="font-size:11px;font-weight:600;color:#7B1FA2">STEP 2 OF 5</span>
+        <span style="font-size:11px;font-weight:600;color:#7B1FA2">STEP 3 OF 8</span>
       </div>
       <div class="step-header">
         <h2 style="margin:8px 0 4px 0;color:#7B1FA2"><i class="ti ti-key"></i> SSO Configuration</h2>
@@ -627,7 +627,7 @@ function renderGraphApiStep() {
   return `
     <div class="wizard-step-content">
       <div style="margin-bottom:16px;padding:8px 12px;background:rgba(0, 150, 136, 0.1);border-radius:4px;display:inline-block">
-        <span style="font-size:11px;font-weight:600;color:#00796B">STEP 3 OF 5</span>
+        <span style="font-size:11px;font-weight:600;color:#00796B">STEP 4 OF 8</span>
       </div>
       <div class="step-header">
         <h2 style="margin:8px 0 4px 0;color:#00796B"><i class="ti ti-api"></i> Graph API Setup</h2>
@@ -794,7 +794,7 @@ function renderAdminSettingsStep() {
   return `
     <div class="wizard-step-content">
       <div style="margin-bottom:16px;padding:8px 12px;background:rgba(255, 152, 0, 0.1);border-radius:4px;display:inline-block">
-        <span style="font-size:11px;font-weight:600;color:#E65100">STEP 4 OF 5</span>
+        <span style="font-size:11px;font-weight:600;color:#E65100">STEP 5 OF 8</span>
       </div>
       <div class="step-header">
         <h2 style="margin:8px 0 4px 0;color:#E65100"><i class="ti ti-users"></i> Admin Settings</h2>
@@ -891,7 +891,7 @@ function renderVerificationStep() {
   return `
     <div class="wizard-step-content">
       <div style="margin-bottom:16px;padding:8px 12px;background:rgba(76, 175, 80, 0.1);border-radius:4px;display:inline-block">
-        <span style="font-size:11px;font-weight:600;color:#2E7D32">STEP 5 OF 5</span>
+        <span style="font-size:11px;font-weight:600;color:#2E7D32">STEP 6 OF 8</span>
       </div>
       <div class="step-header">
         <h2 style="margin:8px 0 4px 0;color:#2E7D32"><i class="ti ti-check-circle"></i> Verification & Completion</h2>
@@ -964,7 +964,7 @@ function renderServiceConfigStep() {
   return `
     <div class="wizard-step-content">
       <div style="margin-bottom:16px;padding:8px 12px;background:rgba(244, 67, 54, 0.1);border-radius:4px;display:inline-block">
-        <span style="font-size:11px;font-weight:600;color:#D32F2F">STEP 6 OF 7 (OPTIONAL)</span>
+        <span style="font-size:11px;font-weight:600;color:#D32F2F">STEP 7 OF 8</span>
       </div>
       <div class="step-header">
         <h2 style="margin:8px 0 4px 0;color:#D32F2F"><i class="ti ti-settings"></i> Service Configuration</h2>
@@ -1042,7 +1042,7 @@ function renderListInitializationStep() {
   return `
     <div class="wizard-step-content">
       <div style="margin-bottom:16px;padding:8px 12px;background:rgba(76, 175, 80, 0.1);border-radius:4px;display:inline-block">
-        <span style="font-size:11px;font-weight:600;color:#2E7D32">STEP 7 OF 7 (FINAL)</span>
+        <span style="font-size:11px;font-weight:600;color:#2E7D32">STEP 8 OF 8 (FINAL)</span>
       </div>
       <div class="step-header">
         <h2 style="margin:8px 0 4px 0;color:#2E7D32"><i class="ti ti-clipboard-list"></i> List Initialization</h2>
