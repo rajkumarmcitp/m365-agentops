@@ -737,6 +737,7 @@ function renderGroups() {
 
 function renderCompliance() {
   const scores = complianceData.scores || { utilization: 0, costOptimization: 0, securityCoverage: 0, compliance: 0 }
+  const costOpt = complianceData.costOptimization || {}
 
   return `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:24px">
@@ -758,24 +759,76 @@ function renderCompliance() {
       </div>
     </div>
 
+    ${costOpt.potentialSavings > 0 ? `
+    <div class="card" style="background:rgba(34, 197, 94, 0.05);border-left:4px solid var(--clr-success-text);margin-bottom:16px">
+      <div style="padding:16px">
+        <div style="font-weight:600;font-size:12px">💰 Potential Monthly Savings</div>
+        <div style="font-size:28px;font-weight:700;color:var(--clr-success-text);margin-top:8px">$${costOpt.potentialSavings}</div>
+        <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">From removing ${costOpt.unusedLicenseCount} unused licenses and consolidating ${costOpt.overlicensedCount} overlicensed assignments</div>
+      </div>
+    </div>
+    ` : ''}
+
     <div class="card">
       <div class="card-header">
         <span class="card-title"><i class="ti ti-shield-alert"></i> Compliance Findings</span>
       </div>
       <div style="padding:12px">
         <div style="display:grid;gap:12px">
+          ${complianceData.disabledUsersWithLicenses > 0 ? `
           <div style="padding:12px;background:rgba(239, 68, 68, 0.05);border-radius:6px;border-left:3px solid var(--clr-danger-text)">
-            <div style="font-weight:600;font-size:11px">Disabled Users with Active Licenses</div>
-            <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${complianceData.disabledUsersWithLicenses || 0} users</div>
+            <div style="font-weight:600;font-size:11px">🚫 Disabled Users with Active Licenses</div>
+            <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${complianceData.disabledUsersWithLicenses} users wasting licenses</div>
+            ${(complianceData.disabledUsersDetail || []).length > 0 ? `
+            <div style="margin-top:8px;font-size:10px;border-top:1px solid rgba(239, 68, 68, 0.2);padding-top:8px">
+              ${(complianceData.disabledUsersDetail || []).map(u => `<div style="padding:4px 0"><strong>${u.displayName}</strong> (${u.licenseCount} license${u.licenseCount !== 1 ? 's' : ''})</div>`).join('')}
+            </div>
+            ` : ''}
           </div>
+          ` : ''}
+
+          ${complianceData.inactiveUsers > 0 ? `
           <div style="padding:12px;background:rgba(250, 190, 88, 0.05);border-radius:6px;border-left:3px solid var(--clr-warning-text)">
-            <div style="font-weight:600;font-size:11px">Inactive Users (90+ days)</div>
-            <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${complianceData.inactiveUsers || 0} users consuming licenses</div>
+            <div style="font-weight:600;font-size:11px">⏱️ Inactive Users (90+ days)</div>
+            <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${complianceData.inactiveUsers} users with no activity but consuming licenses</div>
+            ${(complianceData.inactiveUsersDetail || []).length > 0 ? `
+            <div style="margin-top:8px;font-size:10px;border-top:1px solid rgba(250, 190, 88, 0.2);padding-top:8px">
+              ${(complianceData.inactiveUsersDetail || []).map(u => `<div style="padding:4px 0"><strong>${u.displayName}</strong> • Last sign-in: ${u.lastSignIn} (${u.licenseCount} license${u.licenseCount !== 1 ? 's' : ''})</div>`).join('')}
+            </div>
+            ` : ''}
           </div>
-          <div style="padding:12px;background:rgba(34, 197, 94, 0.05);border-radius:6px;border-left:3px solid var(--clr-success-text)">
-            <div style="font-weight:600;font-size:11px">Premium Security Licenses</div>
-            <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">Users protected by Entra ID P2 and Defender licenses</div>
+          ` : ''}
+
+          ${complianceData.guestUsersWithPremium > 0 ? `
+          <div style="padding:12px;background:rgba(59, 130, 246, 0.05);border-radius:6px;border-left:3px solid var(--clr-info-text)">
+            <div style="font-weight:600;font-size:11px">👥 Guest Users with Premium Licenses</div>
+            <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${complianceData.guestUsersWithPremium} external users consuming premium licenses</div>
+            ${(complianceData.guestUsersDetail || []).length > 0 ? `
+            <div style="margin-top:8px;font-size:10px;border-top:1px solid rgba(59, 130, 246, 0.2);padding-top:8px">
+              ${(complianceData.guestUsersDetail || []).map(u => `<div style="padding:4px 0"><strong>${u.displayName}</strong> (${u.licenseCount} license${u.licenseCount !== 1 ? 's' : ''})</div>`).join('')}
+            </div>
+            ` : ''}
           </div>
+          ` : ''}
+
+          ${complianceData.overlicensedUsers > 0 ? `
+          <div style="padding:12px;background:rgba(168, 85, 247, 0.05);border-radius:6px;border-left:3px solid var(--clr-warning-text)">
+            <div style="font-weight:600;font-size:11px">📦 Overlicensed Users</div>
+            <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${complianceData.overlicensedUsers} users with redundant license combinations</div>
+            ${(complianceData.overlicensedDetail || []).length > 0 ? `
+            <div style="margin-top:8px;font-size:10px;border-top:1px solid rgba(168, 85, 247, 0.2);padding-top:8px">
+              ${(complianceData.overlicensedDetail || []).map(u => `<div style="padding:4px 0"><strong>${u.displayName}</strong> (${u.licenseCount} licenses: ${u.licenses.join(', ')})</div>`).join('')}
+            </div>
+            ` : ''}
+          </div>
+          ` : ''}
+
+          ${!complianceData.disabledUsersWithLicenses && !complianceData.inactiveUsers && !complianceData.guestUsersWithPremium && !complianceData.overlicensedUsers ? `
+          <div style="padding:12px;background:rgba(34, 197, 94, 0.05);border-radius:6px;border-left:3px solid var(--clr-success-text);text-align:center">
+            <div style="font-weight:600;font-size:11px">✅ Excellent Compliance</div>
+            <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">No licensing issues detected</div>
+          </div>
+          ` : ''}
         </div>
       </div>
     </div>

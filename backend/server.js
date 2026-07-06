@@ -3279,26 +3279,153 @@ app.get('/api/licenses/compliance', async (req, res) => {
       throw new Error('Graph Client not initialized')
     }
 
-    const complianceData = {
-      disabledUsersWithLicenses: 0,
-      guestUsersWithPremium: 0,
-      inactiveUsers: 0,
-      unusedLicenses: 0,
-      overlicensedUsers: [],
-      costOptimization: {
-        potentialSavings: 0,
-        overlicensedCount: 0,
-        unusedLicenseCount: 0
-      },
-      scores: {
-        utilization: 85,
-        costOptimization: 78,
-        securityCoverage: 92,
-        compliance: 88
+    const ninetyDaysAgo = new Date()
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+
+    // Fetch license SKUs for pricing reference
+    const skus = await graphClient.api('/subscribedSkus').get()
+    const licenseMap = {}
+    const licenseNames = {}
+    ;(skus.value || []).forEach(sku => {
+      licenseMap[sku.skuId] = sku.skuPartNumber
+      licenseNames[sku.skuPartNumber] = true
+    })
+
+    // Fetch all users with signInActivity
+    console.log('📊 Fetching users for compliance analysis...')
+    const users = await graphClient
+      .api('/users')
+      .select(['id', 'displayName', 'userPrincipalName', 'userType', 'accountEnabled', 'signInActivity', 'createdDateTime'])
+      .top(500)
+      .get()
+
+    const allUsers = users.value || []
+    const disabledUsersWithLicenses = []
+    const guestUsersWithPremium = []
+    const inactiveUsers = []
+    const overlicensedUsers = []
+    let totalInactiveCount = 0
+
+    // Premium license keywords for guest user detection
+    const premiumLicenseKeywords = ['microsoft 365', 'office 365', 'exchange', 'sharepoint', 'teams']
+
+    // Analyze each user
+    for (const user of allUsers.slice(0, 200)) {
+      try {
+        const licenseDetails = await graphClient
+          .api(`/users/${user.id}/licenseDetails`)
+          .get()
+
+        const userLicenses = licenseDetails.value || []
+        const licenseNames_user = userLicenses.map(ld => ld.skuPartNumber).filter(Boolean)
+
+        // Check if disabled but has licenses
+        if (!user.accountEnabled && userLicenses.length > 0) {
+          disabledUsersWithLicenses.push({
+            displayName: user.displayName,
+            userPrincipalName: user.userPrincipalName,
+            licenseCount: userLicenses.length,
+            licenses: licenseNames_user
+          })
+        }
+
+        // Check if guest with premium licenses
+        if (user.userType === 'Guest' && userLicenses.length > 0) {
+          const hasPremium = licenseNames_user.some(name =>
+            premiumLicenseKeywords.some(keyword => name.toLowerCase().includes(keyword))
+          )
+          if (hasPremium) {
+            guestUsersWithPremium.push({
+              displayName: user.displayName,
+              userPrincipalName: user.userPrincipalName,
+              licenseCount: userLicenses.length,
+              licenses: licenseNames_user
+            })
+          }
+        }
+
+        // Check if inactive (no sign-in in 90 days) but has licenses
+        if (userLicenses.length > 0) {
+          const lastSignIn = user.signInActivity?.lastSignInDateTime
+          if (!lastSignIn || new Date(lastSignIn) < ninetyDaysAgo) {
+            inactiveUsers.push({
+              displayName: user.displayName,
+              userPrincipalName: user.userPrincipalName,
+              licenseCount: userLicenses.length,
+              licenses: licenseNames_user,
+              lastSignIn: lastSignIn ? new Date(lastSignIn).toLocaleDateString() : 'Never'
+            })
+            totalInactiveCount++
+          }
+        }
+
+        // Check for overlicensing patterns
+        if (userLicenses.length > 2) {
+          const hasRedundancy = licenseNames_user.some((name, idx) =>
+            licenseNames_user.some((other, otherIdx) =>
+              idx !== otherIdx &&
+              (
+                (name.includes('Microsoft 365') && other.includes('Office 365')) ||
+                (name.includes('Teams') && (other.includes('Microsoft 365') || other.includes('Office 365')))
+              )
+            )
+          )
+
+          if (hasRedundancy) {
+            overlicensedUsers.push({
+              displayName: user.displayName,
+              userPrincipalName: user.userPrincipalName,
+              licenseCount: userLicenses.length,
+              licenses: licenseNames_user
+            })
+          }
+        }
+      } catch (error) {
+        console.warn(`⚠️ Could not fetch licenses for user ${user.displayName}:`, error.message)
       }
     }
 
-    console.log(`✓ Compliance check completed`)
+    // Calculate scores based on findings
+    let utilizationScore = 85
+    let costOptScore = 80
+    let securityScore = 90
+    let complianceScore = 85
+
+    // Adjust scores based on issues found
+    if (disabledUsersWithLicenses.length > 5) costOptScore -= 10
+    if (inactiveUsers.length > 10) {
+      costOptScore -= 5
+      utilizationScore -= 5
+    }
+    if (guestUsersWithPremium.length > 5) securityScore -= 15
+    if (overlicensedUsers.length > 10) costOptScore -= 8
+
+    // Potential savings calculation (rough estimate: $15/month per unused license)
+    const potentialSavings = (disabledUsersWithLicenses.length + inactiveUsers.length) * 15
+
+    const complianceData = {
+      disabledUsersWithLicenses: disabledUsersWithLicenses.length,
+      disabledUsersDetail: disabledUsersWithLicenses.slice(0, 10),
+      guestUsersWithPremium: guestUsersWithPremium.length,
+      guestUsersDetail: guestUsersWithPremium.slice(0, 10),
+      inactiveUsers: totalInactiveCount,
+      inactiveUsersDetail: inactiveUsers.slice(0, 10),
+      overlicensedUsers: overlicensedUsers.length,
+      overlicensedDetail: overlicensedUsers.slice(0, 10),
+      costOptimization: {
+        potentialSavings: Math.round(potentialSavings),
+        overlicensedCount: overlicensedUsers.length,
+        unusedLicenseCount: disabledUsersWithLicenses.length + totalInactiveCount
+      },
+      scores: {
+        utilization: Math.max(0, Math.min(100, utilizationScore)),
+        costOptimization: Math.max(0, Math.min(100, costOptScore)),
+        securityCoverage: Math.max(0, Math.min(100, securityScore)),
+        compliance: Math.max(0, Math.min(100, complianceScore))
+      }
+    }
+
+    console.log(`✓ Compliance check completed: ${disabledUsersWithLicenses.length} disabled users, ${inactiveUsers.length} inactive, ${guestUsersWithPremium.length} guest premium, ${overlicensedUsers.length} overlicensed`)
     res.json({
       success: true,
       data: complianceData
