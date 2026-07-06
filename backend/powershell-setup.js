@@ -13,33 +13,75 @@ const REQUIRED_MODULES = [
 
 /**
  * Check if PowerShell is available and get version
+ * Note: PnP.PowerShell requires PowerShell 7+
  */
 export function checkPowerShellAvailable() {
   try {
-    const result = execSync('pwsh -Version', { encoding: 'utf-8' }).trim()
-    return {
-      available: true,
-      version: result,
-      message: `PowerShell ${result} detected`
+    // Try PowerShell 7+ (pwsh)
+    const result = execSync('pwsh -NoProfile -Command "$PSVersionTable.PSVersion.Major"', {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'ignore']
+    }).trim()
+
+    const majorVersion = parseInt(result, 10)
+
+    if (majorVersion >= 7) {
+      return {
+        available: true,
+        version: majorVersion,
+        versionString: `PowerShell ${majorVersion}`,
+        isSufficientVersion: true,
+        message: `PowerShell ${majorVersion} detected (✅ PnP.PowerShell compatible)`
+      }
+    } else {
+      return {
+        available: true,
+        version: majorVersion,
+        versionString: `PowerShell ${majorVersion}`,
+        isSufficientVersion: false,
+        message: `PowerShell ${majorVersion} detected (❌ Requires PowerShell 7+ for PnP.PowerShell)`
+      }
     }
   } catch (error) {
     // Try older PowerShell format
     try {
-      const result = execSync('powershell -NoProfile -Command "$PSVersionTable.PSVersion"', {
-        encoding: 'utf-8'
-      }).trim()
+      const result = execSync(
+        'powershell -NoProfile -Command "[System.Environment]::OSVersion.Version"',
+        { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }
+      ).trim()
+
       return {
         available: true,
-        version: result,
-        message: `PowerShell ${result} detected`
+        version: 5,
+        versionString: 'PowerShell 5.1 (Windows PowerShell)',
+        isSufficientVersion: false,
+        message: 'Windows PowerShell 5.1 detected (❌ Requires PowerShell 7+ for PnP.PowerShell)'
       }
     } catch (e) {
       return {
         available: false,
         version: null,
-        message: 'PowerShell not found. Please install PowerShell 7+ or Windows PowerShell 5.1+'
+        versionString: null,
+        isSufficientVersion: false,
+        message: '❌ PowerShell not found. Please install PowerShell 7+ (https://github.com/PowerShell/PowerShell/releases)',
+        action: 'install-powershell-7'
       }
     }
+  }
+}
+
+/**
+ * Get PowerShell version number
+ */
+export function getPowerShellVersion() {
+  try {
+    const result = execSync('pwsh -NoProfile -Command "$PSVersionTable.PSVersion.Major"', {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'ignore']
+    }).trim()
+    return parseInt(result, 10)
+  } catch {
+    return null
   }
 }
 
@@ -175,9 +217,26 @@ export async function getPowerShellSetupStatus() {
     return {
       ready: false,
       powerShellAvailable: false,
+      powerShellVersion: null,
+      versionSufficient: false,
       modules: [],
       message: psCheck.message,
-      action: 'PowerShell not found. Please install PowerShell 7+ first.'
+      action: psCheck.action || 'install-powershell-7',
+      instructions: 'Download and install PowerShell 7 or later from: https://github.com/PowerShell/PowerShell/releases'
+    }
+  }
+
+  if (!psCheck.isSufficientVersion) {
+    return {
+      ready: false,
+      powerShellAvailable: true,
+      powerShellVersion: psCheck.version,
+      powerShellVersionString: psCheck.versionString,
+      versionSufficient: false,
+      modules: [],
+      message: psCheck.message,
+      action: 'upgrade-powershell-7',
+      instructions: 'PnP.PowerShell requires PowerShell 7 or later. Please upgrade from: https://github.com/PowerShell/PowerShell/releases'
     }
   }
 
@@ -188,11 +247,13 @@ export async function getPowerShellSetupStatus() {
     ready: allInstalled,
     powerShellAvailable: true,
     powerShellVersion: psCheck.version,
+    powerShellVersionString: psCheck.versionString,
+    versionSufficient: true,
     modules: modules,
     missingCount: modules.filter(m => !m.installed).length,
     message: allInstalled
-      ? 'All PowerShell modules are installed and ready'
-      : `${modules.filter(m => !m.installed).length} modules need to be installed`,
+      ? '✅ All PowerShell modules are installed and ready'
+      : `⏳ ${modules.filter(m => !m.installed).length} modules need to be installed`,
     action: allInstalled ? 'none' : 'install'
   }
 }

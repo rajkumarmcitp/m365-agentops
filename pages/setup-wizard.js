@@ -219,14 +219,20 @@ function renderPowerShellStep() {
           </button>
         </div>
 
+        <div style="background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.2);padding:12px;border-radius:4px;font-size:12px;line-height:1.6;margin-bottom:20px">
+          <strong style="color:#C62828">⚠️ IMPORTANT: PowerShell 7 or Later Required</strong>
+          <p style="margin:6px 0 0 0;color:var(--color-text-secondary)">PnP.PowerShell requires <strong>PowerShell 7+</strong> (not Windows PowerShell 5.1)</p>
+          <a href="https://github.com/PowerShell/PowerShell/releases" target="_blank" style="color:#1976D2;text-decoration:none;font-weight:600;font-size:11px">→ Download PowerShell 7</a>
+        </div>
+
         <div style="background:rgba(33, 150, 243, 0.1);border:1px solid rgba(33, 150, 243, 0.2);padding:12px;border-radius:4px;font-size:12px;line-height:1.6;color:var(--color-text-secondary);margin-bottom:20px">
           <strong>ℹ️ Required PowerShell Modules:</strong>
           <ul style="margin:8px 0 0 0;padding-left:20px">
-            <li>Microsoft.Graph</li>
-            <li>ExchangeOnlineManagement</li>
-            <li>PnP.PowerShell</li>
-            <li>MicrosoftTeams</li>
-            <li>Microsoft.Online.SharePoint.PowerShell</li>
+            <li><strong>Microsoft.Graph</strong> - Microsoft Graph API</li>
+            <li><strong>ExchangeOnlineManagement</strong> - Exchange Online</li>
+            <li><strong>PnP.PowerShell</strong> - SharePoint & PnP ⚠️ Requires PS 7+</li>
+            <li><strong>MicrosoftTeams</strong> - Teams management</li>
+            <li><strong>Microsoft.Online.SharePoint.PowerShell</strong> - SharePoint Online</li>
           </ul>
         </div>
 
@@ -315,8 +321,48 @@ function renderPowerShellStep() {
         }
       }
 
+      // Check PowerShell status on load
+      window.checkPowerShellStatus = async function() {
+        try {
+          const response = await fetch('${API_URL}/api/setup/powershell/status', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          })
+
+          const data = await response.json()
+          const container = document.getElementById('ps-status-container')
+
+          if (!data.powerShellAvailable) {
+            container.innerHTML = \`<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828">
+              <strong>❌ PowerShell Not Found</strong>
+              <p style="font-size:12px;margin:8px 0 0 0">\${data.message}</p>
+              <p style="font-size:11px;margin:6px 0 0 0">
+                <strong>Manual Installation:</strong><br>
+                Download PowerShell 7+ from: <a href="https://github.com/PowerShell/PowerShell/releases" target="_blank" style="color:#1976D2">https://github.com/PowerShell/PowerShell/releases</a>
+              </p>
+            </div>\`
+            document.getElementById('btn-check-ps').style.display = 'none'
+          } else if (!data.versionSufficient) {
+            container.innerHTML = \`<div style="padding:16px;background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);border-radius:4px;color:#E65100">
+              <strong>⚠️ PowerShell Version Insufficient</strong>
+              <p style="font-size:12px;margin:8px 0 0 0">You have \${data.powerShellVersionString}, but PnP.PowerShell requires <strong>PowerShell 7+</strong></p>
+              <p style="font-size:11px;margin:6px 0 0 0">
+                <strong>Upgrade Required:</strong><br>
+                Download PowerShell 7+ from: <a href="https://github.com/PowerShell/PowerShell/releases" target="_blank" style="color:#1976D2">https://github.com/PowerShell/PowerShell/releases</a>
+              </p>
+            </div>\`
+            document.getElementById('btn-check-ps').style.display = 'none'
+          } else {
+            window.checkPowerShellModules()
+          }
+        } catch (error) {
+          console.error('Status check failed:', error)
+          window.checkPowerShellModules()
+        }
+      }
+
       // Auto-check on load
-      window.checkPowerShellModules()
+      window.checkPowerShellStatus()
     </script>
 
     <style>
