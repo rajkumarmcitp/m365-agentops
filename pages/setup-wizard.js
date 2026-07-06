@@ -535,10 +535,19 @@ function renderAzureAdStep() {
         </div>
 
         <div class="form-section" style="border-top:1px solid var(--color-border-primary);padding-top:20px;margin-top:20px">
+          <h3 style="margin-top:0">Or Validate Existing App</h3>
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:14px">If you already have the M365 AgentOps app registered in Azure AD, validate its current configuration and permissions.</p>
+          <button class="btn btn-secondary" onclick="window.validateExistingApp()" style="width:100%;padding:12px 16px;font-size:13px;font-weight:500;background:#6C757D;border-color:#6C757D">
+            <i class="ti ti-check"></i> Validate Existing App
+          </button>
+          <div id="existing-app-result" style="margin-top:16px;display:none"></div>
+        </div>
+
+        <div class="form-section" style="border-top:1px solid var(--color-border-primary);padding-top:20px;margin-top:20px">
           <h3 style="margin-top:0;font-size:14px">Continue to Next Step</h3>
           <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:14px">Once you've entered your Redirect URI from Azure AD, click below to proceed.</p>
           <button class="btn btn-primary" onclick="window.saveAzureAdStep()" style="width:100%;padding:12px 16px;font-size:13px;font-weight:500;background:#1976D2;border-color:#1976D2">
-            <i class="ti ti-arrow-right"></i> Complete Step 1 → Step 2
+            <i class="ti ti-arrow-right"></i> Complete Step 2 → Step 3
           </button>
         </div>
       </div>
@@ -624,6 +633,9 @@ function renderSsoStep() {
 }
 
 function renderGraphApiStep() {
+  // Check redirect URI status after render
+  setTimeout(() => window.checkRedirectUriStatus?.(), 100)
+
   return `
     <div class="wizard-step-content">
       <div style="margin-bottom:16px;padding:8px 12px;background:rgba(0, 150, 136, 0.1);border-radius:4px;display:inline-block">
@@ -635,6 +647,21 @@ function renderGraphApiStep() {
       </div>
 
       <div class="step-body">
+        <div style="background:linear-gradient(135deg, rgba(0, 121, 107, 0.15) 0%, rgba(0, 150, 136, 0.08) 100%);border:1px solid rgba(0, 121, 107, 0.3);padding:14px;border-radius:6px;margin-bottom:20px">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <i class="ti ti-link" style="color:#00796B;font-size:18px;flex-shrink:0;margin-top:2px"></i>
+            <div style="font-size:12px;line-height:1.6;color:var(--color-text-secondary)">
+              <strong style="color:#00796B">Redirect URI Status:</strong>
+              <div id="redirect-uri-status" style="margin-top:6px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>
+                  <span>Checking redirect URI configuration...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div style="background:linear-gradient(135deg, rgba(0, 150, 136, 0.12) 0%, rgba(0, 121, 107, 0.08) 100%);border:1px solid rgba(0, 150, 136, 0.2);padding:16px;border-radius:8px;margin-bottom:24px">
           <div style="display:flex;gap:14px;align-items:flex-start">
             <div style="font-size:32px;line-height:1">🔐</div>
@@ -1085,11 +1112,146 @@ function renderListInitializationStep() {
   `
 }
 
+async function checkRedirectUriStatus() {
+  const statusDiv = document.getElementById('redirect-uri-status')
+  if (!statusDiv) return
+
+  try {
+    const response = await fetch(`${API_URL}/api/setup/validate-existing-app`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+
+    const data = await response.json()
+
+    if (!data.appFound) {
+      statusDiv.innerHTML = `
+        <div style="color:#FF9800;display:flex;gap:8px;align-items:flex-start">
+          <i class="ti ti-alert-circle" style="flex-shrink:0"></i>
+          <div style="font-size:12px">
+            <strong>⚠️ App Not Found:</strong> Configure redirect URI in Step 2 first
+          </div>
+        </div>
+      `
+      return
+    }
+
+    if (!data.redirectUris || data.redirectUris.length === 0) {
+      statusDiv.innerHTML = `
+        <div style="color:#C62828;display:flex;gap:8px;align-items:flex-start">
+          <i class="ti ti-x-circle" style="flex-shrink:0"></i>
+          <div style="font-size:12px">
+            <strong>❌ No Redirect URIs Configured:</strong> Must add redirect URI in Step 2 before proceeding
+          </div>
+        </div>
+      `
+      return
+    }
+
+    statusDiv.innerHTML = `
+      <div style="color:#2E7D32;display:flex;gap:8px;align-items:flex-start">
+        <i class="ti ti-check-circle" style="flex-shrink:0"></i>
+        <div style="font-size:12px">
+          <strong>✅ Redirect URIs Configured (${data.redirectUris.length}):</strong>
+          <div style="margin-top:6px;padding:8px;background:#f0f0f0;border-radius:4px;max-height:120px;overflow-y:auto">
+            ${data.redirectUris.map(uri => `<div style="padding:4px;font-size:11px;word-break:break-all;font-family:monospace">${uri}</div>`).join('')}
+          </div>
+        </div>
+      </div>
+    `
+  } catch (error) {
+    console.error('Error checking redirect URIs:', error)
+    statusDiv.innerHTML = `
+      <div style="color:#FF9800;display:flex;gap:8px;align-items:flex-start">
+        <i class="ti ti-alert-circle" style="flex-shrink:0"></i>
+        <div style="font-size:12px">
+          <strong>⚠️ Unable to verify:</strong> ${error.message}
+        </div>
+      </div>
+    `
+  }
+}
+
+async function validateExistingApp() {
+  const resultDiv = document.getElementById('existing-app-result')
+  resultDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--color-text-secondary);font-size:12px"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> Validating existing app...</div>`
+  resultDiv.style.display = 'block'
+
+  try {
+    const response = await fetch(`${API_URL}/api/setup/validate-existing-app`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+
+    const data = await response.json()
+
+    if (!data.appFound) {
+      resultDiv.innerHTML = `
+        <div style="background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);padding:12px;border-radius:6px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:8px">
+            <i class="ti ti-alert-circle" style="color:#FF9800"></i>
+            <strong>⚠️ App Not Found</strong>
+          </div>
+          <div style="font-size:11px;color:var(--color-text-secondary);padding-left:24px">
+            <div>No M365 AgentOps app found in Azure AD</div>
+            <div style="margin-top:6px">Please register the app first using the instructions above</div>
+          </div>
+        </div>
+      `
+      return
+    }
+
+    const isConfigured = data.permissionCount >= 40
+
+    resultDiv.innerHTML = `
+      <div style="background:${isConfigured ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255, 152, 0, 0.1)'};border:1px solid ${isConfigured ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 152, 0, 0.3)'};padding:14px;border-radius:6px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:10px">
+          <i class="ti ti-check-circle" style="color:${isConfigured ? 'var(--color-success)' : '#FF9800'}"></i>
+          <strong>${isConfigured ? '✅ App Fully Configured' : '⚠️ App Partially Configured'}</strong>
+        </div>
+
+        <div style="font-size:11px;color:var(--color-text-secondary);padding-left:24px;line-height:1.6">
+          <div style="margin-bottom:8px"><strong>App Name:</strong> ${data.appName}</div>
+          <div style="margin-bottom:8px"><strong>App ID:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px;font-size:10px">${data.appId}</code></div>
+
+          <div style="margin-top:10px;margin-bottom:8px"><strong>Configured Redirect URIs (${data.redirectUris.length}):</strong></div>
+          <div style="padding-left:12px;margin-bottom:10px;max-height:100px;overflow-y:auto">
+            ${data.redirectUris.map(uri => `<div style="padding:4px;background:#f0f0f0;margin-bottom:4px;border-radius:2px;font-size:10px;word-break:break-all">${uri}</div>`).join('')}
+          </div>
+
+          <div style="margin-top:10px"><strong>Permissions:</strong> ${data.permissionCount} of ${data.requiredPermissions} configured (${Math.round((data.permissionCount / data.requiredPermissions) * 100)}%)</div>
+          ${!isConfigured ? `<div style="margin-top:6px;color:#FF9800"><small>ℹ️ App needs additional permissions. Please grant admin consent in Step 4.</small></div>` : ''}
+        </div>
+      </div>
+    `
+
+    if (isConfigured) {
+      showToast('App is fully configured and ready!', 'success')
+    } else {
+      showToast(`App configured with ${data.permissionCount} of 40 permissions`, 'warning')
+    }
+  } catch (error) {
+    console.error('Error validating app:', error)
+    resultDiv.innerHTML = `
+      <div style="background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239, 68, 68, 0.3);padding:12px;border-radius:6px;display:flex;align-items:center;gap:8px">
+        <i class="ti ti-alert-circle" style="color:var(--color-error)"></i>
+        <div style="font-size:12px">
+          <strong>❌ Error validating app</strong>
+          <div style="color:var(--color-text-secondary);margin-top:4px;font-size:11px">${error.message}</div>
+        </div>
+      </div>
+    `
+    showToast('Error: ' + error.message, 'error')
+  }
+}
+
 function attachEventListeners() {
   window.setWizardStep = setWizardStep
   window.nextWizardStep = nextWizardStep
   window.prevWizardStep = prevWizardStep
   window.saveAzureAdStep = saveAzureAdStep
+  window.validateExistingApp = validateExistingApp
+  window.checkRedirectUriStatus = checkRedirectUriStatus
   window.testSsoConnection = testSsoConnection
   window.testGraphConnection = testGraphConnection
   window.grantAdminConsent = grantAdminConsent

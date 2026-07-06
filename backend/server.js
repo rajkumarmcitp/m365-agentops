@@ -14150,6 +14150,174 @@ app.post('/api/setup/test-graph-api', async (req, res) => {
 })
 
 /**
+ * POST /api/setup/validate-existing-app
+ * Validate an existing app registration with its current configuration
+ */
+app.post('/api/setup/validate-existing-app', async (req, res) => {
+  try {
+    const clientId = process.env.AZURE_CLIENT_ID
+    const tenantId = process.env.AZURE_TENANT_ID
+
+    if (!clientId || !tenantId || !graphClient) {
+      return res.status(400).json({
+        success: false,
+        error: 'Azure AD credentials or Graph client not configured'
+      })
+    }
+
+    try {
+      console.log(`[AppValidation] Looking for app: ${clientId}`)
+
+      // Get all service principals to find our app
+      const allSps = await graphClient.api(`/servicePrincipals?$top=100`).get()
+      console.log(`[AppValidation] Found ${allSps.value?.length || 0} service principals`)
+
+      // Debug: show first 3 appIds
+      if (allSps.value?.length > 0) {
+        console.log(`[AppValidation] Sample appIds:`, allSps.value.slice(0, 3).map(sp => ({ name: sp.displayName, appId: sp.appId })))
+      }
+
+      const servicePrincipal = allSps.value?.find(sp => {
+        const match = sp.appId?.toLowerCase() === clientId.toLowerCase()
+        if (match) {
+          console.log(`[AppValidation] Found matching app: ${sp.displayName} (${sp.appId})`)
+        }
+        return match
+      })
+
+      // Get the application details directly (appId-based lookup)
+      console.log(`[AppValidation] Looking for app registration with appId: ${clientId}`)
+      let appRegistration = null
+
+      try {
+        const apps = await graphClient.api(`/applications?$top=100`).get()
+        appRegistration = apps.value?.find(app => app.appId?.toLowerCase() === clientId.toLowerCase())
+        console.log(`[AppValidation] Found app registration:`, appRegistration ? appRegistration.displayName : 'NOT FOUND')
+      } catch (error) {
+        console.warn(`[AppValidation] Error fetching apps, trying service principal method`, error.message)
+      }
+
+      if (!appRegistration && !servicePrincipal) {
+        console.log(`[AppValidation] App not found in either applications or service principals`)
+        return res.json({
+          success: true,
+          appFound: false,
+          message: 'App not found in Azure AD. Please ensure it is registered in Azure AD portal.'
+        })
+      }
+
+      // Use service principal if app registration wasn't found
+      if (!appRegistration && servicePrincipal) {
+        // We'll create a minimal response since we can't get full details
+        return res.json({
+          success: true,
+          appFound: true,
+          appName: servicePrincipal.displayName,
+          appId: servicePrincipal.appId,
+          redirectUris: [],
+          configuredPermissions: [],
+          permissionCount: 0,
+          requiredPermissions: 40,
+          isConfigured: false,
+          message: 'App found but cannot read full configuration. Please configure permissions manually.'
+        })
+      }
+
+      if (!appRegistration) {
+        return res.json({
+          success: true,
+          appFound: false,
+          message: 'App registration not found'
+        })
+      }
+
+      // Extract redirect URIs
+      const redirectUris = new Set()
+      const webRedirects = appRegistration.web?.redirectUris || []
+      const publicRedirects = appRegistration.publicClient?.redirectUris || []
+
+      webRedirects.forEach(uri => redirectUris.add(uri))
+      publicRedirects.forEach(uri => redirectUris.add(uri))
+
+      // Get required resource access (permissions)
+      const requiredResourceAccess = appRegistration.requiredResourceAccess || []
+
+      // Find Microsoft Graph resource
+      const graphResource = requiredResourceAccess.find(r =>
+        r.resourceAppId === '00000003-0000-0000-c000-000000000007'
+      )
+
+      // Find Exchange Online resource
+      const exchangeResource = requiredResourceAccess.find(r =>
+        r.resourceAppId === 'e06cf3f6-a6f6-401b-b0a0-eb8d0e46304e'
+      )
+
+      const graphPermissions = graphResource?.resourceAccess || []
+      const exchangePermissions = exchangeResource?.resourceAccess || []
+
+      // Separate application vs delegated permissions
+      const appPermissions = graphPermissions.filter(p => p.type === 'Role').map(p => p.id)
+      const delegatedPermissions = graphPermissions.filter(p => p.type === 'Scope').map(p => p.id)
+
+      // Get permission names from Graph service principal
+      const graphSp = allSps.value?.find(sp => sp.appId === '00000003-0000-0000-c000-000000000007')
+      const permissionNames = new Set()
+
+      if (graphSp?.appRoles) {
+        graphSp.appRoles.forEach(role => {
+          if (appPermissions.includes(role.id)) {
+            permissionNames.add(role.value)
+          }
+        })
+      }
+
+      if (graphSp?.oauth2PermissionScopes) {
+        graphSp.oauth2PermissionScopes.forEach(scope => {
+          if (delegatedPermissions.includes(scope.id)) {
+            permissionNames.add(scope.value)
+          }
+        })
+      }
+
+      // Get Exchange permission names
+      const exchangeSp = allSps.value?.find(sp => sp.appId === 'e06cf3f6-a6f6-401b-b0a0-eb8d0e46304e')
+      if (exchangeSp?.appRoles) {
+        exchangePermissions.forEach(perm => {
+          const role = exchangeSp.appRoles.find(r => r.id === perm.id)
+          if (role && perm.type === 'Role') {
+            permissionNames.add(role.value)
+          }
+        })
+      }
+
+      res.json({
+        success: true,
+        appFound: true,
+        appName: appRegistration.displayName,
+        appId: appRegistration.appId,
+        redirectUris: Array.from(redirectUris),
+        configuredPermissions: Array.from(permissionNames),
+        permissionCount: permissionNames.size,
+        requiredPermissions: 40,
+        isConfigured: permissionNames.size >= 40
+      })
+    } catch (error) {
+      console.error('Error validating app:', error.message)
+      res.json({
+        success: false,
+        error: error.message
+      })
+    }
+  } catch (error) {
+    console.error('❌ Error in validate-existing-app:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
  * POST /api/setup/check-app-permissions
  * Check what permissions the app has vs. required permissions
  */
@@ -14166,6 +14334,7 @@ app.post('/api/setup/check-app-permissions', async (req, res) => {
     }
 
     const requiredPermissions = [
+      // Microsoft Graph - Application permissions (35)
       'Application.Read.All', 'AuditLog.Read.All', 'Device.Read.All',
       'DeviceManagementApps.Read.All', 'DeviceManagementConfiguration.Read.All',
       'DeviceManagementManagedDevices.Read.All', 'DeviceManagementRBAC.Read.All',
@@ -14180,15 +14349,18 @@ app.post('/api/setup/check-app-permissions', async (req, res) => {
       'Team.Create', 'Team.ReadBasic.All', 'TeamMember.ReadWrite.All',
       'TeamworkTag.Read.All', 'ThreatAssessment.Read.All',
       'User.Read.All', 'User.ReadWrite.All', 'UserAuthenticationMethod.Read.All',
+      // Microsoft Graph - Delegated permissions (3)
+      'email', 'openid', 'profile',
+      // Exchange Online - Application permissions (1)
       'Exchange.ManageAsApp'
     ]
 
     try {
-      // Get the service principal for this app
-      const spFilter = `appId eq '${clientId}'`
-      const sp = await graphClient.api(`/servicePrincipals?$filter=${encodeURIComponent(spFilter)}`).get()
+      // List all service principals and find our app
+      const allSps = await graphClient.api(`/servicePrincipals?$top=100`).get()
+      const servicePrincipal = allSps.value?.find(sp => sp.appId === clientId)
 
-      if (!sp.value || sp.value.length === 0) {
+      if (!servicePrincipal) {
         return res.json({
           success: true,
           permissionsGranted: 0,
@@ -14199,43 +14371,57 @@ app.post('/api/setup/check-app-permissions', async (req, res) => {
         })
       }
 
-      const servicePrincipal = sp.value[0]
-
-      // Get oauth2PermissionGrants (delegated permissions)
-      const delegated = await graphClient.api(`/servicePrincipals/${servicePrincipal.id}/oauth2PermissionGrants`).get()
-      const delegatedPerms = delegated.value?.map(p => p.scope?.split(' ') || []).flat() || []
-
       // Get appRoleAssignments (application permissions)
-      const appRoles = await graphClient.api(`/servicePrincipals/${servicePrincipal.id}/appRoleAssignments`).get()
-
-      // Get the app roles from the Graph service principal
-      const graphSp = await graphClient.api(`/servicePrincipals?$filter=appId eq '00000003-0000-0000-c000-000000000007'`).get()
+      const appRoles = await graphClient.api(`/servicePrincipals/${servicePrincipal.id}/appRoleAssignments?$top=100`).get()
       const grantedAppRoles = new Set()
 
-      if (appRoles.value) {
+      // Get the app roles from the Graph service principal
+      const graphSpList = await graphClient.api(`/servicePrincipals?$top=100`).get()
+      const graphSp = graphSpList.value?.find(sp => sp.appId === '00000003-0000-0000-c000-000000000007')
+
+      if (appRoles.value && graphSp?.appRoles) {
         appRoles.value.forEach(assignment => {
-          const appRole = graphSp.value?.[0]?.appRoles?.find(r => r.id === assignment.appRoleId)
+          const appRole = graphSp.appRoles.find(r => r.id === assignment.appRoleId)
           if (appRole) {
             grantedAppRoles.add(appRole.value)
           }
         })
       }
 
-      // Also check Exchange.ManageAsApp in Exchange Online
-      const exchangeSp = await graphClient.api(`/servicePrincipals?$filter=appId eq 'e06cf3f6-a6f6-401b-b0a0-eb8d0e46304e'`).get()
-      const exchangeAppRoles = new Set()
+      // Check delegated permissions (oauth2PermissionGrants)
+      const delegated = await graphClient.api(`/servicePrincipals/${servicePrincipal.id}/oauth2PermissionGrants?$top=100`).get()
+      const grantedDelegated = new Set()
 
-      const exchangeAssignments = await graphClient.api(`/servicePrincipals/${servicePrincipal.id}/appRoleAssignments?$filter=resourceId eq '${exchangeSp.value?.[0]?.id}'`).get()
-      if (exchangeAssignments.value) {
-        exchangeAssignments.value.forEach(assignment => {
-          const appRole = exchangeSp.value?.[0]?.appRoles?.find(r => r.id === assignment.appRoleId)
-          if (appRole) {
-            exchangeAppRoles.add(appRole.value)
+      if (delegated.value) {
+        delegated.value.forEach(grant => {
+          // Split scopes and add to set
+          if (grant.scope) {
+            grant.scope.split(' ').forEach(scope => {
+              if (scope.trim()) grantedDelegated.add(scope.trim())
+            })
           }
         })
       }
 
-      const grantedPermissions = Array.from(grantedAppRoles).concat(Array.from(exchangeAppRoles))
+      // Also check Exchange.ManageAsApp in Exchange Online
+      const exchangeSp = graphSpList.value?.find(sp => sp.appId === 'e06cf3f6-a6f6-401b-b0a0-eb8d0e46304e')
+      const exchangeAppRoles = new Set()
+
+      if (exchangeSp) {
+        const exchangeAssignments = await graphClient.api(`/servicePrincipals/${servicePrincipal.id}/appRoleAssignments?$top=100`).get()
+        if (exchangeAssignments.value && exchangeSp.appRoles) {
+          exchangeAssignments.value.forEach(assignment => {
+            if (assignment.resourceId === exchangeSp.id) {
+              const appRole = exchangeSp.appRoles.find(r => r.id === assignment.appRoleId)
+              if (appRole) {
+                exchangeAppRoles.add(appRole.value)
+              }
+            }
+          })
+        }
+      }
+
+      const grantedPermissions = Array.from(grantedAppRoles).concat(Array.from(grantedDelegated)).concat(Array.from(exchangeAppRoles))
       const missingPermissions = requiredPermissions.filter(p => !grantedPermissions.includes(p))
 
       res.json({
