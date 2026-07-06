@@ -17,15 +17,32 @@ const REQUIRED_MODULES = [
  */
 export function checkPowerShellAvailable() {
   try {
-    // Try PowerShell 7+ (pwsh)
+    // Try PowerShell 7+ (pwsh) - check which pwsh first
+    try {
+      execSync('which pwsh', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] })
+    } catch (e) {
+      console.log('⚠️ pwsh not found in PATH')
+      throw new Error('pwsh not found')
+    }
+
+    // Now get version
     const result = execSync('pwsh -NoProfile -Command "$PSVersionTable.PSVersion.Major"', {
       encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'ignore']
+      stdio: ['pipe', 'pipe', 'ignore'],
+      timeout: 5000
     }).trim()
+
+    console.log(`✅ PowerShell detected, version output: "${result}"`)
 
     const majorVersion = parseInt(result, 10)
 
+    if (isNaN(majorVersion)) {
+      console.warn(`⚠️ Could not parse version: "${result}"`)
+      throw new Error(`Invalid version format: ${result}`)
+    }
+
     if (majorVersion >= 7) {
+      console.log(`✅ PowerShell ${majorVersion} is compatible`)
       return {
         available: true,
         version: majorVersion,
@@ -34,6 +51,7 @@ export function checkPowerShellAvailable() {
         message: `PowerShell ${majorVersion} detected (✅ PnP.PowerShell compatible)`
       }
     } else {
+      console.warn(`⚠️ PowerShell ${majorVersion} is too old`)
       return {
         available: true,
         version: majorVersion,
@@ -43,11 +61,15 @@ export function checkPowerShellAvailable() {
       }
     }
   } catch (error) {
-    // Try older PowerShell format
+    console.log(`⚠️ pwsh check failed: ${error.message}, trying powershell...`)
+
+    // Try older PowerShell format (Windows)
     try {
+      execSync('which powershell', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] })
+
       const result = execSync(
         'powershell -NoProfile -Command "[System.Environment]::OSVersion.Version"',
-        { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }
+        { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'], timeout: 5000 }
       ).trim()
 
       return {
@@ -58,12 +80,13 @@ export function checkPowerShellAvailable() {
         message: 'Windows PowerShell 5.1 detected (❌ Requires PowerShell 7+ for PnP.PowerShell)'
       }
     } catch (e) {
+      console.error(`❌ Neither pwsh nor powershell found: ${e.message}`)
       return {
         available: false,
         version: null,
         versionString: null,
         isSufficientVersion: false,
-        message: '❌ PowerShell not found. Please install PowerShell 7+ (https://github.com/PowerShell/PowerShell/releases)',
+        message: '❌ PowerShell not found. Please install PowerShell 7+ from https://github.com/PowerShell/PowerShell/releases',
         action: 'install-powershell-7'
       }
     }

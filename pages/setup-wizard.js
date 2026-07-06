@@ -283,21 +283,29 @@ window.checkPowerShellStatus = async function() {
     const container = document.getElementById('ps-status-container')
 
     if (!data.powerShellAvailable) {
+      const msg = data.message || '❌ PowerShell could not be detected. It may not be installed or accessible in PATH.'
       container.innerHTML = '<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828">' +
         '<strong>❌ PowerShell Not Found</strong>' +
-        '<p style="font-size:12px;margin:8px 0 0 0">' + data.message + '</p>' +
-        '<p style="font-size:11px;margin:6px 0 0 0"><strong>Manual Installation:</strong><br>' +
-        'Download PowerShell 7+ from: <a href="https://github.com/PowerShell/PowerShell/releases" target="_blank" style="color:#1976D2">https://github.com/PowerShell/PowerShell/releases</a></p>' +
+        '<p style="font-size:12px;margin:8px 0 0 0">' + msg + '</p>' +
+        '<p style="font-size:11px;margin:6px 0 0 0"><strong>For Mac Users:</strong><br>' +
+        '1. Install: <code style="background:#f0f0f0;padding:2px 6px">brew install powershell</code><br>' +
+        '2. Verify: <code style="background:#f0f0f0;padding:2px 6px">pwsh --version</code><br>' +
+        '3. Then click Check Modules again</p>' +
+        '<p style="font-size:11px;margin:6px 0 0 0"><strong>Or download from:</strong><br>' +
+        '<a href="https://github.com/PowerShell/PowerShell/releases" target="_blank" style="color:#1976D2">https://github.com/PowerShell/PowerShell/releases</a></p>' +
         '</div>'
-      document.getElementById('btn-check-ps').style.display = 'none'
+      document.getElementById('btn-check-ps').style.display = 'inline-block'
+      document.getElementById('btn-check-ps').textContent = '🔄 Retry Check'
     } else if (!data.versionSufficient) {
+      const verStr = data.powerShellVersionString || 'Unknown version'
       container.innerHTML = '<div style="padding:16px;background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);border-radius:4px;color:#E65100">' +
         '<strong>⚠️ PowerShell Version Insufficient</strong>' +
-        '<p style="font-size:12px;margin:8px 0 0 0">You have ' + data.powerShellVersionString + ', but PnP.PowerShell requires <strong>PowerShell 7+</strong></p>' +
+        '<p style="font-size:12px;margin:8px 0 0 0">You have ' + verStr + ', but PnP.PowerShell requires <strong>PowerShell 7+</strong></p>' +
         '<p style="font-size:11px;margin:6px 0 0 0"><strong>Upgrade Required:</strong><br>' +
         'Download PowerShell 7+ from: <a href="https://github.com/PowerShell/PowerShell/releases" target="_blank" style="color:#1976D2">https://github.com/PowerShell/PowerShell/releases</a></p>' +
         '</div>'
-      document.getElementById('btn-check-ps').style.display = 'none'
+      document.getElementById('btn-check-ps').style.display = 'inline-block'
+      document.getElementById('btn-check-ps').textContent = '🔄 Retry Check'
     } else {
       window.checkPowerShellModules()
     }
