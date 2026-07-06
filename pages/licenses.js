@@ -744,18 +744,35 @@ function renderCompliance() {
       <div class="card" style="padding:16px;text-align:center">
         <div style="font-size:32px;font-weight:700;color:${scores.utilization >= 80 ? 'var(--clr-success-text)' : scores.utilization >= 60 ? 'var(--clr-warning-text)' : 'var(--clr-danger-text)'}">${scores.utilization || 0}%</div>
         <div style="font-size:11px;font-weight:600;margin-top:8px">License Utilization</div>
+        <div style="font-size:9px;color:var(--color-text-secondary);margin-top:8px;line-height:1.4">Percentage of assigned licenses actively used by employees</div>
       </div>
       <div class="card" style="padding:16px;text-align:center">
         <div style="font-size:32px;font-weight:700;color:${scores.costOptimization >= 80 ? 'var(--clr-success-text)' : scores.costOptimization >= 60 ? 'var(--clr-warning-text)' : 'var(--clr-danger-text)'}">${scores.costOptimization || 0}%</div>
         <div style="font-size:11px;font-weight:600;margin-top:8px">Cost Optimization</div>
+        <div style="font-size:9px;color:var(--color-text-secondary);margin-top:8px;line-height:1.4">Reduced by disabled users, inactive users, and overlicensing</div>
       </div>
       <div class="card" style="padding:16px;text-align:center">
         <div style="font-size:32px;font-weight:700;color:${scores.securityCoverage >= 80 ? 'var(--clr-success-text)' : scores.securityCoverage >= 60 ? 'var(--clr-warning-text)' : 'var(--clr-danger-text)'}">${scores.securityCoverage || 0}%</div>
         <div style="font-size:11px;font-weight:600;margin-top:8px">Security Coverage</div>
+        <div style="font-size:9px;color:var(--color-text-secondary);margin-top:8px;line-height:1.4">Penalized if guest users have premium M365 licenses</div>
       </div>
       <div class="card" style="padding:16px;text-align:center">
         <div style="font-size:32px;font-weight:700;color:${scores.compliance >= 80 ? 'var(--clr-success-text)' : scores.compliance >= 60 ? 'var(--clr-warning-text)' : 'var(--clr-danger-text)'}">${scores.compliance || 0}%</div>
         <div style="font-size:11px;font-weight:600;margin-top:8px">Compliance Score</div>
+        <div style="font-size:9px;color:var(--color-text-secondary);margin-top:8px;line-height:1.4">Overall health across all licensing best practices</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;background:rgba(99, 102, 241, 0.03);border-left:4px solid var(--clr-info-text)">
+      <div class="card-header">
+        <span class="card-title"><i class="ti ti-info-circle"></i> How These Scores Are Calculated</span>
+      </div>
+      <div style="padding:12px;display:grid;gap:8px;font-size:10px">
+        <div><strong>📊 License Utilization:</strong> Starts at 85% • Reduced by inactive users (90+ days no login)</div>
+        <div><strong>💰 Cost Optimization:</strong> Starts at 80% • Reduced by disabled users with licenses (-10%) • Reduced by inactive users (-5%) • Reduced by overlicensing (-8%)</div>
+        <div><strong>🔒 Security Coverage:</strong> Starts at 90% • Reduced if guest users have premium licenses (-15%)</div>
+        <div><strong>✅ Compliance Score:</strong> Overall assessment based on all factors above • Ranges 0-100%</div>
+        <div style="padding-top:4px;border-top:1px solid rgba(99, 102, 241, 0.2);margin-top:8px;color:var(--color-text-secondary)">Scores are capped between 0-100%. Green (≥80%), Yellow (60-79%), Red (&lt;60%)</div>
       </div>
     </div>
 
