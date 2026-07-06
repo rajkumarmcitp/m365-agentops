@@ -759,6 +759,30 @@ function renderCompliance() {
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <span class="card-title"><i class="ti ti-list"></i> Findings Summary</span>
+      </div>
+      <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+        <div style="padding:12px;background:rgba(239, 68, 68, 0.05);border-radius:6px;border-left:3px solid var(--clr-danger-text)">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-danger-text)">${complianceData.disabledUsersWithLicenses || 0}</div>
+          <div style="font-size:10px;margin-top:4px">Disabled Users</div>
+        </div>
+        <div style="padding:12px;background:rgba(250, 190, 88, 0.05);border-radius:6px;border-left:3px solid var(--clr-warning-text)">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">${complianceData.inactiveUsers || 0}</div>
+          <div style="font-size:10px;margin-top:4px">Inactive Users</div>
+        </div>
+        <div style="padding:12px;background:rgba(59, 130, 246, 0.05);border-radius:6px;border-left:3px solid var(--clr-info-text)">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-info-text)">${complianceData.guestUsersWithPremium || 0}</div>
+          <div style="font-size:10px;margin-top:4px">Guest Premium Users</div>
+        </div>
+        <div style="padding:12px;background:rgba(168, 85, 247, 0.05);border-radius:6px;border-left:3px solid var(--clr-warning-text)">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">${complianceData.overlicensedUsers || 0}</div>
+          <div style="font-size:10px;margin-top:4px">Overlicensed Users</div>
+        </div>
+      </div>
+    </div>
+
     ${costOpt.potentialSavings > 0 ? `
     <div class="card" style="background:rgba(34, 197, 94, 0.05);border-left:4px solid var(--clr-success-text);margin-bottom:16px">
       <div style="padding:16px">
@@ -771,7 +795,7 @@ function renderCompliance() {
 
     <div class="card">
       <div class="card-header">
-        <span class="card-title"><i class="ti ti-shield-alert"></i> Compliance Findings</span>
+        <span class="card-title"><i class="ti ti-shield-alert"></i> Compliance Findings Details</span>
       </div>
       <div style="padding:12px">
         <div style="display:grid;gap:12px">
