@@ -3,6 +3,65 @@
 
 import { execSync, spawn } from 'child_process'
 
+/**
+ * Get the current OS platform
+ */
+export function getOSPlatform() {
+  const platform = process.platform
+  if (platform === 'darwin') return 'mac'
+  if (platform === 'win32') return 'windows'
+  if (platform === 'linux') return 'linux'
+  return 'unknown'
+}
+
+/**
+ * Get OS-specific installation instructions
+ */
+export function getInstallationInstructions(os) {
+  switch (os) {
+    case 'mac':
+      return {
+        os: 'macOS',
+        method: 'Homebrew (Recommended)',
+        command: 'brew install powershell',
+        verify: 'pwsh --version',
+        altMethod: 'Download from GitHub',
+        altUrl: 'https://github.com/PowerShell/PowerShell/releases',
+        notes: 'After install, you may need to restart Terminal or clear shell cache'
+      }
+    case 'windows':
+      return {
+        os: 'Windows',
+        method: 'Windows Package Manager (Recommended)',
+        command: 'winget install Microsoft.PowerShell',
+        verify: 'pwsh --version',
+        altMethod: 'Chocolatey',
+        altCommand: 'choco install powershell-core',
+        altUrl: 'https://github.com/PowerShell/PowerShell/releases',
+        notes: 'Administrator privileges may be required'
+      }
+    case 'linux':
+      return {
+        os: 'Linux',
+        method: 'Package Manager (varies by distro)',
+        examples: [
+          'Ubuntu/Debian: sudo apt-get install -y powershell',
+          'CentOS: sudo yum install -y powershell',
+          'Fedora: sudo dnf install -y powershell'
+        ],
+        verify: 'pwsh --version',
+        altUrl: 'https://github.com/PowerShell/PowerShell/releases'
+      }
+    default:
+      return {
+        os: 'Unknown OS',
+        method: 'Download from GitHub',
+        url: 'https://github.com/PowerShell/PowerShell/releases',
+        notes: 'Select the version appropriate for your operating system'
+      }
+  }
+}
+
 const REQUIRED_MODULES = [
   { name: 'Microsoft.Graph', version: '2.0.0', minVersion: '2.0.0' },
   { name: 'ExchangeOnlineManagement', version: '3.0.0', minVersion: '3.0.0' },
@@ -235,6 +294,8 @@ export async function installMissingModules() {
  */
 export async function getPowerShellSetupStatus() {
   const psCheck = checkPowerShellAvailable()
+  const os = getOSPlatform()
+  const instructions = getInstallationInstructions(os)
 
   if (!psCheck.available) {
     return {
@@ -245,7 +306,8 @@ export async function getPowerShellSetupStatus() {
       modules: [],
       message: psCheck.message,
       action: psCheck.action || 'install-powershell-7',
-      instructions: 'Download and install PowerShell 7 or later from: https://github.com/PowerShell/PowerShell/releases'
+      os: os,
+      instructions: instructions
     }
   }
 

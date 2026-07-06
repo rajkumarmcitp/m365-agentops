@@ -284,15 +284,37 @@ window.checkPowerShellStatus = async function() {
 
     if (!data.powerShellAvailable) {
       const msg = data.message || '❌ PowerShell could not be detected. It may not be installed or accessible in PATH.'
+      const inst = data.instructions || {}
+      const isWindows = data.os === 'windows'
+      const isMac = data.os === 'mac'
+      const isLinux = data.os === 'linux'
+
+      let instructionsHtml = '<p style="font-size:11px;margin:6px 0 0 0"><strong>Installation Instructions:</strong><br>'
+
+      if (isMac) {
+        instructionsHtml += '1. <strong>Homebrew:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px">brew install powershell</code><br>' +
+          '2. <strong>Verify:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px">pwsh --version</code><br>' +
+          '3. <strong>Restart:</strong> Close and reopen Terminal<br>' +
+          '<small style="color:var(--color-text-secondary)">Note: If still not detected, restart your shell or clear cache with: <code style="background:#f0f0f0;padding:1px 4px">hash -r</code></small>'
+      } else if (isWindows) {
+        instructionsHtml += '1. <strong>Windows Package Manager:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px">winget install Microsoft.PowerShell</code><br>' +
+          '2. <strong>Or Chocolatey:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px">choco install powershell-core</code><br>' +
+          '3. <strong>Verify:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px">pwsh --version</code><br>' +
+          '<small style="color:var(--color-text-secondary)">Note: Administrator privileges may be required</small>'
+      } else if (isLinux) {
+        instructionsHtml += '<strong>Ubuntu/Debian:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px">sudo apt-get install -y powershell</code><br>' +
+          '<strong>CentOS:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px">sudo yum install -y powershell</code><br>' +
+          '<strong>Fedora:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px">sudo dnf install -y powershell</code>'
+      } else {
+        instructionsHtml += 'Download and install from: <a href="https://github.com/PowerShell/PowerShell/releases" target="_blank" style="color:#1976D2">https://github.com/PowerShell/PowerShell/releases</a>'
+      }
+
+      instructionsHtml += '</p>'
+
       container.innerHTML = '<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828">' +
-        '<strong>❌ PowerShell Not Found</strong>' +
+        '<strong>❌ PowerShell Not Found on ' + (data.os === 'mac' ? 'macOS' : data.os === 'windows' ? 'Windows' : data.os === 'linux' ? 'Linux' : 'This System') + '</strong>' +
         '<p style="font-size:12px;margin:8px 0 0 0">' + msg + '</p>' +
-        '<p style="font-size:11px;margin:6px 0 0 0"><strong>For Mac Users:</strong><br>' +
-        '1. Install: <code style="background:#f0f0f0;padding:2px 6px">brew install powershell</code><br>' +
-        '2. Verify: <code style="background:#f0f0f0;padding:2px 6px">pwsh --version</code><br>' +
-        '3. Then click Check Modules again</p>' +
-        '<p style="font-size:11px;margin:6px 0 0 0"><strong>Or download from:</strong><br>' +
-        '<a href="https://github.com/PowerShell/PowerShell/releases" target="_blank" style="color:#1976D2">https://github.com/PowerShell/PowerShell/releases</a></p>' +
+        instructionsHtml +
         '</div>'
       document.getElementById('btn-check-ps').style.display = 'inline-block'
       document.getElementById('btn-check-ps').textContent = '🔄 Retry Check'
