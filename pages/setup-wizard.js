@@ -523,14 +523,43 @@ function renderAzureAdStep() {
         </div>
 
         <div class="form-section">
-          <h3 style="margin-top:24px">✅ After Registering Your App in Azure:</h3>
-          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:12px">Copy your Redirect URI from Azure Portal (<strong>Authentication → Platform → Redirect URIs</strong>)</p>
+          <h3 style="margin-top:24px">✅ Step 2: Configure Redirect URI in Azure AD</h3>
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:16px">After creating the app registration, add a redirect URI in Azure AD Portal:</p>
+
+          <div style="background:rgba(33, 150, 243, 0.08);padding:14px;border-left:4px solid #2196F3;border-radius:6px;margin-bottom:20px">
+            <h4 style="margin:0 0 12px 0;font-size:12px;font-weight:600;color:#1565C0">How to Add Redirect URI in Azure AD:</h4>
+            <ol style="margin:0;padding-left:20px;font-size:12px;line-height:1.8;color:var(--color-text-secondary)">
+              <li><strong>Go to Azure Portal:</strong> https://portal.azure.com</li>
+              <li><strong>Navigate to:</strong> Azure AD → App Registrations → Your "M365 AgentOps" app</li>
+              <li><strong>Click:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px">Authentication</code> (left sidebar)</li>
+              <li><strong>Click:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px">Add a platform</code> (top right)</li>
+              <li><strong>Select:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px">Web</code></li>
+              <li><strong>Enter Redirect URI:</strong> Copy your deployment URL + <code>/callback</code>
+                <ul style="margin:6px 0;padding-left:20px;font-size:11px">
+                  <li><strong>Example:</strong> <code style="background:#f0f0f0;padding:2px 6px">https://proud-river-0f55f1e10.7.azurestaticapps.net/callback</code></li>
+                  <li><strong>Or Local Dev:</strong> <code style="background:#f0f0f0;padding:2px 6px">http://localhost:5173/callback</code></li>
+                </ul>
+              </li>
+              <li><strong>Click:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px">Configure</code> button</li>
+            </ol>
+          </div>
+
+          <div style="background:rgba(76, 175, 80, 0.1);padding:12px;border-left:4px solid #4CAF50;border-radius:6px;margin-bottom:20px">
+            <div style="font-weight:600;font-size:12px;color:#2E7D32;margin-bottom:8px">📋 Redirect URI Format:</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.6">
+              <strong>Format:</strong> &lt;Your Deployment URL&gt;/callback<br><br>
+              <strong>Examples:</strong><br>
+              • Production: <code style="background:#f0f0f0;padding:2px 6px">https://proud-river-0f55f1e10.7.azurestaticapps.net/callback</code><br>
+              • Local Dev: <code style="background:#f0f0f0;padding:2px 6px">http://localhost:5173/callback</code><br>
+              • Custom Domain: <code style="background:#f0f0f0;padding:2px 6px">https://m365agentops.yourdomain.com/callback</code>
+            </div>
+          </div>
 
           <div class="form-group">
             <label class="form-label">Enter Your Redirect URI *</label>
             <input type="text" class="form-input" id="redirect-uri" placeholder="https://yourdomain.com/callback" value="${wizardState.formData.redirectUri}">
-            <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px">Example: https://m365agentops.yourdomain.com/callback</div>
-            <div style="font-size:11px;color:var(--color-red);margin-top:4px">⚠️ This MUST match exactly what you set in Azure AD</div>
+            <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px">Copy from Azure AD: Authentication → Platform → Web → Redirect URIs</div>
+            <div style="font-size:11px;color:var(--color-red);margin-top:4px">⚠️ MUST match EXACTLY what you configured in Azure AD</div>
           </div>
         </div>
 
@@ -1202,26 +1231,45 @@ async function validateExistingApp() {
       return
     }
 
-    const isConfigured = data.permissionCount >= 40
+    const isConfigured = data.permissionCount >= 41
 
     resultDiv.innerHTML = `
       <div style="background:${isConfigured ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255, 152, 0, 0.1)'};border:1px solid ${isConfigured ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 152, 0, 0.3)'};padding:14px;border-radius:6px">
-        <div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:12px">
           <i class="ti ti-check-circle" style="color:${isConfigured ? 'var(--color-success)' : '#FF9800'}"></i>
           <strong>${isConfigured ? '✅ App Fully Configured' : '⚠️ App Partially Configured'}</strong>
         </div>
 
-        <div style="font-size:11px;color:var(--color-text-secondary);padding-left:24px;line-height:1.6">
-          <div style="margin-bottom:8px"><strong>App Name:</strong> ${data.appName}</div>
-          <div style="margin-bottom:8px"><strong>App ID:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px;font-size:10px">${data.appId}</code></div>
-
-          <div style="margin-top:10px;margin-bottom:8px"><strong>Configured Redirect URIs (${data.redirectUris.length}):</strong></div>
-          <div style="padding-left:12px;margin-bottom:10px;max-height:100px;overflow-y:auto">
-            ${data.redirectUris.map(uri => `<div style="padding:4px;background:#f0f0f0;margin-bottom:4px;border-radius:2px;font-size:10px;word-break:break-all">${uri}</div>`).join('')}
+        <div style="font-size:11px;color:var(--color-text-secondary);padding-left:24px;line-height:1.7">
+          <div style="margin-bottom:10px">
+            <strong>App Details:</strong><br>
+            <div style="padding-left:12px;margin-top:4px">
+              Name: <strong>${data.appName}</strong><br>
+              ID: <code style="background:#f0f0f0;padding:2px 6px;border-radius:2px;font-size:10px">${data.appId}</code>
+            </div>
           </div>
 
-          <div style="margin-top:10px"><strong>Permissions:</strong> ${data.permissionCount} of ${data.requiredPermissions} configured (${Math.round((data.permissionCount / data.requiredPermissions) * 100)}%)</div>
-          ${!isConfigured ? `<div style="margin-top:6px;color:#FF9800"><small>ℹ️ App needs additional permissions. Please grant admin consent in Step 4.</small></div>` : ''}
+          <div style="margin-bottom:10px">
+            <strong>Configured Redirect URIs (${data.redirectUris.length}):</strong>
+            <div style="padding-left:12px;margin-top:6px;background:#f9f9f9;padding:8px;border-left:3px solid #2196F3;border-radius:4px">
+              ${data.redirectUris.length === 0 ? '<span style="color:var(--color-error)">None configured</span>' : data.redirectUris.map(uri => `<div style="padding:4px 0;font-family:monospace;font-size:10px;word-break:break-all">${uri}</div>`).join('')}
+            </div>
+          </div>
+
+          <div style="margin-bottom:10px">
+            <strong>Permissions:</strong><br>
+            <div style="padding-left:12px;margin-top:4px">
+              ${data.permissionCount} of ${data.requiredPermissions} configured
+              <div style="margin-top:6px;background:#f0f0f0;border-radius:4px;height:6px;width:150px">
+                <div style="background:${isConfigured ? '#4CAF50' : '#FF9800'};height:100%;border-radius:4px;width:${Math.round((data.permissionCount / data.requiredPermissions) * 100)}%"></div>
+              </div>
+              <small style="margin-top:4px;display:block">${Math.round((data.permissionCount / data.requiredPermissions) * 100)}% Complete</small>
+            </div>
+          </div>
+
+          ${!isConfigured ? `<div style="margin-top:10px;background:rgba(255, 152, 0, 0.1);padding:8px;border-radius:4px;border-left:3px solid #FF9800">
+            <strong style="color:#FF9800">ℹ️ Action Required:</strong> App needs ${data.requiredPermissions - data.permissionCount} additional permissions. Grant admin consent in Step 4.
+          </div>` : ''}
         </div>
       </div>
     `
