@@ -3029,10 +3029,15 @@ app.get('/api/licenses', async (req, res) => {
       throw new Error('Graph Client not initialized')
     }
 
-    // Get subscription SKUs (licenses)
+    // Get subscription SKUs (licenses) with service plans
     const skus = await graphClient
       .api('/subscribedSkus')
       .get()
+
+    // Debug: Log first SKU to see structure
+    if (skus.value && skus.value.length > 0) {
+      console.log(`📊 Sample SKU structure:`, JSON.stringify(skus.value[0], null, 2).substring(0, 500))
+    }
 
     const licenses = (skus.value || []).map(sku => {
       const consumed = sku.prepaidUnits?.enabled || 0
@@ -3053,6 +3058,15 @@ app.get('/api/licenses', async (req, res) => {
         statusCls = 'warning'
       }
 
+      const servicePlansList = (sku.servicePlans || []).map(sp => ({
+        serviceName: sp.serviceName,
+        provisioningStatus: sp.provisioningStatus
+      }))
+
+      if (servicePlansList.length === 0) {
+        console.log(`⚠️ No service plans found for ${sku.skuPartNumber}:`, sku.servicePlans)
+      }
+
       return {
         id: sku.id,
         skuId: sku.id,
@@ -3064,10 +3078,7 @@ app.get('/api/licenses', async (req, res) => {
         status: status,
         statusCls: statusCls,
         utilizationPct: Math.round(utilizationPct),
-        servicePlans: (sku.servicePlans || []).map(sp => ({
-          serviceName: sp.serviceName,
-          provisioningStatus: sp.provisioningStatus
-        }))
+        servicePlans: servicePlansList
       }
     })
 
