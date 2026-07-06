@@ -192,6 +192,7 @@ function renderStepContent(step) {
 }
 
 function renderPowerShellStep() {
+  const apiUrl = API_URL
   return `
     <div class="wizard-step-content">
       <div style="margin-bottom:16px;padding:8px 12px;background:rgba(76, 175, 80, 0.1);border-radius:4px;display:inline-block">
@@ -253,7 +254,8 @@ function renderPowerShellStep() {
         try {
           container.innerHTML = '<div style="text-align:center;padding:20px"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-block"></i><p>Checking modules...</p></div>'
 
-          const response = await fetch('${API_URL}/api/setup/powershell/check', {
+          const apiBaseUrl = '${apiUrl}'
+          const response = await fetch(apiBaseUrl + '/api/setup/powershell/check', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
           })
@@ -269,15 +271,16 @@ function renderPowerShellStep() {
               : '<div style="padding:16px;background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);border-radius:4px;text-align:center"><i class="ti ti-alert" style="color:#F57C00;font-size:24px;display:block;margin-bottom:8px"></i><strong style="color:#E65100">' + data.missingCount + ' modules need to be installed</strong></div>'
 
             moduleList.style.display = 'block'
-            const moduleHtml = modules.map(m => `
-              <div style="padding:10px;border:1px solid rgba(0,0,0,0.1);border-radius:4px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
-                <div>
-                  <strong style="font-size:12px">${m.name}</strong>
-                  <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${m.version || 'not installed'}</div>
-                </div>
-                <div style="font-size:11px;font-weight:600;${m.installed ? 'color:#4CAF50' : 'color:#F57C00'}">${m.status}</div>
-              </div>
-            `).join('')
+            const moduleHtml = modules.map(m => {
+              const color = m.installed ? 'color:#4CAF50' : 'color:#F57C00'
+              return '<div style="padding:10px;border:1px solid rgba(0,0,0,0.1);border-radius:4px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">' +
+                '<div>' +
+                '<strong style="font-size:12px">' + m.name + '</strong>' +
+                '<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">' + (m.version || 'not installed') + '</div>' +
+                '</div>' +
+                '<div style="font-size:11px;font-weight:600;' + color + '">' + m.status + '</div>' +
+                '</div>'
+            }).join('')
 
             document.getElementById('ps-modules-content').innerHTML = moduleHtml
 
@@ -299,7 +302,8 @@ function renderPowerShellStep() {
         container.innerHTML = '<div style="text-align:center;padding:20px"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-block"></i><p>Installing modules... (this may take 5-10 minutes)</p></div>'
 
         try {
-          const response = await fetch('${API_URL}/api/setup/powershell/install', {
+          const apiBaseUrl = '${apiUrl}'
+          const response = await fetch(apiBaseUrl + '/api/setup/powershell/install', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
           })
@@ -324,7 +328,8 @@ function renderPowerShellStep() {
       // Check PowerShell status on load
       window.checkPowerShellStatus = async function() {
         try {
-          const response = await fetch('${API_URL}/api/setup/powershell/status', {
+          const apiBaseUrl = '${apiUrl}'
+          const response = await fetch(apiBaseUrl + '/api/setup/powershell/status', {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
           })
