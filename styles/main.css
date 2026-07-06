@@ -1509,14 +1509,22 @@ tr:hover td { background: var(--color-background-secondary); }
     grid-template-columns: 1fr 1fr 1fr;
   }
 
-  /* Filter bar vertical stack */
+  /* Filter bar single row */
   .filter-bar {
-    flex-direction: column;
+    flex-direction: row;
     gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
   .filter-bar > * {
-    width: 100%;
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .filter-bar .btn {
+    flex: 0 0 auto;
+    min-width: auto;
   }
 
   /* Modal/Dialog responsive */
