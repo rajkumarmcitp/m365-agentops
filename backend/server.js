@@ -3109,6 +3109,79 @@ app.get('/api/licenses', async (req, res) => {
 })
 
 // ============================================================
+// Service Plans per License
+// ============================================================
+app.get('/api/licenses/service-plans-detail', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    // Fetch SKUs to build SKU mapping
+    const skus = await graphClient.api('/subscribedSkus').get()
+    const skuMap = {}
+    ;(skus.value || []).forEach(sku => {
+      skuMap[sku.skuId] = {
+        skuPartNumber: sku.skuPartNumber,
+        name: sku.skuPartNumber || sku.skuId,
+        servicePlans: (sku.servicePlans || []).map(sp => ({
+          serviceName: sp.serviceName,
+          provisioningStatus: sp.provisioningStatus
+        }))
+      }
+    })
+
+    // If servicePlans are empty from subscribedSkus, fetch from users as fallback
+    const hasEmptyPlans = Object.values(skuMap).some(sku => sku.servicePlans.length === 0)
+    if (hasEmptyPlans) {
+      console.log('⚠️ Service plans empty from subscribedSkus, fetching from user license details...')
+
+      const users = await graphClient
+        .api('/users')
+        .select(['id', 'displayName'])
+        .top(500)
+        .get()
+
+      for (const user of (users.value || []).slice(0, 100)) {
+        try {
+          const licenseDetails = await graphClient
+            .api(`/users/${user.id}/licenseDetails`)
+            .get()
+
+          for (const ld of (licenseDetails.value || [])) {
+            if (!skuMap[ld.skuId]) {
+              skuMap[ld.skuId] = {
+                skuPartNumber: ld.skuPartNumber,
+                name: ld.skuPartNumber || ld.skuId,
+                servicePlans: []
+              }
+            }
+
+            if (ld.servicePlans && ld.servicePlans.length > 0 && skuMap[ld.skuId].servicePlans.length === 0) {
+              skuMap[ld.skuId].servicePlans = ld.servicePlans.map(sp => ({
+                serviceName: sp.serviceName,
+                provisioningStatus: sp.provisioningStatus
+              }))
+            }
+          }
+        } catch (error) {
+          // Continue to next user
+        }
+      }
+    }
+
+    console.log(`✓ Fetched service plans for ${Object.keys(skuMap).length} licenses`)
+    res.json({
+      success: true,
+      data: skuMap
+    })
+  } catch (error) {
+    console.warn('⚠️ Service plans fetch failed:', error.message)
+    res.json({ success: true, data: {} })
+  }
+})
+
+// ============================================================
 // License Analytics - User Assignments
 // ============================================================
 app.get('/api/licenses/assignments', async (req, res) => {

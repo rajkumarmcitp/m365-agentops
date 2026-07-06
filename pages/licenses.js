@@ -70,14 +70,22 @@ export async function initLicenses() {
   // Fetch all license data in parallel
   try {
     console.log('📡 Fetching comprehensive license data...')
-    const [licenses, assignments, groups, compliance] = await Promise.all([
+    const [licenses, assignments, groups, compliance, servicePlans] = await Promise.all([
       callAPI('/licenses'),
       callAPI('/licenses/assignments'),
       callAPI('/licenses/groups'),
-      callAPI('/licenses/compliance')
+      callAPI('/licenses/compliance'),
+      callAPI('/licenses/service-plans-detail')
     ])
 
     if (licenses.success && licenses.data) {
+      // Merge service plans into licenses if available
+      if (servicePlans.success && servicePlans.data) {
+        licenses.data = licenses.data.map(l => ({
+          ...l,
+          servicePlans: servicePlans.data[l.skuId]?.servicePlans || l.servicePlans || []
+        }))
+      }
       realLicenses = licenses.data
       licenseSummary = licenses.summary || { total: 0, consumed: 0, available: 0, utilizationPct: 0 }
     }
@@ -90,7 +98,7 @@ export async function initLicenses() {
     if (compliance.success && compliance.data) {
       complianceData = compliance.data
     }
-    console.log(`✅ Loaded all license data`)
+    console.log(`✅ Loaded all license data with service plans`)
   } catch (error) {
     console.error('❌ Error loading license data:', error)
   }
