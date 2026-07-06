@@ -191,8 +191,126 @@ function renderStepContent(step) {
   }
 }
 
+// PowerShell module check function - defined at global scope
+window.checkPowerShellModules = async function() {
+  const container = document.getElementById('ps-status-container')
+  const moduleList = document.getElementById('ps-module-list')
+  const checkBtn = document.getElementById('btn-check-ps')
+  const installBtn = document.getElementById('btn-install-ps')
+
+  try {
+    container.innerHTML = '<div style="text-align:center;padding:20px"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-block"></i><p>Checking modules...</p></div>'
+
+    const response = await fetch((API_URL || 'http://localhost:3000') + '/api/setup/powershell/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+
+    const data = await response.json()
+
+    if (data.success) {
+      const modules = data.modules
+      const allInstalled = data.allInstalled
+
+      container.innerHTML = allInstalled
+        ? '<div style="padding:16px;background:rgba(76, 175, 80, 0.1);border:1px solid rgba(76, 175, 80, 0.3);border-radius:4px;text-align:center"><i class="ti ti-check" style="color:#4CAF50;font-size:24px;display:block;margin-bottom:8px"></i><strong style="color:#2E7D32">All modules installed!</strong></div>'
+        : '<div style="padding:16px;background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);border-radius:4px;text-align:center"><i class="ti ti-alert" style="color:#F57C00;font-size:24px;display:block;margin-bottom:8px"></i><strong style="color:#E65100">' + data.missingCount + ' modules need to be installed</strong></div>'
+
+      moduleList.style.display = 'block'
+      const moduleHtml = modules.map(m => {
+        const color = m.installed ? 'color:#4CAF50' : 'color:#F57C00'
+        return '<div style="padding:10px;border:1px solid rgba(0,0,0,0.1);border-radius:4px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">' +
+          '<div>' +
+          '<strong style="font-size:12px">' + m.name + '</strong>' +
+          '<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">' + (m.version || 'not installed') + '</div>' +
+          '</div>' +
+          '<div style="font-size:11px;font-weight:600;' + color + '">' + m.status + '</div>' +
+          '</div>'
+      }).join('')
+
+      document.getElementById('ps-modules-content').innerHTML = moduleHtml
+
+      installBtn.style.display = allInstalled ? 'none' : 'inline-block'
+      checkBtn.style.display = 'inline-block'
+    } else {
+      container.innerHTML = '<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828"><strong>Error:</strong> ' + data.error + '</div>'
+    }
+  } catch (error) {
+    container.innerHTML = '<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828">Failed to check modules: ' + error.message + '</div>'
+  }
+}
+
+// PowerShell install function - defined at global scope
+window.installPowerShellModules = async function() {
+  const container = document.getElementById('ps-status-container')
+  const installBtn = document.getElementById('btn-install-ps')
+
+  installBtn.disabled = true
+  container.innerHTML = '<div style="text-align:center;padding:20px"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-block"></i><p>Installing modules... (this may take 5-10 minutes)</p></div>'
+
+  try {
+    const response = await fetch((API_URL || 'http://localhost:3000') + '/api/setup/powershell/install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+
+    const data = await response.json()
+
+    if (data.success || data.allInstalled) {
+      container.innerHTML = '<div style="padding:16px;background:rgba(76, 175, 80, 0.1);border:1px solid rgba(76, 175, 80, 0.3);border-radius:4px;text-align:center"><i class="ti ti-check" style="color:#4CAF50;font-size:24px;display:block;margin-bottom:8px"></i><strong style="color:#2E7D32">✅ All modules installed successfully!</strong><p style="font-size:12px;margin-top:8px">You can now proceed to the next step.</p></div>'
+      installBtn.style.display = 'none'
+      document.getElementById('btn-check-ps').textContent = '✓ Modules Verified'
+      wizardState.completed[1] = true
+    } else {
+      container.innerHTML = '<div style="padding:16px;background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);border-radius:4px"><strong style="color:#F57C00">⚠️ Partial Installation:</strong><p style="font-size:12px;margin-top:6px">' + data.message + '</p></div>'
+      installBtn.disabled = false
+    }
+  } catch (error) {
+    container.innerHTML = '<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828">Installation failed: ' + error.message + '</div>'
+    installBtn.disabled = false
+  }
+}
+
+// PowerShell status check - defined at global scope
+window.checkPowerShellStatus = async function() {
+  try {
+    const response = await fetch((API_URL || 'http://localhost:3000') + '/api/setup/powershell/status', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    })
+
+    const data = await response.json()
+    const container = document.getElementById('ps-status-container')
+
+    if (!data.powerShellAvailable) {
+      container.innerHTML = '<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828">' +
+        '<strong>❌ PowerShell Not Found</strong>' +
+        '<p style="font-size:12px;margin:8px 0 0 0">' + data.message + '</p>' +
+        '<p style="font-size:11px;margin:6px 0 0 0"><strong>Manual Installation:</strong><br>' +
+        'Download PowerShell 7+ from: <a href="https://github.com/PowerShell/PowerShell/releases" target="_blank" style="color:#1976D2">https://github.com/PowerShell/PowerShell/releases</a></p>' +
+        '</div>'
+      document.getElementById('btn-check-ps').style.display = 'none'
+    } else if (!data.versionSufficient) {
+      container.innerHTML = '<div style="padding:16px;background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);border-radius:4px;color:#E65100">' +
+        '<strong>⚠️ PowerShell Version Insufficient</strong>' +
+        '<p style="font-size:12px;margin:8px 0 0 0">You have ' + data.powerShellVersionString + ', but PnP.PowerShell requires <strong>PowerShell 7+</strong></p>' +
+        '<p style="font-size:11px;margin:6px 0 0 0"><strong>Upgrade Required:</strong><br>' +
+        'Download PowerShell 7+ from: <a href="https://github.com/PowerShell/PowerShell/releases" target="_blank" style="color:#1976D2">https://github.com/PowerShell/PowerShell/releases</a></p>' +
+        '</div>'
+      document.getElementById('btn-check-ps').style.display = 'none'
+    } else {
+      window.checkPowerShellModules()
+    }
+  } catch (error) {
+    console.error('Status check failed:', error)
+    window.checkPowerShellModules()
+  }
+}
+
 function renderPowerShellStep() {
-  const apiUrl = API_URL
+  // Auto-start the status check
+  setTimeout(() => window.checkPowerShellStatus(), 100)
+
   return `
     <div class="wizard-step-content">
       <div style="margin-bottom:16px;padding:8px 12px;background:rgba(76, 175, 80, 0.1);border-radius:4px;display:inline-block">
@@ -243,132 +361,6 @@ function renderPowerShellStep() {
         </div>
       </div>
     </div>
-
-    <script>
-      window.checkPowerShellModules = async function() {
-        const container = document.getElementById('ps-status-container')
-        const moduleList = document.getElementById('ps-module-list')
-        const checkBtn = document.getElementById('btn-check-ps')
-        const installBtn = document.getElementById('btn-install-ps')
-
-        try {
-          container.innerHTML = '<div style="text-align:center;padding:20px"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-block"></i><p>Checking modules...</p></div>'
-
-          const apiBaseUrl = '${apiUrl}'
-          const response = await fetch(apiBaseUrl + '/api/setup/powershell/check', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          })
-
-          const data = await response.json()
-
-          if (data.success) {
-            const modules = data.modules
-            const allInstalled = data.allInstalled
-
-            container.innerHTML = allInstalled
-              ? '<div style="padding:16px;background:rgba(76, 175, 80, 0.1);border:1px solid rgba(76, 175, 80, 0.3);border-radius:4px;text-align:center"><i class="ti ti-check" style="color:#4CAF50;font-size:24px;display:block;margin-bottom:8px"></i><strong style="color:#2E7D32">All modules installed!</strong></div>'
-              : '<div style="padding:16px;background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);border-radius:4px;text-align:center"><i class="ti ti-alert" style="color:#F57C00;font-size:24px;display:block;margin-bottom:8px"></i><strong style="color:#E65100">' + data.missingCount + ' modules need to be installed</strong></div>'
-
-            moduleList.style.display = 'block'
-            const moduleHtml = modules.map(m => {
-              const color = m.installed ? 'color:#4CAF50' : 'color:#F57C00'
-              return '<div style="padding:10px;border:1px solid rgba(0,0,0,0.1);border-radius:4px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">' +
-                '<div>' +
-                '<strong style="font-size:12px">' + m.name + '</strong>' +
-                '<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">' + (m.version || 'not installed') + '</div>' +
-                '</div>' +
-                '<div style="font-size:11px;font-weight:600;' + color + '">' + m.status + '</div>' +
-                '</div>'
-            }).join('')
-
-            document.getElementById('ps-modules-content').innerHTML = moduleHtml
-
-            installBtn.style.display = allInstalled ? 'none' : 'inline-block'
-            checkBtn.style.display = 'inline-block'
-          } else {
-            container.innerHTML = '<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828"><strong>Error:</strong> ' + data.error + '</div>'
-          }
-        } catch (error) {
-          container.innerHTML = '<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828">Failed to check modules: ' + error.message + '</div>'
-        }
-      }
-
-      window.installPowerShellModules = async function() {
-        const container = document.getElementById('ps-status-container')
-        const installBtn = document.getElementById('btn-install-ps')
-
-        installBtn.disabled = true
-        container.innerHTML = '<div style="text-align:center;padding:20px"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-block"></i><p>Installing modules... (this may take 5-10 minutes)</p></div>'
-
-        try {
-          const apiBaseUrl = '${apiUrl}'
-          const response = await fetch(apiBaseUrl + '/api/setup/powershell/install', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          })
-
-          const data = await response.json()
-
-          if (data.success || data.allInstalled) {
-            container.innerHTML = '<div style="padding:16px;background:rgba(76, 175, 80, 0.1);border:1px solid rgba(76, 175, 80, 0.3);border-radius:4px;text-align:center"><i class="ti ti-check" style="color:#4CAF50;font-size:24px;display:block;margin-bottom:8px"></i><strong style="color:#2E7D32">✅ All modules installed successfully!</strong><p style="font-size:12px;margin-top:8px">You can now proceed to the next step.</p></div>'
-            installBtn.style.display = 'none'
-            document.getElementById('btn-check-ps').textContent = '✓ Modules Verified'
-            wizardState.completed[1] = true
-          } else {
-            container.innerHTML = '<div style="padding:16px;background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);border-radius:4px"><strong style="color:#F57C00">⚠️ Partial Installation:</strong><p style="font-size:12px;margin-top:6px">' + data.message + '</p></div>'
-            installBtn.disabled = false
-          }
-        } catch (error) {
-          container.innerHTML = '<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828">Installation failed: ' + error.message + '</div>'
-          installBtn.disabled = false
-        }
-      }
-
-      // Check PowerShell status on load
-      window.checkPowerShellStatus = async function() {
-        try {
-          const apiBaseUrl = '${apiUrl}'
-          const response = await fetch(apiBaseUrl + '/api/setup/powershell/status', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-          })
-
-          const data = await response.json()
-          const container = document.getElementById('ps-status-container')
-
-          if (!data.powerShellAvailable) {
-            container.innerHTML = \`<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828">
-              <strong>❌ PowerShell Not Found</strong>
-              <p style="font-size:12px;margin:8px 0 0 0">\${data.message}</p>
-              <p style="font-size:11px;margin:6px 0 0 0">
-                <strong>Manual Installation:</strong><br>
-                Download PowerShell 7+ from: <a href="https://github.com/PowerShell/PowerShell/releases" target="_blank" style="color:#1976D2">https://github.com/PowerShell/PowerShell/releases</a>
-              </p>
-            </div>\`
-            document.getElementById('btn-check-ps').style.display = 'none'
-          } else if (!data.versionSufficient) {
-            container.innerHTML = \`<div style="padding:16px;background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);border-radius:4px;color:#E65100">
-              <strong>⚠️ PowerShell Version Insufficient</strong>
-              <p style="font-size:12px;margin:8px 0 0 0">You have \${data.powerShellVersionString}, but PnP.PowerShell requires <strong>PowerShell 7+</strong></p>
-              <p style="font-size:11px;margin:6px 0 0 0">
-                <strong>Upgrade Required:</strong><br>
-                Download PowerShell 7+ from: <a href="https://github.com/PowerShell/PowerShell/releases" target="_blank" style="color:#1976D2">https://github.com/PowerShell/PowerShell/releases</a>
-              </p>
-            </div>\`
-            document.getElementById('btn-check-ps').style.display = 'none'
-          } else {
-            window.checkPowerShellModules()
-          }
-        } catch (error) {
-          console.error('Status check failed:', error)
-          window.checkPowerShellModules()
-        }
-      }
-
-      // Auto-check on load
-      window.checkPowerShellStatus()
-    </script>
 
     <style>
       @keyframes spin {
