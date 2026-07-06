@@ -150,7 +150,7 @@ function updateSetupBanner(el, setupConfig) {
   if (!banner) return
 
   const completedCount = setupConfig.completedSteps?.length || 0
-  const progressPercent = (completedCount / 5) * 100
+  const progressPercent = (completedCount / 8) * 100
 
   banner.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px">
@@ -158,7 +158,7 @@ function updateSetupBanner(el, setupConfig) {
       <div style="flex:1">
         <div style="font-weight:600;font-size:13px">Setup Wizard in Progress</div>
         <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">
-          ${completedCount} of 5 steps completed
+          ${completedCount} of 8 steps completed
           <div style="background:rgba(0,0,0,0.1);height:4px;border-radius:2px;margin-top:4px">
             <div style="background:#FF9800;height:100%;border-radius:2px;width:${progressPercent}%"></div>
           </div>
