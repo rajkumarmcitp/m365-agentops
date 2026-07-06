@@ -47,6 +47,13 @@ import { createInvestigationTables } from './tenantguard/investigation-schema.js
 import { SettingsService } from './tenantguard/settings-service.js'
 import { getDataService } from './tenantguard/data-service.js'
 import {
+  checkPowerShellAvailable,
+  checkInstalledModules,
+  installMissingModules,
+  getPowerShellSetupStatus,
+  testModuleAvailability
+} from './powershell-setup.js'
+import {
   submitRequest, getRequest, getUserRequests, approveRequest as approveSSRequest,
   rejectRequest as rejectSSRequest, completeRequest, getAllRequests,
   setSelfServiceGraphClient, initializeSelfServiceLists
@@ -13901,6 +13908,114 @@ app.get('/api/tenantguard/dashboard', async (req, res) => {
       success: false,
       error: error.message,
       timestamp: new Date().toISOString()
+    })
+  }
+})
+
+// ============================================================
+// PowerShell Module Setup Endpoints
+// ============================================================
+
+/**
+ * GET /api/setup/powershell/status
+ * Check PowerShell availability and module installation status
+ */
+app.get('/api/setup/powershell/status', async (req, res) => {
+  try {
+    console.log('🔍 Checking PowerShell setup status...')
+    const status = await getPowerShellSetupStatus()
+
+    res.json({
+      success: true,
+      ...status
+    })
+  } catch (error) {
+    console.error('❌ PowerShell status check failed:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/setup/powershell/check
+ * Check installed modules without installing
+ */
+app.post('/api/setup/powershell/check', async (req, res) => {
+  try {
+    console.log('📋 Checking installed PowerShell modules...')
+    const modules = checkInstalledModules()
+
+    res.json({
+      success: true,
+      modules: modules,
+      allInstalled: modules.every(m => m.installed),
+      missingCount: modules.filter(m => !m.installed).length
+    })
+  } catch (error) {
+    console.error('❌ Module check failed:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/setup/powershell/install
+ * Install missing PowerShell modules
+ */
+app.post('/api/setup/powershell/install', async (req, res) => {
+  try {
+    console.log('📦 Starting PowerShell module installation...')
+
+    // Check if PowerShell is available first
+    const psCheck = checkPowerShellAvailable()
+    if (!psCheck.available) {
+      return res.status(400).json({
+        success: false,
+        error: psCheck.message,
+        action: 'PowerShell must be installed first'
+      })
+    }
+
+    // Install missing modules
+    const result = await installMissingModules()
+
+    res.json({
+      success: result.allInstalled,
+      ...result
+    })
+  } catch (error) {
+    console.error('❌ Module installation failed:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/setup/powershell/test/:moduleName
+ * Test if a specific module can be imported
+ */
+app.post('/api/setup/powershell/test/:moduleName', async (req, res) => {
+  try {
+    const { moduleName } = req.params
+    console.log(`🧪 Testing ${moduleName} availability...`)
+
+    const result = testModuleAvailability(moduleName)
+
+    res.json({
+      success: result.available,
+      ...result
+    })
+  } catch (error) {
+    console.error(`❌ Module test failed for ${req.params.moduleName}:`, error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
     })
   }
 })

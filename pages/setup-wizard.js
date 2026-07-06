@@ -5,7 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const wizardState = {
   currentStep: 1,
-  totalSteps: 7,
+  totalSteps: 8,
   completed: {
     1: false,
     2: false,
@@ -13,7 +13,8 @@ const wizardState = {
     4: false,
     5: false,
     6: false,
-    7: false
+    7: false,
+    8: false
   },
   formData: {
     azureClientId: '',
@@ -75,48 +76,55 @@ export function initSetupWizard() {
 const steps = [
   {
     num: 1,
+    title: 'Environment Prerequisites',
+    icon: 'package',
+    description: 'Install and verify PowerShell modules required for self-service portal and advanced features',
+    optional: false
+  },
+  {
+    num: 2,
     title: 'Azure AD Prerequisites',
     icon: 'cloud',
     description: 'Register and configure your application in Azure AD',
     optional: false
   },
   {
-    num: 2,
+    num: 3,
     title: 'SSO Configuration',
     icon: 'key',
     description: 'Connect your Azure AD for Single Sign-On',
     optional: false
   },
   {
-    num: 3,
+    num: 4,
     title: 'Graph API Setup',
     icon: 'api',
     description: 'Configure Microsoft Graph API permissions',
     optional: false
   },
   {
-    num: 4,
+    num: 5,
     title: 'Admin Settings',
     icon: 'users',
     description: 'Configure roles and administrative access',
     optional: false
   },
   {
-    num: 5,
+    num: 6,
     title: 'Verification',
     icon: 'check-circle',
     description: 'Test and verify all connections',
     optional: false
   },
   {
-    num: 6,
+    num: 7,
     title: 'Service Configuration',
     icon: 'settings',
     description: 'Configure optional services (Change Intelligence, Zero Trust, etc.)',
     optional: true
   },
   {
-    num: 7,
+    num: 8,
     title: 'List Initialization',
     icon: 'clipboard-list',
     description: 'Auto-create SharePoint lists and columns for selected services',
@@ -163,29 +171,168 @@ function renderWizard(container) {
 function renderStepContent(step) {
   switch(step) {
     case 1:
-      return renderAzureAdStep()
+      return renderPowerShellStep()
     case 2:
-      return renderSsoStep()
+      return renderAzureAdStep()
     case 3:
-      return renderGraphApiStep()
+      return renderSsoStep()
     case 4:
-      return renderAdminSettingsStep()
+      return renderGraphApiStep()
     case 5:
-      return renderVerificationStep()
+      return renderAdminSettingsStep()
     case 6:
-      return renderServiceConfigStep()
+      return renderVerificationStep()
     case 7:
+      return renderServiceConfigStep()
+    case 8:
       return renderListInitializationStep()
     default:
       return ''
   }
 }
 
+function renderPowerShellStep() {
+  return `
+    <div class="wizard-step-content">
+      <div style="margin-bottom:16px;padding:8px 12px;background:rgba(76, 175, 80, 0.1);border-radius:4px;display:inline-block">
+        <span style="font-size:11px;font-weight:600;color:#2E7D32">STEP 1 OF 8</span>
+      </div>
+      <div class="step-header">
+        <h2 style="margin:8px 0 4px 0;color:#2E7D32"><i class="ti ti-package"></i> Environment Prerequisites</h2>
+        <p style="margin:4px 0 0 0">Install and verify PowerShell modules required for self-service portal and advanced features</p>
+      </div>
+
+      <div class="step-body">
+        <div id="ps-status-container" style="margin-bottom:24px">
+          <div style="text-align:center;padding:20px;color:var(--color-text-secondary)">
+            <i class="ti ti-loader" style="font-size:28px;animation:spin 1s linear infinite;display:inline-block"></i>
+            <p>Checking PowerShell modules...</p>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-bottom:20px">
+          <button id="btn-check-ps" class="wizard-btn wizard-btn-primary" onclick="window.checkPowerShellModules()">
+            <i class="ti ti-refresh"></i> Check Modules
+          </button>
+          <button id="btn-install-ps" class="wizard-btn wizard-btn-primary" onclick="window.installPowerShellModules()" style="display:none">
+            <i class="ti ti-download"></i> Install Missing Modules
+          </button>
+        </div>
+
+        <div style="background:rgba(33, 150, 243, 0.1);border:1px solid rgba(33, 150, 243, 0.2);padding:12px;border-radius:4px;font-size:12px;line-height:1.6;color:var(--color-text-secondary);margin-bottom:20px">
+          <strong>ℹ️ Required PowerShell Modules:</strong>
+          <ul style="margin:8px 0 0 0;padding-left:20px">
+            <li>Microsoft.Graph</li>
+            <li>ExchangeOnlineManagement</li>
+            <li>PnP.PowerShell</li>
+            <li>MicrosoftTeams</li>
+            <li>Microsoft.Online.SharePoint.PowerShell</li>
+          </ul>
+        </div>
+
+        <div id="ps-module-list" style="display:none">
+          <h4 style="margin:16px 0 12px 0">Module Status:</h4>
+          <div id="ps-modules-content"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.checkPowerShellModules = async function() {
+        const container = document.getElementById('ps-status-container')
+        const moduleList = document.getElementById('ps-module-list')
+        const checkBtn = document.getElementById('btn-check-ps')
+        const installBtn = document.getElementById('btn-install-ps')
+
+        try {
+          container.innerHTML = '<div style="text-align:center;padding:20px"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-block"></i><p>Checking modules...</p></div>'
+
+          const response = await fetch('${API_URL}/api/setup/powershell/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          })
+
+          const data = await response.json()
+
+          if (data.success) {
+            const modules = data.modules
+            const allInstalled = data.allInstalled
+
+            container.innerHTML = allInstalled
+              ? '<div style="padding:16px;background:rgba(76, 175, 80, 0.1);border:1px solid rgba(76, 175, 80, 0.3);border-radius:4px;text-align:center"><i class="ti ti-check" style="color:#4CAF50;font-size:24px;display:block;margin-bottom:8px"></i><strong style="color:#2E7D32">All modules installed!</strong></div>'
+              : '<div style="padding:16px;background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);border-radius:4px;text-align:center"><i class="ti ti-alert" style="color:#F57C00;font-size:24px;display:block;margin-bottom:8px"></i><strong style="color:#E65100">' + data.missingCount + ' modules need to be installed</strong></div>'
+
+            moduleList.style.display = 'block'
+            const moduleHtml = modules.map(m => `
+              <div style="padding:10px;border:1px solid rgba(0,0,0,0.1);border-radius:4px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <strong style="font-size:12px">${m.name}</strong>
+                  <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${m.version || 'not installed'}</div>
+                </div>
+                <div style="font-size:11px;font-weight:600;${m.installed ? 'color:#4CAF50' : 'color:#F57C00'}">${m.status}</div>
+              </div>
+            `).join('')
+
+            document.getElementById('ps-modules-content').innerHTML = moduleHtml
+
+            installBtn.style.display = allInstalled ? 'none' : 'inline-block'
+            checkBtn.style.display = 'inline-block'
+          } else {
+            container.innerHTML = '<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828"><strong>Error:</strong> ' + data.error + '</div>'
+          }
+        } catch (error) {
+          container.innerHTML = '<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828">Failed to check modules: ' + error.message + '</div>'
+        }
+      }
+
+      window.installPowerShellModules = async function() {
+        const container = document.getElementById('ps-status-container')
+        const installBtn = document.getElementById('btn-install-ps')
+
+        installBtn.disabled = true
+        container.innerHTML = '<div style="text-align:center;padding:20px"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-block"></i><p>Installing modules... (this may take 5-10 minutes)</p></div>'
+
+        try {
+          const response = await fetch('${API_URL}/api/setup/powershell/install', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          })
+
+          const data = await response.json()
+
+          if (data.success || data.allInstalled) {
+            container.innerHTML = '<div style="padding:16px;background:rgba(76, 175, 80, 0.1);border:1px solid rgba(76, 175, 80, 0.3);border-radius:4px;text-align:center"><i class="ti ti-check" style="color:#4CAF50;font-size:24px;display:block;margin-bottom:8px"></i><strong style="color:#2E7D32">✅ All modules installed successfully!</strong><p style="font-size:12px;margin-top:8px">You can now proceed to the next step.</p></div>'
+            installBtn.style.display = 'none'
+            document.getElementById('btn-check-ps').textContent = '✓ Modules Verified'
+            wizardState.completed[1] = true
+          } else {
+            container.innerHTML = '<div style="padding:16px;background:rgba(255, 152, 0, 0.1);border:1px solid rgba(255, 152, 0, 0.3);border-radius:4px"><strong style="color:#F57C00">⚠️ Partial Installation:</strong><p style="font-size:12px;margin-top:6px">' + data.message + '</p></div>'
+            installBtn.disabled = false
+          }
+        } catch (error) {
+          container.innerHTML = '<div style="padding:16px;background:rgba(244, 67, 54, 0.1);border:1px solid rgba(244, 67, 54, 0.3);border-radius:4px;color:#C62828">Installation failed: ' + error.message + '</div>'
+          installBtn.disabled = false
+        }
+      }
+
+      // Auto-check on load
+      window.checkPowerShellModules()
+    </script>
+
+    <style>
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  `
+}
+
 function renderAzureAdStep() {
   return `
     <div class="wizard-step-content">
       <div style="margin-bottom:16px;padding:8px 12px;background:rgba(33, 150, 243, 0.1);border-radius:4px;display:inline-block">
-        <span style="font-size:11px;font-weight:600;color:#1976D2">STEP 1 OF 5</span>
+        <span style="font-size:11px;font-weight:600;color:#1976D2">STEP 2 OF 8</span>
       </div>
       <div class="step-header">
         <h2 style="margin:8px 0 4px 0;color:#1976D2"><i class="ti ti-cloud"></i> Azure AD Registration</h2>
