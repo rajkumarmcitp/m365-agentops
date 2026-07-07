@@ -505,21 +505,21 @@ function renderTab(tabId) {
 function renderExecutiveSummary() {
   return `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px">
-      <div class="card" style="padding:16px">
-        <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:6px">Total Licenses Purchased</div>
-        <div style="font-size:24px;font-weight:700;color:var(--clr-info-text)">${licenseSummary.total.toLocaleString()}</div>
+      <div class="card" style="padding:12px;background:var(--color-background-primary)">
+        <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Total Licenses Purchased</div>
+        <div style="font-size:28px;font-weight:700;color:var(--clr-info-text)">${licenseSummary.total.toLocaleString()}</div>
       </div>
-      <div class="card" style="padding:16px">
-        <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:6px">Assigned Licenses</div>
-        <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">${licenseSummary.consumed.toLocaleString()}</div>
+      <div class="card" style="padding:12px;background:var(--color-background-primary)">
+        <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Assigned Licenses</div>
+        <div style="font-size:28px;font-weight:700;color:var(--clr-warning-text)">${licenseSummary.consumed.toLocaleString()}</div>
       </div>
-      <div class="card" style="padding:16px">
-        <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:6px">Available Licenses</div>
-        <div style="font-size:24px;font-weight:700;color:var(--clr-success-text)">${licenseSummary.available.toLocaleString()}</div>
+      <div class="card" style="padding:12px;background:var(--color-background-primary)">
+        <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Available Licenses</div>
+        <div style="font-size:28px;font-weight:700;color:var(--clr-success-text)">${licenseSummary.available.toLocaleString()}</div>
       </div>
-      <div class="card" style="padding:16px">
-        <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:6px">Utilization Rate</div>
-        <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">${licenseSummary.utilizationPct}%</div>
+      <div class="card" style="padding:12px;background:var(--color-background-primary)">
+        <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Utilization Rate</div>
+        <div style="font-size:28px;font-weight:700;color:var(--clr-warning-text)">${licenseSummary.utilizationPct}%</div>
       </div>
     </div>
 
@@ -565,22 +565,24 @@ function renderInventory() {
   return `
     <div class="card" style="padding:0;overflow:hidden">
       <table style="width:100%">
-        <thead><tr>
-          <th style="padding:12px;text-align:left;font-weight:600;font-size:11px;width:25%">Product Name / SKU</th>
-          <th style="padding:12px;text-align:center;font-weight:600;font-size:11px;width:12%">Purchased</th>
-          <th style="padding:12px;text-align:center;font-weight:600;font-size:11px;width:12%">Assigned</th>
-          <th style="padding:12px;text-align:center;font-weight:600;font-size:11px;width:12%">Available</th>
-          <th style="padding:12px;text-align:center;font-weight:600;font-size:11px;width:20%">Usage</th>
-          <th style="padding:12px;text-align:center;font-weight:600;font-size:11px;width:19%">Status</th>
-        </tr></thead>
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px;text-align:left;font-weight:600;font-size:10px;width:25%">Product Name / SKU</th>
+            <th style="padding:10px;text-align:center;font-weight:600;font-size:10px;width:12%">Purchased</th>
+            <th style="padding:10px;text-align:center;font-weight:600;font-size:10px;width:12%">Assigned</th>
+            <th style="padding:10px;text-align:center;font-weight:600;font-size:10px;width:12%">Available</th>
+            <th style="padding:10px;text-align:center;font-weight:600;font-size:10px;width:20%">Usage</th>
+            <th style="padding:10px;text-align:center;font-weight:600;font-size:10px;width:19%">Status</th>
+          </tr>
+        </thead>
         <tbody>
           ${getFilteredLicensesForKPI().map(l => `
             <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-              <td style="padding:12px"><strong style="font-size:11px">${l.name || '—'}</strong></td>
-              <td style="padding:12px;text-align:center">${(l.total || 0).toLocaleString()}</td>
-              <td style="padding:12px;text-align:center">${(l.consumed || 0).toLocaleString()}</td>
-              <td style="padding:12px;text-align:center">${(l.available || 0).toLocaleString()}</td>
-              <td style="padding:12px">
+              <td style="padding:10px;font-size:11px;font-weight:500;color:var(--color-text-secondary)">${l.name || '—'}</td>
+              <td style="padding:10px;text-align:center;font-size:11px;color:var(--color-text-secondary)">${(l.total || 0).toLocaleString()}</td>
+              <td style="padding:10px;text-align:center;font-size:11px;color:var(--color-text-secondary)">${(l.consumed || 0).toLocaleString()}</td>
+              <td style="padding:10px;text-align:center;font-size:11px;color:var(--color-text-secondary)">${(l.available || 0).toLocaleString()}</td>
+              <td style="padding:10px">
                 <div style="display:flex;align-items:center;gap:8px">
                   <div class="score-bar" style="flex:1">
                     <div class="score-bar-fill ${l.statusCls || 'success'}" style="width:${l.utilizationPct || 0}%"></div>
@@ -588,7 +590,7 @@ function renderInventory() {
                   <span style="font-size:10px;font-weight:600;min-width:30px">${l.utilizationPct || 0}%</span>
                 </div>
               </td>
-              <td style="padding:12px;text-align:center"><span class="badge ${l.statusCls || 'success'}" style="text-transform:capitalize">${l.status || 'healthy'}</span></td>
+              <td style="padding:10px;text-align:center"><span class="badge ${l.statusCls || 'success'}" style="text-transform:capitalize">${l.status || 'healthy'}</span></td>
             </tr>
           `).join('')}
         </tbody>
@@ -743,35 +745,37 @@ function renderAssignments() {
   return `
     <div class="card" style="padding:0;overflow:hidden">
       ${userAssignments.length === 0 ? `
-        <div style="padding:20px;text-align:center;color:var(--color-text-tertiary)">
+        <div style="padding:40px 20px;text-align:center;color:var(--color-text-tertiary)">
           <i class="ti ti-inbox" style="font-size:32px;margin-bottom:8px;display:block"></i>
-          No user license assignments found
+          <div style="font-size:10px;">No user license assignments found</div>
         </div>
       ` : `
         <table style="width:100%">
-          <thead><tr>
-            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">User Name / Email</th>
-            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Department</th>
-            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Licenses</th>
-            <th style="padding:12px;text-align:left;font-weight:600;font-size:11px">Count</th>
-          </tr></thead>
+          <thead style="background:var(--color-background-secondary)">
+            <tr>
+              <th style="padding:10px;text-align:left;font-weight:600;font-size:10px">User Name / Email</th>
+              <th style="padding:10px;text-align:left;font-weight:600;font-size:10px">Department</th>
+              <th style="padding:10px;text-align:left;font-weight:600;font-size:10px">Licenses</th>
+              <th style="padding:10px;text-align:center;font-weight:600;font-size:10px">Count</th>
+            </tr>
+          </thead>
           <tbody>
             ${userAssignments.slice(0, 50).map(u => `
               <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
-                <td style="padding:12px">
-                  <div style="font-weight:600;font-size:11px">${u.displayName || '—'}</div>
-                  <div style="font-size:10px;color:var(--color-text-tertiary)">${u.userPrincipalName || '—'}</div>
+                <td style="padding:10px">
+                  <div style="font-weight:600;font-size:11px;color:var(--color-text-secondary)">${u.displayName || '—'}</div>
+                  <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px">${u.userPrincipalName || '—'}</div>
                 </td>
-                <td style="padding:12px;font-size:10px">${u.department || '—'}</td>
-                <td style="padding:12px;font-size:10px">
-                  ${(u.licenses || []).map(l => `<span class="badge secondary" style="margin-right:4px;margin-bottom:4px">${l.skuPartNumber || l.skuId}</span>`).join('')}
+                <td style="padding:10px;font-size:10px;color:var(--color-text-secondary)">${u.department || '—'}</td>
+                <td style="padding:10px;font-size:10px">
+                  ${(u.licenses || []).map(l => `<span class="badge secondary" style="margin-right:4px;margin-bottom:4px;font-size:9px">${l.skuPartNumber || l.skuId}</span>`).join('')}
                 </td>
-                <td style="padding:12px;text-align:center;font-weight:600">${u.licenseCount || 0}</td>
+                <td style="padding:10px;text-align:center;font-size:11px;font-weight:600;color:var(--color-text-secondary)">${u.licenseCount || 0}</td>
               </tr>
             `).join('')}
           </tbody>
         </table>
-        ${userAssignments.length > 50 ? `<div style="padding:12px;text-align:center;font-size:10px;color:var(--color-text-tertiary)">Showing 50 of ${userAssignments.length} users</div>` : ''}
+        ${userAssignments.length > 50 ? `<div style="padding:10px;text-align:center;font-size:10px;color:var(--color-text-tertiary);background:var(--color-background-secondary)">Showing 50 of ${userAssignments.length} users</div>` : ''}
       `}
     </div>
   `
