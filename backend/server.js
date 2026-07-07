@@ -3788,6 +3788,209 @@ app.get('/api/licenses/assignment-errors', async (req, res) => {
 })
 
 // ============================================================
+// PHASE 2: License Assignment Audit Trail
+// ============================================================
+app.get('/api/licenses/audit-trail', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const auditTrail = []
+
+    // Query audit logs for license assignment changes
+    // Filter for: Assign license, Remove license, Update license
+    const auditLogs = await graphClient
+      .api('/auditLogs/directoryAudits')
+      .filter("targetResources/any(x:x/type eq 'User') and activityDisplayName in ('Assign license', 'Remove license', 'Update user')")
+      .select(['id', 'activityDisplayName', 'activityDateTime', 'initiatedBy', 'targetResources', 'additionalDetails'])
+      .orderby('activityDateTime desc')
+      .top(100)
+      .get()
+
+    for (const log of (auditLogs.value || [])) {
+      const initiator = log.initiatedBy?.[0]?.user?.displayName || 'Unknown'
+      const target = log.targetResources?.[0]?.displayName || 'Unknown'
+      const action = log.activityDisplayName || 'Unknown'
+      const timestamp = log.activityDateTime
+
+      // Extract license info from additional details
+      const licenseInfo = log.additionalDetails?.[0] || {}
+
+      auditTrail.push({
+        id: log.id,
+        timestamp: timestamp,
+        initiator: initiator,
+        action: action,
+        targetUser: target,
+        licenseInfo: licenseInfo,
+        details: JSON.stringify(log.additionalDetails || {})
+      })
+    }
+
+    console.log(`✓ License audit trail: ${auditTrail.length} entries found`)
+    res.json({ success: true, data: auditTrail })
+  } catch (error) {
+    console.warn('⚠️ License audit trail fetch failed:', error.message)
+    res.json({ success: true, data: [] })
+  }
+})
+
+// ============================================================
+// PHASE 2: Department KPI Aggregation
+// ============================================================
+app.get('/api/licenses/department-kpis', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const departmentKPIs = {}
+
+    // Get all users with licenses and department info
+    const users = await graphClient
+      .api('/users')
+      .select(['id', 'displayName', 'userPrincipalName', 'department', 'assignedLicenses', 'jobTitle'])
+      .filter('assignedLicenses/$count ne 0')
+      .top(500)
+      .get()
+
+    // Get subscribed SKUs for pricing lookup
+    const skus = await graphClient.api('/subscribedSkus').get()
+    const skuPricing = {}
+    for (const sku of (skus.value || [])) {
+      skuPricing[sku.skuId] = {
+        name: sku.skuPartNumber,
+        consumed: sku.consumedUnits,
+        prepaidUnits: sku.prepaidUnits
+      }
+    }
+
+    // Aggregate by department
+    for (const user of (users.value || [])) {
+      const dept = user.department || 'Unassigned'
+
+      if (!departmentKPIs[dept]) {
+        departmentKPIs[dept] = {
+          department: dept,
+          users: 0,
+          totalLicenses: 0,
+          licenseCounts: {},
+          activeUsers: 0
+        }
+      }
+
+      departmentKPIs[dept].users += 1
+      departmentKPIs[dept].totalLicenses += (user.assignedLicenses?.length || 0)
+
+      // Count licenses by type
+      for (const license of (user.assignedLicenses || [])) {
+        const licenseInfo = skuPricing[license.skuId]
+        if (licenseInfo) {
+          const name = licenseInfo.name
+          departmentKPIs[dept].licenseCounts[name] = (departmentKPIs[dept].licenseCounts[name] || 0) + 1
+        }
+      }
+
+      departmentKPIs[dept].activeUsers += 1
+    }
+
+    const result = Object.values(departmentKPIs).sort((a, b) => b.totalLicenses - a.totalLicenses)
+
+    console.log(`✓ Department KPIs: ${result.length} departments analyzed`)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    console.warn('⚠️ Department KPI aggregation failed:', error.message)
+    res.json({ success: true, data: [] })
+  }
+})
+
+// ============================================================
+// PHASE 2: Privileged Account License Validation
+// ============================================================
+app.get('/api/licenses/privileged-accounts', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const privilegedAccounts = {
+      adminsWithoutP2: [],
+      adminsWithoutDefender: [],
+      adminsWithP2: [],
+      adminsWithDefender: [],
+      adminsWithBoth: [],
+      total: 0
+    }
+
+    // Get all global admin roles
+    const adminRoles = await graphClient
+      .api('/directoryRoles')
+      .filter("displayName eq 'Global Administrator' or displayName eq 'Security Administrator' or displayName eq 'Exchange Administrator'")
+      .get()
+
+    for (const role of (adminRoles.value || [])) {
+      // Get members of this role
+      const members = await graphClient
+        .api(`/directoryRoles/${role.id}/members`)
+        .select(['id', 'displayName', 'userPrincipalName'])
+        .top(100)
+        .get()
+
+      for (const member of (members.value || [])) {
+        if (!member.userPrincipalName) continue
+
+        // Get assigned licenses for this admin
+        const licenses = await graphClient
+          .api(`/users/${member.id}`)
+          .select(['assignedLicenses'])
+          .get()
+
+        const assignedLicenses = licenses.assignedLicenses || []
+
+        // Check for P2, Defender licenses
+        const skuIds = assignedLicenses.map(l => l.skuId)
+        const hasP2 = skuIds.some(id => ['eec0eb4f-6444-4f95-uba7-5d3f3b339c7e', '84a661c4-e949-4bd2-a560-ed7766fcaf11', '75a2f3f6-700c-4f6e-b54f-e1b9786d54c8'].includes(id))
+        const hasDefender = skuIds.some(id => ['60d3f92b-6a44-4c61-bd5c-68e08b06d1d1', 'b87edf6a-9b73-44b8-95e7-e0ef6fb3c0cc'].includes(id))
+
+        const account = {
+          displayName: member.displayName,
+          userPrincipalName: member.userPrincipalName,
+          role: role.displayName,
+          hasP2: hasP2,
+          hasDefender: hasDefender,
+          licensesAssigned: assignedLicenses.length,
+          riskLevel: !hasP2 || !hasDefender ? 'High' : 'Low'
+        }
+
+        privilegedAccounts.total += 1
+
+        if (!hasP2 && !hasDefender) {
+          privilegedAccounts.adminsWithoutP2.push(account)
+          privilegedAccounts.adminsWithoutDefender.push(account)
+        } else if (!hasP2) {
+          privilegedAccounts.adminsWithoutP2.push(account)
+        } else if (!hasDefender) {
+          privilegedAccounts.adminsWithoutDefender.push(account)
+        } else if (hasP2 && hasDefender) {
+          privilegedAccounts.adminsWithBoth.push(account)
+        } else if (hasP2) {
+          privilegedAccounts.adminsWithP2.push(account)
+        } else if (hasDefender) {
+          privilegedAccounts.adminsWithDefender.push(account)
+        }
+      }
+    }
+
+    console.log(`✓ Privileged account validation: ${privilegedAccounts.total} admins checked`)
+    res.json({ success: true, data: privilegedAccounts })
+  } catch (error) {
+    console.warn('⚠️ Privileged account validation failed:', error.message)
+    res.json({ success: true, data: { adminsWithoutP2: [], adminsWithoutDefender: [], adminsWithP2: [], adminsWithDefender: [], adminsWithBoth: [], total: 0 } })
+  }
+})
+
+// ============================================================
 // Usage Analytics
 // ============================================================
 app.get('/api/usage-analytics', async (req, res) => {

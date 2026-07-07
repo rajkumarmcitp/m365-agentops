@@ -8,6 +8,9 @@ let userAssignments = []
 let groupLicensing = []
 let complianceData = {}
 let criticalAlerts = { expirationAlerts: {}, servicePlanConflicts: {}, assignmentErrors: {} }
+let auditTrail = []
+let departmentKPIs = []
+let privilegedAccounts = { adminsWithoutP2: [], adminsWithoutDefender: [], adminsWithP2: [], adminsWithDefender: [], adminsWithBoth: [], total: 0 }
 let activeTab = 'alerts'
 
 // Pagination state for compliance findings
@@ -69,6 +72,9 @@ const TABS = [
   { id: 'assignments', label: 'User Assignments', icon: 'ti-users' },
   { id: 'groups', label: 'Group Licensing', icon: 'ti-users-group' },
   { id: 'compliance', label: 'Compliance', icon: 'ti-shield-check' },
+  { id: 'audit', label: 'Audit Trail', icon: 'ti-history' },
+  { id: 'departments', label: 'Department KPIs', icon: 'ti-chart-bar' },
+  { id: 'privileged', label: 'Privileged Accounts', icon: 'ti-shield-star' },
 ]
 
 export async function initLicenses() {
@@ -93,7 +99,7 @@ export async function initLicenses() {
   // Fetch all license data in parallel
   try {
     console.log('📡 Fetching comprehensive license data...')
-    const [licenses, assignments, groups, compliance, servicePlans, expirationAlerts, servicePlanConflicts, assignmentErrors] = await Promise.all([
+    const [licenses, assignments, groups, compliance, servicePlans, expirationAlerts, servicePlanConflicts, assignmentErrors, auditTrailData, departmentData, privilegedData] = await Promise.all([
       callAPI('/licenses'),
       callAPI('/licenses/assignments'),
       callAPI('/licenses/groups'),
@@ -101,7 +107,10 @@ export async function initLicenses() {
       callAPI('/licenses/service-plans-detail'),
       callAPI('/licenses/expiration-alerts'),
       callAPI('/licenses/service-plan-conflicts'),
-      callAPI('/licenses/assignment-errors')
+      callAPI('/licenses/assignment-errors'),
+      callAPI('/licenses/audit-trail'),
+      callAPI('/licenses/department-kpis'),
+      callAPI('/licenses/privileged-accounts')
     ])
 
     if (licenses.success && licenses.data) {
@@ -133,7 +142,16 @@ export async function initLicenses() {
     if (assignmentErrors.success && assignmentErrors.data) {
       criticalAlerts.assignmentErrors = assignmentErrors.data
     }
-    console.log(`✅ Loaded all license data with critical alerts`)
+    if (auditTrailData.success && auditTrailData.data) {
+      auditTrail = auditTrailData.data
+    }
+    if (departmentData.success && departmentData.data) {
+      departmentKPIs = departmentData.data
+    }
+    if (privilegedData.success && privilegedData.data) {
+      privilegedAccounts = privilegedData.data
+    }
+    console.log(`✅ Loaded all license data with critical alerts and Phase 2 features`)
   } catch (error) {
     console.error('❌ Error loading license data:', error)
   }
@@ -531,6 +549,9 @@ function renderTab(tabId) {
     case 'assignments': return renderAssignments()
     case 'groups': return renderGroups()
     case 'compliance': return renderCompliance()
+    case 'audit': return renderAuditTrail()
+    case 'departments': return renderDepartmentKPIs()
+    case 'privileged': return renderPrivilegedAccounts()
     default: return ''
   }
 }
@@ -1270,6 +1291,203 @@ function renderCompliance() {
           ` : ''}
         </div>
       </div>
+    </div>
+  `
+}
+
+function renderAuditTrail() {
+  if (!auditTrail || auditTrail.length === 0) {
+    return `
+      <div class="card" style="text-align:center;padding:40px 20px">
+        <i class="ti ti-inbox" style="font-size:32px;color:var(--color-text-tertiary);margin-bottom:12px;display:block"></i>
+        <div style="font-size:12px;color:var(--color-text-tertiary)">No audit trail data available</div>
+      </div>
+    `
+  }
+
+  return `
+    <div style="margin-bottom:24px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-history"></i> License Assignment Audit Trail</span>
+        </div>
+        <div style="padding:12px">
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+                <th style="padding:8px;text-align:left;font-weight:600">Timestamp</th>
+                <th style="padding:8px;text-align:left;font-weight:600">Action</th>
+                <th style="padding:8px;text-align:left;font-weight:600">Target User</th>
+                <th style="padding:8px;text-align:left;font-weight:600">Initiated By</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${auditTrail.slice(0, 50).map(entry => `
+                <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                  <td style="padding:8px">${new Date(entry.timestamp).toLocaleDateString()} ${new Date(entry.timestamp).toLocaleTimeString()}</td>
+                  <td style="padding:8px"><span class="badge ${entry.action.includes('Assign') ? 'success' : entry.action.includes('Remove') ? 'danger' : 'info'}">${entry.action}</span></td>
+                  <td style="padding:8px">${entry.targetUser}</td>
+                  <td style="padding:8px">${entry.initiator}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div style="margin-top:12px;font-size:10px;color:var(--color-text-tertiary)">
+            Showing ${Math.min(50, auditTrail.length)} of ${auditTrail.length} entries
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderDepartmentKPIs() {
+  if (!departmentKPIs || departmentKPIs.length === 0) {
+    return `
+      <div class="card" style="text-align:center;padding:40px 20px">
+        <i class="ti ti-inbox" style="font-size:32px;color:var(--color-text-tertiary);margin-bottom:12px;display:block"></i>
+        <div style="font-size:12px;color:var(--color-text-tertiary)">No department data available</div>
+      </div>
+    `
+  }
+
+  return `
+    <div style="margin-bottom:24px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px">
+        <div class="card" style="padding:12px">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Total Departments</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-info-text)">${departmentKPIs.length}</div>
+        </div>
+        <div class="card" style="padding:12px">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Total Users</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-info-text)">${departmentKPIs.reduce((sum, d) => sum + d.users, 0).toLocaleString()}</div>
+        </div>
+        <div class="card" style="padding:12px">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">Total Licenses</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-warning-text)">${departmentKPIs.reduce((sum, d) => sum + d.totalLicenses, 0).toLocaleString()}</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-chart-bar"></i> License Distribution by Department</span>
+        </div>
+        <div style="padding:12px">
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+                <th style="padding:8px;text-align:left;font-weight:600">Department</th>
+                <th style="padding:8px;text-align:center;font-weight:600">Users</th>
+                <th style="padding:8px;text-align:center;font-weight:600">Licenses</th>
+                <th style="padding:8px;text-align:center;font-weight:600">Avg/User</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${departmentKPIs.slice(0, 30).map(dept => `
+                <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                  <td style="padding:8px"><strong>${dept.department || 'Unassigned'}</strong></td>
+                  <td style="padding:8px;text-align:center">${dept.users}</td>
+                  <td style="padding:8px;text-align:center"><span style="background:var(--color-background-secondary);padding:4px 8px;border-radius:4px;font-weight:600">${dept.totalLicenses}</span></td>
+                  <td style="padding:8px;text-align:center">${(dept.totalLicenses / (dept.users || 1)).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderPrivilegedAccounts() {
+  const { adminsWithoutP2, adminsWithoutDefender, adminsWithBoth, total } = privilegedAccounts
+
+  if (total === 0) {
+    return `
+      <div class="card" style="text-align:center;padding:40px 20px">
+        <i class="ti ti-inbox" style="font-size:32px;color:var(--color-text-tertiary);margin-bottom:12px;display:block"></i>
+        <div style="font-size:12px;color:var(--color-text-tertiary)">No admin accounts found</div>
+      </div>
+    `
+  }
+
+  return `
+    <div style="margin-bottom:24px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px">
+        <div class="card" style="padding:12px;border-left:4px solid var(--clr-success-text)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">✅ Secure</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-success-text)">${adminsWithBoth.length}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">With P2 & Defender</div>
+        </div>
+        <div class="card" style="padding:12px;border-left:4px solid var(--clr-danger-text)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">🔴 Missing Both</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-danger-text)">${adminsWithoutP2.filter(a => adminsWithoutDefender.some(d => d.userPrincipalName === a.userPrincipalName)).length}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">High Risk</div>
+        </div>
+        <div class="card" style="padding:12px;border-left:4px solid var(--clr-warning-text)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">⚠️ Missing P2</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-warning-text)">${adminsWithoutP2.length}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">No Entra P2</div>
+        </div>
+      </div>
+
+      ${adminsWithBoth.length > 0 ? `
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-header">
+            <span class="card-title" style="color:var(--clr-success-text)"><i class="ti ti-check-circle"></i> ✅ Secure Admins (${adminsWithBoth.length})</span>
+          </div>
+          <div style="padding:12px">
+            <table style="width:100%;border-collapse:collapse;font-size:11px">
+              <thead>
+                <tr style="border-bottom:1px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+                  <th style="padding:8px;text-align:left;font-weight:600">Display Name</th>
+                  <th style="padding:8px;text-align:left;font-weight:600">Email</th>
+                  <th style="padding:8px;text-align:center;font-weight:600">Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${adminsWithBoth.slice(0, 10).map(admin => `
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:8px">${admin.displayName}</td>
+                    <td style="padding:8px;font-size:9px">${admin.userPrincipalName}</td>
+                    <td style="padding:8px;text-align:center"><span class="badge success">${admin.role.split(' ')[0]}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : ''}
+
+      ${adminsWithoutP2.length > 0 ? `
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-header">
+            <span class="card-title" style="color:var(--clr-warning-text)"><i class="ti ti-alert-triangle"></i> ⚠️ Missing Entra P2 (${adminsWithoutP2.length})</span>
+          </div>
+          <div style="padding:12px">
+            <table style="width:100%;border-collapse:collapse;font-size:11px">
+              <thead>
+                <tr style="border-bottom:1px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+                  <th style="padding:8px;text-align:left;font-weight:600">Display Name</th>
+                  <th style="padding:8px;text-align:left;font-weight:600">Email</th>
+                  <th style="padding:8px;text-align:center;font-weight:600">Role</th>
+                  <th style="padding:8px;text-align:center;font-weight:600">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${adminsWithoutP2.slice(0, 10).map(admin => `
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:8px">${admin.displayName}</td>
+                    <td style="padding:8px;font-size:9px">${admin.userPrincipalName}</td>
+                    <td style="padding:8px;text-align:center"><span class="badge info">${admin.role.split(' ')[0]}</span></td>
+                    <td style="padding:8px;text-align:center"><span class="badge danger">Missing P2</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : ''}
     </div>
   `
 }
