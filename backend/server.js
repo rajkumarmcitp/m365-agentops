@@ -3059,12 +3059,12 @@ app.get('/api/licenses', async (req, res) => {
       }
 
       const servicePlansList = (sku.servicePlans || []).map(sp => ({
-        serviceName: sp.serviceName,
-        provisioningStatus: sp.provisioningStatus
+        serviceName: sp.servicePlanName || sp.serviceName || 'Service',
+        provisioningStatus: sp.provisioningStatus || 'Unknown'
       }))
 
       if (servicePlansList.length === 0) {
-        console.log(`⚠️ No service plans found for ${sku.skuPartNumber}:`, sku.servicePlans)
+        console.log(`⚠️ No service plans found for ${sku.skuPartNumber}`)
       }
 
       return {
@@ -3125,7 +3125,7 @@ app.get('/api/licenses/service-plans-detail', async (req, res) => {
         skuPartNumber: sku.skuPartNumber,
         name: sku.skuPartNumber || sku.skuId,
         servicePlans: (sku.servicePlans || []).map(sp => ({
-          serviceName: sp.serviceName,
+          serviceName: sp.servicePlanName || sp.serviceName || 'Service',
           provisioningStatus: sp.provisioningStatus
         }))
       }
@@ -3159,7 +3159,7 @@ app.get('/api/licenses/service-plans-detail', async (req, res) => {
 
             if (ld.servicePlans && ld.servicePlans.length > 0 && skuMap[ld.skuId].servicePlans.length === 0) {
               skuMap[ld.skuId].servicePlans = ld.servicePlans.map(sp => ({
-                serviceName: sp.serviceName,
+                serviceName: sp.servicePlanName || sp.serviceName || 'Service',
                 provisioningStatus: sp.provisioningStatus
               }))
             }
