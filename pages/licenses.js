@@ -448,9 +448,9 @@ function render(el) {
     </div>
 
     <!-- Tab Navigation -->
-    <div style="display:flex;gap:0;border-bottom:1px solid var(--color-border-secondary);margin-bottom:16px;overflow-x:auto">
+    <div class="tabs" id="license-tabs" style="margin-bottom:16px">
       ${TABS.map(t => `
-        <button class="license-tab-btn ${activeTab === t.id ? 'active' : ''}" data-tab="${t.id}" style="padding:12px 16px;border:none;background:none;cursor:pointer;font-size:11px;font-weight:600;color:var(--color-text-secondary);border-bottom:2px solid transparent;white-space:nowrap;${activeTab === t.id ? 'color:var(--color-text-primary);border-bottom-color:var(--clr-info-text)' : ''}">
+        <button class="tab-btn ${activeTab === t.id ? 'active' : ''}" data-tab="${t.id}">
           <i class="ti ${t.icon}"></i> ${t.label}
         </button>
       `).join('')}
@@ -463,7 +463,7 @@ function render(el) {
   `
 
   // Attach event listeners
-  el.querySelectorAll('.license-tab-btn').forEach(btn => {
+  el.querySelectorAll('#license-tabs .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeTab = btn.dataset.tab
       if (activeTab === 'compliance') {
