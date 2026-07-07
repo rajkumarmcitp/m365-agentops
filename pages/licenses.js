@@ -605,11 +605,77 @@ function getStatusColor(status) {
   }
 }
 
+window.openServicePlansModal = function(licenseName, servicePlans) {
+  const modal = document.createElement('div')
+  modal.id = 'service-plans-modal'
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  `
+
+  const enabledCount = (servicePlans || []).filter(sp => sp.provisioningStatus === 'Success').length
+  const disabledCount = (servicePlans || []).filter(sp => sp.provisioningStatus === 'Disabled').length
+  const pendingCount = (servicePlans || []).filter(sp => sp.provisioningStatus?.toLowerCase().includes('pending')).length
+
+  modal.innerHTML = `
+    <div style="background: var(--color-background-primary); border-radius: 8px; width: 90%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+      <div style="padding: 20px; border-bottom: 1px solid var(--color-border-secondary); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="margin: 0; font-size: 18px; font-weight: 700;">${licenseName}</h2>
+          <div style="font-size: 11px; color: var(--color-text-secondary); margin-top: 4px;">
+            Total: <strong>${servicePlans.length}</strong> •
+            <span style="color: var(--clr-success-text);">✓ ${enabledCount}</span> •
+            <span style="color: var(--clr-danger-text);">✗ ${disabledCount}</span>
+            ${pendingCount > 0 ? `• <span style="color: var(--clr-warning-text);">⏳ ${pendingCount}</span>` : ''}
+          </div>
+        </div>
+        <button onclick="document.getElementById('service-plans-modal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--color-text-secondary);">✕</button>
+      </div>
+
+      <div style="flex: 1; overflow-y: auto; padding: 20px;">
+        ${servicePlans.length > 0 ? `
+          <div style="display: grid; gap: 12px;">
+            ${servicePlans.map((sp, idx) => `
+              <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--color-background-secondary); border-radius: 6px; border-left: 3px solid ${getStatusColor(sp.provisioningStatus)};">
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; font-size: 11px;">${idx + 1}. ${sp.serviceName || '—'}</div>
+                  <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">
+                    Status: <span style="color: ${getStatusColor(sp.provisioningStatus)}; font-weight: 500;">${sp.provisioningStatus || 'Unknown'}</span>
+                  </div>
+                </div>
+                <i class="ti ti-circle-filled" style="color: ${getStatusColor(sp.provisioningStatus)}; font-size: 12px;"></i>
+              </div>
+            `).join('')}
+          </div>
+        ` : `
+          <div style="text-align: center; color: var(--color-text-tertiary); padding: 40px 20px;">
+            <i class="ti ti-inbox" style="font-size: 32px; margin-bottom: 8px; display: block;"></i>
+            No service plans found
+          </div>
+        `}
+      </div>
+    </div>
+  `
+
+  document.body.appendChild(modal)
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove()
+  })
+}
+
 function renderServicePlans() {
   return `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:16px">
       ${getFilteredLicensesForKPI().map(l => `
-        <div class="card">
+        <div class="card" style="cursor: pointer; transition: all 0.2s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow=''; this.style.transform=''" onclick="window.openServicePlansModal('${(l.name || '').replace(/'/g, "\\'")}', ${JSON.stringify((l.servicePlans || []).map(sp => ({serviceName: sp.serviceName, provisioningStatus: sp.provisioningStatus})))})">
           <div class="card-header">
             <span class="card-title">${l.name || '—'}</span>
             <span class="badge ${l.statusCls || 'success'}">${l.utilizationPct || 0}%</span>
@@ -618,10 +684,10 @@ function renderServicePlans() {
             ${(l.total || 0).toLocaleString()} licenses | ${(l.consumed || 0).toLocaleString()} assigned
           </div>
           <div style="padding:12px">
-            <div style="font-weight:600;font-size:10px;margin-bottom:8px">Service Plans (${(l.servicePlans || []).length}):</div>
+            <div style="font-weight:600;font-size:10px;margin-bottom:8px">Service Plans (${(l.servicePlans || []).length}): <span style="font-size:9px;color:var(--clr-info-text)">Click to view all</span></div>
             ${(l.servicePlans || []).length > 0 ? `
-              <div style="display:grid;gap:6px;max-height:250px;overflow-y:auto">
-                ${(l.servicePlans || []).map(sp => `
+              <div style="display:grid;gap:6px;max-height:200px;overflow-y:auto">
+                ${(l.servicePlans || []).slice(0, 5).map(sp => `
                   <div style="display:flex;align-items:flex-start;gap:6px;font-size:9px;padding:4px 0">
                     <i class="ti ti-circle-filled" style="color:${getStatusColor(sp.provisioningStatus)};font-size:5px;margin-top:2px;flex-shrink:0"></i>
                     <div style="flex:1;word-break:break-word">
@@ -630,6 +696,7 @@ function renderServicePlans() {
                     </div>
                   </div>
                 `).join('')}
+                ${(l.servicePlans || []).length > 5 ? `<div style="padding:8px;text-align:center;color:var(--clr-info-text);font-size:9px;font-weight:600">... and ${(l.servicePlans || []).length - 5} more</div>` : ''}
               </div>
             ` : `
               <div style="color:var(--color-text-tertiary);font-size:9px">No service plans found</div>
