@@ -587,15 +587,15 @@ function renderCriticalAlerts() {
           <div style="padding:12px">
             ${servicePlanConflicts.exchangeDisabled && servicePlanConflicts.exchangeDisabled.length > 0 ? `
               <div style="margin-bottom:12px">
-                <div style="font-weight:600;font-size:10px;color:var(--color-text-primary);margin-bottom:8px">Exchange Disabled (${servicePlanConflicts.exchangeDisabled.length} users)</div>
+                <div style="font-weight:600;font-size:12px;color:var(--color-text-primary);margin-bottom:8px">Exchange Disabled (${servicePlanConflicts.exchangeDisabled.length} users)</div>
                 <div style="display:grid;gap:6px">
                   ${servicePlanConflicts.exchangeDisabled.slice(0, expandedAlertSections.exchangeDisabled ? undefined : 5).map(conflict => `
-                    <div style="padding:8px;background:var(--color-background-secondary);border-radius:4px;font-size:10px">
+                    <div style="padding:8px;background:var(--color-background-secondary);border-radius:4px;font-size:11px">
                       <div style="font-weight:500">${conflict.displayName}</div>
-                      <div style="color:var(--color-text-tertiary);font-size:9px">${conflict.userPrincipalName}</div>
+                      <div style="color:var(--color-text-tertiary);font-size:10px">${conflict.userPrincipalName}</div>
                     </div>
                   `).join('')}
-                  ${servicePlanConflicts.exchangeDisabled.length > 5 ? `<button onclick="window.toggleAlertSection('exchangeDisabled')" style="background:none;border:none;padding:8px;text-align:center;font-size:9px;color:var(--clr-info-text);cursor:pointer;width:100%;font-weight:600">
+                  ${servicePlanConflicts.exchangeDisabled.length > 5 ? `<button onclick="window.toggleAlertSection('exchangeDisabled')" style="background:none;border:none;padding:8px;text-align:center;font-size:10px;color:var(--clr-info-text);cursor:pointer;width:100%;font-weight:600">
                     ${expandedAlertSections.exchangeDisabled ? '▼ Show less' : `+ ${servicePlanConflicts.exchangeDisabled.length - 5} more`}
                   </button>` : ''}
                 </div>
@@ -603,12 +603,12 @@ function renderCriticalAlerts() {
             ` : ''}
             ${servicePlanConflicts.teamsDisabled && servicePlanConflicts.teamsDisabled.length > 0 ? `
               <div style="margin-bottom:12px">
-                <div style="font-weight:600;font-size:10px;color:var(--color-text-primary);margin-bottom:8px">Teams Disabled (${servicePlanConflicts.teamsDisabled.length} users)</div>
+                <div style="font-weight:600;font-size:12px;color:var(--color-text-primary);margin-bottom:8px">Teams Disabled (${servicePlanConflicts.teamsDisabled.length} users)</div>
                 <div style="display:grid;gap:6px">
                   ${servicePlanConflicts.teamsDisabled.slice(0, expandedAlertSections.teamsDisabled ? undefined : 5).map(conflict => `
-                    <div style="padding:8px;background:var(--color-background-secondary);border-radius:4px;font-size:10px">
+                    <div style="padding:8px;background:var(--color-background-secondary);border-radius:4px;font-size:11px">
                       <div style="font-weight:500">${conflict.displayName}</div>
-                      <div style="color:var(--color-text-tertiary);font-size:9px">${conflict.userPrincipalName}</div>
+                      <div style="color:var(--color-text-tertiary);font-size:10px">${conflict.userPrincipalName}</div>
                     </div>
                   `).join('')}
                   ${servicePlanConflicts.teamsDisabled.length > 5 ? `<button onclick="window.toggleAlertSection('teamsDisabled')" style="background:none;border:none;padding:8px;text-align:center;font-size:9px;color:var(--clr-info-text);cursor:pointer;width:100%;font-weight:600">
@@ -619,12 +619,12 @@ function renderCriticalAlerts() {
             ` : ''}
             ${servicePlanConflicts.sharepointDisabled && servicePlanConflicts.sharepointDisabled.length > 0 ? `
               <div style="margin-bottom:12px">
-                <div style="font-weight:600;font-size:10px;color:var(--color-text-primary);margin-bottom:8px">SharePoint Disabled (${servicePlanConflicts.sharepointDisabled.length} users)</div>
+                <div style="font-weight:600;font-size:12px;color:var(--color-text-primary);margin-bottom:8px">SharePoint Disabled (${servicePlanConflicts.sharepointDisabled.length} users)</div>
                 <div style="display:grid;gap:6px">
                   ${servicePlanConflicts.sharepointDisabled.slice(0, expandedAlertSections.sharepointDisabled ? undefined : 5).map(conflict => `
-                    <div style="padding:8px;background:var(--color-background-secondary);border-radius:4px;font-size:10px">
+                    <div style="padding:8px;background:var(--color-background-secondary);border-radius:4px;font-size:11px">
                       <div style="font-weight:500">${conflict.displayName}</div>
-                      <div style="color:var(--color-text-tertiary);font-size:9px">${conflict.userPrincipalName}</div>
+                      <div style="color:var(--color-text-tertiary);font-size:10px">${conflict.userPrincipalName}</div>
                     </div>
                   `).join('')}
                   ${servicePlanConflicts.sharepointDisabled.length > 5 ? `<button onclick="window.toggleAlertSection('sharepointDisabled')" style="background:none;border:none;padding:8px;text-align:center;font-size:9px;color:var(--clr-info-text);cursor:pointer;width:100%;font-weight:600">
@@ -646,12 +646,12 @@ function renderCriticalAlerts() {
           <div style="padding:12px">
             ${assignmentErrors.failedAssignments && assignmentErrors.failedAssignments.length > 0 ? `
               <div style="margin-bottom:12px">
-                <div style="font-weight:600;font-size:10px;color:var(--clr-danger-text);margin-bottom:8px">Failed Assignments (${assignmentErrors.failedAssignments.length})</div>
+                <div style="font-weight:600;font-size:12px;color:var(--clr-danger-text);margin-bottom:8px">Failed Assignments (${assignmentErrors.failedAssignments.length})</div>
                 <div style="display:grid;gap:6px">
                   ${assignmentErrors.failedAssignments.slice(0, expandedAlertSections.failedAssignments ? undefined : 5).map(err => `
-                    <div style="padding:8px;background:rgba(239, 68, 68, 0.05);border-radius:4px;font-size:10px;border-left:3px solid var(--clr-danger-text)">
+                    <div style="padding:8px;background:rgba(239, 68, 68, 0.05);border-radius:4px;font-size:11px;border-left:3px solid var(--clr-danger-text)">
                       <div style="font-weight:500">${err.displayName}</div>
-                      <div style="color:var(--color-text-tertiary);font-size:9px">${err.userPrincipalName}</div>
+                      <div style="color:var(--color-text-tertiary);font-size:10px">${err.userPrincipalName}</div>
                     </div>
                   `).join('')}
                   ${assignmentErrors.failedAssignments.length > 5 ? `<button onclick="window.toggleAlertSection('failedAssignments')" style="background:none;border:none;padding:8px;text-align:center;font-size:9px;color:var(--clr-info-text);cursor:pointer;width:100%;font-weight:600">
@@ -662,12 +662,12 @@ function renderCriticalAlerts() {
             ` : ''}
             ${assignmentErrors.pendingAssignments && assignmentErrors.pendingAssignments.length > 0 ? `
               <div style="margin-bottom:12px">
-                <div style="font-weight:600;font-size:10px;color:var(--clr-warning-text);margin-bottom:8px">Pending Activations (${assignmentErrors.pendingAssignments.length})</div>
+                <div style="font-weight:600;font-size:12px;color:var(--clr-warning-text);margin-bottom:8px">Pending Activations (${assignmentErrors.pendingAssignments.length})</div>
                 <div style="display:grid;gap:6px">
                   ${assignmentErrors.pendingAssignments.slice(0, expandedAlertSections.pendingAssignments ? undefined : 5).map(err => `
-                    <div style="padding:8px;background:rgba(250, 190, 88, 0.05);border-radius:4px;font-size:10px;border-left:3px solid var(--clr-warning-text)">
+                    <div style="padding:8px;background:rgba(250, 190, 88, 0.05);border-radius:4px;font-size:11px;border-left:3px solid var(--clr-warning-text)">
                       <div style="font-weight:500">${err.displayName}</div>
-                      <div style="color:var(--color-text-tertiary);font-size:9px">${err.userPrincipalName}</div>
+                      <div style="color:var(--color-text-tertiary);font-size:10px">${err.userPrincipalName}</div>
                     </div>
                   `).join('')}
                   ${assignmentErrors.pendingAssignments.length > 5 ? `<button onclick="window.toggleAlertSection('pendingAssignments')" style="background:none;border:none;padding:8px;text-align:center;font-size:9px;color:var(--clr-info-text);cursor:pointer;width:100%;font-weight:600">
