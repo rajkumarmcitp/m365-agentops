@@ -11,6 +11,8 @@ let criticalAlerts = { expirationAlerts: {}, servicePlanConflicts: {}, assignmen
 let auditTrail = []
 let departmentKPIs = []
 let privilegedAccounts = { adminsWithoutP2: [], adminsWithoutDefender: [], adminsWithP2: [], adminsWithDefender: [], adminsWithBoth: [], total: 0 }
+let userActivityCorrelation = { licensedButInactive: [], activeLicensed: [], overlicensed: [], totalAnalyzed: 0 }
+let highRiskAlerts = { critical: [], high: [], medium: [], low: [], total: 0 }
 let activeTab = 'alerts'
 
 // Pagination state for compliance findings
@@ -75,6 +77,8 @@ const TABS = [
   { id: 'audit', label: 'Audit Trail', icon: 'ti-history' },
   { id: 'departments', label: 'Department KPIs', icon: 'ti-chart-bar' },
   { id: 'privileged', label: 'Privileged Accounts', icon: 'ti-shield-star' },
+  { id: 'activity', label: 'Activity Correlation', icon: 'ti-activity' },
+  { id: 'risk-dashboard', label: 'Risk Dashboard', icon: 'ti-alert-circle' },
 ]
 
 export async function initLicenses() {
@@ -99,7 +103,7 @@ export async function initLicenses() {
   // Fetch all license data in parallel
   try {
     console.log('📡 Fetching comprehensive license data...')
-    const [licenses, assignments, groups, compliance, servicePlans, expirationAlerts, servicePlanConflicts, assignmentErrors, auditTrailData, departmentData, privilegedData] = await Promise.all([
+    const [licenses, assignments, groups, compliance, servicePlans, expirationAlerts, servicePlanConflicts, assignmentErrors, auditTrailData, departmentData, privilegedData, activityData, riskData] = await Promise.all([
       callAPI('/licenses'),
       callAPI('/licenses/assignments'),
       callAPI('/licenses/groups'),
@@ -110,7 +114,9 @@ export async function initLicenses() {
       callAPI('/licenses/assignment-errors'),
       callAPI('/licenses/audit-trail'),
       callAPI('/licenses/department-kpis'),
-      callAPI('/licenses/privileged-accounts')
+      callAPI('/licenses/privileged-accounts'),
+      callAPI('/licenses/user-activity-correlation'),
+      callAPI('/licenses/high-risk-alerts')
     ])
 
     if (licenses.success && licenses.data) {
@@ -151,7 +157,13 @@ export async function initLicenses() {
     if (privilegedData.success && privilegedData.data) {
       privilegedAccounts = privilegedData.data
     }
-    console.log(`✅ Loaded all license data with critical alerts and Phase 2 features`)
+    if (activityData.success && activityData.data) {
+      userActivityCorrelation = activityData.data
+    }
+    if (riskData.success && riskData.data) {
+      highRiskAlerts = riskData.data
+    }
+    console.log(`✅ Loaded all license data with critical alerts, Phase 2, and Phase 3 features`)
   } catch (error) {
     console.error('❌ Error loading license data:', error)
   }
@@ -552,6 +564,8 @@ function renderTab(tabId) {
     case 'audit': return renderAuditTrail()
     case 'departments': return renderDepartmentKPIs()
     case 'privileged': return renderPrivilegedAccounts()
+    case 'activity': return renderActivityCorrelation()
+    case 'risk-dashboard': return renderRiskDashboard()
     default: return ''
   }
 }
@@ -1485,6 +1499,167 @@ function renderPrivilegedAccounts() {
                 `).join('')}
               </tbody>
             </table>
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `
+}
+
+function renderActivityCorrelation() {
+  if (!userActivityCorrelation || userActivityCorrelation.totalAnalyzed === 0) {
+    return `
+      <div class="card" style="text-align:center;padding:40px 20px">
+        <i class="ti ti-inbox" style="font-size:32px;color:var(--color-text-tertiary);margin-bottom:12px;display:block"></i>
+        <div style="font-size:12px;color:var(--color-text-tertiary)">No activity data available</div>
+      </div>
+    `
+  }
+
+  const { licensedButInactive, activeLicensed, overlicensed, totalAnalyzed } = userActivityCorrelation
+
+  return `
+    <div style="margin-bottom:24px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px">
+        <div class="card" style="padding:12px;border-left:4px solid var(--clr-danger-text)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">🔴 Licensed But Inactive</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-danger-text)">${licensedButInactive.length}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">No sign-in 30+ days</div>
+        </div>
+        <div class="card" style="padding:12px;border-left:4px solid var(--clr-success-text)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">✅ Active Licensed</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-success-text)">${activeLicensed.length}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">Active & licensed</div>
+        </div>
+        <div class="card" style="padding:12px;border-left:4px solid var(--clr-warning-text)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">⚠️ Over-Licensed</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-warning-text)">${overlicensed.length}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">3+ licenses, active</div>
+        </div>
+      </div>
+
+      ${licensedButInactive.length > 0 ? `
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" style="color:var(--clr-danger-text)"><i class="ti ti-user-x"></i> Licensed But Inactive Users</span>
+          </div>
+          <div style="padding:12px">
+            <table style="width:100%;border-collapse:collapse;font-size:11px">
+              <thead>
+                <tr style="border-bottom:1px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+                  <th style="padding:8px;text-align:left;font-weight:600">User</th>
+                  <th style="padding:8px;text-align:center;font-weight:600">Licenses</th>
+                  <th style="padding:8px;text-align:center;font-weight:600">Last Sign-In</th>
+                  <th style="padding:8px;text-align:center;font-weight:600">Days Inactive</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${licensedButInactive.slice(0, 15).map(user => `
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:8px"><strong>${user.displayName}</strong><div style="font-size:9px;color:var(--color-text-tertiary)">${user.userPrincipalName}</div></td>
+                    <td style="padding:8px;text-align:center"><span class="badge danger">${user.licenseCount}</span></td>
+                    <td style="padding:8px;text-align:center">${user.lastSignIn}</td>
+                    <td style="padding:8px;text-align:center"><span style="font-weight:600">${user.daysSinceSignIn}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : ''}
+
+      ${overlicensed.length > 0 ? `
+        <div class="card" style="margin-top:12px">
+          <div class="card-header">
+            <span class="card-title" style="color:var(--clr-warning-text)"><i class="ti ti-alert-triangle"></i> Over-Licensed Users (Potential Savings)</span>
+          </div>
+          <div style="padding:12px">
+            <table style="width:100%;border-collapse:collapse;font-size:11px">
+              <thead>
+                <tr style="border-bottom:1px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+                  <th style="padding:8px;text-align:left;font-weight:600">User</th>
+                  <th style="padding:8px;text-align:center;font-weight:600">Licenses</th>
+                  <th style="padding:8px;text-align:center;font-weight:600">Last Activity</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${overlicensed.slice(0, 10).map(user => `
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+                    <td style="padding:8px"><strong>${user.displayName}</strong><div style="font-size:9px;color:var(--color-text-tertiary)">${user.userPrincipalName}</div></td>
+                    <td style="padding:8px;text-align:center"><span class="badge warning">${user.licenseCount}+</span></td>
+                    <td style="padding:8px;text-align:center">${user.lastSignIn}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `
+}
+
+function renderRiskDashboard() {
+  const { critical, high, medium, low, total } = highRiskAlerts
+
+  if (total === 0) {
+    return `
+      <div class="card" style="text-align:center;padding:40px 20px;background:rgba(34, 197, 94, 0.05)">
+        <i class="ti ti-check-circle" style="font-size:32px;color:var(--clr-success-text);margin-bottom:12px;display:block"></i>
+        <div style="font-weight:600;font-size:12px;color:var(--clr-success-text)">✅ All Clear</div>
+        <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px">No high-risk alerts detected</div>
+      </div>
+    `
+  }
+
+  return `
+    <div style="margin-bottom:24px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px">
+        <div class="card" style="padding:12px;border-left:4px solid var(--clr-danger-text)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">🔴 Critical</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-danger-text)">${critical.length}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">Immediate action</div>
+        </div>
+        <div class="card" style="padding:12px;border-left:4px solid var(--clr-warning-text)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">🟠 High</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-warning-text)">${high.length}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">This week</div>
+        </div>
+        <div class="card" style="padding:12px;border-left:4px solid var(--clr-info-text)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">ℹ️ Medium</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-info-text)">${medium.length}</div>
+          <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:4px">Monitor</div>
+        </div>
+      </div>
+
+      ${critical.length > 0 ? `
+        <div class="card" style="margin-bottom:12px;border-left:4px solid var(--clr-danger-text)">
+          <div class="card-header">
+            <span class="card-title" style="color:var(--clr-danger-text)"><i class="ti ti-alert-octagon"></i> CRITICAL Alerts</span>
+          </div>
+          <div style="padding:12px">
+            ${critical.map(alert => `
+              <div style="padding:8px;background:rgba(239, 68, 68, 0.05);border-radius:4px;margin-bottom:6px;border-left:3px solid var(--clr-danger-text)">
+                <div style="font-weight:600;font-size:11px">${alert.type}</div>
+                <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px">${alert.message}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      ${high.length > 0 ? `
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" style="color:var(--clr-warning-text)"><i class="ti ti-alert-triangle"></i> HIGH Priority Alerts</span>
+          </div>
+          <div style="padding:12px">
+            ${high.slice(0, 10).map(alert => `
+              <div style="padding:8px;background:rgba(250, 190, 88, 0.05);border-radius:4px;margin-bottom:6px;border-left:3px solid var(--clr-warning-text)">
+                <div style="font-weight:600;font-size:11px">${alert.type}</div>
+                <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px">${alert.message}</div>
+              </div>
+            `).join('')}
           </div>
         </div>
       ` : ''}

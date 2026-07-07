@@ -4052,6 +4052,182 @@ app.get('/api/licenses/privileged-accounts', async (req, res) => {
 })
 
 // ============================================================
+// PHASE 3: User Activity Correlation
+// ============================================================
+app.get('/api/licenses/user-activity-correlation', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const correlationData = {
+      licensedButInactive: [],
+      activeLicensed: [],
+      overlicensed: [],
+      totalAnalyzed: 0
+    }
+
+    // Get all licensed users
+    const users = await graphClient
+      .api('/users')
+      .select(['id', 'displayName', 'userPrincipalName', 'lastPasswordChangeDateTime', 'signInActivity'])
+      .filter('accountEnabled eq true')
+      .top(100)
+      .get()
+
+    for (const user of (users.value || []).slice(0, 50)) {
+      try {
+        // Get user licenses
+        const userLicenses = await graphClient
+          .api(`/users/${user.id}`)
+          .select(['assignedLicenses'])
+          .get()
+
+        if (!userLicenses.assignedLicenses || userLicenses.assignedLicenses.length === 0) {
+          continue
+        }
+
+        correlationData.totalAnalyzed++
+
+        // Check last sign-in
+        const lastSignIn = user.signInActivity?.lastSignInDateTime
+        const lastSignInDate = lastSignIn ? new Date(lastSignIn) : null
+        const daysSinceSignIn = lastSignInDate ? Math.floor((Date.now() - lastSignInDate) / (1000 * 60 * 60 * 24)) : 999
+
+        // Determine activity status
+        const isActive = daysSinceSignIn < 30
+        const licenseCount = userLicenses.assignedLicenses.length
+
+        const userActivity = {
+          displayName: user.displayName,
+          userPrincipalName: user.userPrincipalName,
+          licenseCount: licenseCount,
+          lastSignIn: lastSignInDate ? lastSignInDate.toLocaleDateString() : 'Never',
+          daysSinceSignIn: daysSinceSignIn,
+          riskLevel: isActive ? 'Low' : daysSinceSignIn < 90 ? 'Medium' : 'High'
+        }
+
+        if (!isActive && daysSinceSignIn > 30) {
+          correlationData.licensedButInactive.push(userActivity)
+        } else if (isActive && licenseCount > 2) {
+          correlationData.overlicensed.push(userActivity)
+        } else if (isActive) {
+          correlationData.activeLicensed.push(userActivity)
+        }
+      } catch (userError) {
+        // Skip users with permission issues
+      }
+    }
+
+    console.log(`✓ User activity correlation: ${correlationData.totalAnalyzed} licensed users analyzed`)
+    res.json({ success: true, data: correlationData })
+  } catch (error) {
+    console.warn('⚠️ User activity correlation failed:', error.message)
+    res.json({ success: true, data: { licensedButInactive: [], activeLicensed: [], overlicensed: [], totalAnalyzed: 0 } })
+  }
+})
+
+// ============================================================
+// PHASE 3: High-Risk Alert Dashboard
+// ============================================================
+app.get('/api/licenses/high-risk-alerts', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const alerts = {
+      critical: [],
+      high: [],
+      medium: [],
+      low: [],
+      total: 0
+    }
+
+    // Get expiration alerts
+    const skus = await graphClient.api('/subscribedSkus').top(500).get()
+    for (const sku of (skus.value || [])) {
+      if (sku.expirationDateTime) {
+        const expiryDate = new Date(sku.expirationDateTime)
+        const daysUntilExpiry = Math.floor((expiryDate - Date.now()) / (1000 * 60 * 60 * 24))
+
+        if (daysUntilExpiry < 0) {
+          alerts.critical.push({
+            type: 'License Expired',
+            license: sku.skuPartNumber,
+            severity: 'CRITICAL',
+            days: 0,
+            message: `${sku.skuPartNumber} expired ${Math.abs(daysUntilExpiry)} days ago`
+          })
+        } else if (daysUntilExpiry <= 7) {
+          alerts.critical.push({
+            type: 'License Expiring Soon',
+            license: sku.skuPartNumber,
+            severity: 'CRITICAL',
+            days: daysUntilExpiry,
+            message: `${sku.skuPartNumber} expires in ${daysUntilExpiry} days`
+          })
+        } else if (daysUntilExpiry <= 30) {
+          alerts.high.push({
+            type: 'License Expiry Warning',
+            license: sku.skuPartNumber,
+            severity: 'HIGH',
+            days: daysUntilExpiry,
+            message: `${sku.skuPartNumber} expires in ${daysUntilExpiry} days`
+          })
+        }
+      }
+    }
+
+    // Get admin security alerts
+    const adminRoles = await graphClient.api('/directoryRoles').get()
+    const adminRolesList = (adminRoles.value || []).filter(r =>
+      r.displayName === 'Global Administrator' ||
+      r.displayName === 'Security Administrator'
+    )
+
+    for (const role of adminRolesList) {
+      try {
+        const members = await graphClient
+          .api(`/directoryRoles/${role.id}/members`)
+          .select(['id', 'displayName', 'userPrincipalName'])
+          .get()
+
+        for (const member of (members.value || []).slice(0, 10)) {
+          const licenses = await graphClient
+            .api(`/users/${member.id}`)
+            .select(['assignedLicenses'])
+            .get()
+
+          const skuIds = (licenses.assignedLicenses || []).map(l => l.skuId)
+          const hasP2 = skuIds.some(id => ['eec0eb4f-6444-4f95-uba7-5d3f3b339c7e', '84a661c4-e949-4bd2-a560-ed7766fcaf11'].includes(id))
+          const hasDefender = skuIds.some(id => ['60d3f92b-6a44-4c61-bd5c-68e08b06d1d1'].includes(id))
+
+          if (!hasP2 || !hasDefender) {
+            alerts.high.push({
+              type: 'Admin Missing Security License',
+              license: hasP2 ? 'Defender' : 'Entra P2',
+              severity: 'HIGH',
+              message: `Admin ${member.displayName} missing ${!hasP2 ? 'Entra P2' : 'Defender'}`
+            })
+          }
+        }
+      } catch (e) {
+        // Skip role member fetch errors
+      }
+    }
+
+    alerts.total = alerts.critical.length + alerts.high.length + alerts.medium.length + alerts.low.length
+
+    console.log(`✓ High-risk alerts: ${alerts.total} alerts found (${alerts.critical.length} critical, ${alerts.high.length} high)`)
+    res.json({ success: true, data: alerts })
+  } catch (error) {
+    console.warn('⚠️ High-risk alerts fetch failed:', error.message)
+    res.json({ success: true, data: { critical: [], high: [], medium: [], low: [], total: 0 } })
+  }
+})
+
+// ============================================================
 // Usage Analytics
 // ============================================================
 app.get('/api/usage-analytics', async (req, res) => {
