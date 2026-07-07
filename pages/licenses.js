@@ -496,6 +496,74 @@ function renderDemoCompliance(el, summary) {
   `
 }
 
+function renderCriticalKPIs() {
+  const { expirationAlerts, servicePlanConflicts, assignmentErrors } = criticalAlerts
+  const { adminsWithoutP2 } = privilegedAccounts
+  const { licensedButInactive } = userActivityCorrelation
+
+  const criticalCount = (expirationAlerts.critical?.length || 0) +
+                        (servicePlanConflicts.total || 0) +
+                        (assignmentErrors.total || 0) +
+                        adminsWithoutP2.length +
+                        licensedButInactive.length
+
+  if (criticalCount === 0) {
+    return `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px">
+        <div class="card" style="padding:12px;background:rgba(34, 197, 94, 0.05);border-left:4px solid var(--clr-success-text)">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">✅ All Critical Areas</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-success-text)">HEALTHY</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">No action required</div>
+        </div>
+      </div>
+    `
+  }
+
+  return `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px">
+      ${expirationAlerts.critical?.length > 0 ? `
+        <div class="card" style="padding:12px;background:rgba(239, 68, 68, 0.05);border-left:4px solid var(--clr-danger-text);cursor:pointer" onclick="activeTab='alerts'; document.getElementById('tab-content').innerHTML = renderTab('alerts')">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">🔴 License Expiring</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-danger-text)">${expirationAlerts.critical.length}</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">CRITICAL: Renew now</div>
+        </div>
+      ` : ''}
+
+      ${servicePlanConflicts.total > 0 ? `
+        <div class="card" style="padding:12px;background:rgba(239, 68, 68, 0.05);border-left:4px solid var(--clr-danger-text);cursor:pointer" onclick="activeTab='alerts'; document.getElementById('tab-content').innerHTML = renderTab('alerts')">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">⚠️ Service Plan Issues</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-danger-text)">${servicePlanConflicts.total}</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Users affected</div>
+        </div>
+      ` : ''}
+
+      ${assignmentErrors.total > 0 ? `
+        <div class="card" style="padding:12px;background:rgba(239, 68, 68, 0.05);border-left:4px solid var(--clr-danger-text);cursor:pointer" onclick="activeTab='alerts'; document.getElementById('tab-content').innerHTML = renderTab('alerts')">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">❌ Assignment Errors</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-danger-text)">${assignmentErrors.total}</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Failed/Pending</div>
+        </div>
+      ` : ''}
+
+      ${adminsWithoutP2.length > 0 ? `
+        <div class="card" style="padding:12px;background:rgba(250, 190, 88, 0.05);border-left:4px solid var(--clr-warning-text);cursor:pointer" onclick="activeTab='privileged'; document.getElementById('tab-content').innerHTML = renderTab('privileged')">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">🛡️ Admin Security Gap</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-warning-text)">${adminsWithoutP2.length}</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Missing P2/Defender</div>
+        </div>
+      ` : ''}
+
+      ${licensedButInactive.length > 0 ? `
+        <div class="card" style="padding:12px;background:rgba(250, 190, 88, 0.05);border-left:4px solid var(--clr-warning-text);cursor:pointer" onclick="activeTab='activity'; document.getElementById('tab-content').innerHTML = renderTab('activity')">
+          <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:6px">💰 Cost Savings</div>
+          <div style="font-size:28px;font-weight:700;color:var(--clr-warning-text)">${licensedButInactive.length}</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Inactive 30+ days</div>
+        </div>
+      ` : ''}
+    </div>
+  `
+}
+
 function render(el) {
   el.innerHTML = `
     <div class="page-header">
@@ -507,6 +575,11 @@ function render(el) {
         <button class="btn" id="license-refresh"><i class="ti ti-refresh"></i> Refresh</button>
         <button class="btn btn-primary" id="license-export"><i class="ti ti-download"></i> Export</button>
       </div>
+    </div>
+
+    <!-- Critical KPIs requiring action -->
+    <div id="critical-kpis">
+      ${renderCriticalKPIs()}
     </div>
 
     <!-- Tab Navigation -->
