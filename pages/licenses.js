@@ -633,39 +633,38 @@ window.openServicePlansModal = function(skuId) {
   const pendingCount = (plans || []).filter(sp => sp.provisioningStatus?.toLowerCase().includes('pending')).length
 
   modal.innerHTML = `
-    <div style="background: var(--color-background-primary); border-radius: 8px; width: 90%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
-      <div style="padding: 20px; border-bottom: 1px solid var(--color-border-secondary); display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <h2 style="margin: 0; font-size: 18px; font-weight: 700;">${licenseName}</h2>
-          <div style="font-size: 11px; color: var(--color-text-secondary); margin-top: 4px;">
-            Total: <strong>${plans.length}</strong> •
-            <span style="color: var(--clr-success-text);">✓ ${enabledCount}</span> •
-            <span style="color: var(--clr-danger-text);">✗ ${disabledCount}</span>
-            ${pendingCount > 0 ? `• <span style="color: var(--clr-warning-text);">⏳ ${pendingCount}</span>` : ''}
+    <div style="background: var(--color-background-primary); border-radius: var(--border-radius-md); width: 90%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+      <div style="padding: 16px 16px; border-bottom: 0.5px solid var(--color-border-tertiary); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+        <div style="flex: 1;">
+          <div style="font-size: 12px; font-weight: 600; color: var(--color-text-primary);">${licenseName}</div>
+          <div style="font-size: 10px; color: var(--color-text-tertiary); margin-top: 6px;">
+            <span style="font-weight: 600;">${plans.length}</span> service plans •
+            <span style="color: var(--clr-success-text);">✓ ${enabledCount}</span> enabled •
+            <span style="color: var(--clr-danger-text);">✗ ${disabledCount}</span> disabled
+            ${pendingCount > 0 ? ` • <span style="color: var(--clr-warning-text);">⏳ ${pendingCount}</span>` : ''}
           </div>
         </div>
-        <button onclick="document.getElementById('service-plans-modal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--color-text-secondary);">✕</button>
+        <button onclick="document.getElementById('service-plans-modal').remove()" style="background: none; border: none; font-size: 16px; cursor: pointer; color: var(--color-text-tertiary); padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">✕</button>
       </div>
 
-      <div style="flex: 1; overflow-y: auto; padding: 20px;">
+      <div style="flex: 1; overflow-y: auto; padding: 12px;">
         ${plans.length > 0 ? `
-          <div style="display: grid; gap: 12px;">
+          <div style="display: grid; gap: 8px;">
             ${plans.map((sp, idx) => `
-              <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--color-background-secondary); border-radius: 6px; border-left: 3px solid ${getStatusColor(sp.provisioningStatus)};">
-                <div style="flex: 1;">
-                  <div style="font-weight: 600; font-size: 11px;">${idx + 1}. ${sp.serviceName || '—'}</div>
-                  <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">
-                    Status: <span style="color: ${getStatusColor(sp.provisioningStatus)}; font-weight: 500;">${sp.provisioningStatus || 'Unknown'}</span>
+              <div style="display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: var(--color-background-secondary); border-radius: 6px; border-left: 3px solid ${getStatusColor(sp.provisioningStatus)};">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-weight: 600; font-size: 10px; color: var(--color-text-primary);">${idx + 1}. ${sp.serviceName || '—'}</div>
+                  <div style="font-size: 9px; color: var(--color-text-tertiary); margin-top: 3px;">
+                    <span style="color: ${getStatusColor(sp.provisioningStatus)}; font-weight: 500;">${sp.provisioningStatus || 'Unknown'}</span>
                   </div>
                 </div>
-                <i class="ti ti-circle-filled" style="color: ${getStatusColor(sp.provisioningStatus)}; font-size: 12px;"></i>
               </div>
             `).join('')}
           </div>
         ` : `
           <div style="text-align: center; color: var(--color-text-tertiary); padding: 40px 20px;">
-            <i class="ti ti-inbox" style="font-size: 32px; margin-bottom: 8px; display: block;"></i>
-            No service plans found
+            <i class="ti ti-inbox" style="font-size: 28px; margin-bottom: 8px; display: block;"></i>
+            <div style="font-size: 10px;">No service plans found</div>
           </div>
         `}
       </div>
