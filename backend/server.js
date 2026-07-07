@@ -3799,10 +3799,10 @@ app.get('/api/licenses/audit-trail', async (req, res) => {
     const auditTrail = []
 
     // Query audit logs for license assignment changes
-    // Filter for: Assign license, Remove license, Update license
+    // Use simple filter for license-related activities
     const auditLogs = await graphClient
       .api('/auditLogs/directoryAudits')
-      .filter("targetResources/any(x:x/type eq 'User') and activityDisplayName in ('Assign license', 'Remove license', 'Update user')")
+      .filter("activityDisplayName eq 'Assign license' or activityDisplayName eq 'Remove license'")
       .select(['id', 'activityDisplayName', 'activityDateTime', 'initiatedBy', 'targetResources', 'additionalDetails'])
       .orderby('activityDateTime desc')
       .top(100)
@@ -3814,17 +3814,12 @@ app.get('/api/licenses/audit-trail', async (req, res) => {
       const action = log.activityDisplayName || 'Unknown'
       const timestamp = log.activityDateTime
 
-      // Extract license info from additional details
-      const licenseInfo = log.additionalDetails?.[0] || {}
-
       auditTrail.push({
         id: log.id,
         timestamp: timestamp,
         initiator: initiator,
         action: action,
-        targetUser: target,
-        licenseInfo: licenseInfo,
-        details: JSON.stringify(log.additionalDetails || {})
+        targetUser: target
       })
     }
 
@@ -3847,11 +3842,10 @@ app.get('/api/licenses/department-kpis', async (req, res) => {
 
     const departmentKPIs = {}
 
-    // Get all users with licenses and department info
+    // Get all users with department info
     const users = await graphClient
       .api('/users')
-      .select(['id', 'displayName', 'userPrincipalName', 'department', 'assignedLicenses', 'jobTitle'])
-      .filter('assignedLicenses/$count ne 0')
+      .select(['id', 'displayName', 'userPrincipalName', 'department'])
       .top(500)
       .get()
 
@@ -3861,38 +3855,44 @@ app.get('/api/licenses/department-kpis', async (req, res) => {
     for (const sku of (skus.value || [])) {
       skuPricing[sku.skuId] = {
         name: sku.skuPartNumber,
-        consumed: sku.consumedUnits,
-        prepaidUnits: sku.prepaidUnits
+        consumed: sku.consumedUnits
       }
     }
 
-    // Aggregate by department
-    for (const user of (users.value || [])) {
-      const dept = user.department || 'Unassigned'
+    // Get license details for each user
+    for (const user of (users.value || []).slice(0, 100)) {
+      try {
+        const licenses = await graphClient
+          .api(`/users/${user.id}`)
+          .select(['assignedLicenses'])
+          .get()
 
-      if (!departmentKPIs[dept]) {
-        departmentKPIs[dept] = {
-          department: dept,
-          users: 0,
-          totalLicenses: 0,
-          licenseCounts: {},
-          activeUsers: 0
+        const dept = user.department || 'Unassigned'
+
+        if (!departmentKPIs[dept]) {
+          departmentKPIs[dept] = {
+            department: dept,
+            users: 0,
+            totalLicenses: 0,
+            licenseCounts: {}
+          }
         }
-      }
 
-      departmentKPIs[dept].users += 1
-      departmentKPIs[dept].totalLicenses += (user.assignedLicenses?.length || 0)
+        departmentKPIs[dept].users += 1
+        const licenseCount = (licenses.assignedLicenses?.length || 0)
+        departmentKPIs[dept].totalLicenses += licenseCount
 
-      // Count licenses by type
-      for (const license of (user.assignedLicenses || [])) {
-        const licenseInfo = skuPricing[license.skuId]
-        if (licenseInfo) {
-          const name = licenseInfo.name
-          departmentKPIs[dept].licenseCounts[name] = (departmentKPIs[dept].licenseCounts[name] || 0) + 1
+        // Count licenses by type
+        for (const license of (licenses.assignedLicenses || [])) {
+          const licenseInfo = skuPricing[license.skuId]
+          if (licenseInfo) {
+            const name = licenseInfo.name
+            departmentKPIs[dept].licenseCounts[name] = (departmentKPIs[dept].licenseCounts[name] || 0) + 1
+          }
         }
+      } catch (e) {
+        // Skip users with permission issues
       }
-
-      departmentKPIs[dept].activeUsers += 1
     }
 
     const result = Object.values(departmentKPIs).sort((a, b) => b.totalLicenses - a.totalLicenses)
@@ -3923,11 +3923,17 @@ app.get('/api/licenses/privileged-accounts', async (req, res) => {
       total: 0
     }
 
-    // Get all global admin roles
-    const adminRoles = await graphClient
+    // Get all directory roles
+    const allRoles = await graphClient
       .api('/directoryRoles')
-      .filter("displayName eq 'Global Administrator' or displayName eq 'Security Administrator' or displayName eq 'Exchange Administrator'")
       .get()
+
+    // Filter for admin roles
+    const adminRoles = (allRoles.value || []).filter(r =>
+      r.displayName === 'Global Administrator' ||
+      r.displayName === 'Security Administrator' ||
+      r.displayName === 'Exchange Administrator'
+    )
 
     for (const role of (adminRoles.value || [])) {
       // Get members of this role
