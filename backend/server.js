@@ -3935,15 +3935,20 @@ app.get('/api/licenses/privileged-accounts', async (req, res) => {
       r.displayName === 'Exchange Administrator'
     )
 
-    for (const role of (adminRoles.value || [])) {
-      // Get members of this role
-      const members = await graphClient
-        .api(`/directoryRoles/${role.id}/members`)
-        .select(['id', 'displayName', 'userPrincipalName'])
-        .top(100)
-        .get()
+    console.log(`📋 Found ${adminRoles.length} admin roles`)
 
-      for (const member of (members.value || [])) {
+    for (const role of adminRoles) {
+      console.log(`  Fetching members for role: ${role.displayName}`)
+      try {
+        // Get members of this role
+        const members = await graphClient
+          .api(`/directoryRoles/${role.id}/members`)
+          .select(['id', 'displayName', 'userPrincipalName'])
+          .get()
+
+        console.log(`    Found ${(members.value || []).length} members`)
+
+        for (const member of (members.value || [])) {
         if (!member.userPrincipalName) continue
 
         // Get assigned licenses for this admin
@@ -3985,6 +3990,9 @@ app.get('/api/licenses/privileged-accounts', async (req, res) => {
         } else if (hasDefender) {
           privilegedAccounts.adminsWithDefender.push(account)
         }
+        }
+      } catch (roleError) {
+        console.warn(`  ⚠️ Error fetching members for ${role.displayName}: ${roleError.message}`)
       }
     }
 
