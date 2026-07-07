@@ -3525,6 +3525,269 @@ app.get('/api/licenses/compliance', async (req, res) => {
 })
 
 // ============================================================
+// PHASE 1: License Expiration Monitoring
+// ============================================================
+app.get('/api/licenses/expiration-alerts', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const skus = await graphClient.api('/subscribedSkus').get()
+    const today = new Date()
+    const alerts = {
+      critical: [],
+      warning: [],
+      info: []
+    }
+
+    ;(skus.value || []).forEach(sku => {
+      if (!sku.expirationDateTime) return
+
+      const expiryDate = new Date(sku.expirationDateTime)
+      const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24))
+
+      if (daysUntilExpiry <= 0) {
+        alerts.critical.push({
+          skuPartNumber: sku.skuPartNumber,
+          expirationDate: sku.expirationDateTime,
+          daysLeft: daysUntilExpiry,
+          status: 'EXPIRED',
+          severity: 'critical'
+        })
+      } else if (daysUntilExpiry <= 7) {
+        alerts.critical.push({
+          skuPartNumber: sku.skuPartNumber,
+          expirationDate: sku.expirationDateTime,
+          daysLeft: daysUntilExpiry,
+          status: `Expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}`,
+          severity: 'critical'
+        })
+      } else if (daysUntilExpiry <= 14) {
+        alerts.warning.push({
+          skuPartNumber: sku.skuPartNumber,
+          expirationDate: sku.expirationDateTime,
+          daysLeft: daysUntilExpiry,
+          status: `Expires in ${daysUntilExpiry} days`,
+          severity: 'warning'
+        })
+      } else if (daysUntilExpiry <= 30) {
+        alerts.info.push({
+          skuPartNumber: sku.skuPartNumber,
+          expirationDate: sku.expirationDateTime,
+          daysLeft: daysUntilExpiry,
+          status: `Expires in ${daysUntilExpiry} days`,
+          severity: 'info'
+        })
+      }
+
+      // Also check for suspended subscriptions
+      if (sku.prepaidUnits?.suspended > 0) {
+        alerts.critical.push({
+          skuPartNumber: sku.skuPartNumber,
+          status: `SUSPENDED (${sku.prepaidUnits.suspended} units)`,
+          severity: 'critical',
+          type: 'suspended'
+        })
+      }
+    })
+
+    console.log(`✓ License expiration alerts: ${alerts.critical.length} critical, ${alerts.warning.length} warning`)
+    res.json({
+      success: true,
+      data: alerts
+    })
+  } catch (error) {
+    console.warn('⚠️ License expiration fetch failed:', error.message)
+    res.json({ success: true, data: { critical: [], warning: [], info: [] } })
+  }
+})
+
+// ============================================================
+// PHASE 1: Service Plan Conflict Detection
+// ============================================================
+app.get('/api/licenses/service-plan-conflicts', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const conflicts = {
+      exchangeDisabled: [],
+      teamsDisabled: [],
+      sharepointDisabled: [],
+      total: 0
+    }
+
+    // Get users with license details
+    const users = await graphClient
+      .api('/users')
+      .select(['id', 'displayName', 'userPrincipalName'])
+      .top(500)
+      .get()
+
+    for (const user of (users.value || []).slice(0, 100)) {
+      try {
+        const licenseDetails = await graphClient
+          .api(`/users/${user.id}/licenseDetails`)
+          .get()
+
+        const userLicenses = licenseDetails.value || []
+
+        for (const license of userLicenses) {
+          const servicePlans = license.servicePlans || []
+
+          // Check Exchange status
+          const exchangePlan = servicePlans.find(sp =>
+            sp.serviceName && sp.serviceName.toLowerCase().includes('exchange')
+          )
+          if (exchangePlan && exchangePlan.provisioningStatus === 'Disabled') {
+            conflicts.exchangeDisabled.push({
+              displayName: user.displayName,
+              userPrincipalName: user.userPrincipalName,
+              license: license.skuPartNumber,
+              issue: 'Exchange service disabled but license assigned'
+            })
+          }
+
+          // Check Teams status
+          const teamsPlan = servicePlans.find(sp =>
+            sp.serviceName && sp.serviceName.toLowerCase().includes('teams')
+          )
+          if (teamsPlan && teamsPlan.provisioningStatus === 'Disabled') {
+            conflicts.teamsDisabled.push({
+              displayName: user.displayName,
+              userPrincipalName: user.userPrincipalName,
+              license: license.skuPartNumber,
+              issue: 'Teams service disabled but license assigned'
+            })
+          }
+
+          // Check SharePoint/OneDrive status
+          const sharePlan = servicePlans.find(sp =>
+            sp.serviceName && (sp.serviceName.toLowerCase().includes('sharepoint') ||
+                               sp.serviceName.toLowerCase().includes('onedrive'))
+          )
+          if (sharePlan && sharePlan.provisioningStatus === 'Disabled') {
+            conflicts.sharepointDisabled.push({
+              displayName: user.displayName,
+              userPrincipalName: user.userPrincipalName,
+              license: license.skuPartNumber,
+              issue: 'SharePoint/OneDrive disabled but license assigned'
+            })
+          }
+        }
+      } catch (error) {
+        console.warn(`⚠️ Could not check conflicts for user ${user.displayName}:`, error.message)
+      }
+    }
+
+    conflicts.total = conflicts.exchangeDisabled.length + conflicts.teamsDisabled.length + conflicts.sharepointDisabled.length
+
+    console.log(`✓ Service plan conflicts detected: ${conflicts.total} total`)
+    res.json({
+      success: true,
+      data: conflicts
+    })
+  } catch (error) {
+    console.warn('⚠️ Service plan conflict detection failed:', error.message)
+    res.json({ success: true, data: { exchangeDisabled: [], teamsDisabled: [], sharepointDisabled: [], total: 0 } })
+  }
+})
+
+// ============================================================
+// PHASE 1: Assignment Error Tracking
+// ============================================================
+app.get('/api/licenses/assignment-errors', async (req, res) => {
+  try {
+    if (!graphClient) {
+      throw new Error('Graph Client not initialized')
+    }
+
+    const errors = {
+      failedAssignments: [],
+      pendingAssignments: [],
+      partialAssignments: [],
+      total: 0
+    }
+
+    // Get users with license details
+    const users = await graphClient
+      .api('/users')
+      .select(['id', 'displayName', 'userPrincipalName'])
+      .top(500)
+      .get()
+
+    for (const user of (users.value || []).slice(0, 100)) {
+      try {
+        const licenseDetails = await graphClient
+          .api(`/users/${user.id}/licenseDetails`)
+          .get()
+
+        const userLicenses = licenseDetails.value || []
+
+        for (const license of userLicenses) {
+          const servicePlans = license.servicePlans || []
+
+          // Count service plan statuses
+          const pendingPlans = servicePlans.filter(sp =>
+            sp.provisioningStatus === 'PendingActivation' ||
+            sp.provisioningStatus === 'PendingProvisioning'
+          ).length
+
+          const disabledPlans = servicePlans.filter(sp =>
+            sp.provisioningStatus === 'Disabled'
+          ).length
+
+          // Track pending assignments
+          if (pendingPlans > 0) {
+            errors.pendingAssignments.push({
+              displayName: user.displayName,
+              userPrincipalName: user.userPrincipalName,
+              license: license.skuPartNumber,
+              pendingServices: pendingPlans,
+              totalServices: servicePlans.length,
+              status: `${pendingPlans}/${servicePlans.length} services pending activation`
+            })
+          }
+
+          // Track partial assignments (some services disabled/pending)
+          if (disabledPlans > 0 && disabledPlans < servicePlans.length) {
+            errors.partialAssignments.push({
+              displayName: user.displayName,
+              userPrincipalName: user.userPrincipalName,
+              license: license.skuPartNumber,
+              disabledServices: disabledPlans,
+              totalServices: servicePlans.length,
+              status: `${disabledPlans}/${servicePlans.length} services disabled`
+            })
+          }
+        }
+      } catch (error) {
+        // Assignment failed completely
+        errors.failedAssignments.push({
+          displayName: user.displayName,
+          userPrincipalName: user.userPrincipalName,
+          error: error.message,
+          status: 'Assignment fetch failed'
+        })
+      }
+    }
+
+    errors.total = errors.failedAssignments.length + errors.pendingAssignments.length + errors.partialAssignments.length
+
+    console.log(`✓ Assignment errors tracked: ${errors.total} total (${errors.failedAssignments.length} failed, ${errors.pendingAssignments.length} pending, ${errors.partialAssignments.length} partial)`)
+    res.json({
+      success: true,
+      data: errors
+    })
+  } catch (error) {
+    console.warn('⚠️ Assignment error tracking failed:', error.message)
+    res.json({ success: true, data: { failedAssignments: [], pendingAssignments: [], partialAssignments: [], total: 0 } })
+  }
+})
+
+// ============================================================
 // Usage Analytics
 // ============================================================
 app.get('/api/usage-analytics', async (req, res) => {

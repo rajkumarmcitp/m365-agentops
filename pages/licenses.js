@@ -7,7 +7,8 @@ let licenseSummary = { total: 0, consumed: 0, available: 0, utilizationPct: 0 }
 let userAssignments = []
 let groupLicensing = []
 let complianceData = {}
-let activeTab = 'summary'
+let criticalAlerts = { expirationAlerts: {}, servicePlanConflicts: {}, assignmentErrors: {} }
+let activeTab = 'alerts'
 
 // Pagination state for compliance findings
 let compliancePagination = {
@@ -43,6 +44,7 @@ function calculateKPISummary() {
 }
 
 const TABS = [
+  { id: 'alerts', label: 'Critical Alerts', icon: 'ti-alert-triangle' },
   { id: 'summary', label: 'Executive Summary', icon: 'ti-layout-dashboard' },
   { id: 'inventory', label: 'License Inventory', icon: 'ti-box' },
   { id: 'services', label: 'Service Plans', icon: 'ti-list-check' },
@@ -73,12 +75,15 @@ export async function initLicenses() {
   // Fetch all license data in parallel
   try {
     console.log('📡 Fetching comprehensive license data...')
-    const [licenses, assignments, groups, compliance, servicePlans] = await Promise.all([
+    const [licenses, assignments, groups, compliance, servicePlans, expirationAlerts, servicePlanConflicts, assignmentErrors] = await Promise.all([
       callAPI('/licenses'),
       callAPI('/licenses/assignments'),
       callAPI('/licenses/groups'),
       callAPI('/licenses/compliance'),
-      callAPI('/licenses/service-plans-detail')
+      callAPI('/licenses/service-plans-detail'),
+      callAPI('/licenses/expiration-alerts'),
+      callAPI('/licenses/service-plan-conflicts'),
+      callAPI('/licenses/assignment-errors')
     ])
 
     if (licenses.success && licenses.data) {
@@ -101,7 +106,16 @@ export async function initLicenses() {
     if (compliance.success && compliance.data) {
       complianceData = compliance.data
     }
-    console.log(`✅ Loaded all license data with service plans`)
+    if (expirationAlerts.success && expirationAlerts.data) {
+      criticalAlerts.expirationAlerts = expirationAlerts.data
+    }
+    if (servicePlanConflicts.success && servicePlanConflicts.data) {
+      criticalAlerts.servicePlanConflicts = servicePlanConflicts.data
+    }
+    if (assignmentErrors.success && assignmentErrors.data) {
+      criticalAlerts.assignmentErrors = assignmentErrors.data
+    }
+    console.log(`✅ Loaded all license data with critical alerts`)
   } catch (error) {
     console.error('❌ Error loading license data:', error)
   }
@@ -492,6 +506,7 @@ function renderTab(tabId) {
   licenseSummary = calculateKPISummary()
 
   switch(tabId) {
+    case 'alerts': return renderCriticalAlerts()
     case 'summary': return renderExecutiveSummary()
     case 'inventory': return renderInventory()
     case 'services': return renderServicePlans()
@@ -500,6 +515,142 @@ function renderTab(tabId) {
     case 'compliance': return renderCompliance()
     default: return ''
   }
+}
+
+function renderCriticalAlerts() {
+  const { expirationAlerts, servicePlanConflicts, assignmentErrors } = criticalAlerts
+
+  return `
+    <div style="margin-bottom:24px">
+      <!-- Expiration Alerts -->
+      ${expirationAlerts.critical && expirationAlerts.critical.length > 0 ? `
+        <div class="card mb-3">
+          <div class="card-header">
+            <span class="card-title"><i class="ti ti-alert-triangle"></i> 🔴 Critical: License Expiration</span>
+          </div>
+          <div style="padding:12px">
+            <div style="display:grid;gap:8px">
+              ${expirationAlerts.critical.map(alert => `
+                <div style="padding:12px;background:rgba(239, 68, 68, 0.05);border-radius:6px;border-left:3px solid var(--clr-danger-text)">
+                  <div style="font-weight:600;font-size:11px;color:var(--color-text-primary)">${alert.skuPartNumber}</div>
+                  <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${alert.status}</div>
+                  ${alert.expirationDate ? `<div style="font-size:9px;color:var(--color-text-tertiary);margin-top:2px">Expires: ${new Date(alert.expirationDate).toLocaleDateString()}</div>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
+      ${expirationAlerts.warning && expirationAlerts.warning.length > 0 ? `
+        <div class="card mb-3">
+          <div class="card-header">
+            <span class="card-title"><i class="ti ti-alert-circle"></i> 🟠 Warning: License Expiring Soon</span>
+          </div>
+          <div style="padding:12px">
+            <div style="display:grid;gap:8px">
+              ${expirationAlerts.warning.map(alert => `
+                <div style="padding:12px;background:rgba(250, 190, 88, 0.05);border-radius:6px;border-left:3px solid var(--clr-warning-text)">
+                  <div style="font-weight:600;font-size:11px;color:var(--color-text-primary)">${alert.skuPartNumber}</div>
+                  <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${alert.status}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Service Plan Conflicts -->
+      ${servicePlanConflicts.total > 0 ? `
+        <div class="card mb-3">
+          <div class="card-header">
+            <span class="card-title"><i class="ti ti-alert-octagon"></i> 🟠 Service Plan Conflicts Detected</span>
+          </div>
+          <div style="padding:12px">
+            ${servicePlanConflicts.exchangeDisabled && servicePlanConflicts.exchangeDisabled.length > 0 ? `
+              <div style="margin-bottom:12px">
+                <div style="font-weight:600;font-size:10px;color:var(--color-text-primary);margin-bottom:8px">Exchange Disabled (${servicePlanConflicts.exchangeDisabled.length} users)</div>
+                <div style="display:grid;gap:6px">
+                  ${servicePlanConflicts.exchangeDisabled.slice(0, 5).map(conflict => `
+                    <div style="padding:8px;background:var(--color-background-secondary);border-radius:4px;font-size:10px">
+                      <div style="font-weight:500">${conflict.displayName}</div>
+                      <div style="color:var(--color-text-tertiary);font-size:9px">${conflict.userPrincipalName}</div>
+                    </div>
+                  `).join('')}
+                  ${servicePlanConflicts.exchangeDisabled.length > 5 ? `<div style="text-align:center;font-size:9px;color:var(--clr-info-text);padding:8px">+ ${servicePlanConflicts.exchangeDisabled.length - 5} more</div>` : ''}
+                </div>
+              </div>
+            ` : ''}
+            ${servicePlanConflicts.teamsDisabled && servicePlanConflicts.teamsDisabled.length > 0 ? `
+              <div style="margin-bottom:12px">
+                <div style="font-weight:600;font-size:10px;color:var(--color-text-primary);margin-bottom:8px">Teams Disabled (${servicePlanConflicts.teamsDisabled.length} users)</div>
+                <div style="display:grid;gap:6px">
+                  ${servicePlanConflicts.teamsDisabled.slice(0, 5).map(conflict => `
+                    <div style="padding:8px;background:var(--color-background-secondary);border-radius:4px;font-size:10px">
+                      <div style="font-weight:500">${conflict.displayName}</div>
+                      <div style="color:var(--color-text-tertiary);font-size:9px">${conflict.userPrincipalName}</div>
+                    </div>
+                  `).join('')}
+                  ${servicePlanConflicts.teamsDisabled.length > 5 ? `<div style="text-align:center;font-size:9px;color:var(--clr-info-text);padding:8px">+ ${servicePlanConflicts.teamsDisabled.length - 5} more</div>` : ''}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Assignment Errors -->
+      ${assignmentErrors.total > 0 ? `
+        <div class="card mb-3">
+          <div class="card-header">
+            <span class="card-title"><i class="ti ti-exclamation-mark"></i> 🟠 Assignment Issues Detected</span>
+          </div>
+          <div style="padding:12px">
+            ${assignmentErrors.failedAssignments && assignmentErrors.failedAssignments.length > 0 ? `
+              <div style="margin-bottom:12px">
+                <div style="font-weight:600;font-size:10px;color:var(--clr-danger-text);margin-bottom:8px">Failed Assignments (${assignmentErrors.failedAssignments.length})</div>
+                <div style="display:grid;gap:6px">
+                  ${assignmentErrors.failedAssignments.slice(0, 5).map(err => `
+                    <div style="padding:8px;background:rgba(239, 68, 68, 0.05);border-radius:4px;font-size:10px;border-left:3px solid var(--clr-danger-text)">
+                      <div style="font-weight:500">${err.displayName}</div>
+                      <div style="color:var(--color-text-tertiary);font-size:9px">${err.userPrincipalName}</div>
+                    </div>
+                  `).join('')}
+                  ${assignmentErrors.failedAssignments.length > 5 ? `<div style="text-align:center;font-size:9px;color:var(--clr-info-text);padding:8px">+ ${assignmentErrors.failedAssignments.length - 5} more</div>` : ''}
+                </div>
+              </div>
+            ` : ''}
+            ${assignmentErrors.pendingAssignments && assignmentErrors.pendingAssignments.length > 0 ? `
+              <div style="margin-bottom:12px">
+                <div style="font-weight:600;font-size:10px;color:var(--clr-warning-text);margin-bottom:8px">Pending Activations (${assignmentErrors.pendingAssignments.length})</div>
+                <div style="display:grid;gap:6px">
+                  ${assignmentErrors.pendingAssignments.slice(0, 5).map(err => `
+                    <div style="padding:8px;background:rgba(250, 190, 88, 0.05);border-radius:4px;font-size:10px;border-left:3px solid var(--clr-warning-text)">
+                      <div style="font-weight:500">${err.displayName} - ${err.status}</div>
+                      <div style="color:var(--color-text-tertiary);font-size:9px">${err.license}</div>
+                    </div>
+                  `).join('')}
+                  ${assignmentErrors.pendingAssignments.length > 5 ? `<div style="text-align:center;font-size:9px;color:var(--clr-info-text);padding:8px">+ ${assignmentErrors.pendingAssignments.length - 5} more</div>` : ''}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- No Alerts -->
+      ${(!expirationAlerts.critical || expirationAlerts.critical.length === 0) &&
+        (!expirationAlerts.warning || expirationAlerts.warning.length === 0) &&
+        (servicePlanConflicts.total === 0) &&
+        (assignmentErrors.total === 0) ? `
+        <div class="card" style="text-align:center;padding:40px 20px;background:rgba(34, 197, 94, 0.05)">
+          <i class="ti ti-check-circle" style="font-size:32px;color:var(--clr-success-text);margin-bottom:12px;display:block"></i>
+          <div style="font-weight:600;font-size:12px;color:var(--clr-success-text)">✅ No Critical Alerts</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px">All license governance checks passed</div>
+        </div>
+      ` : ''}
+    </div>
+  `
 }
 
 function renderExecutiveSummary() {
