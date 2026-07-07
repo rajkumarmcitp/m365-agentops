@@ -17,6 +17,9 @@ let compliancePagination = {
   overlicense: { currentPage: 1, pageSize: 10 }
 }
 
+// Service plans modal storage
+let servicePlansStore = {}
+
 // Helper function to check if license is free
 function isFreeLicense(licenseName) {
   if (!licenseName) return false
@@ -605,7 +608,11 @@ function getStatusColor(status) {
   }
 }
 
-window.openServicePlansModal = function(licenseName, servicePlans) {
+window.openServicePlansModal = function(skuId) {
+  const servicePlans = servicePlansStore[skuId] || { name: 'Unknown', plans: [] }
+  const licenseName = servicePlans.name
+  const plans = servicePlans.plans || []
+
   const modal = document.createElement('div')
   modal.id = 'service-plans-modal'
   modal.style.cssText = `
@@ -621,9 +628,9 @@ window.openServicePlansModal = function(licenseName, servicePlans) {
     z-index: 9999;
   `
 
-  const enabledCount = (servicePlans || []).filter(sp => sp.provisioningStatus === 'Success').length
-  const disabledCount = (servicePlans || []).filter(sp => sp.provisioningStatus === 'Disabled').length
-  const pendingCount = (servicePlans || []).filter(sp => sp.provisioningStatus?.toLowerCase().includes('pending')).length
+  const enabledCount = (plans || []).filter(sp => sp.provisioningStatus === 'Success').length
+  const disabledCount = (plans || []).filter(sp => sp.provisioningStatus === 'Disabled').length
+  const pendingCount = (plans || []).filter(sp => sp.provisioningStatus?.toLowerCase().includes('pending')).length
 
   modal.innerHTML = `
     <div style="background: var(--color-background-primary); border-radius: 8px; width: 90%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
@@ -631,7 +638,7 @@ window.openServicePlansModal = function(licenseName, servicePlans) {
         <div>
           <h2 style="margin: 0; font-size: 18px; font-weight: 700;">${licenseName}</h2>
           <div style="font-size: 11px; color: var(--color-text-secondary); margin-top: 4px;">
-            Total: <strong>${servicePlans.length}</strong> •
+            Total: <strong>${plans.length}</strong> •
             <span style="color: var(--clr-success-text);">✓ ${enabledCount}</span> •
             <span style="color: var(--clr-danger-text);">✗ ${disabledCount}</span>
             ${pendingCount > 0 ? `• <span style="color: var(--clr-warning-text);">⏳ ${pendingCount}</span>` : ''}
@@ -641,9 +648,9 @@ window.openServicePlansModal = function(licenseName, servicePlans) {
       </div>
 
       <div style="flex: 1; overflow-y: auto; padding: 20px;">
-        ${servicePlans.length > 0 ? `
+        ${plans.length > 0 ? `
           <div style="display: grid; gap: 12px;">
-            ${servicePlans.map((sp, idx) => `
+            ${plans.map((sp, idx) => `
               <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--color-background-secondary); border-radius: 6px; border-left: 3px solid ${getStatusColor(sp.provisioningStatus)};">
                 <div style="flex: 1;">
                   <div style="font-weight: 600; font-size: 11px;">${idx + 1}. ${sp.serviceName || '—'}</div>
@@ -672,10 +679,21 @@ window.openServicePlansModal = function(licenseName, servicePlans) {
 }
 
 function renderServicePlans() {
+  // Store service plans data for modal access
+  getFilteredLicensesForKPI().forEach(l => {
+    servicePlansStore[l.skuId] = {
+      name: l.name,
+      plans: (l.servicePlans || []).map(sp => ({
+        serviceName: sp.serviceName,
+        provisioningStatus: sp.provisioningStatus
+      }))
+    }
+  })
+
   return `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:16px">
       ${getFilteredLicensesForKPI().map(l => `
-        <div class="card" style="cursor: pointer; transition: all 0.2s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow=''; this.style.transform=''" onclick="window.openServicePlansModal('${(l.name || '').replace(/'/g, "\\'")}', ${JSON.stringify((l.servicePlans || []).map(sp => ({serviceName: sp.serviceName, provisioningStatus: sp.provisioningStatus})))})">
+        <div class="card" style="cursor: pointer; transition: all 0.2s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow=''; this.style.transform=''" onclick="window.openServicePlansModal('${l.skuId}')">
           <div class="card-header">
             <span class="card-title">${l.name || '—'}</span>
             <span class="badge ${l.statusCls || 'success'}">${l.utilizationPct || 0}%</span>
