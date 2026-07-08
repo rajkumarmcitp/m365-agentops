@@ -372,44 +372,94 @@ function renderOperations(el, catalog) {
     grouped[op.group].push(op)
   })
 
+  // Determine if we have an active operation group selected
+  const activeGroupName = window.activeGroupName
+  const activeGroupOps = window.activeGroupOps || []
+  const hasActiveGroup = activeGroupName && activeGroupOps.length > 0
+
   area.innerHTML = `
-    <div class="card">
-      <div class="card-title mb-3"><i class="ti ti-list-check"></i> Select operation group</div>
-      <div class="op-cards-grid">
-        ${Object.entries(grouped).map(([grpName, ops]) => `
-          <div class="op-group-card" data-group="${grpName}">
-            <div class="op-group-title">${grpName}</div>
-            <div class="op-group-count">${ops.length} action${ops.length !== 1 ? 's' : ''}</div>
-            <div style="margin-top:8px;font-size:11px;color:var(--color-text-secondary)">Click to configure</div>
+    <div class="portal-operations-layout">
+      <!-- Left Sidebar: Operation Groups -->
+      <div class="portal-ops-sidebar">
+        <div class="portal-ops-header">
+          <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:8px">
+            <i class="ti ti-list-check"></i> Operation Groups
           </div>
-        `).join('')}
+        </div>
+        <div class="portal-ops-list">
+          ${Object.entries(grouped).map(([grpName, ops]) => `
+            <div class="portal-op-group-item ${activeGroupName === grpName ? 'active' : ''}" data-group="${grpName}">
+              <div class="op-item-title">${grpName}</div>
+              <div class="op-item-count">${ops.length} action${ops.length !== 1 ? 's' : ''}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Right Content: Form -->
+      <div class="portal-ops-content">
+        ${hasActiveGroup ? renderOperationForm(catalog, activeGroupName, activeGroupOps) : '<div class="portal-empty-content"><div style="text-align:center;padding:48px 24px"><i class="ti ti-click" style="font-size:48px;color:var(--color-text-secondary);margin-bottom:16px;display:block"></i><p style="color:var(--color-text-secondary);font-size:14px">Select an operation group from the left to begin</p></div></div>'}
       </div>
     </div>
-
-    <div id="svc-form-preview"></div>
   `
 
-  // Group card click handler - proceed to form view
-  area.querySelectorAll('.op-group-card').forEach(groupCard => {
-    groupCard.addEventListener('click', () => {
-      const grpName = groupCard.dataset.group
+  // Group item click handler
+  area.querySelectorAll('.portal-op-group-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const grpName = item.dataset.group
       const opsData = grouped[grpName] || []
 
-      // Set active operation to first one in group
       if (opsData.length > 0) {
         activeOpId = opsData[0].id
-        // Store group name for form rendering
         window.activeGroupName = grpName
         window.activeGroupOps = opsData
-      }
+        renderOperations(el, catalog)
 
-      // Switch to form view
-      portalView = 'form'
-      formValues = {}
-      const pageEl = document.getElementById('page-portal')
-      render(pageEl)
+        // Wire up event listeners for the new form
+        wireFormEvents(el, catalog)
+      }
     })
   })
+
+  // Wire form events if there's an active group
+  if (hasActiveGroup) {
+    wireFormEvents(el, catalog)
+  }
+}
+
+function wireFormEvents(el, catalog) {
+  // Action selector change handler
+  const actionSelector = el.querySelector('#action-selector')
+  if (actionSelector) {
+    actionSelector.addEventListener('change', (e) => {
+      activeOpId = e.target.value
+      formValues = {}
+      const area = el.querySelector('#svc-ops-area')
+      renderOperations(area ? area.parentElement : el, catalog)
+    })
+  }
+
+  // Form submission
+  const form = el.querySelector('#operation-form')
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault()
+      const serviceId = resolveServiceId()
+      const op = getOperation(serviceId, activeOpId)
+      if (op) {
+        handleSubmit(el, op)
+      }
+    })
+  }
+
+  // Wire conditional field visibility
+  const serviceId = resolveServiceId()
+  const op = getOperation(serviceId, activeOpId)
+  if (op) {
+    wireFieldDependencies(el, op)
+    setupUserSearch(el)
+  }
+}
 
   if (activeOpId) {
     const card = area.querySelector(`.op-card[data-op="${activeOpId}"]`)
@@ -547,6 +597,70 @@ function loadOperationForm(container, catalog, opId) {
           `).join('')}
         </div>
       </div>
+    </div>
+  `
+}
+
+// ============================================================
+// OPERATION FORM — Render form for operation group in sidebar
+// ============================================================
+function renderOperationForm(catalog, groupName, groupOps) {
+  if (groupOps.length === 0) return '<div class="portal-empty-content">No operations available</div>'
+
+  const op = catalog.operations.find(o => o.id === activeOpId)
+  if (!op) return '<div class="portal-empty-content">Operation not found</div>'
+
+  const wfSteps = buildWorkflow(op)
+  const hasMultipleOps = groupOps.length > 1
+
+  return `
+    <div class="portal-form-wrapper">
+      <div class="portal-form-header">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+          <div>
+            <div class="portal-form-title">${groupName}</div>
+            <div class="portal-form-subtitle">${hasMultipleOps ? 'Select an action' : op.label}</div>
+          </div>
+        </div>
+
+        ${hasMultipleOps ? `
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;background:linear-gradient(135deg, var(--clr-info-bg) 0%, rgba(230, 241, 251, 0.3) 100%);border-radius:8px;border-left:3px solid var(--clr-info-text);margin-bottom:20px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--clr-info-text);text-transform:uppercase;letter-spacing:0.2px;margin:0">
+              <i class="ti ti-list-check" style="font-size:14px"></i> Action Type
+            </label>
+            <select id="action-selector" class="portal-action-select">
+              ${groupOps.map(o => `<option value="${o.id}">${o.label}</option>`).join('')}
+            </select>
+          </div>
+        ` : ''}
+      </div>
+
+      <form id="operation-form" class="portal-operation-form">
+        <div class="portal-form-fields">
+          ${op.fields.map(f => renderField(f)).join('')}
+        </div>
+
+        <div style="background:var(--clr-info-bg);border:1px solid var(--clr-info-border);border-radius:8px;padding:16px;margin-bottom:20px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <i class="ti ti-robot" style="font-size:18px;color:var(--clr-teal-text);flex-shrink:0;margin-top:2px"></i>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px"><i class="ti ti-sparkles" style="margin-right:6px"></i>AI Agent Validation</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                ${op.agentChecks.map(c => `
+                  <div style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:flex-start;gap:6px">
+                    <i class="ti ti-check" style="color:var(--clr-teal-text);font-size:11px;flex-shrink:0;margin-top:2px"></i>
+                    <span>${c}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="portal-form-actions">
+          <button type="submit" class="btn-submit" id="form-submit"><i class="ti ti-send"></i> Submit Request</button>
+        </div>
+      </form>
     </div>
   `
 }
