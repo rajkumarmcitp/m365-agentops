@@ -608,50 +608,51 @@ function renderOperationForm(catalog, groupName, groupOps) {
 
   return `
     <div class="portal-form-wrapper">
-      <div class="portal-form-header">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
-          <div>
-            <div class="portal-form-title">${groupName}</div>
-            <div class="portal-form-subtitle">${hasMultipleOps ? 'Select an action' : op.label}</div>
-          </div>
-        </div>
+      <!-- Operation Header -->
+      <div class="portal-ops-header-section">
+        <div class="portal-ops-group-name">${groupName}</div>
+        ${hasMultipleOps ? `<div class="portal-ops-select-prompt">Select an action</div>` : ''}
+      </div>
 
+      <form id="operation-form" class="portal-operation-form">
+        <!-- Action Selector -->
         ${hasMultipleOps ? `
-          <div style="display:flex;flex-direction:column;gap:8px;padding:16px;background:linear-gradient(135deg, var(--clr-info-bg) 0%, rgba(230, 241, 251, 0.3) 100%);border-radius:8px;border-left:3px solid var(--clr-info-text);margin-bottom:20px">
-            <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--clr-info-text);text-transform:uppercase;letter-spacing:0.2px;margin:0">
-              <i class="ti ti-list-check" style="font-size:14px"></i> Action Type
+          <div class="portal-action-group">
+            <label class="portal-action-label">
+              <i class="ti ti-list-check"></i> Action Type
             </label>
             <select id="action-selector" class="portal-action-select">
               ${groupOps.map(o => `<option value="${o.id}">${o.label}</option>`).join('')}
             </select>
           </div>
         ` : ''}
-      </div>
 
-      <form id="operation-form" class="portal-operation-form">
+        <!-- Form Fields -->
         <div class="portal-form-fields">
           ${op.fields.map(f => renderField(f)).join('')}
         </div>
 
-        <div style="background:var(--clr-info-bg);border:1px solid var(--clr-info-border);border-radius:8px;padding:16px;margin-bottom:20px">
-          <div style="display:flex;align-items:flex-start;gap:12px">
-            <i class="ti ti-robot" style="font-size:18px;color:var(--clr-teal-text);flex-shrink:0;margin-top:2px"></i>
-            <div style="flex:1">
-              <div style="font-size:12px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px"><i class="ti ti-sparkles" style="margin-right:6px"></i>AI Agent Validation</div>
-              <div style="display:flex;flex-direction:column;gap:6px">
-                ${op.agentChecks.map(c => `
-                  <div style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:flex-start;gap:6px">
-                    <i class="ti ti-check" style="color:var(--clr-teal-text);font-size:11px;flex-shrink:0;margin-top:2px"></i>
-                    <span>${c}</span>
-                  </div>
-                `).join('')}
+        <!-- AI Agent Validation Section -->
+        <div class="portal-agent-validation">
+          <div class="portal-validation-header">
+            <i class="ti ti-robot"></i>
+            <span><i class="ti ti-sparkles" style="margin-right:6px"></i>AI Agent Validation</span>
+          </div>
+          <div class="portal-validation-checks">
+            ${op.agentChecks.map(c => `
+              <div class="portal-validation-check">
+                <i class="ti ti-check"></i>
+                <span>${c}</span>
               </div>
-            </div>
+            `).join('')}
           </div>
         </div>
 
+        <!-- Form Actions -->
         <div class="portal-form-actions">
-          <button type="submit" class="btn-submit" id="form-submit"><i class="ti ti-send"></i> Submit Request</button>
+          <button type="submit" class="btn-submit" id="form-submit">
+            <i class="ti ti-send"></i> Submit Request
+          </button>
         </div>
       </form>
     </div>
