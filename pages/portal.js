@@ -568,8 +568,8 @@ function renderFormView(el) {
 
   el.innerHTML = `
     <div style="max-width:1000px;margin:0 auto">
-      <div style="margin-bottom:32px">
-        <button class="btn" id="form-back" style="margin-bottom:16px"><i class="ti ti-arrow-left"></i> Back to Services</button>
+      <div style="margin-bottom:40px">
+        <button class="btn" id="form-back" style="margin-bottom:24px;background:transparent;border:none;color:var(--clr-info-text);padding:0;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 250ms"><i class="ti ti-arrow-left" style="font-size:16px"></i> Back to Operation Groups</button>
 
         <div class="form-container">
           <div class="form-header">
@@ -583,11 +583,12 @@ function renderFormView(el) {
           </div>
 
           ${hasMultipleOps ? `
-            <div class="form-fields" style="margin-bottom:24px">
-              <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">
-                <i class="ti ti-list"></i> Choose Action
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px;padding:24px;background:linear-gradient(135deg, var(--clr-info-bg) 0%, rgba(230, 241, 251, 0.3) 100%);border-radius:10px;border-left:4px solid var(--clr-info-text)">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--clr-info-text);text-transform:uppercase;letter-spacing:0.3px">
+                <i class="ti ti-list-check" style="font-size:16px"></i> Select Action Type
               </label>
-              <select id="action-selector" style="width:100%;padding:12px;border:1px solid var(--color-border);border-radius:6px;background:white;color:var(--color-text-primary);font-size:13px;cursor:pointer">
+              <p style="margin:0;font-size:12px;color:var(--color-text-secondary);line-height:1.5">Choose the specific action you want to perform for ${window.activeGroupName || group.name}</p>
+              <select id="action-selector">
                 ${groupOps.map(op => `<option value="${op.id}">${op.label}</option>`).join('')}
               </select>
             </div>
