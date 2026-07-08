@@ -290,7 +290,7 @@ function renderSecurity() {
         </div>
         <div style="margin-bottom:16px">
           <div style="font-size:11px;font-weight:600;margin-bottom:8px">Authentication Methods</div>
-          ${s.authenticationMethods.map(m => `
+          ${(s.authenticationMethods || []).map(m => `
             <div style="padding:8px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;justify-content:space-between;font-size:11px">
               <span>${m.type}</span>
               <span style="color:${m.status === 'Enabled' ? 'var(--clr-success-text)' : 'var(--color-text-tertiary)'}">${m.status}</span>
@@ -299,7 +299,7 @@ function renderSecurity() {
         </div>
         <div>
           <div style="font-size:11px;font-weight:600;margin-bottom:8px">Risk Detections (Last 30d)</div>
-          ${s.riskDetections.map(r => `
+          ${(s.riskDetections || []).map(r => `
             <div style="padding:8px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;justify-content:space-between;font-size:11px">
               <span>${r.type}</span>
               <span style="color:${r.status === 'No' ? 'var(--clr-success-text)' : 'var(--color-text-tertiary)'}">${r.status}</span>
@@ -402,9 +402,9 @@ function renderGroups() {
   return `
     <div style="display:flex;flex-direction:column;gap:16px">
       <div class="card">
-        <div class="card-header"><span class="card-title">Security Groups (${GROUP_MEMBERSHIPS.securityGroups.length})</span></div>
+        <div class="card-header"><span class="card-title">Security Groups (${(userData.groups?.securityGroups || []).length})</span></div>
         <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
-          ${userData.groups.securityGroups.map(g => `
+          ${(userData.groups?.securityGroups || []).map(g => `
             <div style="padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px">
               <div style="font-weight:600">${g.name}</div>
               <div style="color:var(--color-text-tertiary);font-size:9px">${g.type} • ${g.membershipType}</div>
@@ -413,9 +413,9 @@ function renderGroups() {
         </div>
       </div>
       <div class="card">
-        <div class="card-header"><span class="card-title">Microsoft 365 Groups (${GROUP_MEMBERSHIPS.microsoft365Groups.length})</span></div>
+        <div class="card-header"><span class="card-title">Microsoft 365 Groups (${(userData.groups?.microsoft365Groups || []).length})</span></div>
         <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
-          ${userData.groups.microsoft365Groups.map(g => `
+          ${(userData.groups?.microsoft365Groups || []).map(g => `
             <div style="padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px">
               <div style="font-weight:600">${g.name}</div>
               <div style="color:var(--color-text-tertiary);font-size:9px">${g.teamConnected ? '✓ Teams' : 'No Teams'} • ${g.dynamicMembership ? 'Dynamic' : 'Static'}</div>
@@ -558,7 +558,7 @@ function renderTeams() {
         ` : ''}
         <div style="font-size:11px;font-weight:600">My Teams</div>
         <div>
-          ${t.teams.map(tm => `
+          ${(t.teams || []).map(tm => `
             <div style="padding:8px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px">
               <div style="font-weight:600">${tm.name}</div>
               <div style="color:var(--color-text-tertiary);font-size:9px">${tm.role} • Owner: ${tm.owner}</div>
@@ -636,7 +636,7 @@ function renderCopilot() {
       <div class="card">
         <div class="card-header"><span class="card-title">Recommendations</span></div>
         <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
-          ${c.recommendations.map(r => `
+          ${(c.recommendations || []).map(r => `
             <div style="padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
               <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px">
                 <div style="font-weight:600;font-size:11px">${r.title}</div>
