@@ -80,19 +80,19 @@
 .portal-info-banner {
   background: linear-gradient(to right, var(--clr-info-bg), rgba(230, 241, 251, 0.5));
   border-left: 4px solid var(--clr-info-text);
-  padding: 16px 20px;
+  padding: 12px 16px;
   border-radius: 8px;
   margin-bottom: 32px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 13px;
-  line-height: 1.5;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.4;
   color: var(--color-text-primary);
 }
 
 .portal-info-banner i {
-  font-size: 20px;
+  font-size: 16px;
   color: var(--clr-info-text);
   flex-shrink: 0;
 }
