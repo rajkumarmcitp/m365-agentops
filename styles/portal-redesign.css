@@ -411,13 +411,53 @@
 }
 
 /* ============================================================
-   Service Operations Grid
+   Service Operations Grid — Grouped by Type
    ============================================================ */
 .op-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
   margin-bottom: 16px;
+}
+
+.op-group-card {
+  background: white;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 10px;
+  padding: 22px;
+  cursor: pointer;
+  transition: all 200ms;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  min-height: 120px;
+  justify-content: center;
+}
+
+.op-group-card:hover {
+  border-color: var(--clr-info-text);
+  box-shadow: 0 4px 12px rgba(12, 68, 124, 0.12);
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #fafbfc 0%, white 100%);
+}
+
+.op-group-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.op-group-count {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.op-action-item:hover {
+  background: var(--clr-info-bg);
+  color: var(--clr-info-text);
 }
 
 .op-card {

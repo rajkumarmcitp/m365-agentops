@@ -374,33 +374,53 @@ function renderOperations(el, catalog) {
 
   area.innerHTML = `
     <div class="card">
-      <div class="card-title mb-3"><i class="ti ti-list-check"></i> Select an action</div>
-      ${Object.entries(grouped).map(([grpName, ops]) => `
-        <div style="margin-bottom:20px">
-          <div class="section-heading">${grpName}</div>
-          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:12px;line-height:1.4;padding:0 12px">
-            ${buildWorkflow(ops[0]).map(s => s.label).join(' → ')}
+      <div class="card-title mb-3"><i class="ti ti-list-check"></i> Select operation group</div>
+      <div class="op-cards-grid">
+        ${Object.entries(grouped).map(([grpName, ops]) => `
+          <div class="op-group-card" data-group="${grpName}">
+            <div class="op-group-title">${grpName}</div>
+            <div class="op-group-count">${ops.length} action${ops.length !== 1 ? 's' : ''}</div>
+            <div class="op-group-actions" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--color-border-secondary);border-radius:8px;margin-top:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:100;min-width:220px">
+              ${ops.map(op => `
+                <div class="op-action-item" data-op="${op.id}" style="padding:12px 16px;border-bottom:1px solid var(--color-border-tertiary);cursor:pointer;font-size:13px;color:var(--color-text-primary)">
+                  ${op.label}
+                </div>
+              `).join('')}
+            </div>
           </div>
-          <div class="op-cards-grid">
-            ${ops.map(op => `
-              <div class="op-card ${activeOpId === op.id ? 'selected' : ''}" data-op="${op.id}">
-                <div class="op-card-title">${op.label}</div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `).join('')}
+        `).join('')}
+      </div>
     </div>
 
     <div id="svc-form-preview"></div>
   `
 
-  area.querySelectorAll('.op-card').forEach(card => {
-    card.addEventListener('click', () => {
-      area.querySelectorAll('.op-card').forEach(c => c.classList.remove('selected'))
-      card.classList.add('selected')
-      activeOpId = card.dataset.op
-      renderFormPreview(area, getCatalog(resolveServiceId()), activeOpId)
+  // Group card click handler - show/hide actions
+  area.querySelectorAll('.op-group-card').forEach(groupCard => {
+    groupCard.style.position = 'relative'
+    groupCard.addEventListener('click', (e) => {
+      if (e.target.classList.contains('op-action-item')) return
+
+      // Hide all other action lists
+      area.querySelectorAll('.op-group-actions').forEach(actions => {
+        actions.style.display = 'none'
+      })
+
+      // Toggle current actions
+      const actionsList = groupCard.querySelector('.op-group-actions')
+      actionsList.style.display = actionsList.style.display === 'none' ? 'block' : 'none'
+    })
+  })
+
+  // Action item click handler - select operation and show preview
+  area.querySelectorAll('.op-action-item').forEach(item => {
+    item.addEventListener('click', () => {
+      activeOpId = item.dataset.op
+      renderFormPreview(area, catalog, activeOpId)
+      // Hide actions list after selection
+      area.querySelectorAll('.op-group-actions').forEach(actions => {
+        actions.style.display = 'none'
+      })
     })
   })
 
