@@ -231,10 +231,13 @@ function renderLanding(el) {
       <span>Signed in as <strong>${u?.name}</strong> (${roleDesc[u?.role] || u?.role}). All requests are logged and validated by our AI Agent before provisioning.</span>
     </div>
 
-    <div style="margin-bottom:24px">
+    <div style="margin-bottom:20px">
       <div class="section-label">
-        <i class="ti ti-route"></i>
+        <i class="ti ti-workflow"></i>
         Request Approval & Provisioning Workflow
+      </div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-top:6px;font-weight:500">
+        Every request follows this 7-step process from submission to completion
       </div>
     </div>
 
