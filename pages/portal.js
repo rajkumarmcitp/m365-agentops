@@ -382,8 +382,8 @@ function renderOperations(el, catalog) {
       <!-- Left Sidebar: Operation Groups -->
       <div class="portal-ops-sidebar">
         <div class="portal-ops-header">
-          <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:8px">
-            <i class="ti ti-list-check"></i> Operation Groups
+          <div style="font-size:11px;font-weight:800;color:#666;text-transform:uppercase;letter-spacing:0.8px;display:flex;align-items:center;gap:8px;margin:0">
+            <i class="ti ti-layout-list" style="font-size:14px"></i> Operation Groups
           </div>
         </div>
         <div class="portal-ops-list">
