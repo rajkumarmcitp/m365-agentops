@@ -377,7 +377,7 @@ function renderOperations(el, catalog) {
       <div class="card-title mb-3"><i class="ti ti-list-check"></i> Select operation group</div>
       <div class="op-cards-grid">
         ${Object.entries(grouped).map(([grpName, ops]) => `
-          <div class="op-group-card" data-group="${grpName}" data-ops="${JSON.stringify(ops.map(o => ({ id: o.id, label: o.label })))}">
+          <div class="op-group-card" data-group="${grpName}">
             <div class="op-group-title">${grpName}</div>
             <div class="op-group-count">${ops.length} action${ops.length !== 1 ? 's' : ''}</div>
             <div style="margin-top:8px;font-size:11px;color:var(--color-text-secondary)">Click to configure</div>
@@ -393,10 +393,12 @@ function renderOperations(el, catalog) {
   area.querySelectorAll('.op-group-card').forEach(groupCard => {
     groupCard.addEventListener('click', () => {
       const grpName = groupCard.dataset.group
-      const opsData = JSON.parse(groupCard.dataset.ops)
+      const opsData = grouped[grpName] || []
 
       // Set active operation to first one in group
-      activeOpId = opsData[0].id
+      if (opsData.length > 0) {
+        activeOpId = opsData[0].id
+      }
 
       // Render group form with action selector
       renderGroupForm(area, catalog, grpName, opsData)
