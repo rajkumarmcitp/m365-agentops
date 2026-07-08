@@ -614,6 +614,44 @@ function renderOperationForm(catalog, groupName, groupOps) {
         ${hasMultipleOps ? `<div class="portal-ops-select-prompt">Select an action</div>` : ''}
       </div>
 
+      <!-- Workflow Timeline -->
+      <div class="portal-workflow-timeline">
+        <div class="portal-wf-step">
+          <div class="portal-wf-dot">1</div>
+          <div class="portal-wf-label">Request<br>Submitted</div>
+        </div>
+        <div class="portal-wf-arrow"></div>
+        <div class="portal-wf-step">
+          <div class="portal-wf-dot">2</div>
+          <div class="portal-wf-label">Manager<br>Approval</div>
+        </div>
+        <div class="portal-wf-arrow"></div>
+        <div class="portal-wf-step">
+          <div class="portal-wf-dot">3</div>
+          <div class="portal-wf-label">Data Owner<br>Approval</div>
+        </div>
+        <div class="portal-wf-arrow"></div>
+        <div class="portal-wf-step">
+          <div class="portal-wf-dot">4</div>
+          <div class="portal-wf-label">IT<br>Review</div>
+        </div>
+        <div class="portal-wf-arrow"></div>
+        <div class="portal-wf-step">
+          <div class="portal-wf-dot">5</div>
+          <div class="portal-wf-label">AI Agent<br>Validation</div>
+        </div>
+        <div class="portal-wf-arrow"></div>
+        <div class="portal-wf-step">
+          <div class="portal-wf-dot">6</div>
+          <div class="portal-wf-label">System<br>Provisioning</div>
+        </div>
+        <div class="portal-wf-arrow"></div>
+        <div class="portal-wf-step">
+          <div class="portal-wf-dot">7</div>
+          <div class="portal-wf-label">Completion</div>
+        </div>
+      </div>
+
       <form id="operation-form" class="portal-operation-form">
         <!-- Action Selector -->
         ${hasMultipleOps ? `
