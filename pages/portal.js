@@ -229,9 +229,6 @@ function renderLanding(el) {
           Request Microsoft 365 resources with instant AI-powered validation, approval tracking, and automated provisioning.
         </div>
         <div class="portal-hero-actions">
-          <button class="btn" id="view-all-templates-btn">
-            <i class="ti ti-lightning-bolt"></i> Quick Start Templates
-          </button>
         </div>
       </div>
     </div>
@@ -256,19 +253,6 @@ function renderLanding(el) {
         </div>
         ${i < WORKFLOW_STEPS.length - 1 ? '<div class="pwf-arrow"><i class="ti ti-arrow-right"></i></div>' : ''}
       `).join('')}
-    </div>
-
-    <div class="portal-templates-section">
-      <div class="section-header">
-        <div class="section-label">
-          <i class="ti ti-lightning-bolt"></i>
-          Quick Start Templates
-        </div>
-        <button id="view-all-templates" class="view-all-btn">
-          View all (${REQUEST_TEMPLATES.length}) →
-        </button>
-      </div>
-      <div class="templates-grid" id="templates-carousel"></div>
     </div>
 
     <div style="margin-bottom:16px">
@@ -318,42 +302,6 @@ function renderLanding(el) {
       render(el)
     })
   })
-
-  // Render templates carousel (first 6 most popular)
-  const carousel = el.querySelector('#templates-carousel')
-  REQUEST_TEMPLATES.slice(0, 6).forEach(template => {
-    const card = document.createElement('div')
-    card.className = 'template-card'
-    card.innerHTML = `
-      <div class="template-icon">${template.thumbnail}</div>
-      <div class="template-name">${template.name}</div>
-      <div class="template-time"><i class="ti ti-clock" style="font-size:10px;margin-right:4px"></i>${template.estimatedTime}</div>
-    `
-    card.addEventListener('click', () => {
-      activeTemplateId = template.id
-      activeGroupId = null
-      activeOpId = null
-      formValues = template.formDefaults || {}
-      portalView = 'form'
-      render(el)
-    })
-    carousel.appendChild(card)
-  })
-
-  // View all templates button
-  el.querySelector('#view-all-templates').addEventListener('click', () => {
-    portalView = 'templates'
-    render(el)
-  })
-
-  // Quick start templates button
-  const quickStartBtn = el.querySelector('#view-all-templates-btn')
-  if (quickStartBtn) {
-    quickStartBtn.addEventListener('click', () => {
-      portalView = 'templates'
-      render(el)
-    })
-  }
 
 }
 
