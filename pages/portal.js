@@ -389,7 +389,7 @@ function renderOperations(el, catalog) {
     <div id="svc-form-preview"></div>
   `
 
-  // Group card click handler - render form with action selector
+  // Group card click handler - proceed to form view
   area.querySelectorAll('.op-group-card').forEach(groupCard => {
     groupCard.addEventListener('click', () => {
       const grpName = groupCard.dataset.group
@@ -398,10 +398,16 @@ function renderOperations(el, catalog) {
       // Set active operation to first one in group
       if (opsData.length > 0) {
         activeOpId = opsData[0].id
+        // Store group name for form rendering
+        window.activeGroupName = grpName
+        window.activeGroupOps = opsData
       }
 
-      // Render group form with action selector
-      renderGroupForm(area, catalog, grpName, opsData)
+      // Switch to form view
+      portalView = 'form'
+      formValues = {}
+      const pageEl = document.getElementById('page-portal')
+      render(pageEl)
     })
   })
 
@@ -556,6 +562,10 @@ function renderFormView(el) {
 
   const wfSteps = buildWorkflow(op)
 
+  // Check if we have multiple operations from group card click
+  const groupOps = window.activeGroupOps || []
+  const hasMultipleOps = groupOps.length > 1
+
   el.innerHTML = `
     <div style="max-width:1000px;margin:0 auto">
       <div style="margin-bottom:32px">
@@ -565,12 +575,23 @@ function renderFormView(el) {
           <div class="form-header">
             <div class="form-title">
               <i class="ti ti-edit"></i>
-              ${op.label}
+              ${window.activeGroupName || group.name}
             </div>
             <div class="form-subtitle">
-              ${group.name}${activeSubId ? ' — ' + (EXCHANGE_SUB.find(s => s.id === activeSubId)?.name || '') : ''}
+              ${hasMultipleOps ? 'Select an action to proceed' : op.label}
             </div>
           </div>
+
+          ${hasMultipleOps ? `
+            <div class="form-fields" style="margin-bottom:24px">
+              <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-primary);margin-bottom:8px">
+                <i class="ti ti-list"></i> Choose Action
+              </label>
+              <select id="action-selector" style="width:100%;padding:12px;border:1px solid var(--color-border);border-radius:6px;background:white;color:var(--color-text-primary);font-size:13px;cursor:pointer">
+                ${groupOps.map(op => `<option value="${op.id}">${op.label}</option>`).join('')}
+              </select>
+            </div>
+          ` : ''}
 
           <div class="form-fields">
             ${op.fields.map(f => renderField(f)).join('')}
@@ -636,9 +657,19 @@ function renderFormView(el) {
     </div>
   `
 
-  el.querySelector('#form-back').addEventListener('click', () => { portalView = 'service'; render(el) })
-  el.querySelector('#form-cancel').addEventListener('click', () => { portalView = 'service'; render(el) })
+  el.querySelector('#form-back').addEventListener('click', () => { portalView = 'service'; window.activeGroupName = null; window.activeGroupOps = null; render(el) })
+  el.querySelector('#form-cancel').addEventListener('click', () => { portalView = 'service'; window.activeGroupName = null; window.activeGroupOps = null; render(el) })
   el.querySelector('#form-submit').addEventListener('click', () => handleSubmit(el, op))
+
+  // Action selector change handler
+  const actionSelector = el.querySelector('#action-selector')
+  if (actionSelector) {
+    actionSelector.addEventListener('change', (e) => {
+      activeOpId = e.target.value
+      formValues = {}
+      render(el)
+    })
+  }
 
   // Wire conditional field visibility
   wireFieldDependencies(el, op)
