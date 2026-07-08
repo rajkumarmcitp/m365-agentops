@@ -376,15 +376,15 @@ function renderOperations(el, catalog) {
     <div class="card">
       <div class="card-title mb-3"><i class="ti ti-list-check"></i> Select an action</div>
       ${Object.entries(grouped).map(([grpName, ops]) => `
-        <div style="margin-bottom:16px">
+        <div style="margin-bottom:20px">
           <div class="section-heading">${grpName}</div>
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:12px;line-height:1.4;padding:0 12px">
+            ${buildWorkflow(ops[0]).map(s => s.label).join(' → ')}
+          </div>
           <div class="op-cards-grid">
             ${ops.map(op => `
               <div class="op-card ${activeOpId === op.id ? 'selected' : ''}" data-op="${op.id}">
                 <div class="op-card-title">${op.label}</div>
-                <div class="op-card-workflow" style="font-size:11px;color:var(--color-text-secondary);margin-top:8px;line-height:1.4">
-                  ${buildWorkflow(op).map(s => s.label).join(' → ')}
-                </div>
               </div>
             `).join('')}
           </div>
