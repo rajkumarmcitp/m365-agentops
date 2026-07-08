@@ -382,11 +382,16 @@ function renderOperations(el, catalog) {
             ${buildWorkflow(ops[0]).map(s => s.label).join(' → ')}
           </div>
           <div class="op-cards-grid">
-            ${ops.map(op => `
+            ${ops.map(op => {
+              const hasMultipleApprovals = buildWorkflow(op).filter(s => s.id !== 'submit' && s.id !== 'agent' && s.id !== 'action' && s.id !== 'done').length > 1
+              return `
               <div class="op-card ${activeOpId === op.id ? 'selected' : ''}" data-op="${op.id}">
-                <div class="op-card-title">${op.label}</div>
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                  <div class="op-card-title">${op.label}</div>
+                  ${hasMultipleApprovals ? '<span class="op-card-badge">Multi-Approval</span>' : ''}
+                </div>
               </div>
-            `).join('')}
+            `}).join('')}
           </div>
         </div>
       `).join('')}
