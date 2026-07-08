@@ -219,17 +219,10 @@ function renderLanding(el) {
   const available = SERVICE_GROUPS.filter(g => svcEnabled(groupSettingKey(g.id)))
 
   el.innerHTML = `
-    <div class="portal-hero">
-      <div class="portal-hero-content">
-        <div class="portal-hero-title">
-          <i class="ti ti-sparkles"></i>
-          M365 Self-Service Portal
-        </div>
-        <div class="portal-hero-subtitle">
-          Request Microsoft 365 resources with instant AI-powered validation, approval tracking, and automated provisioning.
-        </div>
-        <div class="portal-hero-actions">
-        </div>
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-sparkles"></i> Self-Service Portal</div>
+        <div class="page-subtitle">Request Microsoft 365 resources with instant validation, approval tracking, and automated provisioning</div>
       </div>
     </div>
 
