@@ -385,10 +385,6 @@ function renderOperations(el, catalog) {
                 <div class="op-card-steps">
                   ${buildWorkflow(op).map(s => `<span class="op-step-dot op-step-${s.color}" title="${s.label}"></span>`).join('')}
                 </div>
-                <div class="op-card-approval">
-                  <i class="ti ti-route" style="font-size:10px"></i>
-                  ${buildWorkflow(op).map(s => s.label).join(' → ')}
-                </div>
               </div>
             `).join('')}
           </div>
