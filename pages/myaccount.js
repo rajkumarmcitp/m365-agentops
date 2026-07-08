@@ -32,7 +32,10 @@ export async function initMyAccount() {
   const el = document.getElementById('page-myaccount')
   if (!el) return
 
-  // Fetch real data from backend
+  // Show skeleton loaders immediately
+  renderWithSkeletons(el)
+
+  // Fetch real data from backend in parallel
   try {
     console.log('📡 Fetching My Account data from backend...')
 
@@ -70,11 +73,47 @@ export async function initMyAccount() {
     userData.mailbox = mailbox.status === 'fulfilled' && mailbox.value.success ? mailbox.value.data : { mailboxUsage: 65 }
 
     console.log('✓ My Account data loaded')
+    render(el)
   } catch (error) {
     console.warn('⚠️ Using simulated data:', error.message)
+    render(el)
   }
+}
 
-  render(el)
+function renderWithSkeletons(el) {
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-user-circle"></i> My Account</div>
+        <div class="page-subtitle">Your Microsoft 365 profile, security status, and assigned resources</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn" id="myacc-refresh" disabled><i class="ti ti-refresh"></i> Refresh</button>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tabs" id="myacc-subnav">
+      ${TABS.map(t => `
+        <button class="tab-btn ${activeTab === t.id ? 'active' : ''}" data-tab="${t.id}" disabled>
+          <i class="ti ${t.icon}"></i><span>${t.label}</span>
+        </button>
+      `).join('')}
+    </div>
+
+    <!-- Content with skeletons -->
+    <div id="myacc-content" style="margin-top:16px">${getSkeletonTab(activeTab)}</div>
+  `
+
+  el.querySelectorAll('#myacc-subnav .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeTab = btn.dataset.tab
+      el.querySelector('#myacc-content').innerHTML = renderTab()
+      if (activeTab === 'signin') {
+        setTimeout(() => initSigninMap(el), 100)
+      }
+    })
+  })
 }
 
 function render(el) {
@@ -148,6 +187,247 @@ function renderTab() {
   }
   const fn = tabs[activeTab]
   return fn ? fn() : ''
+}
+
+function getSkeletonTab(tabId) {
+  const skeletons = {
+    executive: skeletonExecutive,
+    profile: skeletonProfile,
+    security: skeletonSecurity,
+    signin: skeletonSignin,
+    licenses: skeletonLicenses,
+    groups: skeletonGroups,
+    devices: skeletonDevices,
+    apps: skeletonApps,
+    onedrive: skeletonOneDrive,
+    teams: skeletonTeams,
+    approvals: skeletonApprovals,
+    copilot: skeletonCopilot,
+  }
+  const fn = skeletons[tabId]
+  return fn ? fn() : ''
+}
+
+function skeletonExecutive() {
+  return `
+    <div class="kpi-row mb-3">
+      ${[1, 2, 3, 4, 5, 6].map(() => `
+        <div class="kpi-tile">
+          <div class="skeleton" style="width:80px;height:32px;margin-bottom:8px"></div>
+          <div class="skeleton" style="width:100px;height:12px"></div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="skeleton" style="width:150px;height:16px"></div></div>
+      <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary);display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        ${[1, 2, 3, 4].map(() => `
+          <div>
+            <div class="skeleton" style="width:80px;height:10px;margin-bottom:6px"></div>
+            <div class="skeleton" style="width:100px;height:18px"></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `
+}
+
+function skeletonProfile() {
+  return `
+    <div class="card">
+      <div class="card-header"><div class="skeleton" style="width:150px;height:16px"></div></div>
+      <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary)">
+        <div style="display:flex;gap:16px;margin-bottom:16px">
+          <div class="skeleton" style="width:72px;height:72px;border-radius:50%;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div class="skeleton" style="width:200px;height:18px;margin-bottom:6px"></div>
+            <div class="skeleton" style="width:150px;height:12px;margin-bottom:4px"></div>
+            <div class="skeleton" style="width:120px;height:12px"></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          ${[1, 2, 3, 4, 5, 6].map(() => `
+            <div>
+              <div class="skeleton" style="width:80px;height:10px;margin-bottom:6px"></div>
+              <div class="skeleton" style="width:150px;height:12px"></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function skeletonSecurity() {
+  return `
+    <div class="card">
+      <div class="card-header"><div class="skeleton" style="width:150px;height:16px"></div></div>
+      <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary)">
+        ${[1, 2, 3, 4, 5].map(() => `
+          <div style="margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <div class="skeleton" style="width:200px;height:14px;margin-bottom:8px"></div>
+            <div class="skeleton" style="width:300px;height:12px"></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `
+}
+
+function skeletonSignin() {
+  return `
+    <div class="card">
+      <div class="card-header"><div class="skeleton" style="width:150px;height:16px"></div></div>
+      <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary)">
+        ${[1, 2, 3].map(() => `
+          <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <div class="skeleton" style="width:250px;height:12px;margin-bottom:6px"></div>
+            <div class="skeleton" style="width:200px;height:12px"></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `
+}
+
+function skeletonLicenses() {
+  return `
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${[1, 2, 3, 4, 5].map(() => `
+        <div class="card" style="padding:12px">
+          <div class="skeleton" style="width:200px;height:14px;margin-bottom:6px"></div>
+          <div class="skeleton" style="width:150px;height:12px"></div>
+        </div>
+      `).join('')}
+    </div>
+  `
+}
+
+function skeletonGroups() {
+  return `
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${[1, 2, 3].map(() => `
+        <div class="card">
+          <div class="card-header"><div class="skeleton" style="width:200px;height:16px"></div></div>
+          <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
+            ${[1, 2, 3].map(() => `
+              <div style="padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+                <div class="skeleton" style="width:150px;height:12px;margin-bottom:4px"></div>
+                <div class="skeleton" style="width:120px;height:10px"></div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `
+}
+
+function skeletonDevices() {
+  return `
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${[1, 2, 3, 4].map(() => `
+        <div class="card" style="padding:12px">
+          <div class="skeleton" style="width:200px;height:14px;margin-bottom:8px"></div>
+          <div class="skeleton" style="width:150px;height:12px;margin-bottom:4px"></div>
+          <div class="skeleton" style="width:120px;height:12px"></div>
+        </div>
+      `).join('')}
+    </div>
+  `
+}
+
+function skeletonApps() {
+  return `
+    <div class="card">
+      <div class="card-header"><div class="skeleton" style="width:150px;height:16px"></div></div>
+      <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
+        ${[1, 2, 3, 4, 5].map(() => `
+          <div style="padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <div class="skeleton" style="width:180px;height:12px;margin-bottom:4px"></div>
+            <div class="skeleton" style="width:100px;height:10px"></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `
+}
+
+function skeletonOneDrive() {
+  return `
+    <div class="card">
+      <div class="card-header"><div class="skeleton" style="width:150px;height:16px"></div></div>
+      <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary)">
+        <div class="skeleton" style="width:250px;height:12px;margin-bottom:8px"></div>
+        <div class="skeleton" style="width:300px;height:18px"></div>
+      </div>
+    </div>
+  `
+}
+
+function skeletonTeams() {
+  return `
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${[1, 2, 3].map(() => `
+        <div class="card" style="padding:12px">
+          <div class="skeleton" style="width:200px;height:14px;margin-bottom:8px"></div>
+          <div class="skeleton" style="width:150px;height:12px"></div>
+        </div>
+      `).join('')}
+    </div>
+  `
+}
+
+function skeletonApprovals() {
+  return `
+    <div class="card">
+      <div class="card-header"><div class="skeleton" style="width:150px;height:16px"></div></div>
+      <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
+        ${[1, 2].map(() => `
+          <div style="padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+            <div class="skeleton" style="width:200px;height:12px;margin-bottom:6px"></div>
+            <div class="skeleton" style="width:150px;height:11px"></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `
+}
+
+function skeletonCopilot() {
+  return `
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="card-header"><div class="skeleton" style="width:150px;height:16px"></div></div>
+        <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary);text-align:center">
+          <div class="skeleton" style="width:80px;height:10px;margin:0 auto 8px;"></div>
+          <div class="skeleton" style="width:120px;height:28px;margin:0 auto"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="skeleton" style="width:150px;height:16px"></div></div>
+        <div style="padding:16px;border-top:0.5px solid var(--color-border-secondary);display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          ${[1, 2, 3, 4].map(() => `
+            <div>
+              <div class="skeleton" style="width:80px;height:10px;margin-bottom:6px"></div>
+              <div class="skeleton" style="width:100px;height:16px"></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="skeleton" style="width:150px;height:16px"></div></div>
+        <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
+          ${[1, 2].map(() => `
+            <div style="padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
+              <div class="skeleton" style="width:180px;height:12px;margin-bottom:6px"></div>
+              <div class="skeleton" style="width:200px;height:10px"></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `
 }
 
 function renderExecutive() {
