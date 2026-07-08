@@ -13,6 +13,7 @@ import { DataCollectors } from './data-collectors.js'
 import { ThreatCollectors } from './threat-collectors.js'
 import { ApplicationCollectors } from './application-collectors.js'
 import { InfrastructureCollectors } from './infrastructure-collectors.js'
+import DeviceValidations from './device-validations.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -2881,10 +2882,55 @@ export class ZeroTrustValidator {
   /**
    * Validate Device controls using cached data
    */
+  /**
+   * Validate comprehensive device controls using DeviceValidations class
+   * Handles all 34 new device controls with full Graph API validation
+   */
+  async validateDeviceControlComprehensive(validation, result, deviceData) {
+    try {
+      const deviceValidator = new DeviceValidations(deviceData)
+      const allValidations = await deviceValidator.validateAll()
+
+      // Flatten all validation results
+      const allResults = []
+      Object.values(allValidations).forEach(category => {
+        if (Array.isArray(category)) {
+          allResults.push(...category)
+        }
+      })
+
+      // Find the specific validation result
+      const validationResult = allResults.find(v => v.id === validation.id)
+
+      if (validationResult) {
+        result.currentValue = validationResult.value
+        result.status = validationResult.status
+        result.evidence = {
+          value: validationResult.value,
+          category: validationResult.category || 'Device Security'
+        }
+        return validationResult.status
+      }
+
+      result.currentValue = 'Device control validation not found'
+      return 'warn'
+    } catch (error) {
+      console.warn(`Error validating device control ${validation.id}:`, error.message)
+      result.error = error.message
+      result.currentValue = 'Validation failed'
+      return 'warn'
+    }
+  }
+
   async validateDeviceWithCollectors(validation, result, deviceData) {
     if (!deviceData) return 'warn'
 
     try {
+      // Use comprehensive DeviceValidations for new 34 controls
+      if (validation.id.startsWith('dev-')) {
+        return await this.validateDeviceControlComprehensive(validation, result, deviceData)
+      }
+
       switch (validation.id) {
         // Device Enrollment Configuration
         case 'DEV-001': {

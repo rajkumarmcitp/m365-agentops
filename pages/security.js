@@ -287,9 +287,9 @@ function renderSecuritySkeleton(el) {
     </div>
 
     <div style="border:0.5px solid var(--color-border-secondary);border-radius:8px;background:var(--color-background-primary);padding:12px;margin-bottom:16px">
-      <div style="display:flex;flex-wrap:wrap;gap:4px">
+      <div class="tabs" style="display:flex;flex-wrap:wrap;gap:4px;margin:0;padding:0">
         ${['Executive', 'Secure Score', 'Identity', 'Email', 'Endpoint', 'Teams', 'SharePoint', 'Data Protection', 'Priv. Access', 'Guests', 'Incidents', 'Security Copilot', 'API Reference'].map(label => `
-          <button class="tab-btn" disabled style="white-space:nowrap;flex-shrink:0">${label}</button>
+          <button class="tab-btn" disabled style="flex-shrink:0;white-space:nowrap">${label}</button>
         `).join('')}
       </div>
     </div>
@@ -330,10 +330,10 @@ function render(el) {
     </div>
 
     <!-- Internal sub-navigation - Responsive tabs -->
-    <div style="border:0.5px solid var(--color-border-secondary);border-radius:8px;background:var(--color-background-primary);padding:12px;margin-bottom:16px">
-      <div class="tabs" id="sec-subnav" style="margin-bottom:0;padding-bottom:0;display:flex;flex-wrap:wrap;gap:4px">
+    <div style="border:0.5px solid var(--color-border-secondary);border-radius:8px;background:var(--color-background-primary);padding:0 12px 12px 12px;margin-bottom:16px">
+      <div class="tabs" id="sec-subnav" style="display:flex;flex-wrap:wrap;gap:4px;margin:0;padding:0">
         ${SEC_TABS.map(t => `
-          <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}" style="flex-shrink:0;white-space:nowrap">
+          <button class="tab-btn ${activeSection === t.id ? 'active' : ''}" data-sec="${t.id}">
             <i class="ti ${t.icon}"></i><span>${t.label}</span>
             ${t.id === 'identity' && realIdentityPosture.highRiskUsers > 0 ? `<span class="sec-tab-badge red">${realIdentityPosture.highRiskUsers}</span>` : ''}
             ${t.id === 'incidents' && critCount > 0 ? `<span class="sec-tab-badge red">${critCount}</span>` : ''}

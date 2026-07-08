@@ -1,29 +1,220 @@
-import { state } from '../app.js'
+import { state, isRole } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { getMessageCenterMessages, getServiceHealth, api } from '../lib/api-client.js'
 import { MC_MESSAGES } from '../data/msgcenter-data.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
 
+// Cache for tenant users
+let tenantUsers = []
+
+async function fetchTenantUsers() {
+  if (tenantUsers.length > 0) return tenantUsers
+
+  try {
+    const response = await fetch(`${api}/users`)
+    const result = await response.json()
+    const users = Array.isArray(result) ? result : (result.data || [])
+    tenantUsers = users.map(u => ({
+      name: u.displayName || u.mail || u.userPrincipalName || 'Unknown',
+      email: u.mail || u.userPrincipalName || '',
+      id: u.id
+    }))
+    return tenantUsers
+  } catch (err) {
+    console.warn('Could not fetch tenant users:', err.message)
+    return []
+  }
+}
+
+function setupAssigneeAutocomplete(input, container) {
+  let dropdown = null
+  let selectedIndex = -1
+  let filteredUsers = []
+
+  input.addEventListener('input', async (e) => {
+    const query = e.target.value.toLowerCase().trim()
+
+    // Only show dropdown after 3 characters
+    if (query.length < 3) {
+      if (dropdown) dropdown.remove()
+      return
+    }
+
+    const users = await fetchTenantUsers()
+    filteredUsers = users.filter(u =>
+      u.name.toLowerCase().includes(query) ||
+      u.email.toLowerCase().includes(query)
+    ).slice(0, 10)
+
+    // Remove old dropdown
+    if (dropdown) dropdown.remove()
+
+    if (filteredUsers.length === 0) return
+
+    // Create dropdown
+    dropdown = document.createElement('div')
+    dropdown.style.cssText = `
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ccc;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    `
+
+    filteredUsers.forEach((user, idx) => {
+      const option = document.createElement('div')
+      option.style.cssText = `
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 12px;
+        border-bottom: 1px solid #f0f0f0;
+        hover: background-color: #f0f0f0;
+      `
+      option.textContent = `${user.name} (${user.email})`
+      option.onmouseover = () => option.style.backgroundColor = '#f0f0f0'
+      option.onmouseout = () => option.style.backgroundColor = 'white'
+      option.onclick = () => {
+        input.value = user.email
+        input.dataset.selectedUser = user.email
+        if (dropdown) dropdown.remove()
+        dropdown = null
+      }
+      dropdown.appendChild(option)
+    })
+
+    const inputRect = input.getBoundingClientRect()
+    const containerRect = container.getBoundingClientRect()
+
+    container.appendChild(dropdown)
+    dropdown.style.position = 'relative'
+    dropdown.style.top = '0'
+    dropdown.style.left = '0'
+  })
+
+  // Close dropdown on blur
+  input.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (dropdown) {
+        dropdown.remove()
+        dropdown = null
+      }
+    }, 200)
+  })
+}
+
+function cleanHTMLContent(htmlString) {
+  if (!htmlString) return ''
+
+  // Create a temporary div to parse HTML
+  const temp = document.createElement('div')
+  temp.innerHTML = htmlString
+
+  // Remove all tags but keep content
+  let text = temp.textContent || temp.innerText || ''
+
+  // Clean up whitespace
+  text = text
+    .replace(/\n\n+/g, '\n\n')  // Remove multiple newlines
+    .replace(/^\s+|\s+$/g, '')   // Trim
+    .trim()
+
+  return text
+}
+
+function formatAnnouncementContent(text) {
+  if (!text) return ''
+
+  // Split by section headers like [What and Why], [Rollout Schedule], etc.
+  const sections = text.split(/(\[[^\]]+\])/g)
+  let formatted = ''
+
+  for (let i = 0; i < sections.length; i++) {
+    const section = sections[i]
+
+    if (!section) continue
+
+    // Check if this is a section header
+    if (section.match(/^\[.+\]$/)) {
+      // Format as section header (remove brackets)
+      const headerText = section.replace(/[\[\]]/g, '')
+      formatted += `\n\n<strong style="font-size:12px;color:#0066cc;text-transform:uppercase;letter-spacing:0.5px">${headerText}</strong>\n`
+    } else {
+      // Regular content - split by newlines and format as list items
+      let content = section.trim()
+
+      // Handle bullet points (lines that look like items)
+      const lines = content.split('\n').filter(l => l.trim())
+
+      let inList = false
+      for (const line of lines) {
+        const trimmed = line.trim()
+
+        if (!trimmed) continue
+
+        // Detect list-like content (short lines, or lines starting with common prefixes)
+        if (trimmed.match(/^(•|·|-|●|✓|✅|⚠️)/) ||
+            (trimmed.length < 100 && trimmed.match(/:/)) ||
+            trimmed.match(/^(Beginning|Expected|Windows|Mac|GCC|DoD|Worldwide)/)) {
+
+          if (!inList) {
+            formatted += '<ul style="margin:8px 0;padding-left:20px">\n'
+            inList = true
+          }
+          formatted += `<li style="font-size:11px;margin:4px 0">${trimmed}</li>\n`
+        } else {
+          if (inList) {
+            formatted += '</ul>\n'
+            inList = false
+          }
+          formatted += `<div style="font-size:11px;margin:6px 0;line-height:1.6">${trimmed}</div>\n`
+        }
+      }
+
+      if (inList) {
+        formatted += '</ul>\n'
+        inList = false
+      }
+    }
+  }
+
+  return formatted
+}
+
 function getAnnouncementDetailsHTML(msg) {
-  let html = '<div style="padding:16px;background:#f5f5f5;border-top:1px solid #ddd;min-width:0">'
+  let html = '<div style="width:100%;min-width:0">'
+
+  let contentToDisplay = ''
 
   if (msg.description && typeof msg.description === 'string') {
-    const formattedBody = msg.description
-      .replace(/\n/g, '<br>')
-      .replace(/\[([^\]]+:)\]/g, '<strong style="color:#333">[$1]</strong>')
+    contentToDisplay = msg.description
+  } else if (msg.body && typeof msg.body === 'string') {
+    contentToDisplay = msg.body
+  }
+
+  if (contentToDisplay) {
+    // Clean HTML first
+    let cleanedText = cleanHTMLContent(contentToDisplay)
+
+    // Apply announcement formatting (sections, lists, etc.)
+    const formattedBody = formatAnnouncementContent(cleanedText)
 
     html += `
-      <div style="margin-bottom:16px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <i class="ti ti-info-circle" style="font-size:14px;color:#0066cc"></i>
-          <div style="font-weight:700;font-size:12px;color:#333">Summary</div>
-        </div>
-        <div style="font-size:11px;color:#555;line-height:1.6;background:#fff;padding:10px;border-radius:6px;border-left:3px solid #0066cc">
+      <div style="margin-bottom:16px;width:100%">
+        <div style="font-size:11px;color:#555;line-height:1.7;background:#fff;padding:12px;border-radius:6px;border-left:3px solid #0066cc;word-wrap:break-word;overflow-wrap:break-word;white-space:normal;max-height:none;overflow:visible;min-height:auto;max-width:100%">
           ${formattedBody}
         </div>
       </div>
     `
+  } else {
+    html += '<div style="color:#999;font-size:11px;padding:10px">No description available</div>'
   }
 
   html += '</div>'
@@ -290,7 +481,6 @@ function renderDemoMsgCenter(el) {
       </div>
       <div class="page-actions">
         <button class="btn" id="mc-sync"><i class="ti ti-refresh"></i> Sync announcements</button>
-        <button class="btn" id="mc-digest"><i class="ti ti-file-text"></i> Weekly digest</button>
       </div>
     </div>
 
@@ -338,11 +528,14 @@ async function renderProductionMsgCenter(el) {
   `
 
   try {
-    // Fetch announcements from SharePoint (backend syncs automatically every hour)
-    console.log('📡 Fetching announcements from SharePoint...')
+    // Fetch sync status and announcements in parallel
+    console.log('📡 Fetching announcements and sync status...')
     const siteUrl = encodeURIComponent(state.settings.sharepointSiteUrl || 'root')
-    const announcementsResult = await fetch(`${api}/msgcenter/announcements?siteUrl=${siteUrl}`)
-      .then(r => r.json())
+
+    const [announcementsResult, syncStatusResult] = await Promise.all([
+      fetch(`${api}/msgcenter/announcements?siteUrl=${siteUrl}`).then(r => r.json()),
+      fetch(`${api}/msgcenter/sync-status`).then(r => r.json()).catch(() => ({ data: {} }))
+    ])
 
     if (!announcementsResult.success || !announcementsResult.data || announcementsResult.data.length === 0) {
       el.innerHTML = `
@@ -372,6 +565,18 @@ async function renderProductionMsgCenter(el) {
     const announcements = announcementsResult.data
     const notReviewedCount = announcements.filter(a => a.reviewStatus === 'Not Reviewed').length
     const tasksCreatedCount = announcements.filter(a => a.taskStatus !== 'Not Started').length
+    const syncStatus = syncStatusResult.data || {}
+
+    // Build sync status indicator
+    const lastSyncTime = syncStatus.lastSuccessfulSync ? new Date(syncStatus.lastSuccessfulSync) : null
+    const lastSyncStr = lastSyncTime
+      ? `${lastSyncTime.toLocaleDateString()} ${lastSyncTime.toLocaleTimeString()}`
+      : 'Never'
+    const syncStatusClass = syncStatus.consecutiveFailures > 0 ? 'warning' : 'success'
+    const syncStatusIcon = syncStatus.consecutiveFailures > 0 ? '⚠️' : '✅'
+    const syncStatusText = syncStatus.consecutiveFailures > 0
+      ? `${syncStatus.consecutiveFailures} failed attempts`
+      : `Last sync: ${lastSyncStr}`
 
     el.innerHTML = `
       <div class="page-header">
@@ -381,7 +586,15 @@ async function renderProductionMsgCenter(el) {
         </div>
         <div class="page-actions">
           <button class="btn" id="mc-sync"><i class="ti ti-refresh"></i> Sync announcements</button>
-          <button class="btn" id="mc-digest"><i class="ti ti-file-text"></i> Weekly digest</button>
+          ${isRole('super', 'admin') ? '<button class="btn danger" id="mc-clear-restart" style="background:#dc3545;color:white"><i class="ti ti-trash"></i> Clear & Restart (7-day)</button>' : ''}
+        </div>
+      </div>
+
+      <div style="padding:12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:20px;border-left:3px solid var(--color-status-${syncStatusClass})">
+        <div style="font-size:12px;display:flex;align-items:center;gap:8px">
+          <span>${syncStatusIcon}</span>
+          <span>Sync Status: ${syncStatusText}</span>
+          <span style="font-size:10px;color:var(--color-text-tertiary)">(Total: ${syncStatus.totalSyncs || 0} attempts, ${syncStatus.totalSuccessfulSyncs || 0} successful)</span>
         </div>
       </div>
 
@@ -564,52 +777,54 @@ async function renderProductionMsgCenter(el) {
                 </div>
               </div>
               <div style="display:flex;gap:6px;align-items:flex-start;flex-shrink:0">
-                <span class="badge ${reviewStatusColor}" style="font-size:9px">${ann.reviewStatus}</span>
-                <span class="badge ${taskStatusColor}" style="font-size:9px">${ann.taskStatus}</span>
+                <span class="badge ${reviewStatusColor}" style="font-size:11px;padding:4px 8px">${ann.reviewStatus}</span>
+                <span class="badge ${taskStatusColor}" style="font-size:11px;padding:4px 8px">${ann.taskStatus}</span>
                 <i class="ti ti-chevron-down mc-chevron" style="font-size:16px;color:#999;transition:transform 150ms;cursor:pointer;flex-shrink:0"></i>
               </div>
             </div>
             ${ann.actionDeadline ? `<div style="font-size:10px;color:var(--clr-danger-text);margin-top:6px">⚠️ Action required by: <strong>${ann.actionDeadline}</strong></div>` : ''}
           </div>
           <div class="mc-announcement-details" data-idx="${idx}" style="display:none;padding:12px;background:#f5f5f5;border-top:1px solid #ddd">
-            <div style="display:flex;gap:16px;align-items:flex-start">
+            <div style="display:flex;gap:16px;align-items:flex-start;width:100%">
               <!-- Summary Section (3/4 width) -->
-              <div style="flex:3;min-width:0">
+              <div style="flex:1;min-width:0;max-width:calc(75% - 8px)">
                 ${getAnnouncementDetailsHTML(ann)}
               </div>
 
               <!-- Admin Actions Section (1/4 width) -->
-              <div style="flex:1;min-width:250px;padding:12px;background:#fff;border-radius:6px;border:1px solid #ddd">
-                <div style="font-weight:700;font-size:11px;color:#333;margin-bottom:12px">Admin Actions</div>
+              <div style="flex:0 0 auto;width:280px;min-width:280px;padding:12px;background:#fff;border-radius:6px;border:1px solid #ddd">
+                <div style="font-weight:700;font-size:13px;color:#333;margin-bottom:12px">Admin Actions</div>
 
                 <div style="margin-bottom:12px">
-                  <label style="font-size:10px;font-weight:600;color:#555;display:block;margin-bottom:6px">Review Status</label>
-                  <select class="form-select review-status-select" data-item-id="${ann.id}" style="width:100%;padding:6px;font-size:10px;border:0.5px solid #ccc;border-radius:4px">
+                  <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:6px">Review Status</label>
+                  <select class="form-select review-status-select" data-item-id="${ann.id}" style="width:100%;padding:6px;font-size:12px;border:0.5px solid #ccc;border-radius:4px">
                     <option value="Not Reviewed" ${ann.reviewStatus === 'Not Reviewed' ? 'selected' : ''}>Not Reviewed</option>
                     <option value="Reviewed" ${ann.reviewStatus === 'Reviewed' ? 'selected' : ''}>Reviewed</option>
                   </select>
                 </div>
 
                 <div style="margin-bottom:12px">
-                  <label style="font-size:10px;font-weight:600;color:#555;display:block;margin-bottom:6px">Assign To</label>
-                  <input type="text" class="form-input assignee-input" data-item-id="${ann.id}" placeholder="Email or name..." value="${ann.assignedTo || ''}" style="width:100%;padding:6px;font-size:10px;border:0.5px solid #ccc;border-radius:4px">
+                  <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:6px">Assign To</label>
+                  <div style="position:relative" class="assignee-container-${ann.id}">
+                    <input type="text" class="form-input assignee-input" data-item-id="${ann.id}" placeholder="Start typing name or email..." value="${ann.assignedTo || ''}" style="width:100%;padding:6px;font-size:12px;border:0.5px solid #ccc;border-radius:4px">
+                  </div>
                 </div>
 
                 <div style="margin-bottom:12px">
-                  <label style="font-size:10px;font-weight:600;color:#555;display:block;margin-bottom:6px">Set Deadline</label>
-                  <input type="date" class="form-input deadline-input" data-item-id="${ann.id}" value="${formatDateForInput(ann.actionDeadline)}" style="width:100%;padding:6px;font-size:10px;border:0.5px solid #ccc;border-radius:4px">
+                  <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:6px">Set Deadline</label>
+                  <input type="date" class="form-input deadline-input" data-item-id="${ann.id}" value="${formatDateForInput(ann.actionDeadline)}" style="width:100%;padding:6px;font-size:12px;border:0.5px solid #ccc;border-radius:4px">
                 </div>
 
                 <div style="margin-bottom:12px">
-                  <label style="font-size:10px;font-weight:600;color:#555;display:block;margin-bottom:6px">Notes</label>
-                  <textarea class="form-textarea notes-textarea" data-item-id="${ann.id}" placeholder="Add notes..." style="width:100%;padding:6px;font-size:10px;border:0.5px solid #ccc;border-radius:4px;resize:vertical;min-height:60px">${ann.notes || ''}</textarea>
+                  <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:6px">Notes</label>
+                  <textarea class="form-textarea notes-textarea" data-item-id="${ann.id}" placeholder="Add notes..." style="width:100%;padding:6px;font-size:12px;border:0.5px solid #ccc;border-radius:4px;resize:vertical;min-height:60px">${ann.notes || ''}</textarea>
                 </div>
 
                 <div style="display:flex;gap:8px;flex-direction:column">
-                  <button class="btn btn-primary save-announcement-btn" data-item-id="${ann.id}" style="width:100%;font-size:10px">
+                  <button class="btn btn-primary save-announcement-btn" data-item-id="${ann.id}" style="width:100%;font-size:12px">
                     <i class="ti ti-device-floppy"></i> Save Changes
                   </button>
-                  <div style="font-size:9px;color:#666;padding:8px;background:#f0f0f0;border-radius:4px;text-align:center">
+                  <div style="font-size:11px;color:#666;padding:8px;background:#f0f0f0;border-radius:4px;text-align:center">
                     💡 Task auto-created when Task Status is set
                   </div>
                 </div>
@@ -644,6 +859,41 @@ async function renderProductionMsgCenter(el) {
       btn.innerHTML = `<span class="spinner dark"></span> Refreshing...`
       await renderProductionMsgCenter(el)
     })
+
+    // Admin clear & restart button
+    const clearBtn = el.querySelector('#mc-clear-restart')
+    if (clearBtn) {
+      clearBtn.addEventListener('click', async () => {
+        const confirmed = confirm(
+          '⚠️ This will DELETE all synced announcements and restart with a 7-day window.\n\n' +
+          'Announcements older than 7 days will no longer be synced.\n\n' +
+          'Continue?'
+        )
+        if (!confirmed) return
+
+        clearBtn.disabled = true
+        clearBtn.innerHTML = `<span class="spinner dark"></span> Clearing & restarting...`
+
+        try {
+          const response = await fetch(`${api}/msgcenter/clear-and-restart`, { method: 'POST' })
+          const result = await response.json()
+
+          if (result.success) {
+            showToast('✅ Data cleared and restarted with 7-day window', 'success')
+            await new Promise(r => setTimeout(r, 1500))
+            await renderProductionMsgCenter(el)
+          } else {
+            showToast(`❌ Error: ${result.error}`, 'error')
+            clearBtn.disabled = false
+            clearBtn.innerHTML = `<i class="ti ti-trash"></i> Clear & Restart (7-day)`
+          }
+        } catch (error) {
+          showToast(`❌ Error: ${error.message}`, 'error')
+          clearBtn.disabled = false
+          clearBtn.innerHTML = `<i class="ti ti-trash"></i> Clear & Restart (7-day)`
+        }
+      })
+    }
   } catch (error) {
     console.error('Error rendering Change Intelligence:', error)
     showToast(`Error: ${error.message}`, 'error')
@@ -684,6 +934,15 @@ const setupAnnouncementToggle = (el) => {
 }
 
 const setupActionHandlers = (el) => {
+  // Setup autocomplete for assignee inputs
+  el.querySelectorAll('.assignee-input').forEach(input => {
+    const itemId = input.dataset.itemId
+    const container = el.querySelector(`.assignee-container-${itemId}`)
+    if (container) {
+      setupAssigneeAutocomplete(input, container)
+    }
+  })
+
   // Save changes button
   el.querySelectorAll('.save-announcement-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {

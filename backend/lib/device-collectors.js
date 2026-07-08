@@ -303,6 +303,220 @@ export class DeviceCollectors {
   }
 
   /**
+   * Managed Devices Collector
+   * Covers: Device inventory, compliance status, sync health, platform distribution
+   */
+  async collectManagedDevices() {
+    if (this.cache.managedDevices) return this.cache.managedDevices
+
+    try {
+      const response = await unifiedGraphClient.get('/deviceManagement/managedDevices?$select=id,displayName,deviceName,platform,osVersion,complianceState,lastSyncDateTime,managedDeviceOwnerType,deviceEnrollmentType,isEncrypted,jailBroken')
+      const devices = response.value || []
+
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
+      const data = {
+        all: devices,
+        total: devices.length,
+        byPlatform: {
+          windows: devices.filter(d => d.platform === 'Windows').length,
+          ios: devices.filter(d => d.platform === 'iOS').length,
+          android: devices.filter(d => d.platform === 'Android').length,
+          macos: devices.filter(d => d.platform === 'macOS').length
+        },
+        byCompliance: {
+          compliant: devices.filter(d => d.complianceState === 'Compliant').length,
+          noncompliant: devices.filter(d => d.complianceState === 'NonCompliant').length,
+          unknown: devices.filter(d => !['Compliant', 'NonCompliant'].includes(d.complianceState)).length
+        },
+        byOwnership: {
+          corporate: devices.filter(d => d.managedDeviceOwnerType === 'Company').length,
+          personal: devices.filter(d => d.managedDeviceOwnerType === 'Personal').length
+        },
+        syncHealth: {
+          synced7d: devices.filter(d => d.lastSyncDateTime && new Date(d.lastSyncDateTime) > sevenDaysAgo).length,
+          synced30d: devices.filter(d => d.lastSyncDateTime && new Date(d.lastSyncDateTime) > thirtyDaysAgo).length,
+          stale: devices.filter(d => !d.lastSyncDateTime || new Date(d.lastSyncDateTime) <= thirtyDaysAgo).length
+        },
+        encryption: {
+          encrypted: devices.filter(d => d.isEncrypted === true).length,
+          unencrypted: devices.filter(d => d.isEncrypted === false).length
+        },
+        security: {
+          jailbrokenRooted: devices.filter(d => d.jailBroken === true).length
+        },
+        complianceRate: devices.length > 0
+          ? Math.round((devices.filter(d => d.complianceState === 'Compliant').length / devices.length) * 100)
+          : 0,
+        timestamp: new Date().toISOString()
+      }
+
+      this.cache.managedDevices = data
+      return data
+    } catch (e) {
+      console.warn('⚠️ Managed Devices Collector failed:', e.message)
+      return { all: [], total: 0, byPlatform: {}, byCompliance: {}, error: e.message }
+    }
+  }
+
+  /**
+   * Compliance Policy Assignments Collector
+   * Covers: Assignment status, target groups, deployment metrics
+   */
+  async collectCompliancePolicyAssignments() {
+    if (this.cache.complianceAssignments) return this.cache.complianceAssignments
+
+    try {
+      const policiesResponse = await unifiedGraphClient.get('/deviceManagement/deviceCompliancePolicies')
+      const policies = policiesResponse.value || []
+
+      const assignmentData = {
+        policies: [],
+        byPlatform: { windows: [], ios: [], android: [], macos: [] },
+        assignmentStatus: {
+          assigned: 0,
+          unassigned: 0
+        }
+      }
+
+      for (const policy of policies.slice(0, 20)) { // Limit to avoid excessive API calls
+        try {
+          const assignResponse = await unifiedGraphClient.get(`/deviceManagement/deviceCompliancePolicies/${policy.id}/assignments`)
+          const assignments = assignResponse.value || []
+
+          const policyData = {
+            id: policy.id,
+            displayName: policy.displayName,
+            platform: policy.platform,
+            assigned: assignments.length > 0,
+            assignmentCount: assignments.length,
+            assignments: assignments
+          }
+
+          assignmentData.policies.push(policyData)
+          if (assignments.length > 0) {
+            assignmentData.assignmentStatus.assigned++
+          } else {
+            assignmentData.assignmentStatus.unassigned++
+          }
+
+          if (policy.platform && assignmentData.byPlatform[policy.platform.toLowerCase()]) {
+            assignmentData.byPlatform[policy.platform.toLowerCase()].push(policyData)
+          }
+        } catch (e) {
+          console.warn(`⚠️ Failed to get assignments for policy ${policy.id}:`, e.message)
+        }
+      }
+
+      assignmentData.timestamp = new Date().toISOString()
+      this.cache.complianceAssignments = assignmentData
+      return assignmentData
+    } catch (e) {
+      console.warn('⚠️ Compliance Assignment Collector failed:', e.message)
+      return { policies: [], assignmentStatus: { assigned: 0, unassigned: 0 }, error: e.message }
+    }
+  }
+
+  /**
+   * Configuration Policy Assignments Collector
+   * Covers: Device configuration deployment status
+   */
+  async collectConfigurationAssignments() {
+    if (this.cache.configurationAssignments) return this.cache.configurationAssignments
+
+    try {
+      const configResponse = await unifiedGraphClient.get('/deviceManagement/configurationPolicies')
+      const configs = configResponse.value || []
+
+      const assignmentData = {
+        policies: [],
+        assignmentStatus: {
+          assigned: 0,
+          unassigned: 0
+        }
+      }
+
+      for (const config of configs.slice(0, 20)) { // Limit to avoid excessive API calls
+        try {
+          const assignResponse = await unifiedGraphClient.get(`/deviceManagement/configurationPolicies/${config.id}/assignments`)
+          const assignments = assignResponse.value || []
+
+          const configData = {
+            id: config.id,
+            name: config.name,
+            assigned: assignments.length > 0,
+            assignmentCount: assignments.length
+          }
+
+          assignmentData.policies.push(configData)
+          if (assignments.length > 0) {
+            assignmentData.assignmentStatus.assigned++
+          } else {
+            assignmentData.assignmentStatus.unassigned++
+          }
+        } catch (e) {
+          console.warn(`⚠️ Failed to get assignments for config ${config.id}:`, e.message)
+        }
+      }
+
+      assignmentData.timestamp = new Date().toISOString()
+      this.cache.configurationAssignments = assignmentData
+      return assignmentData
+    } catch (e) {
+      console.warn('⚠️ Configuration Assignment Collector failed:', e.message)
+      return { policies: [], assignmentStatus: { assigned: 0, unassigned: 0 }, error: e.message }
+    }
+  }
+
+  /**
+   * Mobile Device Management Settings Collector
+   * Covers: MDM settings, platform-specific policies, device restrictions
+   */
+  async collectMDMSettings() {
+    if (this.cache.mdmSettings) return this.cache.mdmSettings
+
+    try {
+      const [androidMdmResponse, iosMdmResponse, macOSMdmResponse, windowsMdmResponse] = await Promise.all([
+        unifiedGraphClient.get('/deviceManagement/androidDeviceOwnerEnrollmentProfiles').catch(e => ({ value: [], error: e.message })),
+        unifiedGraphClient.get('/deviceManagement/iosEnrollmentConfigurations').catch(e => ({ value: [], error: e.message })),
+        unifiedGraphClient.get('/deviceManagement/macOSEnrollmentProfileAssignments').catch(e => ({ value: [], error: e.message })),
+        unifiedGraphClient.get('/deviceManagement/windowsEnrollmentConfigurations').catch(e => ({ value: [], error: e.message }))
+      ])
+
+      const data = {
+        android: {
+          enterpriseEnrollment: androidMdmResponse.value?.length > 0,
+          count: androidMdmResponse.value?.length || 0,
+          error: androidMdmResponse.error
+        },
+        ios: {
+          enrollmentProfiles: iosMdmResponse.value?.length > 0,
+          count: iosMdmResponse.value?.length || 0,
+          error: iosMdmResponse.error
+        },
+        macos: {
+          enrollmentAssignments: macOSMdmResponse.value?.length > 0,
+          count: macOSMdmResponse.value?.length || 0,
+          error: macOSMdmResponse.error
+        },
+        windows: {
+          enrollmentConfigs: windowsMdmResponse.value?.length > 0,
+          count: windowsMdmResponse.value?.length || 0,
+          error: windowsMdmResponse.error
+        },
+        timestamp: new Date().toISOString()
+      }
+
+      this.cache.mdmSettings = data
+      return data
+    } catch (e) {
+      console.warn('⚠️ MDM Settings Collector failed:', e.message)
+      return { android: {}, ios: {}, macos: {}, windows: {}, error: e.message }
+    }
+  }
+
+  /**
    * Collect all device security data
    * Called once per validation run to populate cache
    */
@@ -310,14 +524,18 @@ export class DeviceCollectors {
     console.log('📊 Starting Device Security data collection...')
     const startTime = Date.now()
 
-    const [ca, compliance, config, enrollment, appProt, endpoint, admin] = await Promise.all([
+    const [ca, compliance, config, enrollment, appProt, endpoint, admin, managedDevices, complianceAssign, configAssign, mdmSettings] = await Promise.all([
       this.collectConditionalAccess(),
       this.collectCompliancePolicies(),
       this.collectConfigurationPolicies(),
       this.collectEnrollmentConfigurations(),
       this.collectAppProtectionPolicies(),
       this.collectEndpointSecurity(),
-      this.collectAdministration()
+      this.collectAdministration(),
+      this.collectManagedDevices(),
+      this.collectCompliancePolicyAssignments(),
+      this.collectConfigurationAssignments(),
+      this.collectMDMSettings()
     ])
 
     const duration = Date.now() - startTime
@@ -331,6 +549,10 @@ export class DeviceCollectors {
       appProtection: appProt,
       endpointSecurity: endpoint,
       administration: admin,
+      managedDevices,
+      complianceAssignments: complianceAssign,
+      configurationAssignments: configAssign,
+      mdmSettings,
       duration,
       timestamp: new Date().toISOString()
     }
