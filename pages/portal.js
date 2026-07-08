@@ -850,7 +850,7 @@ function renderField(f) {
         ${f.label}${req ? '<span class="form-field-required">*</span>' : ''}
       </label>
       <input type="${f.type}" class="form-field-input ${autocompleteClass.trim()}" id="ff-${f.id}" name="${f.id}" placeholder="${f.placeholder || ''}" ${f.required ? 'required' : ''} autocomplete="off">
-      ${hasAutocomplete ? '<div class="user-dropdown" id="dd-' + f.id + '" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ccc;border-radius:4px;max-height:200px;overflow-y:auto;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.1)"></div>' : ''}
+      ${hasAutocomplete ? '<div class="user-dropdown" id="dd-' + f.id + '" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #d0d0d0;border-radius:6px;max-height:240px;overflow-y:auto;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,0.12);margin-top:4px"></div>' : ''}
       ${hint}
     </div>`
   }
@@ -931,10 +931,16 @@ function setupUserSearch(el) {
       debounceTimer = setTimeout(async () => {
         const query = e.target.value.split(',').pop().trim() // Get last value for comma-separated
 
-        if (query.length < 2) {
+        // Require at least 3 characters for search
+        if (query.length < 3) {
           dropdown.style.display = 'none'
+          if (query.length > 0) {
+            console.log(`⏳ ${searchType} search: "${query}" (need ${3 - query.length} more character${3 - query.length > 1 ? 's' : ''})`)
+          }
           return
         }
+
+        console.log(`🔎 ${searchType.toUpperCase()} search: "${query}" in field: ${fieldId}`)
 
         try {
           const response = await fetch(`${apiUrl}${endpoint}?query=${encodeURIComponent(query)}`, {
@@ -945,12 +951,14 @@ function setupUserSearch(el) {
           if (result.success && result.data.length > 0) {
             const resultType = searchType === 'group' ? 'group' : 'user'
             dropdown.innerHTML = result.data.map((item, idx) => `
-              <div class="search-option" data-value="${item.email || item.displayName}" data-index="${idx}" style="padding:10px;cursor:pointer;border-bottom:1px solid #eee">
-                <div style="font-weight:600">${item.displayName}</div>
-                <div style="font-size:9px;color:var(--color-text-secondary)">${item.email}</div>
+              <div class="search-option" data-value="${item.email || item.displayName}" data-index="${idx}" style="padding:12px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;transition:background 200ms;display:flex;flex-direction:column;gap:4px" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='white'">
+                <div style="font-weight:600;color:#1a1a1a;font-size:13px">${item.displayName}</div>
+                <div style="font-size:12px;color:#888">${item.email}</div>
               </div>
             `).join('')
             dropdown.style.display = 'block'
+
+            console.log(`✅ ${searchType} search found ${result.data.length} result(s) for "${query}"`)
 
             // Click handlers for options
             dropdown.querySelectorAll('.search-option').forEach(option => {
@@ -959,23 +967,26 @@ function setupUserSearch(el) {
                 if (searchType === 'group') {
                   // For group selection, just set the value
                   input.value = selectedValue
+                  console.log(`✅ Group selected: ${selectedValue}`)
                 } else {
                   // For members, handle comma-separated values
                   const currentValue = input.value
                   const parts = currentValue.split(',')
                   parts[parts.length - 1] = selectedValue
                   input.value = parts.join(', ').trim()
+                  console.log(`✅ User selected: ${selectedValue}`)
                 }
                 dropdown.style.display = 'none'
               })
             })
           } else {
             const noResultMsg = searchType === 'group' ? 'No groups found' : 'No users found'
-            dropdown.innerHTML = `<div style="padding:10px;color:var(--color-text-tertiary)">${noResultMsg}</div>`
+            dropdown.innerHTML = `<div style="padding:12px 14px;color:#999;font-size:12px">${noResultMsg}</div>`
             dropdown.style.display = 'block'
+            console.log(`ℹ️ ${searchType} search: ${noResultMsg} for "${query}"`)
           }
         } catch (error) {
-          console.error(`${searchType} search error:`, error)
+          console.error(`❌ ${searchType} search error:`, error)
           dropdown.style.display = 'none'
         }
       }, 300) // Wait 300ms before searching
