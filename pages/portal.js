@@ -377,16 +377,10 @@ function renderOperations(el, catalog) {
       <div class="card-title mb-3"><i class="ti ti-list-check"></i> Select operation group</div>
       <div class="op-cards-grid">
         ${Object.entries(grouped).map(([grpName, ops]) => `
-          <div class="op-group-card" data-group="${grpName}">
+          <div class="op-group-card" data-group="${grpName}" data-ops="${JSON.stringify(ops.map(o => ({ id: o.id, label: o.label })))}">
             <div class="op-group-title">${grpName}</div>
             <div class="op-group-count">${ops.length} action${ops.length !== 1 ? 's' : ''}</div>
-            <div class="op-group-actions" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--color-border-secondary);border-radius:8px;margin-top:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:100;min-width:220px">
-              ${ops.map(op => `
-                <div class="op-action-item" data-op="${op.id}" style="padding:12px 16px;border-bottom:1px solid var(--color-border-tertiary);cursor:pointer;font-size:13px;color:var(--color-text-primary)">
-                  ${op.label}
-                </div>
-              `).join('')}
-            </div>
+            <div style="margin-top:8px;font-size:11px;color:var(--color-text-secondary)">Click to configure</div>
           </div>
         `).join('')}
       </div>
@@ -395,32 +389,17 @@ function renderOperations(el, catalog) {
     <div id="svc-form-preview"></div>
   `
 
-  // Group card click handler - show/hide actions
+  // Group card click handler - render form with action selector
   area.querySelectorAll('.op-group-card').forEach(groupCard => {
-    groupCard.style.position = 'relative'
-    groupCard.addEventListener('click', (e) => {
-      if (e.target.classList.contains('op-action-item')) return
+    groupCard.addEventListener('click', () => {
+      const grpName = groupCard.dataset.group
+      const opsData = JSON.parse(groupCard.dataset.ops)
 
-      // Hide all other action lists
-      area.querySelectorAll('.op-group-actions').forEach(actions => {
-        actions.style.display = 'none'
-      })
+      // Set active operation to first one in group
+      activeOpId = opsData[0].id
 
-      // Toggle current actions
-      const actionsList = groupCard.querySelector('.op-group-actions')
-      actionsList.style.display = actionsList.style.display === 'none' ? 'block' : 'none'
-    })
-  })
-
-  // Action item click handler - select operation and show preview
-  area.querySelectorAll('.op-action-item').forEach(item => {
-    item.addEventListener('click', () => {
-      activeOpId = item.dataset.op
-      renderFormPreview(area, catalog, activeOpId)
-      // Hide actions list after selection
-      area.querySelectorAll('.op-group-actions').forEach(actions => {
-        actions.style.display = 'none'
-      })
+      // Render group form with action selector
+      renderGroupForm(area, catalog, grpName, opsData)
     })
   })
 
@@ -480,6 +459,88 @@ function renderFormPreview(area, catalog, opId) {
     const pageEl = document.getElementById('page-portal')
     render(pageEl)
   })
+}
+
+function renderGroupForm(area, catalog, grpName, opsData) {
+  const preview = area.querySelector('#svc-form-preview')
+  if (!preview) return
+
+  const firstOp = catalog.operations.find(o => o.id === opsData[0].id)
+  if (!firstOp) return
+
+  preview.innerHTML = `
+    <div class="form-preview-card">
+      <div class="form-preview-header">
+        <div class="form-preview-title"><i class="ti ti-sparkles"></i> ${grpName}</div>
+        <button class="btn-submit" id="svc-start-form"><i class="ti ti-arrow-right"></i> Start Request</button>
+      </div>
+
+      <div style="margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--color-border-secondary)">
+        <label style="font-size:13px;font-weight:700;color:var(--color-text-primary);display:block;margin-bottom:8px">
+          Select Action
+        </label>
+        <select id="group-action-selector" style="width:100%;padding:10px 12px;border:1px solid var(--color-border-secondary);border-radius:8px;font-size:13px;font-weight:600;color:var(--color-text-primary)">
+          ${opsData.map(op => `<option value="${op.id}">${op.label}</option>`).join('')}
+        </select>
+      </div>
+
+      <div id="group-form-preview"></div>
+    </div>
+  `
+
+  const selector = preview.querySelector('#group-action-selector')
+  const formPreview = preview.querySelector('#group-form-preview')
+
+  // Load initial form
+  loadOperationForm(formPreview, catalog, activeOpId)
+
+  // Change handler for action selector
+  selector.addEventListener('change', (e) => {
+    activeOpId = e.target.value
+    loadOperationForm(formPreview, catalog, activeOpId)
+  })
+
+  preview.querySelector('#svc-start-form').addEventListener('click', () => {
+    portalView = 'form'
+    formValues = {}
+    const pageEl = document.getElementById('page-portal')
+    render(pageEl)
+  })
+}
+
+function loadOperationForm(container, catalog, opId) {
+  const op = catalog.operations.find(o => o.id === opId)
+  if (!op) return
+
+  const wfSteps = buildWorkflow(op)
+
+  container.innerHTML = `
+    <div class="form-preview-grid">
+      <div>
+        <div class="form-section-heading">Approval & Provisioning Workflow</div>
+        <div class="workflow-timeline-h">
+          ${wfSteps.map((s, i) => `
+            <div class="wfh-step">
+              <div class="wfh-circle wfh-${s.color}"><i class="ti ${s.icon}"></i></div>
+              <div class="wfh-label">${s.label}</div>
+            </div>
+            ${i < wfSteps.length - 1 ? '<div class="wfh-arrow"></div>' : ''}
+          `).join('')}
+        </div>
+      </div>
+      <div>
+        <div class="form-section-heading">AI Agent Validation Checks</div>
+        <div class="agent-checks-list">
+          ${op.agentChecks.map(c => `
+            <div class="agent-check-item">
+              <i class="ti ti-robot agent-check-icon"></i>
+              <span>${c}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `
 }
 
 // ============================================================
