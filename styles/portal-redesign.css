@@ -411,60 +411,47 @@
 }
 
 /* ============================================================
-   Service Operations Grid — Enhanced Actions
+   Service Operations Grid
    ============================================================ */
 .op-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .op-card {
   background: white;
   border: 1px solid var(--color-border-secondary);
   border-radius: 10px;
-  padding: 18px;
+  padding: 20px;
   cursor: pointer;
   transition: all 200ms;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  min-height: 100px;
+  justify-content: center;
 }
 
 .op-card:hover {
-  border-color: var(--color-border-primary);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  border-color: var(--clr-info-text);
+  box-shadow: 0 4px 12px rgba(12, 68, 124, 0.1);
   transform: translateY(-2px);
-  background: linear-gradient(135deg, #fafbfc 0%, white 100%);
 }
 
 .op-card.selected {
-  background: linear-gradient(135deg, #E6F1FB 0%, #D4E8F7 100%);
+  background: var(--clr-info-bg);
   border-color: var(--clr-info-text);
-  box-shadow: 0 6px 16px rgba(12, 68, 124, 0.15);
-  border-width: 1px;
+  box-shadow: 0 4px 12px rgba(12, 68, 124, 0.2);
 }
 
 .op-card-title {
   font-size: 14px;
   font-weight: 700;
   color: var(--color-text-primary);
-  letter-spacing: -0.2px;
-}
-
-.op-card-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  background: var(--clr-warning-bg);
-  color: var(--clr-warning-text);
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  white-space: nowrap;
-  flex-shrink: 0;
+  line-height: 1.4;
 }
 
 .op-card-steps {
