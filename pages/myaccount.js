@@ -2,16 +2,25 @@ import { go } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { api } from '../lib/api-client.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
-import {
-  USER_PROFILE, SECURITY_DASHBOARD, SIGNIN_ACTIVITY, LICENSES,
-  GROUP_MEMBERSHIPS, ONEDRIVE_INFO, TEAMS_INFO, DEVICES, APP_ACCESS,
-  PENDING_APPROVALS, COPILOT_READINESS, EXECUTIVE_SUMMARY
-} from '../data/myaccount-data.js'
 
 let activeTab = 'executive'
 
-// Real data from backend (fallback to simulated if errors)
-let userData = { profile: USER_PROFILE, security: SECURITY_DASHBOARD, signin: SIGNIN_ACTIVITY, licenses: LICENSES, groups: GROUP_MEMBERSHIPS, onedrive: ONEDRIVE_INFO, teams: TEAMS_INFO, devices: DEVICES }
+// Real data from backend only - NO DEMO DATA FALLBACKS
+let userData = {
+  profile: null,
+  security: null,
+  signin: [],
+  licenses: [],
+  groups: { securityGroups: [], microsoft365Groups: [], distributionLists: [] },
+  onedrive: null,
+  teams: null,
+  devices: [],
+  mailbox: null,
+  apps: [],
+  approvals: [],
+  copilot: null
+}
+let dataFetchError = null
 
 const TABS = [
   { id: 'executive', label: 'Executive Summary', icon: 'ti-dashboard' },
@@ -61,21 +70,39 @@ export async function initMyAccount() {
       fetch(`${api}/me/mailbox?email=${encodeURIComponent(userEmail)}`).then(r => r.json())
     ])
 
-    // Use real data if successful, fallback to simulated
-    userData.profile = profile.status === 'fulfilled' && profile.value.success ? profile.value.data : USER_PROFILE
-    userData.security = security.status === 'fulfilled' && security.value.success ? security.value.data : SECURITY_DASHBOARD
-    userData.signin = signin.status === 'fulfilled' && signin.value.success ? signin.value.data.recentSignins : SIGNIN_ACTIVITY
-    userData.licenses = licenses.status === 'fulfilled' && licenses.value.success ? licenses.value.data : LICENSES
-    userData.groups = groups.status === 'fulfilled' && groups.value.success ? groups.value.data : GROUP_MEMBERSHIPS
-    userData.onedrive = onedrive.status === 'fulfilled' && onedrive.value.success ? onedrive.value.data : ONEDRIVE_INFO
-    userData.teams = teams.status === 'fulfilled' && teams.value.success ? teams.value.data : TEAMS_INFO
-    userData.devices = devices.status === 'fulfilled' && devices.value.success ? devices.value.data : DEVICES
-    userData.mailbox = mailbox.status === 'fulfilled' && mailbox.value.success ? mailbox.value.data : { mailboxUsage: 65 }
+    // Use ONLY real data - NO demo fallbacks
+    if (profile.status === 'fulfilled' && profile.value.success) userData.profile = profile.value.data
+    else { dataFetchError = 'Profile data unavailable'; console.error('❌ Profile fetch failed:', profile.reason || 'no success flag') }
 
-    console.log('✓ My Account data loaded')
+    if (security.status === 'fulfilled' && security.value.success) userData.security = security.value.data
+    else { dataFetchError = 'Security data unavailable'; console.error('❌ Security fetch failed:', security.reason || 'no success flag') }
+
+    if (signin.status === 'fulfilled' && signin.value.success) userData.signin = signin.value.data.recentSignins || []
+    else { dataFetchError = 'Sign-in data unavailable'; console.error('❌ Sign-in fetch failed:', signin.reason || 'no success flag') }
+
+    if (licenses.status === 'fulfilled' && licenses.value.success) userData.licenses = licenses.value.data || []
+    else { dataFetchError = 'Licenses data unavailable'; console.error('❌ Licenses fetch failed:', licenses.reason || 'no success flag') }
+
+    if (groups.status === 'fulfilled' && groups.value.success) userData.groups = groups.value.data || { securityGroups: [], microsoft365Groups: [], distributionLists: [] }
+    else { dataFetchError = 'Groups data unavailable'; console.error('❌ Groups fetch failed:', groups.reason || 'no success flag') }
+
+    if (onedrive.status === 'fulfilled' && onedrive.value.success) userData.onedrive = onedrive.value.data
+    else { dataFetchError = 'OneDrive data unavailable'; console.error('❌ OneDrive fetch failed:', onedrive.reason || 'no success flag') }
+
+    if (teams.status === 'fulfilled' && teams.value.success) userData.teams = teams.value.data
+    else { dataFetchError = 'Teams data unavailable'; console.error('❌ Teams fetch failed:', teams.reason || 'no success flag') }
+
+    if (devices.status === 'fulfilled' && devices.value.success) userData.devices = devices.value.data || []
+    else { dataFetchError = 'Devices data unavailable'; console.error('❌ Devices fetch failed:', devices.reason || 'no success flag') }
+
+    if (mailbox.status === 'fulfilled' && mailbox.value.success) userData.mailbox = mailbox.value.data
+    else { dataFetchError = 'Mailbox data unavailable'; console.error('❌ Mailbox fetch failed:', mailbox.reason || 'no success flag') }
+
+    console.log('✓ My Account data loaded from backend (real data only)')
     render(el)
   } catch (error) {
-    console.warn('⚠️ Using simulated data:', error.message)
+    dataFetchError = error.message
+    console.error('❌ My Account initialization failed - showing error state:', error.message)
     render(el)
   }
 }
@@ -140,7 +167,7 @@ function render(el) {
       ${TABS.map(t => `
         <button class="tab-btn ${activeTab === t.id ? 'active' : ''}" data-tab="${t.id}">
           <i class="ti ${t.icon}"></i><span>${t.label}</span>
-          ${t.id === 'approvals' && PENDING_APPROVALS.length > 0 ? `<span class="intune-tab-badge red">${PENDING_APPROVALS.length}</span>` : ''}
+          ${t.id === 'approvals' && (userData.approvals?.length || 0) > 0 ? `<span class="intune-tab-badge red">${userData.approvals.length}</span>` : ''}
         </button>
       `).join('')}
     </div>
@@ -718,9 +745,9 @@ function renderGroups() {
         </div>
       </div>
       <div class="card">
-        <div class="card-header"><span class="card-title">Distribution Lists (${GROUP_MEMBERSHIPS.distributionLists.length})</span></div>
+        <div class="card-header"><span class="card-title">Distribution Lists (${(userData.groups?.distributionLists || []).length})</span></div>
         <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
-          ${(userData.groups.distributionLists || []).map(d => `
+          ${(userData.groups?.distributionLists || []).map(d => `
             <div style="padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px">
               <div style="font-weight:600">${d.name}</div>
               <div style="color:var(--color-text-tertiary);font-size:9px">${d.membershipType}</div>
@@ -768,7 +795,7 @@ function renderApps() {
             </tr>
           </thead>
           <tbody>
-            ${(userData.apps || APP_ACCESS).map(a => `
+            ${(userData.apps || []).map(a => `
               <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
                 <td style="padding:10px 12px;font-size:11px">${a.name}</td>
                 <td style="padding:10px 12px;font-size:11px">${a.lastAccessed}</td>
@@ -865,7 +892,7 @@ function renderTeams() {
 }
 
 function renderApprovals() {
-  if (!PENDING_APPROVALS || PENDING_APPROVALS.length === 0) {
+  if (!userData.approvals || userData.approvals.length === 0) {
     return `
       <div class="card">
         <div style="padding:32px;text-align:center;color:var(--color-text-secondary);font-size:12px">
@@ -878,7 +905,7 @@ function renderApprovals() {
     <div class="card">
       <div class="card-header"><span class="card-title">Pending Approvals</span></div>
       <div style="padding:0;border-top:0.5px solid var(--color-border-secondary)">
-        ${PENDING_APPROVALS.map(a => `
+        ${userData.approvals.map(a => `
           <div style="padding:12px;border-bottom:0.5px solid var(--color-border-tertiary)">
             <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px">
               <div>
@@ -896,7 +923,7 @@ function renderApprovals() {
 }
 
 function renderCopilot() {
-  const c = COPILOT_READINESS
+  const c = userData.copilot || { personalAIReadinessScore: 0, exchangeUsage: 0, teamsUsage: 0, oneDriveUsage: 0, sharePointUsage: 0, recommendations: [] }
   return `
     <div style="display:flex;flex-direction:column;gap:16px">
       <div class="card">
