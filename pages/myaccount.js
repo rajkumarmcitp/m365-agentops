@@ -108,7 +108,14 @@ function renderWithSkeletons(el) {
   el.querySelectorAll('#myacc-subnav .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeTab = btn.dataset.tab
+
+      // Update active tab highlight
+      el.querySelectorAll('#myacc-subnav .tab-btn').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+
+      // Update content
       el.querySelector('#myacc-content').innerHTML = renderTab()
+
       if (activeTab === 'signin') {
         setTimeout(() => initSigninMap(el), 100)
       }
@@ -145,7 +152,14 @@ function render(el) {
   el.querySelectorAll('#myacc-subnav .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeTab = btn.dataset.tab
+
+      // Update active tab highlight
+      el.querySelectorAll('#myacc-subnav .tab-btn').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+
+      // Update content
       el.querySelector('#myacc-content').innerHTML = renderTab()
+
       // Initialize map for sign-in activity tab
       if (activeTab === 'signin') {
         setTimeout(() => initSigninMap(el), 100)
