@@ -231,6 +231,26 @@ function renderLanding(el) {
       <span>Signed in as <strong>${u?.name}</strong> (${roleDesc[u?.role] || u?.role}). All requests are logged and validated by our AI Agent before provisioning.</span>
     </div>
 
+    <div style="margin-bottom:20px">
+      <div class="section-label">
+        <i class="ti ti-workflow"></i>
+        Request Approval & Provisioning Workflow
+      </div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-top:6px;font-weight:500">
+        Every request follows this 7-step process from submission to completion
+      </div>
+    </div>
+
+    <div class="portal-workflow-banner">
+      ${WORKFLOW_STEPS.map((s, i) => `
+        <div class="pwf-step">
+          <div class="pwf-circle pwf-${s.color}"><i class="ti ${s.icon}"></i></div>
+          <div class="pwf-label">${s.label}</div>
+        </div>
+        ${i < WORKFLOW_STEPS.length - 1 ? '<div class="pwf-arrow"><i class="ti ti-arrow-right"></i></div>' : ''}
+      `).join('')}
+    </div>
+
     <div style="margin-bottom:16px">
       <div class="section-label">
         <i class="ti ti-layout-grid"></i>
@@ -352,30 +372,9 @@ function renderOperations(el, catalog) {
     grouped[op.group].push(op)
   })
 
-  const firstOp = Object.values(grouped)[0]?.[0]
-  const wfSteps = firstOp ? buildWorkflow(firstOp) : []
-
   area.innerHTML = `
     <div class="card">
       <div class="card-title mb-3"><i class="ti ti-list-check"></i> Select an action</div>
-
-      <div style="margin-bottom:20px;padding:0 12px">
-        <div style="font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">
-          <i class="ti ti-workflow"></i> Request Workflow
-        </div>
-        <div class="portal-workflow-banner" style="margin-bottom:0">
-          ${wfSteps.map((s, i) => `
-            <div class="pwf-step">
-              <div class="pwf-circle pwf-${s.color}"><i class="ti ${s.icon}"></i></div>
-              <div class="pwf-label">${s.label}</div>
-            </div>
-            ${i < wfSteps.length - 1 ? '<div class="pwf-arrow"><i class="ti ti-arrow-right"></i></div>' : ''}
-          `).join('')}
-        </div>
-      </div>
-
-      <hr style="margin:16px 0;border:none;height:1px;background:var(--color-border-tertiary)">
-
       ${Object.entries(grouped).map(([grpName, ops]) => `
         <div style="margin-bottom:20px">
           <div class="section-heading">${grpName}</div>
