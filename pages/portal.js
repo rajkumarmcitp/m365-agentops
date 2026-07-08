@@ -461,13 +461,6 @@ function wireFormEvents(el, catalog) {
   }
 }
 
-  if (activeOpId) {
-    const card = area.querySelector(`.op-card[data-op="${activeOpId}"]`)
-    if (card) card.classList.add('selected')
-    renderFormPreview(area, catalog, activeOpId)
-  }
-}
-
 function renderFormPreview(area, catalog, opId) {
   const preview = area.querySelector('#svc-form-preview')
   if (!preview) return
