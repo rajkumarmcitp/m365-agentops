@@ -3042,58 +3042,75 @@ app.get('/api/licenses', async (req, res) => {
       console.log(`📊 Sample SKU structure:`, JSON.stringify(skus.value[0], null, 2).substring(0, 500))
     }
 
-    const licenses = (skus.value || []).map(sku => {
-      const consumed = sku.prepaidUnits?.enabled || 0
-      const warning = sku.prepaidUnits?.warning || 0
-      const suspended = sku.prepaidUnits?.suspended || 0
-      const available = (sku.prepaidUnits?.enabled || 0) - (sku.consumedUnits || 0)
+    const licenses = (skus.value || [])
+      .filter(sku => {
+        // EXCLUDE FREE/TRIAL LICENSES
+        const skuName = (sku.skuPartNumber || '').toUpperCase()
+        const isFree = skuName.includes('FREE') || skuName.includes('TRIAL') || skuName.includes('STARTER') || skuName.includes('PREVIEW')
+        const prepaid = sku.prepaidUnits?.enabled || 0
 
-      // Determine health status
-      let status = 'healthy'
-      let statusCls = 'success'
-      const utilizationPct = consumed > 0 ? ((sku.consumedUnits || 0) / consumed * 100) : 0
+        // Include only paid licenses (prepaid > 0 and not free)
+        const isPaid = prepaid > 0 && !isFree
 
-      if (utilizationPct >= 95) {
-        status = 'critical'
-        statusCls = 'danger'
-      } else if (utilizationPct >= 80) {
-        status = 'monitor'
-        statusCls = 'warning'
-      }
+        if (!isPaid) {
+          console.log(`⏭️  Excluding free/trial license: ${sku.skuPartNumber} (prepaid: ${prepaid}, isFree: ${isFree})`)
+        }
 
-      const servicePlansList = (sku.servicePlans || []).map(sp => ({
-        serviceName: sp.servicePlanName || sp.serviceName || 'Service',
-        provisioningStatus: sp.provisioningStatus || 'Unknown'
-      }))
+        return isPaid
+      })
+      .map(sku => {
+        const consumed = sku.prepaidUnits?.enabled || 0
+        const warning = sku.prepaidUnits?.warning || 0
+        const suspended = sku.prepaidUnits?.suspended || 0
+        const available = (sku.prepaidUnits?.enabled || 0) - (sku.consumedUnits || 0)
 
-      if (servicePlansList.length === 0) {
-        console.log(`⚠️ No service plans found for ${sku.skuPartNumber}`)
-      }
+        // Determine health status
+        let status = 'healthy'
+        let statusCls = 'success'
+        const utilizationPct = consumed > 0 ? ((sku.consumedUnits || 0) / consumed * 100) : 0
 
-      return {
-        id: sku.id,
-        skuId: sku.id,
-        skuPartNumber: sku.skuPartNumber,
-        name: sku.skuPartNumber || sku.skuId || 'Unknown License',
-        total: consumed,
-        consumed: sku.consumedUnits || 0,
-        available: Math.max(0, available),
-        status: status,
-        statusCls: statusCls,
-        utilizationPct: Math.round(utilizationPct),
-        servicePlans: servicePlansList
-      }
-    })
+        if (utilizationPct >= 95) {
+          status = 'critical'
+          statusCls = 'danger'
+        } else if (utilizationPct >= 80) {
+          status = 'monitor'
+          statusCls = 'warning'
+        }
+
+        const servicePlansList = (sku.servicePlans || []).map(sp => ({
+          serviceName: sp.servicePlanName || sp.serviceName || 'Service',
+          provisioningStatus: sp.provisioningStatus || 'Unknown'
+        }))
+
+        if (servicePlansList.length === 0) {
+          console.log(`⚠️ No service plans found for ${sku.skuPartNumber}`)
+        }
+
+        return {
+          id: sku.id,
+          skuId: sku.id,
+          skuPartNumber: sku.skuPartNumber,
+          name: sku.skuPartNumber || sku.skuId || 'Unknown License',
+          total: consumed,
+          consumed: sku.consumedUnits || 0,
+          available: Math.max(0, available),
+          status: status,
+          statusCls: statusCls,
+          utilizationPct: Math.round(utilizationPct),
+          servicePlans: servicePlansList
+        }
+      })
 
     // Sort by utilization percentage descending
     licenses.sort((a, b) => b.utilizationPct - a.utilizationPct)
 
-    // Calculate totals
+    // Calculate totals (FREE LICENSES EXCLUDED)
     const totalLicenses = licenses.reduce((sum, l) => sum + l.total, 0)
     const totalConsumed = licenses.reduce((sum, l) => sum + l.consumed, 0)
     const totalAvailable = licenses.reduce((sum, l) => sum + l.available, 0)
 
-    console.log(`✓ Found ${licenses.length} license SKUs`)
+    console.log(`✓ Found ${licenses.length} PAID license SKUs (excluding free/trial)`)
+    console.log(`📊 License totals (paid only): ${totalLicenses} total, ${totalConsumed} consumed, ${totalAvailable} available`)
     res.json({
       success: true,
       count: licenses.length,
