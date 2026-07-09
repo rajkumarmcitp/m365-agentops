@@ -10347,13 +10347,8 @@ app.get('/api/zero-trust/validations', async (req, res) => {
           }
 
           try {
-            // Try to update existing
-            const existing = await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items?$filter=fields/ValidationID eq '${validation.id}'`).get()
-            if (existing.value && existing.value.length > 0) {
-              await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items/${existing.value[0].id}`).patch(itemData)
-            } else {
-              await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items`).post(itemData)
-            }
+            // Create new item (don't check for existing since ValidationID isn't indexed)
+            await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items`).post(itemData)
           } catch (e) {
             console.warn(`⚠️ Could not save result for ${validation.id}:`, e.message)
           }
