@@ -154,7 +154,7 @@ async function loadDashboardData(el) {
     console.log(`   - Security Score: ${scoreResult.data?.currentScore || 'N/A'}`)
     console.log(`   - Requests: ${requestsResult.requests?.length || 0}`)
     console.log(`   - Licenses: ${licensesResult.count || 0} SKUs, ${licensesResult.summary?.utilizationPct || 0}% utilized`)
-    console.log(`   - Zero Trust: ${zeroTrustResult.validations?.length || 0} controls`)
+    console.log(`   - Zero Trust: ${zeroTrustResult.data?.validations?.length || 0} controls`)
 
     // Check setup status and show banner if incomplete
     if (setupResult.success && setupResult.completedSteps && setupResult.completedSteps.length < 5) {
@@ -296,9 +296,11 @@ function updateSystemHealth(el, scoreResult = {}, licensesResult = {}, zeroTrust
   const zt_status = el.querySelector('#dash-zt-status')
   const zt_pillars = el.querySelector('#dash-zt-pillars')
 
-  const ztValidations = zeroTrustResult.validations || []
+  const ztValidations = zeroTrustResult.data?.validations || []
   const ztSuccess = zeroTrustResult.success ?? false
-  const ztSummary = zeroTrustResult.summary || {}
+  const ztSummary = zeroTrustResult.data?.summary || {}
+
+  console.log('📊 Zero Trust validations:', ztValidations.length, 'Success:', ztSuccess)
 
   if (ztSuccess && ztValidations.length > 0) {
     const passCount = ztValidations.filter(v => v.status === 'pass').length
