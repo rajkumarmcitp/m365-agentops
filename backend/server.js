@@ -364,15 +364,18 @@ app.use(cors({
     'http://localhost:5174',    // Vite fallback port
     'http://localhost:5175',    // Vite fallback port 2
     'http://localhost:3000',    // Backend itself
+    'http://localhost:3001',    // Backend API server
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174',
     'http://127.0.0.1:5175',
     'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
     'https://proud-river-0f55f1e10.7.azurestaticapps.net' // Production frontend
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200
 }))
 
 // ============================================================

@@ -943,9 +943,7 @@ function setupUserSearch(el) {
         console.log(`🔎 ${searchType.toUpperCase()} search: "${query}" in field: ${fieldId}`)
 
         try {
-          const response = await fetch(`${apiUrl}${endpoint}?query=${encodeURIComponent(query)}`, {
-            targetAddressSpace: isDev ? 'local' : undefined
-          })
+          const response = await fetch(`${apiUrl}${endpoint}?query=${encodeURIComponent(query)}`)
           const result = await response.json()
 
           if (result.success && result.data.length > 0) {
