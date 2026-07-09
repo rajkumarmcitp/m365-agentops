@@ -127,11 +127,20 @@ async function loadDashboardData(el) {
       getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return { data: {} } }),
       fetch('/api/setup/config').then(r => r.json()).catch(e => { console.warn('⚠️ Setup config fetch failed:', e.message); return { success: false } }),
       fetch('/api/requests/list').then(r => r.json()).catch(e => { console.warn('⚠️ Requests fetch failed:', e.message); return { requests: [] } }),
-      fetch('/api/licenses').then(r => r.json()).then(data => {
+      fetch('/api/licenses').then(r => {
+        console.log('📊 License API response status:', r.status)
+        if (!r.ok) {
+          console.error('❌ License API returned status:', r.status, r.statusText)
+        }
+        return r.json()
+      }).then(data => {
         console.log('📊 Raw licenses response:', data)
+        if (!data.success) {
+          console.warn('⚠️ License API returned success: false')
+        }
         return data
       }).catch(e => {
-        console.warn('⚠️ Licenses fetch failed:', e.message)
+        console.error('❌ Licenses fetch error:', e)
         return { success: false, summary: { utilizationPct: 0, total: 0, consumed: 0 }, count: 0 }
       })
     ])
