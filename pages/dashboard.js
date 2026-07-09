@@ -119,15 +119,17 @@ function renderDashboardSkeleton(el) {
 async function loadDashboardData(el) {
   try {
     console.log('📡 Fetching dashboard data from real APIs...')
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    console.log('📡 Using API URL:', apiUrl)
 
     // Fetch all data in parallel
     const [devicesResult, usersResult, scoreResult, setupResult, requestsResult, licensesResult] = await Promise.all([
       getDevices().catch(e => { console.warn('⚠️ Devices fetch failed:', e.message); return { data: { value: [] } } }),
       getUsers().catch(e => { console.warn('⚠️ Users fetch failed:', e.message); return { data: { value: [] } } }),
       getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return { data: {} } }),
-      fetch('/api/setup/config').then(r => r.json()).catch(e => { console.warn('⚠️ Setup config fetch failed:', e.message); return { success: false } }),
-      fetch('/api/requests/list').then(r => r.json()).catch(e => { console.warn('⚠️ Requests fetch failed:', e.message); return { requests: [] } }),
-      fetch('/api/licenses').then(r => {
+      fetch(`${apiUrl}/api/setup/config`).then(r => r.json()).catch(e => { console.warn('⚠️ Setup config fetch failed:', e.message); return { success: false } }),
+      fetch(`${apiUrl}/api/requests/list`).then(r => r.json()).catch(e => { console.warn('⚠️ Requests fetch failed:', e.message); return { requests: [] } }),
+      fetch(`${apiUrl}/api/licenses`).then(r => {
         console.log('📊 License API response status:', r.status)
         if (!r.ok) {
           console.error('❌ License API returned status:', r.status, r.statusText)
