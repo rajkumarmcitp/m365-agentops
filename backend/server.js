@@ -544,6 +544,10 @@ const ROLE_GROUPS = {
 // ============================================================
 let investigationService = null
 
+// Cache for last Zero Trust validation results (in-memory)
+let lastZeroTrustResults = null
+let lastZeroTrustResultsTime = null
+
 /**
  * Migrate demo alerts from in-memory to SharePoint
  */
@@ -10328,6 +10332,11 @@ app.get('/api/zero-trust/validations', async (req, res) => {
       }
     }
 
+    // Cache results for immediate dashboard display
+    lastZeroTrustResults = results
+    lastZeroTrustResultsTime = new Date().toISOString()
+    console.log(`✅ Cached ${results.validations.length} validation results in memory`)
+
     // Automatically save new results to SharePoint if configured
     if (siteId && resultsListId && graphClient && results.validations) {
       console.log('💾 Saving validation results to SharePoint...')
@@ -10513,6 +10522,25 @@ app.get('/api/zero-trust/pillars', async (req, res) => {
  */
 app.get('/api/zero-trust/last-results', async (req, res) => {
   try {
+    // Try to use cached results first (immediate response)
+    if (lastZeroTrustResults && lastZeroTrustResults.validations && lastZeroTrustResults.validations.length > 0) {
+      console.log(`📦 Returning cached Zero Trust results (${lastZeroTrustResults.validations.length} validations)`)
+      const validations = lastZeroTrustResults.validations
+      const summary = lastZeroTrustResults.summary || { pass: 0, fail: 0, warn: 0 }
+      const compliance = lastZeroTrustResults.overallScore || 0
+
+      return res.json({
+        success: true,
+        hasResults: true,
+        lastRunTime: lastZeroTrustResultsTime,
+        validations: validations,
+        summary: summary,
+        compliance: compliance,
+        totalValidations: validations.length,
+        source: 'cache'
+      })
+    }
+
     const siteId = process.env.SHAREPOINT_SITE_ID
     const resultsListId = process.env.SHAREPOINT_ZEROTRUST_RESULTS_LIST_ID
 
