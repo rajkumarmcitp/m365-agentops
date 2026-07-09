@@ -10512,6 +10512,97 @@ app.get('/api/zero-trust/pillars', async (req, res) => {
   }
 })
 
+/**
+ * GET /api/zero-trust/last-results
+ * Fetch the last saved Zero Trust validation results from SharePoint
+ */
+app.get('/api/zero-trust/last-results', async (req, res) => {
+  try {
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const resultsListId = process.env.SHAREPOINT_ZEROTRUST_RESULTS_LIST_ID
+
+    if (!siteId || !resultsListId || !graphClient) {
+      return res.json({
+        success: false,
+        hasResults: false,
+        message: 'SharePoint not configured for Zero Trust results storage'
+      })
+    }
+
+    console.log('📋 Fetching last Zero Trust results from SharePoint...')
+
+    // Get all results and sort by ValidatedAt (most recent first)
+    const results = await graphClient.api(
+      `/sites/${siteId}/lists/${resultsListId}/items?$expand=fields&$orderby=fields/ValidatedAt desc&$top=200`
+    ).get()
+
+    if (!results.value || results.value.length === 0) {
+      return res.json({
+        success: true,
+        hasResults: false,
+        message: 'No assessment results found yet'
+      })
+    }
+
+    // Group by ValidatedAt to get results from the same run
+    const validations = {}
+    let lastRunTime = null
+
+    for (const item of results.value) {
+      const validationId = item.fields.ValidationID
+      const status = item.fields.Status?.toLowerCase() || 'unknown'
+      const validatedAt = item.fields.ValidatedAt
+
+      if (!lastRunTime) {
+        lastRunTime = validatedAt
+      }
+
+      // Only include items from the most recent run
+      if (validatedAt === lastRunTime) {
+        validations[validationId] = {
+          id: validationId,
+          status: status,
+          evidence: item.fields.Evidence ? JSON.parse(item.fields.Evidence) : null,
+          notes: item.fields.Notes,
+          currentValue: item.fields.CurrentValue,
+          validatedBy: item.fields.ValidatedBy,
+          validatedAt: validatedAt,
+          method: item.fields.ValidationMethod
+        }
+      }
+    }
+
+    // Calculate summary
+    const validationArray = Object.values(validations)
+    const summary = {
+      pass: validationArray.filter(v => v.status === 'pass').length,
+      fail: validationArray.filter(v => v.status === 'fail').length,
+      warn: validationArray.filter(v => v.status === 'warning').length
+    }
+
+    const compliance = Math.round((summary.pass / validationArray.length) * 100)
+
+    console.log(`✅ Retrieved ${validationArray.length} results from last run (${lastRunTime})`)
+
+    res.json({
+      success: true,
+      hasResults: true,
+      lastRunTime: lastRunTime,
+      validations: validationArray,
+      summary: summary,
+      compliance: compliance,
+      totalValidations: validationArray.length
+    })
+  } catch (error) {
+    console.error('❌ Error fetching last results:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      hasResults: false
+    })
+  }
+})
+
 // ============================================================
 // Message Center Sync Job (runs every hour)
 // ============================================================

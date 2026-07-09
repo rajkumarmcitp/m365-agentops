@@ -104,7 +104,28 @@ function renderDashboardSkeleton(el) {
   el.querySelector('#dash-to-security')?.addEventListener('click', async () => await go('security'))
   el.querySelector('#dash-to-tenantguard')?.addEventListener('click', async () => await go('tenantguard'))
   el.querySelector('#dash-to-privaccts')?.addEventListener('click', async () => await go('privaccts'))
-  el.querySelector('#dash-to-zt')?.addEventListener('click', async () => await go('zerotrust'))
+  el.querySelector('#dash-to-zt')?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn')
+    if (btn && (btn.textContent.includes('Request') || btn.textContent.includes('Re-run'))) {
+      // Run assessment
+      btn.disabled = true
+      const origText = btn.textContent
+      btn.textContent = '⏳ Running...'
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/zero-trust/validations`)
+        const data = await response.json()
+        showToast('Assessment completed! Refreshing...', 'success')
+        setTimeout(() => location.reload(), 1500)
+      } catch (err) {
+        showToast('Assessment failed: ' + err.message, 'error')
+        btn.disabled = false
+        btn.textContent = origText
+      }
+    } else {
+      // Navigate to Zero Trust page
+      await go('zerotrust')
+    }
+  })
   el.querySelector('#dash-to-m365')?.addEventListener('click', async () => await go('m365config'))
   el.querySelector('#dash-to-licenses')?.addEventListener('click', async () => await go('licenses'))
   el.querySelector('#dash-to-intune')?.addEventListener('click', async () => await go('intune'))
@@ -145,7 +166,7 @@ async function loadDashboardData(el) {
         console.error('❌ Licenses fetch error:', e)
         return { success: false, summary: { utilizationPct: 0, total: 0, consumed: 0 }, count: 0 }
       }),
-      fetch(`${apiUrl}/api/zero-trust/validations`).then(r => r.json()).catch(e => { console.warn('⚠️ Zero Trust fetch failed:', e.message); return { success: false, validations: [] } })
+      fetch(`${apiUrl}/api/zero-trust/last-results`).then(r => r.json()).catch(e => { console.warn('⚠️ Zero Trust last results fetch failed:', e.message); return { success: false, hasResults: false } })
     ])
 
     console.log('✅ API responses received:')
@@ -154,7 +175,7 @@ async function loadDashboardData(el) {
     console.log(`   - Security Score: ${scoreResult.data?.currentScore || 'N/A'}`)
     console.log(`   - Requests: ${requestsResult.requests?.length || 0}`)
     console.log(`   - Licenses: ${licensesResult.count || 0} SKUs, ${licensesResult.summary?.utilizationPct || 0}% utilized`)
-    console.log(`   - Zero Trust: ${zeroTrustResult.data?.validations?.length || 0} controls`)
+    console.log(`   - Zero Trust: ${zeroTrustResult.compliance || 0}% compliant (${zeroTrustResult.hasResults ? 'saved results' : 'pending'})`)
 
     // Check setup status and show banner if incomplete
     if (setupResult.success && setupResult.completedSteps && setupResult.completedSteps.length < 5) {
@@ -292,28 +313,30 @@ function updateCriticalAlerts(el, requestsData = {}) {
 }
 
 function updateSystemHealth(el, scoreResult = {}, licensesResult = {}, zeroTrustResult = {}) {
-  // ✅ UPDATE ZERO TRUST - Display REAL data from API
+  // ✅ UPDATE ZERO TRUST - Display REAL data from SharePoint
   const zt_status = el.querySelector('#dash-zt-status')
   const zt_pillars = el.querySelector('#dash-zt-pillars')
+  const zt_btn = el.querySelector('#dash-to-zt')
 
-  const ztValidations = zeroTrustResult.data?.validations || []
-  const ztSuccess = zeroTrustResult.success ?? false
-  const ztSummary = zeroTrustResult.data?.summary || {}
+  const hasResults = zeroTrustResult.hasResults ?? false
+  const compliance = zeroTrustResult.compliance ?? 0
+  const totalValidations = zeroTrustResult.totalValidations ?? 0
+  const lastRunTime = zeroTrustResult.lastRunTime
 
-  console.log('📊 Zero Trust validations:', ztValidations.length, 'Success:', ztSuccess)
-
-  if (ztSuccess && ztValidations.length > 0) {
-    const passCount = ztValidations.filter(v => v.status === 'pass').length
-    const failCount = ztValidations.filter(v => v.status === 'fail').length
-    const warnCount = ztValidations.filter(v => v.status === 'warning').length
-    const compliance = Math.round((passCount / ztValidations.length) * 100)
+  if (hasResults && compliance >= 0) {
+    const summary = zeroTrustResult.summary || {}
+    const lastRun = lastRunTime ? new Date(lastRunTime).toLocaleString() : 'Unknown'
 
     if (zt_status) zt_status.textContent = `${compliance}% Compliant`
-    if (zt_pillars) zt_pillars.textContent = `Pillars: 5 • Controls: ${ztValidations.length}`
-    console.log(`📊 Zero Trust - ${compliance}% compliant (${passCount}/${ztValidations.length} controls)`)
+    if (zt_pillars) zt_pillars.textContent = `Pillars: 5 • Controls: ${totalValidations}`
+    if (zt_btn) zt_btn.textContent = '🔄 Re-run Assessment'
+
+    console.log(`📊 Zero Trust - ${compliance}% compliant (${summary.pass || 0}/${totalValidations} controls) - Last run: ${lastRun}`)
   } else {
     if (zt_status) zt_status.textContent = 'Pending Assessment'
     if (zt_pillars) zt_pillars.textContent = 'Pillars: 5 • Controls: 0'
+    if (zt_btn) zt_btn.textContent = 'Request Assessment'
+
     console.log('📊 Zero Trust - Pending Assessment')
   }
 
@@ -683,7 +706,28 @@ function renderDemoDashboard(el) {
   el.querySelector('#dash-to-security')?.addEventListener('click', async () => await go('security'))
   el.querySelector('#dash-to-tenantguard')?.addEventListener('click', async () => await go('tenantguard'))
   el.querySelector('#dash-to-privaccts')?.addEventListener('click', async () => await go('privaccts'))
-  el.querySelector('#dash-to-zt')?.addEventListener('click', async () => await go('zerotrust'))
+  el.querySelector('#dash-to-zt')?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn')
+    if (btn && (btn.textContent.includes('Request') || btn.textContent.includes('Re-run'))) {
+      // Run assessment
+      btn.disabled = true
+      const origText = btn.textContent
+      btn.textContent = '⏳ Running...'
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/zero-trust/validations`)
+        const data = await response.json()
+        showToast('Assessment completed! Refreshing...', 'success')
+        setTimeout(() => location.reload(), 1500)
+      } catch (err) {
+        showToast('Assessment failed: ' + err.message, 'error')
+        btn.disabled = false
+        btn.textContent = origText
+      }
+    } else {
+      // Navigate to Zero Trust page
+      await go('zerotrust')
+    }
+  })
   el.querySelector('#dash-to-m365')?.addEventListener('click', async () => await go('m365config'))
   el.querySelector('#dash-to-licenses')?.addEventListener('click', async () => await go('licenses'))
   el.querySelector('#dash-to-intune')?.addEventListener('click', async () => await go('intune'))
