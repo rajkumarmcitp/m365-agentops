@@ -5,7 +5,7 @@ const NAV_ITEMS = {
     { id: 'dashboard',  label: 'Dashboard',            icon: 'ti-layout-dashboard' },
     { id: 'requests',   label: 'Requests',             icon: 'ti-inbox',              badge: '7',  badgeCls: 'blue' },
     { id: 'security',   label: 'Security',             icon: 'ti-shield-exclamation', badge: '3',  badgeCls: 'red' },
-    { id: 'tenantguard-enhanced',label: 'Tenant Guard',icon: 'ti-alert-triangle',badge: 'Real Data' },
+    { id: 'tenantguard',label: 'Tenant Guard',icon: 'ti-alert-triangle',badge: 'Real Data' },
     { id: 'user-investigation',label: 'User Investigation',icon: 'ti-shield-check' },
     { id: 'zerotrust',  label: 'Zero Trust',           icon: 'ti-lock-check',         badge: '2',  badgeCls: 'amber' },
     { id: 'privaccts',  label: 'Privileged Accounts',  icon: 'ti-crown',              badge: '2',  badgeCls: 'red' },
