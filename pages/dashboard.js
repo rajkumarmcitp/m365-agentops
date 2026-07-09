@@ -128,7 +128,7 @@ async function loadDashboardData(el) {
       getUsers().catch(e => { console.warn('⚠️ Users fetch failed:', e.message); return { data: { value: [] } } }),
       getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return { data: {} } }),
       fetch(`${apiUrl}/api/setup/config`).then(r => r.json()).catch(e => { console.warn('⚠️ Setup config fetch failed:', e.message); return { success: false } }),
-      fetch(`${apiUrl}/api/requests/list`).then(r => r.json()).catch(e => { console.warn('⚠️ Requests fetch failed:', e.message); return { requests: [] } }),
+      fetch(`${apiUrl}/api/requests`).then(r => r.json()).catch(e => { console.warn('⚠️ Requests fetch failed:', e.message); return { requests: [] } }),
       fetch(`${apiUrl}/api/licenses`).then(r => {
         console.log('📊 License API response status:', r.status)
         if (!r.ok) {
