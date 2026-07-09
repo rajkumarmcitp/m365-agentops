@@ -124,8 +124,8 @@ async function loadDashboardData(el) {
 
     // Fetch all data in parallel
     const [devicesResult, usersResult, scoreResult, setupResult, requestsResult, licensesResult] = await Promise.all([
-      getDevices().catch(e => { console.warn('⚠️ Devices fetch failed:', e.message); return { data: { value: [] } } }),
-      getUsers().catch(e => { console.warn('⚠️ Users fetch failed:', e.message); return { data: { value: [] } } }),
+      getDevices().catch(e => { console.warn('⚠️ Devices fetch failed:', e.message); return { count: 0, data: [] } }),
+      getUsers().catch(e => { console.warn('⚠️ Users fetch failed:', e.message); return { count: 0, data: [] } }),
       getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return { data: {} } }),
       fetch(`${apiUrl}/api/setup/config`).then(r => r.json()).catch(e => { console.warn('⚠️ Setup config fetch failed:', e.message); return { success: false } }),
       fetch(`${apiUrl}/api/requests`).then(r => r.json()).catch(e => { console.warn('⚠️ Requests fetch failed:', e.message); return { requests: [] } }),
@@ -206,17 +206,21 @@ function updateSetupBanner(el, setupConfig) {
 
 function updateKpiTiles(el, devicesResult, usersResult, scoreResult) {
   // Update Managed Devices
-  if (devicesResult.data && devicesResult.data.value) {
-    realDeviceCount = devicesResult.data.value.length || 0
+  const deviceCount = devicesResult.count || (devicesResult.data?.length) || (devicesResult.data?.value?.length) || 0
+  if (deviceCount > 0) {
+    realDeviceCount = deviceCount
     const deviceEl = el.querySelector('.kpi-row')?.children[0]?.querySelector('.kpi-value')
     if (deviceEl) deviceEl.textContent = realDeviceCount.toLocaleString()
+    console.log(`✅ Updated devices to: ${realDeviceCount}`)
   }
 
   // Update Total Users
-  if (usersResult.data && usersResult.data.value) {
-    realUserCount = usersResult.data.value.length || 0
+  const userCount = usersResult.count || (usersResult.data?.length) || (usersResult.data?.value?.length) || 0
+  if (userCount > 0) {
+    realUserCount = userCount
     const userEl = el.querySelector('.kpi-row')?.children[1]?.querySelector('.kpi-value')
     if (userEl) userEl.textContent = realUserCount.toLocaleString()
+    console.log(`✅ Updated users to: ${realUserCount}`)
   }
 
   // Update Security Score
