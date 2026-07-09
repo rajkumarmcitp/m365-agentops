@@ -10531,9 +10531,9 @@ app.get('/api/zero-trust/last-results', async (req, res) => {
 
     console.log('📋 Fetching last Zero Trust results from SharePoint...')
 
-    // Get all results and sort by ValidatedAt (most recent first)
+    // Get all results (sort in memory since ValidatedAt isn't indexed)
     const results = await graphClient.api(
-      `/sites/${siteId}/lists/${resultsListId}/items?$expand=fields&$orderby=fields/ValidatedAt desc&$top=200`
+      `/sites/${siteId}/lists/${resultsListId}/items?$expand=fields&$top=500`
     ).get()
 
     if (!results.value || results.value.length === 0) {
@@ -10544,11 +10544,17 @@ app.get('/api/zero-trust/last-results', async (req, res) => {
       })
     }
 
-    // Group by ValidatedAt to get results from the same run
+    // Sort by ValidatedAt in memory and get the most recent run
+    const sortedItems = (results.value || []).sort((a, b) => {
+      const timeA = new Date(a.fields.ValidatedAt || 0).getTime()
+      const timeB = new Date(b.fields.ValidatedAt || 0).getTime()
+      return timeB - timeA // Most recent first
+    })
+
     const validations = {}
     let lastRunTime = null
 
-    for (const item of results.value) {
+    for (const item of sortedItems) {
       const validationId = item.fields.ValidationID
       const status = item.fields.Status?.toLowerCase() || 'unknown'
       const validatedAt = item.fields.ValidatedAt
