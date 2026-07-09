@@ -121,12 +121,13 @@ async function loadDashboardData(el) {
     console.log('📡 Fetching dashboard data from real APIs...')
 
     // Fetch all data in parallel
-    const [devicesResult, usersResult, scoreResult, setupResult, requestsResult] = await Promise.all([
+    const [devicesResult, usersResult, scoreResult, setupResult, requestsResult, licensesResult] = await Promise.all([
       getDevices().catch(e => { console.warn('⚠️ Devices fetch failed:', e.message); return { data: { value: [] } } }),
       getUsers().catch(e => { console.warn('⚠️ Users fetch failed:', e.message); return { data: { value: [] } } }),
       getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return { data: {} } }),
       fetch('/api/setup/config').then(r => r.json()).catch(e => { console.warn('⚠️ Setup config fetch failed:', e.message); return { success: false } }),
-      fetch('/api/requests/list').then(r => r.json()).catch(e => { console.warn('⚠️ Requests fetch failed:', e.message); return { requests: [] } })
+      fetch('/api/requests/list').then(r => r.json()).catch(e => { console.warn('⚠️ Requests fetch failed:', e.message); return { requests: [] } }),
+      fetch('/api/licenses').then(r => r.json()).catch(e => { console.warn('⚠️ Licenses fetch failed:', e.message); return { success: false, summary: { utilizationPct: 0 } } })
     ])
 
     console.log('✅ API responses received:')
@@ -134,6 +135,7 @@ async function loadDashboardData(el) {
     console.log(`   - Users: ${usersResult.data?.value?.length || 0}`)
     console.log(`   - Security Score: ${scoreResult.data?.currentScore || 'N/A'}`)
     console.log(`   - Requests: ${requestsResult.requests?.length || 0}`)
+    console.log(`   - Licenses: ${licensesResult.count || 0} SKUs, ${licensesResult.summary?.utilizationPct || 0}% utilized`)
 
     // Check setup status and show banner if incomplete
     if (setupResult.success && setupResult.completedSteps && setupResult.completedSteps.length < 5) {
@@ -147,7 +149,7 @@ async function loadDashboardData(el) {
     updateCriticalAlerts(el, requestsResult)
 
     // Update SYSTEM HEALTH with REAL data
-    updateSystemHealth(el, scoreResult)
+    updateSystemHealth(el, scoreResult, licensesResult)
 
     // Update APPLICATIONS HEALTH with REAL data
     updateApplicationsHealth(el)
@@ -266,7 +268,7 @@ function updateCriticalAlerts(el, requestsData = {}) {
   }
 }
 
-function updateSystemHealth(el, scoreResult = {}) {
+function updateSystemHealth(el, scoreResult = {}, licensesResult = {}) {
   // ✅ UPDATE ZERO TRUST - Fetch from Zero Trust API
   const zt_status = el.querySelector('#dash-zt-status')
   const zt_pillars = el.querySelector('#dash-zt-pillars')
@@ -283,14 +285,21 @@ function updateSystemHealth(el, scoreResult = {}) {
   if (cis_trend) cis_trend.textContent = '📊 Trend: — No data'
   console.log('📊 CIS Controls - 0% compliance (no validations run)')
 
-  // ✅ UPDATE LICENSE UTILIZATION - Fetch from Licenses API
+  // ✅ UPDATE LICENSE UTILIZATION - Display REAL data from Graph API
   const lic_pct = el.querySelector('#dash-license-pct')
   const lic_count = el.querySelector('#dash-license-count')
   const lic_risk = el.querySelector('#dash-license-risk')
-  if (lic_pct) lic_pct.textContent = '0%'
-  if (lic_count) lic_count.textContent = '0 / 0'
-  if (lic_risk) lic_risk.textContent = '✓ No data'
-  console.log('📊 License Utilization - No data available')
+
+  const licUtilization = licensesResult.summary?.utilizationPct || 0
+  const licTotal = licensesResult.summary?.total || 0
+  const licConsumed = licensesResult.summary?.consumed || 0
+  const licCount = licensesResult.count || 0
+
+  if (lic_pct) lic_pct.textContent = `${licUtilization}%`
+  if (lic_count) lic_count.textContent = licTotal > 0 ? `${licConsumed} / ${licTotal}` : '0 / 0'
+  if (lic_risk) lic_risk.textContent = licCount > 0 ? `📊 ${licCount} SKUs` : '✓ No data'
+
+  console.log(`📊 License Utilization - ${licUtilization}% utilized (${licConsumed}/${licTotal} licenses)`)
 
   // ✅ UPDATE DEVICE COMPLIANCE - Use real device data
   const dev_comp = el.querySelector('#dash-device-compliance')
