@@ -83,8 +83,8 @@ export function startCorrelationJobs() {
     createCorrelationTables(db)
 
     // Initialize demo data if empty
-    const existingCorrelations = db.prepare('SELECT COUNT(*) as count FROM alert_correlations').all()
-    if (!existingCorrelations || existingCorrelations[0]?.count === 0) {
+    const existingCorrelations = db.prepare('SELECT COUNT(*) as count FROM alert_correlations').get()
+    if (!existingCorrelations || existingCorrelations.count === 0) {
       initializeDemoData(db)
     }
 
