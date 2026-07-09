@@ -127,7 +127,13 @@ async function loadDashboardData(el) {
       getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return { data: {} } }),
       fetch('/api/setup/config').then(r => r.json()).catch(e => { console.warn('⚠️ Setup config fetch failed:', e.message); return { success: false } }),
       fetch('/api/requests/list').then(r => r.json()).catch(e => { console.warn('⚠️ Requests fetch failed:', e.message); return { requests: [] } }),
-      fetch('/api/licenses').then(r => r.json()).catch(e => { console.warn('⚠️ Licenses fetch failed:', e.message); return { success: false, summary: { utilizationPct: 0 } } })
+      fetch('/api/licenses').then(r => r.json()).then(data => {
+        console.log('📊 Raw licenses response:', data)
+        return data
+      }).catch(e => {
+        console.warn('⚠️ Licenses fetch failed:', e.message)
+        return { success: false, summary: { utilizationPct: 0, total: 0, consumed: 0 }, count: 0 }
+      })
     ])
 
     console.log('✅ API responses received:')
@@ -290,16 +296,31 @@ function updateSystemHealth(el, scoreResult = {}, licensesResult = {}) {
   const lic_count = el.querySelector('#dash-license-count')
   const lic_risk = el.querySelector('#dash-license-risk')
 
-  const licUtilization = licensesResult.summary?.utilizationPct || 0
-  const licTotal = licensesResult.summary?.total || 0
-  const licConsumed = licensesResult.summary?.consumed || 0
-  const licCount = licensesResult.count || 0
+  console.log('📊 licensesResult object:', licensesResult)
+  console.log('📊 licensesResult.summary:', licensesResult.summary)
 
-  if (lic_pct) lic_pct.textContent = `${licUtilization}%`
-  if (lic_count) lic_count.textContent = licTotal > 0 ? `${licConsumed} / ${licTotal}` : '0 / 0'
-  if (lic_risk) lic_risk.textContent = licCount > 0 ? `📊 ${licCount} SKUs` : '✓ No data'
+  const licUtilization = licensesResult.summary?.utilizationPct ?? 0
+  const licTotal = licensesResult.summary?.total ?? 0
+  const licConsumed = licensesResult.summary?.consumed ?? 0
+  const licCount = licensesResult.count ?? 0
+  const licSuccess = licensesResult.success ?? false
 
-  console.log(`📊 License Utilization - ${licUtilization}% utilized (${licConsumed}/${licTotal} licenses)`)
+  console.log(`📊 Extracted values - Util: ${licUtilization}%, Total: ${licTotal}, Consumed: ${licConsumed}, Count: ${licCount}, Success: ${licSuccess}`)
+
+  if (lic_pct) {
+    lic_pct.textContent = `${licUtilization}%`
+    console.log(`✅ Updated license pct to: ${licUtilization}%`)
+  }
+  if (lic_count) {
+    lic_count.textContent = licTotal > 0 ? `${licConsumed} / ${licTotal}` : '0 / 0'
+    console.log(`✅ Updated license count to: ${licTotal > 0 ? licConsumed + ' / ' + licTotal : '0 / 0'}`)
+  }
+  if (lic_risk) {
+    lic_risk.textContent = licCount > 0 ? `📊 ${licCount} SKUs` : (licSuccess ? '⚠️ Minimal licenses' : '✓ No data')
+    console.log(`✅ Updated license risk to: ${licCount > 0 ? licCount + ' SKUs' : 'No data'}`)
+  }
+
+  console.log(`📊 License Utilization - ${licUtilization}% utilized (${licConsumed}/${licTotal} licenses, ${licCount} SKUs)`)
 
   // ✅ UPDATE DEVICE COMPLIANCE - Use real device data
   const dev_comp = el.querySelector('#dash-device-compliance')
