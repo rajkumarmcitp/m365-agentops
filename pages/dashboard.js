@@ -145,7 +145,7 @@ async function loadDashboardData(el) {
     console.log('📡 Using API URL:', apiUrl)
 
     // Fetch all data in parallel
-    const [devicesResult, usersResult, scoreResult, setupResult, requestsResult, licensesResult, zeroTrustResult] = await Promise.all([
+    const [devicesResult, usersResult, scoreResult, setupResult, requestsResult, licensesResult, zeroTrustResult, cisResult] = await Promise.all([
       getDevices().catch(e => { console.warn('⚠️ Devices fetch failed:', e.message); return { count: 0, data: [] } }),
       getUsers().catch(e => { console.warn('⚠️ Users fetch failed:', e.message); return { count: 0, data: [] } }),
       getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return { data: {} } }),
@@ -167,7 +167,8 @@ async function loadDashboardData(el) {
         console.error('❌ Licenses fetch error:', e)
         return { success: false, summary: { utilizationPct: 0, total: 0, consumed: 0 }, count: 0 }
       }),
-      fetch(`${apiUrl}/api/zero-trust/last-results`).then(r => r.json()).catch(e => { console.warn('⚠️ Zero Trust last results fetch failed:', e.message); return { success: false, hasResults: false } })
+      fetch(`${apiUrl}/api/zero-trust/last-results`).then(r => r.json()).catch(e => { console.warn('⚠️ Zero Trust last results fetch failed:', e.message); return { success: false, hasResults: false } }),
+      fetch(`${apiUrl}/api/config/cis-controls`).then(r => r.json()).catch(e => { console.warn('⚠️ CIS controls fetch failed:', e.message); return { success: false, data: [] } })
     ])
 
     console.log('✅ API responses received:')
@@ -177,6 +178,7 @@ async function loadDashboardData(el) {
     console.log(`   - Requests: ${requestsResult.requests?.length || 0}`)
     console.log(`   - Licenses: ${licensesResult.count || 0} SKUs, ${licensesResult.summary?.utilizationPct || 0}% utilized`)
     console.log(`   - Zero Trust: ${zeroTrustResult.compliance || 0}% compliant (${zeroTrustResult.hasResults ? 'saved results' : 'pending'})`)
+    console.log(`   - CIS Controls: ${cisResult.data?.length || 0} controls (${cisResult.isValidating ? 'validating...' : 'idle'})`)
 
     // Check setup status and show banner if incomplete
     if (setupResult.success && setupResult.completedSteps && setupResult.completedSteps.length < 5) {
@@ -190,7 +192,7 @@ async function loadDashboardData(el) {
     updateCriticalAlerts(el, requestsResult)
 
     // Update SYSTEM HEALTH with REAL data
-    updateSystemHealth(el, scoreResult, licensesResult, zeroTrustResult)
+    updateSystemHealth(el, scoreResult, licensesResult, zeroTrustResult, cisResult)
 
     // Update APPLICATIONS HEALTH with REAL data
     updateApplicationsHealth(el)
@@ -313,7 +315,7 @@ function updateCriticalAlerts(el, requestsData = {}) {
   }
 }
 
-function updateSystemHealth(el, scoreResult = {}, licensesResult = {}, zeroTrustResult = {}) {
+function updateSystemHealth(el, scoreResult = {}, licensesResult = {}, zeroTrustResult = {}, cisResult = {}) {
   // ✅ UPDATE ZERO TRUST - Display REAL data from SharePoint
   const zt_status = el.querySelector('#dash-zt-status')
   const zt_pillars = el.querySelector('#dash-zt-pillars')
@@ -341,14 +343,34 @@ function updateSystemHealth(el, scoreResult = {}, licensesResult = {}, zeroTrust
     console.log('📊 Zero Trust - Pending Assessment')
   }
 
-  // ✅ UPDATE CIS CONTROLS - Fetch from Compliance API
+  // ✅ UPDATE CIS CONTROLS - Display REAL data from API
   const cis_comp = el.querySelector('#dash-cis-compliance')
   const cis_topics = el.querySelector('#dash-cis-topics')
   const cis_trend = el.querySelector('#dash-cis-trend')
-  if (cis_comp) cis_comp.textContent = '0%'
-  if (cis_topics) cis_topics.textContent = '0'
-  if (cis_trend) cis_trend.textContent = '📊 Trend: — No data'
-  console.log('📊 CIS Controls - 0% compliance (no validations run)')
+
+  const cisData = cisResult.data || []
+  const cisIsValidating = cisResult.isValidating ?? false
+  const cisMessage = cisResult.message || ''
+
+  if (cisIsValidating) {
+    if (cis_comp) cis_comp.textContent = '⏳ Validating...'
+    if (cis_topics) cis_topics.textContent = '—'
+    if (cis_trend) cis_trend.textContent = '📊 Trend: Running validation'
+    console.log('📊 CIS Controls - Validation in progress')
+  } else if (cisData && cisData.length > 0) {
+    const passed = cisData.filter(c => c.status === 'pass').length
+    const compliance = Math.round((passed / cisData.length) * 100)
+
+    if (cis_comp) cis_comp.textContent = `${compliance}%`
+    if (cis_topics) cis_topics.textContent = cisData.length.toString()
+    if (cis_trend) cis_trend.textContent = `📊 ${passed}/${cisData.length} controls passed`
+    console.log(`📊 CIS Controls - ${compliance}% compliance (${passed}/${cisData.length} controls)`)
+  } else {
+    if (cis_comp) cis_comp.textContent = '—'
+    if (cis_topics) cis_topics.textContent = '0'
+    if (cis_trend) cis_trend.textContent = '📊 Trend: Pending validation'
+    console.log('📊 CIS Controls - Awaiting validation')
+  }
 
   // ✅ UPDATE LICENSE UTILIZATION - Display REAL data from Graph API
   const lic_pct = el.querySelector('#dash-license-pct')
