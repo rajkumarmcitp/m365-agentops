@@ -348,19 +348,19 @@ function updateSystemHealth(el, scoreResult = {}, licensesResult = {}, zeroTrust
   const cis_topics = el.querySelector('#dash-cis-topics')
   const cis_trend = el.querySelector('#dash-cis-trend')
 
-  const hasResults = cisResult.hasResults ?? false
-  const compliance = cisResult.compliance ?? 0
-  const totalControls = cisResult.totalControls ?? 0
-  const passed = cisResult.passed ?? 0
-  const lastRunTime = cisResult.lastRunTime
+  const ciHasResults = cisResult.hasResults ?? false
+  const cisCompliance = cisResult.compliance ?? 0
+  const cisTotalControls = cisResult.totalControls ?? 0
+  const cisPassed = cisResult.passed ?? 0
+  const cisLastRunTime = cisResult.lastRunTime
 
-  if (hasResults && totalControls > 0) {
-    const lastRun = lastRunTime ? new Date(lastRunTime).toLocaleString() : 'Unknown'
+  if (ciHasResults && cisTotalControls > 0) {
+    const lastRun = cisLastRunTime ? new Date(cisLastRunTime).toLocaleString() : 'Unknown'
 
-    if (cis_comp) cis_comp.textContent = `${compliance}%`
-    if (cis_topics) cis_topics.textContent = totalControls.toString()
-    if (cis_trend) cis_trend.textContent = `📊 ${passed}/${totalControls} passed`
-    console.log(`📊 CIS Controls - ${compliance}% compliance (${passed}/${totalControls} controls) - Last run: ${lastRun}`)
+    if (cis_comp) cis_comp.textContent = `${cisCompliance}%`
+    if (cis_topics) cis_topics.textContent = cisTotalControls.toString()
+    if (cis_trend) cis_trend.textContent = `📊 ${cisPassed}/${cisTotalControls} passed`
+    console.log(`📊 CIS Controls - ${cisCompliance}% compliance (${cisPassed}/${cisTotalControls} controls) - Last run: ${lastRun}`)
   } else {
     if (cis_comp) cis_comp.textContent = '—'
     if (cis_topics) cis_topics.textContent = '0'
