@@ -168,7 +168,7 @@ async function loadDashboardData(el) {
         return { success: false, summary: { utilizationPct: 0, total: 0, consumed: 0 }, count: 0 }
       }),
       fetch(`${apiUrl}/api/zero-trust/last-results`).then(r => r.json()).catch(e => { console.warn('⚠️ Zero Trust last results fetch failed:', e.message); return { success: false, hasResults: false } }),
-      fetch(`${apiUrl}/api/config/cis-controls`).then(r => r.json()).catch(e => { console.warn('⚠️ CIS controls fetch failed:', e.message); return { success: false, data: [] } })
+      fetch(`${apiUrl}/api/config/cis-results/last`).then(r => r.json()).catch(e => { console.warn('⚠️ CIS results fetch failed:', e.message); return { success: false, hasResults: false } })
     ])
 
     console.log('✅ API responses received:')
@@ -343,33 +343,29 @@ function updateSystemHealth(el, scoreResult = {}, licensesResult = {}, zeroTrust
     console.log('📊 Zero Trust - Pending Assessment')
   }
 
-  // ✅ UPDATE CIS CONTROLS - Display REAL data from API
+  // ✅ UPDATE CIS CONTROLS - Display CACHED last run results from API
   const cis_comp = el.querySelector('#dash-cis-compliance')
   const cis_topics = el.querySelector('#dash-cis-topics')
   const cis_trend = el.querySelector('#dash-cis-trend')
 
-  const cisData = cisResult.data || []
-  const cisIsValidating = cisResult.isValidating ?? false
-  const cisMessage = cisResult.message || ''
+  const hasResults = cisResult.hasResults ?? false
+  const compliance = cisResult.compliance ?? 0
+  const totalControls = cisResult.totalControls ?? 0
+  const passed = cisResult.passed ?? 0
+  const lastRunTime = cisResult.lastRunTime
 
-  if (cisIsValidating) {
-    if (cis_comp) cis_comp.textContent = '⏳ Validating...'
-    if (cis_topics) cis_topics.textContent = '—'
-    if (cis_trend) cis_trend.textContent = '📊 Trend: Running validation'
-    console.log('📊 CIS Controls - Validation in progress')
-  } else if (cisData && cisData.length > 0) {
-    const passed = cisData.filter(c => c.status === 'pass').length
-    const compliance = Math.round((passed / cisData.length) * 100)
+  if (hasResults && totalControls > 0) {
+    const lastRun = lastRunTime ? new Date(lastRunTime).toLocaleString() : 'Unknown'
 
     if (cis_comp) cis_comp.textContent = `${compliance}%`
-    if (cis_topics) cis_topics.textContent = cisData.length.toString()
-    if (cis_trend) cis_trend.textContent = `📊 ${passed}/${cisData.length} controls passed`
-    console.log(`📊 CIS Controls - ${compliance}% compliance (${passed}/${cisData.length} controls)`)
+    if (cis_topics) cis_topics.textContent = totalControls.toString()
+    if (cis_trend) cis_trend.textContent = `📊 ${passed}/${totalControls} passed`
+    console.log(`📊 CIS Controls - ${compliance}% compliance (${passed}/${totalControls} controls) - Last run: ${lastRun}`)
   } else {
     if (cis_comp) cis_comp.textContent = '—'
     if (cis_topics) cis_topics.textContent = '0'
-    if (cis_trend) cis_trend.textContent = '📊 Trend: Pending validation'
-    console.log('📊 CIS Controls - Awaiting validation')
+    if (cis_trend) cis_trend.textContent = '📊 Trend: Awaiting first validation'
+    console.log('📊 CIS Controls - No validation results yet')
   }
 
   // ✅ UPDATE LICENSE UTILIZATION - Display REAL data from Graph API
