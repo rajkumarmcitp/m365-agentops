@@ -123,7 +123,7 @@ async function loadDashboardData(el) {
     console.log('📡 Using API URL:', apiUrl)
 
     // Fetch all data in parallel
-    const [devicesResult, usersResult, scoreResult, setupResult, requestsResult, licensesResult] = await Promise.all([
+    const [devicesResult, usersResult, scoreResult, setupResult, requestsResult, licensesResult, zeroTrustResult] = await Promise.all([
       getDevices().catch(e => { console.warn('⚠️ Devices fetch failed:', e.message); return { count: 0, data: [] } }),
       getUsers().catch(e => { console.warn('⚠️ Users fetch failed:', e.message); return { count: 0, data: [] } }),
       getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return { data: {} } }),
@@ -144,15 +144,17 @@ async function loadDashboardData(el) {
       }).catch(e => {
         console.error('❌ Licenses fetch error:', e)
         return { success: false, summary: { utilizationPct: 0, total: 0, consumed: 0 }, count: 0 }
-      })
+      }),
+      fetch(`${apiUrl}/api/zero-trust/validations`).then(r => r.json()).catch(e => { console.warn('⚠️ Zero Trust fetch failed:', e.message); return { success: false, validations: [] } })
     ])
 
     console.log('✅ API responses received:')
-    console.log(`   - Devices: ${devicesResult.data?.value?.length || 0}`)
-    console.log(`   - Users: ${usersResult.data?.value?.length || 0}`)
+    console.log(`   - Devices: ${devicesResult.count || 0}`)
+    console.log(`   - Users: ${usersResult.count || 0}`)
     console.log(`   - Security Score: ${scoreResult.data?.currentScore || 'N/A'}`)
     console.log(`   - Requests: ${requestsResult.requests?.length || 0}`)
     console.log(`   - Licenses: ${licensesResult.count || 0} SKUs, ${licensesResult.summary?.utilizationPct || 0}% utilized`)
+    console.log(`   - Zero Trust: ${zeroTrustResult.validations?.length || 0} controls`)
 
     // Check setup status and show banner if incomplete
     if (setupResult.success && setupResult.completedSteps && setupResult.completedSteps.length < 5) {
@@ -166,7 +168,7 @@ async function loadDashboardData(el) {
     updateCriticalAlerts(el, requestsResult)
 
     // Update SYSTEM HEALTH with REAL data
-    updateSystemHealth(el, scoreResult, licensesResult)
+    updateSystemHealth(el, scoreResult, licensesResult, zeroTrustResult)
 
     // Update APPLICATIONS HEALTH with REAL data
     updateApplicationsHealth(el)
@@ -289,13 +291,29 @@ function updateCriticalAlerts(el, requestsData = {}) {
   }
 }
 
-function updateSystemHealth(el, scoreResult = {}, licensesResult = {}) {
-  // ✅ UPDATE ZERO TRUST - Fetch from Zero Trust API
+function updateSystemHealth(el, scoreResult = {}, licensesResult = {}, zeroTrustResult = {}) {
+  // ✅ UPDATE ZERO TRUST - Display REAL data from API
   const zt_status = el.querySelector('#dash-zt-status')
   const zt_pillars = el.querySelector('#dash-zt-pillars')
-  if (zt_status) zt_status.textContent = 'Pending Assessment'
-  if (zt_pillars) zt_pillars.textContent = 'Pillars: 5 • Controls: 0'
-  console.log('📊 Zero Trust - Pending Assessment')
+
+  const ztValidations = zeroTrustResult.validations || []
+  const ztSuccess = zeroTrustResult.success ?? false
+  const ztSummary = zeroTrustResult.summary || {}
+
+  if (ztSuccess && ztValidations.length > 0) {
+    const passCount = ztValidations.filter(v => v.status === 'pass').length
+    const failCount = ztValidations.filter(v => v.status === 'fail').length
+    const warnCount = ztValidations.filter(v => v.status === 'warning').length
+    const compliance = Math.round((passCount / ztValidations.length) * 100)
+
+    if (zt_status) zt_status.textContent = `${compliance}% Compliant`
+    if (zt_pillars) zt_pillars.textContent = `Pillars: 5 • Controls: ${ztValidations.length}`
+    console.log(`📊 Zero Trust - ${compliance}% compliant (${passCount}/${ztValidations.length} controls)`)
+  } else {
+    if (zt_status) zt_status.textContent = 'Pending Assessment'
+    if (zt_pillars) zt_pillars.textContent = 'Pillars: 5 • Controls: 0'
+    console.log('📊 Zero Trust - Pending Assessment')
+  }
 
   // ✅ UPDATE CIS CONTROLS - Fetch from Compliance API
   const cis_comp = el.querySelector('#dash-cis-compliance')
