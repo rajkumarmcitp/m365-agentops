@@ -119,6 +119,13 @@ export function renderNav() {
 
   sidebar.innerHTML = html
 
+  // Logo click handler - navigate to dashboard
+  const navLogo = sidebar.querySelector('.nav-logo')
+  if (navLogo) {
+    navLogo.style.cursor = 'pointer'
+    navLogo.addEventListener('click', async () => await go('dashboard'))
+  }
+
   // Click handlers
   sidebar.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', async () => await go(item.dataset.page))

@@ -8,10 +8,6 @@ export function renderHeader() {
   if (!u) return
 
   header.innerHTML = `
-    <div class="header-brand">
-      <div class="brand-icon"><i class="ti ti-shield-bolt"></i></div>
-      <span>M365 AgentOps</span>
-    </div>
     <div class="header-spacer"></div>
     <div class="header-actions">
       <button class="header-icon-btn" title="Notifications" id="notification-bell" style="position:relative">
@@ -21,10 +17,12 @@ export function renderHeader() {
       <button class="header-icon-btn" title="Admin Settings" id="hdr-settings">
         <i class="ti ti-settings"></i>
       </button>
-      <div class="user-avatar" style="background:${u.color}" title="${u.name} — ${u.email}">${u.initials}</div>
-      <span class="role-badge ${u.role}">${u.role}</span>
-      <button class="signout-btn" id="hdr-signout">
-        <i class="ti ti-logout"></i> Sign out
+      <div class="user-avatar" style="background:${u.color}" title="${u.name} — ${u.email}">
+        <div class="avatar-initials">${u.initials}</div>
+        <div class="avatar-role">${u.role}</div>
+      </div>
+      <button class="signout-btn" id="hdr-signout" title="Sign out">
+        <i class="ti ti-logout"></i>
       </button>
     </div>
   `
