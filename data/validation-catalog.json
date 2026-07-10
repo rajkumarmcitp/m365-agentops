@@ -193,7 +193,7 @@
       "impactScore": 70
     },
     {
-      "id": "DEV-001",
+      "id": "DEV-069",
       "name": "Intune MDM Enrollment Required",
       "pillar": "Device Security",
       "category": "Device Compliance",
@@ -209,7 +209,7 @@
       "impactScore": 85
     },
     {
-      "id": "DEV-002",
+      "id": "DEV-070",
       "name": "Device Compliance Policy Enforced",
       "pillar": "Device Security",
       "category": "Device Compliance",
@@ -225,7 +225,7 @@
       "impactScore": 75
     },
     {
-      "id": "DEV-003",
+      "id": "DEV-071",
       "name": "BitLocker Enabled on Windows Devices",
       "pillar": "Device Security",
       "category": "Device Configuration",
@@ -241,7 +241,7 @@
       "impactScore": 70
     },
     {
-      "id": "DEV-004",
+      "id": "DEV-072",
       "name": "Windows Defender Enabled",
       "pillar": "Device Security",
       "category": "Endpoint Protection",
@@ -257,17 +257,17 @@
       "impactScore": 90
     },
     {
-      "id": "DEV-005",
-      "name": "Defender for Endpoint Onboarded",
+      "id": "DEV-073",
+      "name": "Mobile Device Management Enrollment",
       "pillar": "Device Security",
       "category": "Endpoint Protection",
       "severity": "High",
-      "description": "EDR (Endpoint Detection & Response) via Defender for Endpoint",
+      "description": "Device enrollment and MDM management via Intune",
       "graphApi": "GET /v1.0/deviceManagement/windowsDriverUpdateProfiles",
       "powershell": "Get-MdeDevices | Measure-Object",
-      "expectedValue": ">80% device onboarding rate",
-      "evidence": "Onboarded device count",
-      "remediation": "Onboard devices via Intune, Group Policy, or manual registration",
+      "expectedValue": ">80% device enrollment rate",
+      "evidence": "Enrolled device count",
+      "remediation": "Enforce device enrollment via Intune, Group Policy, or mobile app enrollment",
       "autoRemediationAvailable": false,
       "priority": 4,
       "impactScore": 75
