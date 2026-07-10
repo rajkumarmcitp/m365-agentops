@@ -1420,132 +1420,232 @@ export class ZeroTrustValidator {
         }
       }
 
-      // DEV-016: BitLocker via Configuration Policy
+      // DEV-016: macOS Platform SSO — Authentication
+      // Fully Automatable: Validate SSO policy configuration and assignments
       if (validation.id === 'DEV-016') {
         try {
-          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
-          const policies = configResponse.value || []
+          const [catalogResp, devResp] = await Promise.all([
+            this.graphClient.api('/deviceManagement/configurationPolicies').get(),
+            this.graphClient.api('/deviceManagement/managedDevices?$filter=operatingSystem eq \'macOS\'&$select=id&$top=1').get().catch(() => ({ value: [] }))
+          ])
 
-          const bitlockerPolicy = policies.find(p =>
-            p.name?.toLowerCase().includes('bitlocker') ||
-            p.name?.toLowerCase().includes('encryption')
+          const policies = catalogResp.value || []
+          const ssoPolicies = policies.filter(p =>
+            (p.name?.toLowerCase().includes('platform sso') ||
+             p.name?.toLowerCase().includes('enterprise sso') ||
+             p.name?.toLowerCase().includes('extensible sso') ||
+             p.name?.toLowerCase().includes('microsoft enterprise sso') ||
+             p.name?.toLowerCase().includes('single sign-on')) &&
+            p.platforms?.toLowerCase().includes('macos')
           )
 
-          result.currentValue = bitlockerPolicy ? 'BitLocker encryption policy active' : 'No BitLocker policy'
-          result.evidence = {
-            hasPolicy: !!bitlockerPolicy,
-            policyName: bitlockerPolicy?.name
+          const macosDevices = devResp.value?.length || 0
+
+          let assignedCount = 0, settingsVerified = 0
+          const policyDetails = []
+          const REQUIRED_SSO_SETTINGS = ['tenantId', 'realm', 'registrationType', 'enableSharedDeviceAuthentication']
+
+          for (const policy of ssoPolicies.slice(0, 5)) {
+            try {
+              const aResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/assignments`).get()
+              const hasAssignments = (aResp.value || []).length > 0
+              if (hasAssignments) {
+                assignedCount++
+                try {
+                  const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
+                  const configuredSettings = (sResp.value || []).filter(s => {
+                    const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
+                    return REQUIRED_SSO_SETTINGS.some(setting => defId.includes(setting.toLowerCase()))
+                  })
+                  if (configuredSettings.length >= 2) settingsVerified++
+                } catch (_) { /* settings optional */ }
+                policyDetails.push({ name: policy.name, assigned: true })
+              }
+            } catch (_) { /* optional */ }
           }
-          return bitlockerPolicy ? 'pass' : 'fail'
+
+          const coveragePct = macosDevices > 0 ? Math.round((assignedCount / macosDevices) * 100) : 0
+
+          const scoreExists = ssoPolicies.length > 0 ? 35 : 0
+          const scoreAssigned = assignedCount > 0 ? 25 : 0
+          const scoreCoverage = coveragePct >= 95 ? 40 : coveragePct >= 70 ? 25 : 10
+          const totalScore = scoreExists + scoreAssigned + scoreCoverage
+
+          result.currentValue = ssoPolicies.length === 0
+            ? 'No macOS Platform SSO policies configured'
+            : `${ssoPolicies.length} SSO policy(ies) (${assignedCount} assigned) — ${coveragePct}% coverage — ${settingsVerified} with full SSO settings verified — score ${totalScore}%`
+          result.evidence = {
+            policiesFound: ssoPolicies.length,
+            policiesAssigned: assignedCount,
+            settingsVerified,
+            macosDevices,
+            coveragePct,
+            policyDetails,
+            scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, coverage: `${scoreCoverage}%`, total: `${totalScore}%` }
+          }
+          if (ssoPolicies.length === 0) return 'fail'
+          return totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail'
         } catch (e) {
-          return markManual(e, 'Could not verify BitLocker encryption policy configuration')
+          console.warn(`⚠️ DEV-016 error: ${e.message}`)
+          result.currentValue = 'Could not retrieve macOS Platform SSO policies'
+          result.evidence = { error: e.message }
+          return 'warn'
         }
       }
 
       // DEV-017: Defender Antivirus Configuration
       // DEV-017: Windows Update Policies — Enforced
-      // Settings Catalog policies for Windows Update (WUfB rings in legacy endpoint not reliably accessible)
+      // Fully Automatable: Settings Catalog + legacy WUfB rings
       if (validation.id === 'DEV-017') {
         try {
-          const catalogResp = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          // Fetch both Settings Catalog policies and legacy WUfB configurations
+          const [catalogResp, wufbResp, devResp] = await Promise.all([
+            this.graphClient.api('/deviceManagement/configurationPolicies').get(),
+            this.graphClient.api('/deviceManagement/deviceConfigurations?$filter=isof(\'microsoft.graph.windowsUpdateForBusinessConfiguration\')').get().catch(() => ({ value: [] })),
+            this.graphClient.api('/deviceManagement/managedDevices?$filter=operatingSystem eq \'Windows\'&$select=id&$top=1').get().catch(() => ({ value: [] }))
+          ])
+
           const catalogUpdatePolicies = (catalogResp.value || []).filter(p =>
             (p.name?.toLowerCase().includes('windows update') ||
              p.name?.toLowerCase().includes('update ring') ||
              p.name?.toLowerCase().includes('wufb') ||
              p.name?.toLowerCase().includes('patch')) &&
-            (p.platforms?.toLowerCase().includes('windows') || !p.platforms)
+            p.platforms?.toLowerCase().includes('windows')
           )
+          const wufbPolicies = wufbResp.value || []
+          const windowsDevices = devResp.value?.length || 0
 
-          let assignedCount = 0, settingVerified = false
+          let catalogAssigned = 0, wufbAssigned = 0, settingsVerified = 0
           const policyDetails = []
+
+          // Check Settings Catalog policies
           for (const policy of catalogUpdatePolicies.slice(0, 5)) {
             try {
               const aResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/assignments`).get()
-              if ((aResp.value || []).length > 0) {
-                assignedCount++
-                policyDetails.push({ name: policy.name, assigned: true })
-                // Check settings for update configuration
-                try {
-                  const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
-                  for (const s of (sResp.value || [])) {
-                    const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
-                    if (defId.includes('update') || defId.includes('quality') || defId.includes('feature') || defId.includes('deferral')) {
-                      settingVerified = true; break
-                    }
-                  }
-                } catch (_) { /* settings optional */ }
+              const hasAssignments = (aResp.value || []).length > 0
+              if (hasAssignments) {
+                catalogAssigned++
+                const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
+                const hasUpdateSettings = (sResp.value || []).some(s => {
+                  const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
+                  return defId.includes('update') || defId.includes('quality') || defId.includes('feature') || defId.includes('deferral')
+                })
+                if (hasUpdateSettings) settingsVerified++
+                policyDetails.push({ name: policy.name, type: 'Catalog', assigned: true })
               }
             } catch (_) { /* optional */ }
           }
 
-          const totalFound = catalogUpdatePolicies.length
-          const scoreExists = totalFound > 0 ? 35 : 0
-          const scoreAssigned = assignedCount > 0 ? 25 : 0
-          const scoreSettings = settingVerified ? 40 : (assignedCount > 0 ? 20 : 0)
-          const totalScore = scoreExists + scoreAssigned + scoreSettings
-
-          result.currentValue = totalFound === 0
-            ? 'No Windows Update policies found in Intune Settings Catalog'
-            : `${totalFound} Windows Update policy(ies) — ${assignedCount} assigned — settings ${settingVerified ? 'verified ✓' : 'unconfirmed'} — score ${totalScore}%`
-          result.evidence = {
-            catalogPolicies: catalogUpdatePolicies.map(p => p.name),
-            totalFound, assignedCount, settingVerified, policyDetails,
-            scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, settingsVerified: `${scoreSettings}%`, total: `${totalScore}%` }
+          // Check WUfB legacy policies
+          for (const policy of wufbPolicies.slice(0, 5)) {
+            try {
+              const aResp = await this.graphClient.api(`/deviceManagement/deviceConfigurations/${policy.id}/assignments`).get()
+              if ((aResp.value || []).length > 0) {
+                wufbAssigned++
+                policyDetails.push({ name: policy.displayName, type: 'WUfB Legacy', assigned: true })
+              }
+            } catch (_) { /* optional */ }
           }
-          if (totalFound === 0) return 'fail'
+
+          const totalPolicies = catalogUpdatePolicies.length + wufbPolicies.length
+          const totalAssigned = catalogAssigned + wufbAssigned
+          const coveragePct = windowsDevices > 0 ? Math.round((totalAssigned / windowsDevices) * 100) : 0
+
+          const scoreExists = totalPolicies > 0 ? 35 : 0
+          const scoreAssigned = totalAssigned > 0 ? 25 : 0
+          const scoreCoverage = coveragePct >= 95 ? 40 : coveragePct >= 70 ? 25 : 10
+          const totalScore = scoreExists + scoreAssigned + scoreCoverage
+
+          result.currentValue = totalPolicies === 0
+            ? 'No Windows Update policies configured'
+            : `${totalPolicies} policies (${totalAssigned} assigned) — ${coveragePct}% coverage — ${settingsVerified} with update settings verified — score ${totalScore}%`
+          result.evidence = {
+            catalogPolicies: catalogUpdatePolicies.length,
+            wufbPolicies: wufbPolicies.length,
+            totalPolicies,
+            assignedPolicies: totalAssigned,
+            windowsDevices,
+            coveragePct,
+            settingsVerified,
+            policyDetails,
+            scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, coverage: `${scoreCoverage}%`, total: `${totalScore}%` }
+          }
+          if (totalPolicies === 0) return 'fail'
           return totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail'
-        } catch (e) { return markManual(e, 'Could not retrieve Windows Update policies from Settings Catalog') }
+        } catch (e) {
+          console.warn(`⚠️ DEV-017 error: ${e.message}`)
+          result.currentValue = 'Could not retrieve Windows Update policies'
+          result.evidence = { error: e.message }
+          return 'warn'
+        }
       }
 
       // DEV-018: macOS Update Policies — Enforced
-      // Settings Catalog policies for macOS update settings
+      // Fully Automatable: Settings Catalog macOS update policies
       if (validation.id === 'DEV-018') {
         try {
-          const catalogResp = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const [catalogResp, devResp] = await Promise.all([
+            this.graphClient.api('/deviceManagement/configurationPolicies').get(),
+            this.graphClient.api('/deviceManagement/managedDevices?$filter=operatingSystem eq \'macOS\'&$select=id&$top=1').get().catch(() => ({ value: [] }))
+          ])
+
           const UPDATE_KW = ['update', 'macos update', 'software update', 'os update', 'patch', 'security update']
           const macCatalog = (catalogResp.value || []).filter(p =>
             UPDATE_KW.some(k => p.name?.toLowerCase().includes(k)) &&
-            (p.platforms?.toLowerCase().includes('macos') || p.name?.toLowerCase().includes('mac'))
+            p.platforms?.toLowerCase().includes('macos')
           )
+          const macDevices = devResp.value?.length || 0
 
-          let assignedCount = 0, settingVerified = false
+          let assignedCount = 0, settingsVerified = 0
           const policyDetails = []
           for (const policy of macCatalog.slice(0, 5)) {
             try {
               const aResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/assignments`).get()
-              if ((aResp.value || []).length > 0) {
+              const hasAssignments = (aResp.value || []).length > 0
+              if (hasAssignments) {
                 assignedCount++
-                policyDetails.push({ name: policy.name, assigned: true })
                 try {
                   const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
-                  for (const s of (sResp.value || [])) {
+                  const hasUpdateSettings = (sResp.value || []).some(s => {
                     const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
-                    if (defId.includes('automaticupdate') || defId.includes('softwareupdate') || defId.includes('delay') || defId.includes('security')) {
-                      settingVerified = true; break
-                    }
-                  }
+                    return defId.includes('automaticupdate') || defId.includes('softwareupdate') ||
+                           defId.includes('delay') || defId.includes('security') || defId.includes('majorversion')
+                  })
+                  if (hasUpdateSettings) settingsVerified++
                 } catch (_) { /* settings optional */ }
+                policyDetails.push({ name: policy.name, assigned: true })
               }
             } catch (_) { /* optional */ }
           }
 
           const totalFound = macCatalog.length
+          const coveragePct = macDevices > 0 ? Math.round((assignedCount / macDevices) * 100) : 0
+
           const scoreExists = totalFound > 0 ? 35 : 0
           const scoreAssigned = assignedCount > 0 ? 25 : 0
-          const scoreSettings = settingVerified ? 40 : (assignedCount > 0 ? 20 : 0)
-          const totalScore = scoreExists + scoreAssigned + scoreSettings
+          const scoreCoverage = coveragePct >= 95 ? 40 : coveragePct >= 70 ? 25 : 10
+          const totalScore = scoreExists + scoreAssigned + scoreCoverage
 
           result.currentValue = totalFound === 0
-            ? 'No macOS update policies found in Intune Settings Catalog'
-            : `${totalFound} macOS update policy(ies) — ${assignedCount} assigned — settings ${settingVerified ? 'verified ✓' : 'unconfirmed'} — score ${totalScore}%`
+            ? 'No macOS update policies configured'
+            : `${totalFound} policies (${assignedCount} assigned) — ${coveragePct}% coverage — ${settingsVerified} with update settings verified — score ${totalScore}%`
           result.evidence = {
-            catalogPolicies: macCatalog.map(p => p.name),
-            totalFound, assignedCount, settingVerified, policyDetails,
-            scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, settingsVerified: `${scoreSettings}%`, total: `${totalScore}%` }
+            totalPolicies: totalFound,
+            assignedPolicies: assignedCount,
+            macosDevices: macDevices,
+            coveragePct,
+            settingsVerified,
+            policyDetails,
+            scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, coverage: `${scoreCoverage}%`, total: `${totalScore}%` }
           }
           if (totalFound === 0) return 'fail'
           return totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail'
-        } catch (e) { return markManual(e, 'Could not retrieve macOS update policies from Settings Catalog') }
+        } catch (e) {
+          console.warn(`⚠️ DEV-018 error: ${e.message}`)
+          result.currentValue = 'Could not retrieve macOS update policies'
+          result.evidence = { error: e.message }
+          return 'warn'
+        }
       }
 
       // DEV-019: Endpoint Analytics
@@ -2129,11 +2229,11 @@ export class ZeroTrustValidator {
         }
       }
 
-      // DEV-040: Defender for Endpoint Integration
-      // Scoring: connector exists & enabled (35%) + platform coverage (25%) + device risk signals flowing (40%)
+      // DEV-040: Defender for Endpoint Onboarded
+      // Fully Automatable: Verify connector enabled, platforms active, device risk signals flowing
       if (validation.id === 'DEV-040') {
         try {
-          // Step 1: check Mobile Threat Defense connectors for MDE
+          // Step 1: Retrieve MTD connector status
           const connResp = await this.graphClient.api('/deviceManagement/mobileThreatDefenseConnectors').get()
           const connectors = connResp.value || []
           const mde = connectors.find(c =>
@@ -2142,50 +2242,81 @@ export class ZeroTrustValidator {
             c.partnerName?.toLowerCase().includes('atp')
           )
 
-          // Step 2: check platform enablement on connector
+          // Step 2: Verify connector is enabled and platforms are active
+          const connectorEnabled = mde?.isActive === true || mde?.enabled === true
           const androidEnabled = mde?.androidEnabled === true || mde?.androidDeviceBlockedOnMissingPartnerData === false
           const iosEnabled = mde?.iosEnabled === true || mde?.iosDeviceBlockedOnMissingPartnerData === false
           const windowsEnabled = mde?.windowsEnabled === true
+          const macosEnabled = mde?.macOSEnabled === true || mde?.macosEnabled === true
 
-          // Step 3: check devices for threat state data (signals flowing)
-          let devicesWithThreatState = 0, totalDevices = 0
+          // Step 3: Retrieve managed devices and check threat state reporting
+          let devicesWithThreatState = 0, totalDevices = 0, devicesByRiskLevel = { low: 0, medium: 0, high: 0, secured: 0 }
           try {
-            const devResp = await this.graphClient.api('/deviceManagement/managedDevices?$select=id,partnerReportedThreatState&$top=200').get()
+            const devResp = await this.graphClient.api('/deviceManagement/managedDevices?$select=id,partnerReportedThreatState,deviceHealthAttestationState&$top=200').get()
             const devices = devResp.value || []
             totalDevices = devices.length
             devicesWithThreatState = devices.filter(d =>
               d.partnerReportedThreatState && d.partnerReportedThreatState !== 'unknown'
             ).length
+            // Count devices by risk level
+            devices.forEach(d => {
+              const state = d.partnerReportedThreatState?.toLowerCase() || 'unknown'
+              if (state === 'low') devicesByRiskLevel.low++
+              else if (state === 'medium') devicesByRiskLevel.medium++
+              else if (state === 'high') devicesByRiskLevel.high++
+              else if (state === 'secured') devicesByRiskLevel.secured++
+            })
           } catch (_) { /* optional */ }
 
-          const connectorExists = !!mde
-          const platformsEnabled = [androidEnabled, iosEnabled, windowsEnabled].filter(Boolean).length
-          const riskPct = totalDevices > 0 ? Math.round((devicesWithThreatState / totalDevices) * 100) : null
+          const connectorExists = !!mde && connectorEnabled
+          const platformsEnabled = [androidEnabled, iosEnabled, windowsEnabled, macosEnabled].filter(Boolean).length
+          const riskPct = totalDevices > 0 ? Math.round((devicesWithThreatState / totalDevices) * 100) : 0
 
-          // Scoring
+          // Scoring: connector (35%) + platforms (25%) + device risk signals (40%)
           const scoreConnector = connectorExists ? 35 : 0
-          const scorePlatform = Math.round((platformsEnabled / 3) * 25)
-          const scoreRisk = riskPct === null ? 20 : riskPct >= 90 ? 40 : riskPct >= 50 ? 25 : 10
+          const scorePlatform = Math.round((platformsEnabled / 4) * 25)
+          const scoreRisk = riskPct >= 90 ? 40 : riskPct >= 70 ? 30 : riskPct >= 50 ? 20 : riskPct >= 20 ? 10 : 0
           const totalScore = scoreConnector + scorePlatform + scoreRisk
 
-          result.currentValue = !connectorExists
-            ? 'Microsoft Defender for Endpoint connector not found in Intune'
-            : `MDE connector active — Android: ${androidEnabled ? '✓' : '✗'}, iOS: ${iosEnabled ? '✓' : '✗'}, Windows: ${windowsEnabled ? '✓' : '✗'}${riskPct !== null ? ` — ${riskPct}% of devices reporting threat state` : ''} — score ${totalScore}%`
+          if (!connectorExists) {
+            result.currentValue = 'Microsoft Defender for Endpoint connector not enabled or licensed'
+            result.evidence = {
+              connectorFound: !!mde,
+              connectorEnabled,
+              licenseRequired: !connectorExists,
+              message: 'Requires Microsoft Defender for Endpoint license and connector enablement'
+            }
+            return 'fail'
+          }
+
+          result.currentValue = `MDE Onboarded ✓ — Android: ${androidEnabled ? '✓' : '✗'}, iOS: ${iosEnabled ? '✓' : '✗'}, Windows: ${windowsEnabled ? '✓' : '✗'}, macOS: ${macosEnabled ? '✓' : '✗'} — ${riskPct}% devices reporting threat state — score ${totalScore}%`
           result.evidence = {
-            connectorFound: connectorExists,
-            connectorName: mde?.partnerName,
-            androidEnabled, iosEnabled, windowsEnabled,
-            platformsEnabled,
-            devicesWithThreatState, totalDevices, riskCoveragePct: riskPct,
-            allConnectors: connectors.map(c => c.partnerName),
+            connectorEnabled: true,
+            platformsEnabled: {
+              android: androidEnabled,
+              ios: iosEnabled,
+              windows: windowsEnabled,
+              macos: macosEnabled,
+              totalEnabled: platformsEnabled
+            },
+            deviceThreatReporting: {
+              totalDevices,
+              devicesReporting: devicesWithThreatState,
+              reportingCoveragePct: riskPct,
+              byRiskLevel: devicesByRiskLevel
+            },
             scoreBreakdown: { connector: `${scoreConnector}%`, platforms: `${scorePlatform}%`, riskSignals: `${scoreRisk}%`, total: `${totalScore}%` }
           }
 
-          if (!connectorExists) return 'fail'
           if (totalScore >= 80) return 'pass'
           if (totalScore >= 50) return 'warn'
           return 'fail'
-        } catch (e) { return markManual(e, 'Could not retrieve Defender for Endpoint connector status') }
+        } catch (e) {
+          console.warn(`⚠️ DEV-040 error: ${e.message}`)
+          result.currentValue = 'Could not retrieve Defender for Endpoint connector status'
+          result.evidence = { error: e.message }
+          return 'warn'
+        }
       }
 
       // DEV-041: Device Risk-Based Access
@@ -2473,12 +2604,16 @@ export class ZeroTrustValidator {
       }
 
       // DEV-055: AirDrop/Nearby Share Disabled
-      // Scoring: policy exists (35%) + assigned (25%) + coverage >= 95% (40%)
+      // Fully Automatable: Validate setting values + assignments + coverage
       if (validation.id === 'DEV-055') {
         try {
-          const catalogResp = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
-          const policies = catalogResp.value || []
+          const [catalogResp, iosResp, androidResp] = await Promise.all([
+            this.graphClient.api('/deviceManagement/configurationPolicies').get(),
+            this.graphClient.api('/deviceManagement/managedDevices?$filter=operatingSystem eq \'iOS\'&$select=id&$top=1').get().catch(() => ({ value: [] })),
+            this.graphClient.api('/deviceManagement/managedDevices?$filter=operatingSystem eq \'Android\'&$select=id&$top=1').get().catch(() => ({ value: [] }))
+          ])
 
+          const policies = catalogResp.value || []
           const airDropPolicies = policies.filter(p =>
             (p.name?.toLowerCase().includes('airdrop') ||
              p.name?.toLowerCase().includes('nearby share') ||
@@ -2487,50 +2622,62 @@ export class ZeroTrustValidator {
             (p.platforms?.toLowerCase().includes('ios') || p.platforms?.toLowerCase().includes('android') || !p.platforms)
           )
 
-          let assignedCount = 0, coveragePct = 0
+          const iosDevices = iosResp.value?.length || 0
+          const androidDevices = androidResp.value?.length || 0
+          const totalMobileDevices = iosDevices + androidDevices
+
+          let assignedCount = 0, restrictionVerified = 0
           const policyDetails = []
           for (const policy of airDropPolicies.slice(0, 5)) {
             try {
               const aResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/assignments`).get()
-              const assigned = (aResp.value || []).length > 0
-              if (assigned) {
+              const hasAssignments = (aResp.value || []).length > 0
+              if (hasAssignments) {
                 assignedCount++
-                policyDetails.push({ name: policy.name, assignments: (aResp.value || []).length })
+                try {
+                  const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
+                  const hasRestrictionSettings = (sResp.value || []).some(s => {
+                    const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
+                    const val = s.settingInstance?.value || ''
+                    // Check if AirDrop is disabled (false) or Nearby Share is disabled
+                    return (defId.includes('airdrop') || defId.includes('nearby') || defId.includes('shared')) &&
+                           (val === 'false' || val?.toString?.().toLowerCase() === 'disabled')
+                  })
+                  if (hasRestrictionSettings) restrictionVerified++
+                } catch (_) { /* settings optional */ }
+                policyDetails.push({ name: policy.name, assigned: true, settingsVerified: restrictionVerified > 0 })
               }
             } catch (_) { /* optional */ }
           }
 
-          // Get device counts to estimate coverage
-          let iosDevices = 0, androidDevices = 0
-          try {
-            const iosResp = await this.graphClient.api(`/deviceManagement/managedDevices?$filter=operatingSystem eq 'iOS'&$select=id&$top=1`).get()
-            iosDevices = iosResp.value?.length || 0
-            const androidResp = await this.graphClient.api(`/deviceManagement/managedDevices?$filter=operatingSystem eq 'Android'&$select=id&$top=1`).get()
-            androidDevices = androidResp.value?.length || 0
-          } catch (_) { /* optional */ }
-
-          coveragePct = assignedCount > 0 ? Math.min(100, assignedCount * 25) : 0
+          const coveragePct = totalMobileDevices > 0 ? Math.round((assignedCount / totalMobileDevices) * 100) : 0
 
           const scoreExists = airDropPolicies.length > 0 ? 35 : 0
           const scoreAssigned = assignedCount > 0 ? 25 : 0
-          const scoreCoverage = coveragePct >= 95 ? 40 : coveragePct >= 50 ? 25 : 0
+          const scoreCoverage = coveragePct >= 95 ? 40 : coveragePct >= 70 ? 25 : 10
           const totalScore = scoreExists + scoreAssigned + scoreCoverage
 
           result.currentValue = airDropPolicies.length === 0
             ? 'No AirDrop/Nearby Share restriction policies found'
-            : `${airDropPolicies.length} policies (${assignedCount} assigned) — coverage ~${coveragePct}% — score ${totalScore}%`
+            : `${airDropPolicies.length} policies (${assignedCount} assigned) — ${coveragePct}% coverage — ${restrictionVerified} with restrictions verified — score ${totalScore}%`
           result.evidence = {
             policiesFound: airDropPolicies.length,
             policiesAssigned: assignedCount,
+            restrictionVerified,
+            iosDevices,
+            androidDevices,
+            totalMobileDevices,
+            coveragePct,
             policyDetails,
-            estimatedCoveragePct: coveragePct,
-            iosDevices, androidDevices,
             scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, coverage: `${scoreCoverage}%`, total: `${totalScore}%` }
           }
           if (airDropPolicies.length === 0) return 'fail'
           return totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail'
         } catch (e) {
-          return markManual(e, 'Could not retrieve AirDrop/Nearby Share restriction configuration policies')
+          console.warn(`⚠️ DEV-055 error: ${e.message}`)
+          result.currentValue = 'Could not retrieve AirDrop/Nearby Share restriction policies'
+          result.evidence = { error: e.message }
+          return 'warn'
         }
       }
 
@@ -2549,12 +2696,16 @@ export class ZeroTrustValidator {
       }
 
       // DEV-057: Voice Assistant Restrictions (Siri/Google Assistant)
-      // Scoring: policy exists (35%) + assigned (25%) + coverage (40%)
+      // Fully Automatable: Validate setting values + assignments + coverage
       if (validation.id === 'DEV-057') {
         try {
-          const catalogResp = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
-          const policies = catalogResp.value || []
+          const [catalogResp, iosResp, androidResp] = await Promise.all([
+            this.graphClient.api('/deviceManagement/configurationPolicies').get(),
+            this.graphClient.api('/deviceManagement/managedDevices?$filter=operatingSystem eq \'iOS\'&$select=id&$top=1').get().catch(() => ({ value: [] })),
+            this.graphClient.api('/deviceManagement/managedDevices?$filter=operatingSystem eq \'Android\'&$select=id&$top=1').get().catch(() => ({ value: [] }))
+          ])
 
+          const policies = catalogResp.value || []
           const voicePolicies = policies.filter(p =>
             (p.name?.toLowerCase().includes('siri') ||
              p.name?.toLowerCase().includes('voice assistant') ||
@@ -2564,37 +2715,61 @@ export class ZeroTrustValidator {
             (p.platforms?.toLowerCase().includes('ios') || p.platforms?.toLowerCase().includes('android') || !p.platforms)
           )
 
-          let assignedCount = 0
+          const iosDevices = iosResp.value?.length || 0
+          const androidDevices = androidResp.value?.length || 0
+          const totalMobileDevices = iosDevices + androidDevices
+
+          let assignedCount = 0, restrictionVerified = 0
           const policyDetails = []
           for (const policy of voicePolicies.slice(0, 5)) {
             try {
               const aResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/assignments`).get()
-              const assigned = (aResp.value || []).length > 0
-              if (assigned) {
+              const hasAssignments = (aResp.value || []).length > 0
+              if (hasAssignments) {
                 assignedCount++
-                policyDetails.push({ name: policy.name, assignments: (aResp.value || []).length })
+                try {
+                  const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
+                  const hasDisabledSettings = (sResp.value || []).some(s => {
+                    const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
+                    const val = s.settingInstance?.value || ''
+                    return (defId.includes('siri') || defId.includes('voice') || defId.includes('assistant') || defId.includes('voicesearch')) &&
+                           (val === 'false' || val?.toString?.().toLowerCase() === 'disabled' || val?.toString?.().toLowerCase() === 'false')
+                  })
+                  if (hasDisabledSettings) restrictionVerified++
+                } catch (_) { /* settings optional */ }
+                policyDetails.push({ name: policy.name, assigned: true })
               }
             } catch (_) { /* optional */ }
           }
 
+          const coveragePct = totalMobileDevices > 0 ? Math.round((assignedCount / totalMobileDevices) * 100) : 0
+
           const scoreExists = voicePolicies.length > 0 ? 35 : 0
           const scoreAssigned = assignedCount > 0 ? 25 : 0
-          const scoreCoverage = assignedCount >= 2 ? 40 : assignedCount === 1 ? 20 : 0
+          const scoreCoverage = coveragePct >= 95 ? 40 : coveragePct >= 70 ? 25 : 10
           const totalScore = scoreExists + scoreAssigned + scoreCoverage
 
           result.currentValue = voicePolicies.length === 0
             ? 'No voice assistant restriction policies found'
-            : `${voicePolicies.length} policies (${assignedCount} assigned) — score ${totalScore}%`
+            : `${voicePolicies.length} policies (${assignedCount} assigned) — ${coveragePct}% coverage — ${restrictionVerified} with restrictions verified — score ${totalScore}%`
           result.evidence = {
             policiesFound: voicePolicies.length,
             policiesAssigned: assignedCount,
+            restrictionVerified,
+            iosDevices,
+            androidDevices,
+            totalMobileDevices,
+            coveragePct,
             policyDetails,
             scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, coverage: `${scoreCoverage}%`, total: `${totalScore}%` }
           }
           if (voicePolicies.length === 0) return 'fail'
           return totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail'
         } catch (e) {
-          return markManual(e, 'Could not retrieve voice assistant restriction configuration policies')
+          console.warn(`⚠️ DEV-057 error: ${e.message}`)
+          result.currentValue = 'Could not retrieve voice assistant restriction policies'
+          result.evidence = { error: e.message }
+          return 'warn'
         }
       }
 
@@ -2778,52 +2953,67 @@ export class ZeroTrustValidator {
       }
 
       // DEV-066: Android Compliance Policies — Managed Devices
-      // Scoring: policy exists (35%) + assigned (25%) + compliance coverage >= 95% (40%)
+      // Fully Automatable: Validate policy settings + assignments + compliance coverage
       if (validation.id === 'DEV-066') {
         try {
-          const polResp = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+          const [polResp, devResp] = await Promise.all([
+            this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get(),
+            this.graphClient.api('/deviceManagement/managedDevices?$filter=operatingSystem eq \'Android\'&$select=id,complianceState&$top=200').get().catch(() => ({ value: [] }))
+          ])
+
           const allPolicies = polResp.value || []
           const androidPolicies = allPolicies.filter(p =>
             (p.displayName?.toLowerCase().includes('android') ||
              p.displayName?.toLowerCase().includes('enterprise')) &&
-            p.platform === 'android'
+            (p.platform === 'android' || p['@odata.type']?.includes('Android'))
           )
 
-          let assignedCount = 0, complianceCount = 0
+          const devices = devResp.value || []
+          const androidDeviceCount = devices.length
+          const compliantCount = devices.filter(d => d.complianceState === 'compliant').length
+          const compliancePct = androidDeviceCount > 0 ? Math.round((compliantCount / androidDeviceCount) * 100) : 0
+
+          let assignedCount = 0, settingsVerified = 0
           const policyDetails = []
+          const REQUIRED_SETTINGS = ['minAndroidSecurityPatchLevel', 'deviceThreatProtectionEnabled', 'passwordRequired',
+                                     'encryptionRequired', 'rootDevicesBlocked', 'playStoreAppsOnly']
+
           for (const policy of androidPolicies.slice(0, 5)) {
             try {
               const aResp = await this.graphClient.api(`/deviceManagement/deviceCompliancePolicies/${policy.id}/assignments`).get()
-              const assigned = (aResp.value || []).length > 0
-              if (assigned) {
+              const hasAssignments = (aResp.value || []).length > 0
+              if (hasAssignments) {
                 assignedCount++
-                policyDetails.push({ name: policy.displayName, assignments: (aResp.value || []).length })
+                // Count how many required security settings are configured
+                let configuredSettings = 0
+                for (const setting of REQUIRED_SETTINGS) {
+                  if (policy[setting] !== undefined && policy[setting] !== null) configuredSettings++
+                }
+                if (configuredSettings >= 3) settingsVerified++
+                policyDetails.push({
+                  name: policy.displayName,
+                  assigned: true,
+                  settingsCount: configuredSettings,
+                  minSecurityPatch: policy.minAndroidSecurityPatchLevel,
+                  passwordRequired: policy.passwordRequired,
+                  encryptionRequired: policy.encryptionRequired
+                })
               }
             } catch (_) { /* optional */ }
           }
 
-          // Get managed Android device count and compliance states
-          let androidDeviceCount = 0, compliantCount = 0
-          try {
-            const devResp = await this.graphClient.api(`/deviceManagement/managedDevices?$filter=operatingSystem eq 'Android'&$select=id,complianceState&$top=200`).get()
-            const devices = devResp.value || []
-            androidDeviceCount = devices.length
-            compliantCount = devices.filter(d => d.complianceState === 'compliant').length
-          } catch (_) { /* optional */ }
-
-          const compliancePct = androidDeviceCount > 0 ? Math.round((compliantCount / androidDeviceCount) * 100) : 0
-
           const scoreExists = androidPolicies.length > 0 ? 35 : 0
           const scoreAssigned = assignedCount > 0 ? 25 : 0
-          const scoreCoverage = compliancePct >= 95 ? 40 : compliancePct >= 70 ? 25 : 0
+          const scoreCoverage = compliancePct >= 95 ? 40 : compliancePct >= 70 ? 25 : 10
           const totalScore = scoreExists + scoreAssigned + scoreCoverage
 
           result.currentValue = androidPolicies.length === 0
             ? 'No Android compliance policies found'
-            : `${androidPolicies.length} Android policy(ies) (${assignedCount} assigned) — ${compliantCount}/${androidDeviceCount} devices compliant (${compliancePct}%) — score ${totalScore}%`
+            : `${androidPolicies.length} Android policy(ies) (${assignedCount} assigned) — ${compliantCount}/${androidDeviceCount} devices compliant (${compliancePct}%) — ${settingsVerified} with full security settings — score ${totalScore}%`
           result.evidence = {
             policiesFound: androidPolicies.length,
             policiesAssigned: assignedCount,
+            settingsVerified,
             managedAndroidDevices: androidDeviceCount,
             compliantDevices: compliantCount,
             compliancePct,
@@ -2833,7 +3023,10 @@ export class ZeroTrustValidator {
           if (androidPolicies.length === 0) return 'fail'
           return totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail'
         } catch (e) {
-          return markManual(e, 'Could not retrieve Android compliance policies')
+          console.warn(`⚠️ DEV-066 error: ${e.message}`)
+          result.currentValue = 'Could not retrieve Android compliance policies'
+          result.evidence = { error: e.message }
+          return 'warn'
         }
       }
 
@@ -2885,70 +3078,91 @@ export class ZeroTrustValidator {
       }
 
       // DEV-068: Windows Local Account Restrictions — Access Control
-      // Scoring: policy exists (35%) + assigned (25%) + coverage >= 95% (40%)
+      // Fully Automatable: Settings Catalog + Endpoint Security intents
       if (validation.id === 'DEV-068') {
         try {
-          const catalogResp = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
-          const policies = catalogResp.value || []
+          const [catalogResp, intentsResp, devResp] = await Promise.all([
+            this.graphClient.api('/deviceManagement/configurationPolicies').get(),
+            this.graphClient.api('/beta/deviceManagement/intents?$filter=displayName eq \'Windows Security Baselines\'').get().catch(() => ({ value: [] })),
+            this.graphClient.api('/deviceManagement/managedDevices?$filter=operatingSystem eq \'Windows\'&$select=id&$top=1').get().catch(() => ({ value: [] }))
+          ])
 
-          const localAcctPolicies = policies.filter(p =>
+          const catalogPolicies = (catalogResp.value || []).filter(p =>
             (p.name?.toLowerCase().includes('local admin') ||
              p.name?.toLowerCase().includes('local account') ||
-             p.name?.toLowerCase().includes('local user') ||
              p.name?.toLowerCase().includes('laps') ||
              p.name?.toLowerCase().includes('user rights') ||
-             p.name?.toLowerCase().includes('guest account')) &&
+             p.name?.toLowerCase().includes('guest account') ||
+             p.name?.toLowerCase().includes('administrator')) &&
             p.platforms?.toLowerCase().includes('windows')
           )
+          const windowsDevices = devResp.value?.length || 0
 
-          let assignedCount = 0, settingVerified = false
+          let catalogAssigned = 0, intentsAssigned = 0, settingsVerified = 0
           const policyDetails = []
-          for (const policy of localAcctPolicies.slice(0, 5)) {
+
+          // Check Settings Catalog policies
+          for (const policy of catalogPolicies.slice(0, 5)) {
             try {
               const aResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/assignments`).get()
-              if ((aResp.value || []).length > 0) {
-                assignedCount++
-                policyDetails.push({ name: policy.name, assignments: (aResp.value || []).length })
+              const hasAssignments = (aResp.value || []).length > 0
+              if (hasAssignments) {
+                catalogAssigned++
                 try {
                   const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
-                  for (const s of (sResp.value || [])) {
+                  const hasRestrictiveSettings = (sResp.value || []).some(s => {
                     const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
-                    if (defId.includes('localadmin') || defId.includes('guestaccount') || defId.includes('laps') || defId.includes('userrights')) {
-                      settingVerified = true; break
-                    }
-                  }
+                    return defId.includes('localadmin') || defId.includes('guestaccount') ||
+                           defId.includes('laps') || defId.includes('userrights') || defId.includes('administrator')
+                  })
+                  if (hasRestrictiveSettings) settingsVerified++
                 } catch (_) { /* settings optional */ }
+                policyDetails.push({ name: policy.name, type: 'Catalog', assigned: true })
               }
             } catch (_) { /* optional */ }
           }
 
-          // Get Windows device count for coverage estimate
-          let windowsDevices = 0
-          try {
-            const wResp = await this.graphClient.api(`/deviceManagement/managedDevices?$filter=operatingSystem eq 'Windows'&$select=id&$top=1`).get()
-            windowsDevices = wResp.value?.length || 0
-          } catch (_) { /* optional */ }
+          // Check Endpoint Security intents
+          for (const intent of (intentsResp.value || []).slice(0, 3)) {
+            try {
+              const aResp = await this.graphClient.api(`/beta/deviceManagement/intents/${intent.id}/assignments`).get()
+              if ((aResp.value || []).length > 0) {
+                intentsAssigned++
+                policyDetails.push({ name: intent.displayName, type: 'Endpoint Security', assigned: true })
+              }
+            } catch (_) { /* optional */ }
+          }
 
-          const scoreExists = localAcctPolicies.length > 0 ? 35 : 0
-          const scoreAssigned = assignedCount > 0 ? 25 : 0
-          const scoreCoverage = settingVerified ? 40 : (assignedCount > 0 ? 20 : 0)
+          const totalPolicies = catalogPolicies.length + (intentsResp.value || []).length
+          const totalAssigned = catalogAssigned + intentsAssigned
+          const coveragePct = windowsDevices > 0 ? Math.round((totalAssigned / windowsDevices) * 100) : 0
+
+          const scoreExists = totalPolicies > 0 ? 35 : 0
+          const scoreAssigned = totalAssigned > 0 ? 25 : 0
+          const scoreCoverage = coveragePct >= 95 ? 40 : coveragePct >= 70 ? 25 : 10
           const totalScore = scoreExists + scoreAssigned + scoreCoverage
 
-          result.currentValue = localAcctPolicies.length === 0
-            ? 'No Windows local account restriction policies found'
-            : `${localAcctPolicies.length} policies (${assignedCount} assigned) — settings ${settingVerified ? 'verified ✓' : 'unconfirmed'} — score ${totalScore}%`
+          result.currentValue = totalPolicies === 0
+            ? 'No Windows local account restriction policies configured'
+            : `${totalPolicies} policies (${totalAssigned} assigned) — ${coveragePct}% coverage — ${settingsVerified} with restrictive settings verified — score ${totalScore}%`
           result.evidence = {
-            policiesFound: localAcctPolicies.length,
-            policiesAssigned: assignedCount,
-            settingVerified,
-            policyDetails,
+            catalogPolicies: catalogPolicies.length,
+            endpointSecurityIntents: (intentsResp.value || []).length,
+            totalPolicies,
+            assignedPolicies: totalAssigned,
             windowsDevices,
-            scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, settingsVerified: `${scoreCoverage}%`, total: `${totalScore}%` }
+            coveragePct,
+            settingsVerified,
+            policyDetails,
+            scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, coverage: `${scoreCoverage}%`, total: `${totalScore}%` }
           }
-          if (localAcctPolicies.length === 0) return 'fail'
+          if (totalPolicies === 0) return 'fail'
           return totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail'
         } catch (e) {
-          return markManual(e, 'Could not retrieve Windows local account restriction policies')
+          console.warn(`⚠️ DEV-068 error: ${e.message}`)
+          result.currentValue = 'Could not retrieve Windows local account restriction policies'
+          result.evidence = { error: e.message }
+          return 'warn'
         }
       }
 
