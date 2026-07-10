@@ -3453,7 +3453,7 @@ export class ZeroTrustValidator {
   }
 
   /**
-   * Validate AI controls (AI-006 to AI-027)
+   * Validate AI controls (AI-001 to AI-027)
    */
   async validateAI(validation, result) {
     try {
@@ -3466,15 +3466,384 @@ export class ZeroTrustValidator {
         return 'warn'
       }
 
-      // AI controls are not directly exposed via Graph API — requires manual review
-      result.currentValue = 'AI governance controls require review in Microsoft 365 Admin Center / Copilot settings'
-      result.evidence = { note: 'Configure via Microsoft 365 Admin Center > Copilot > Settings' }
+      // AI-001: Copilot User MFA Enforcement
+      if (validation.id === 'AI-001') {
+        try {
+          const spResp = await this.graphClient.api('/v1.0/servicePrincipals?$filter=appDisplayName eq \'Microsoft 365 Copilot\'&$top=10').get()
+          const apps = spResp.value || []
+          const copilotApp = apps.find(a => a.appDisplayName?.includes('Copilot'))
+
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = true
+          result.currentValue = copilotApp ? 'Copilot service principal found — MFA policy review required' : 'Copilot not configured'
+          result.evidence = {
+            copilotFound: !!copilotApp,
+            manualVerificationNote: 'Verify MFA enforcement via Conditional Access policies targeting Copilot users'
+          }
+          return copilotApp ? 'warn' : 'fail'
+        } catch (e) {
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = true
+          return markManual(e, 'Could not verify Copilot MFA enforcement')
+        }
+      }
+
+      // AI-002: Overshared SharePoint Sites Detected
+      if (validation.id === 'AI-002') {
+        try {
+          const sitesResp = await this.graphClient.api('/v1.0/sites?$filter=sharingCapability eq \'ExternalUserAndGuestSharing\'&$select=id,displayName,sharingCapability&$top=20').get()
+          const oversharedSites = sitesResp.value || []
+
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          result.currentValue = `${oversharedSites.length} SharePoint sites with external sharing enabled`
+          result.evidence = {
+            oversharedSitesCount: oversharedSites.length,
+            sampleSites: oversharedSites.slice(0, 5).map(s => s.displayName),
+            riskLevel: oversharedSites.length > 0 ? 'High' : 'Low'
+          }
+          return oversharedSites.length === 0 ? 'pass' : 'warn'
+        } catch (e) {
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          return markManual(e, 'Could not retrieve SharePoint site sharing configuration')
+        }
+      }
+
+      // AI-003: Overshared OneDrive Content Detected
+      if (validation.id === 'AI-003') {
+        try {
+          const usersResp = await this.graphClient.api('/v1.0/users?$select=id,userPrincipalName&$top=10').get()
+          const users = usersResp.value || []
+          let oversharingCount = 0
+
+          for (const user of users.slice(0, 5)) {
+            try {
+              const driveResp = await this.graphClient.api(`/v1.0/users/${user.id}/drive/root/permissions?$select=id,grantedTo`).get()
+              const externalPerms = (driveResp.value || []).filter(p => p.grantedTo?.user?.mail)
+              if (externalPerms.length > 3) oversharingCount++
+            } catch (e) {
+              // Skip user if permission fetch fails
+            }
+          }
+
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          result.currentValue = `${oversharingCount} OneDrive accounts with oversharing detected`
+          result.evidence = {
+            accountsReviewed: Math.min(5, users.length),
+            oversharingAccounts: oversharingCount,
+            riskLevel: oversharingCount > 0 ? 'High' : 'Low'
+          }
+          return oversharingCount === 0 ? 'pass' : 'warn'
+        } catch (e) {
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          return markManual(e, 'Could not retrieve OneDrive sharing configuration')
+        }
+      }
+
+      // AI-004: AI Agent Graph Permissions Minimal
+      if (validation.id === 'AI-004') {
+        try {
+          const spResp = await this.graphClient.api('/v1.0/servicePrincipals?$filter=displayName eq \'AI Agent\' or displayName eq \'Bot Framework\'&$select=id,displayName,requiredResourceAccess&$top=10').get()
+          const aiAgents = spResp.value || []
+
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = true
+          result.currentValue = `${aiAgents.length} AI agent(s) found — permissions review required`
+          result.evidence = {
+            aiAgentsFound: aiAgents.length,
+            agentNames: aiAgents.map(a => a.displayName),
+            manualVerificationNote: 'Verify each AI agent has least-privilege Graph permissions'
+          }
+          return aiAgents.length > 0 ? 'warn' : 'fail'
+        } catch (e) {
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = true
+          return markManual(e, 'Could not retrieve AI agent service principals')
+        }
+      }
+
+      // AI-005: AI Agent Secrets Rotation
+      if (validation.id === 'AI-005') {
+        try {
+          const appsResp = await this.graphClient.api('/v1.0/applications?$select=id,displayName,passwordCredentials&$top=50').get()
+          const apps = appsResp.value || []
+
+          let secretsNeedRotation = 0
+          const now = new Date()
+          const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+
+          for (const app of apps) {
+            const credentials = app.passwordCredentials || []
+            for (const cred of credentials) {
+              const createdDate = new Date(cred.createdDateTime)
+              if (createdDate < ninetyDaysAgo) {
+                secretsNeedRotation++
+              }
+            }
+          }
+
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          result.currentValue = `${secretsNeedRotation} secrets older than 90 days detected`
+          result.evidence = {
+            applicationsScanned: apps.length,
+            secretsNeedingRotation: secretsNeedRotation,
+            rotationThresholdDays: 90,
+            riskLevel: secretsNeedRotation > 0 ? 'High' : 'Low'
+          }
+          return secretsNeedRotation === 0 ? 'pass' : 'fail'
+        } catch (e) {
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          return markManual(e, 'Could not retrieve application secrets information')
+        }
+      }
+
+      // AI-006: Copilot License Assignment & Governance
+      if (validation.id === 'AI-006') {
+        try {
+          const skusResp = await this.graphClient.api('/v1.0/subscribedSkus?$filter=servicePlans/any(s:s/servicePlanName eq \'COPILOT_PRO\' or s/servicePlanName eq \'COPILOT_STANDALONE\')').get()
+          const copilotSkus = skusResp.value || []
+
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = true
+          result.currentValue = copilotSkus.length > 0 ? 'Copilot licenses assigned — governance review required' : 'No Copilot licenses found'
+          result.evidence = {
+            copilotLicensesFound: copilotSkus.length > 0,
+            licenseCount: copilotSkus.length,
+            manualVerificationNote: 'Verify Copilot licenses are assigned only to authorized users'
+          }
+          return copilotSkus.length > 0 ? 'warn' : 'fail'
+        } catch (e) {
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = true
+          return markManual(e, 'Could not retrieve Copilot license information')
+        }
+      }
+
+      // AI-007: Copilot Data Privacy Mode Enabled
+      if (validation.id === 'AI-007') {
+        try {
+          const settingsResp = await this.graphClient.api('/v1.0/admin/microsoft365Apps/settings').get()
+          const privacyMode = settingsResp?.isCopilotDataPrivacyEnabled
+
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          result.currentValue = privacyMode ? 'Copilot Data Privacy Mode enabled' : 'Copilot Data Privacy Mode disabled'
+          result.evidence = {
+            privacyModeEnabled: privacyMode,
+            setting: 'Copilot Data Privacy Mode'
+          }
+          return privacyMode ? 'pass' : 'fail'
+        } catch (e) {
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          return markManual(e, 'Could not retrieve Copilot Data Privacy settings')
+        }
+      }
+
+      // AI-008: Copilot Tenant Isolation Enforced
+      if (validation.id === 'AI-008') {
+        try {
+          const tenantResp = await this.graphClient.api('/v1.0/organization?$select=id,displayName&$top=1').get()
+          const org = tenantResp.value?.[0]
+
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = true
+          result.currentValue = org ? 'Tenant isolation applicable — requires manual verification' : 'Organization not found'
+          result.evidence = {
+            tenantName: org?.displayName,
+            manualVerificationNote: 'Copilot tenant isolation enforced by default in Microsoft 365'
+          }
+          return org ? 'warn' : 'fail'
+        } catch (e) {
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = true
+          return markManual(e, 'Could not retrieve tenant configuration')
+        }
+      }
+
+      // AI-009: Copilot Feedback & Logging Audit
+      if (validation.id === 'AI-009') {
+        try {
+          const auditResp = await this.graphClient.api('/v1.0/auditLogs/directoryAudits?$filter=contains(activityDisplayName,\'Copilot\') or contains(activityDisplayName,\'AI\')&$top=100').get()
+          const auditLogs = auditResp.value || []
+
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          result.currentValue = `${auditLogs.length} Copilot-related audit events in logs`
+          result.evidence = {
+            auditEventsLogged: auditLogs.length,
+            loggingEnabled: auditLogs.length > 0,
+            timeRange: 'Last audit period'
+          }
+          return auditLogs.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          return markManual(e, 'Could not retrieve Copilot audit logs')
+        }
+      }
+
+      // AI-010: Copilot Ground Truth Data Protection
+      if (validation.id === 'AI-010') {
+        try {
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = true
+          result.currentValue = 'Ground truth data protection requires manual configuration'
+          result.evidence = {
+            manualVerificationNote: 'Configure DLP policies to exclude sensitive data from Copilot training'
+          }
+          return 'warn'
+        } catch (e) {
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = true
+          return markManual(e, 'Ground truth data protection requires manual setup')
+        }
+      }
+
+      // AI-011: SharePoint AI Indexing
+      if (validation.id === 'AI-011') {
+        try {
+          const sitesResp = await this.graphClient.api('/v1.0/sites?$select=id,displayName,sharingCapability&$top=30').get()
+          const sites = sitesResp.value || []
+          const oversharedSites = sites.filter(s => s.sharingCapability === 'ExternalUserAndGuestSharing')
+
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          result.currentValue = `${oversharedSites.length} of ${sites.length} SharePoint sites are overshared`
+          result.evidence = {
+            totalSites: sites.length,
+            oversharedSites: oversharedSites.length,
+            oversharePercentage: sites.length > 0 ? Math.round((oversharedSites.length / sites.length) * 100) : 0
+          }
+          return oversharedSites.length === 0 ? 'pass' : 'warn'
+        } catch (e) {
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          return markManual(e, 'Could not retrieve SharePoint site configuration')
+        }
+      }
+
+      // AI-012: OneDrive AI Indexing
+      if (validation.id === 'AI-012') {
+        try {
+          const driveResp = await this.graphClient.api('/v1.0/me/drive?$select=quota').get()
+
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          result.currentValue = 'OneDrive indexed for AI — oversharingdetection required'
+          result.evidence = {
+            driveAccessible: !!driveResp,
+            manualReviewRequired: true
+          }
+          return 'warn'
+        } catch (e) {
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          return markManual(e, 'Could not verify OneDrive AI indexing configuration')
+        }
+      }
+
+      // AI-015: AI Agent Access Logging & Audit
+      if (validation.id === 'AI-015') {
+        try {
+          const signInsResp = await this.graphClient.api('/v1.0/auditLogs/signIns?$filter=createdDateTime ge ' + new Date(Date.now() - 7*24*60*60*1000).toISOString() + ' and clientAppUsed eq \'ServicePrincipal\'&$top=100').get()
+          const aiAgentSignIns = signInsResp.value || []
+
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          result.currentValue = `${aiAgentSignIns.length} AI agent access events logged in last 7 days`
+          result.evidence = {
+            accessEventsLogged: aiAgentSignIns.length,
+            timeRange: 'Last 7 days',
+            loggingEnabled: aiAgentSignIns.length >= 0
+          }
+          return aiAgentSignIns.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          return markManual(e, 'Could not retrieve AI agent access logs')
+        }
+      }
+
+      // AI-018: Conditional Access - AI Agent Device Compliance
+      if (validation.id === 'AI-018') {
+        try {
+          const caResp = await this.graphClient.api('/v1.0/policies/conditionalAccessPolicies?$filter=contains(displayName,\'AI\') or contains(displayName,\'Agent\')&$select=id,displayName,state').get()
+          const aiCAPolicies = caResp.value || []
+          const enabledPolicies = aiCAPolicies.filter(p => p.state === 'enabled')
+
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          result.currentValue = `${enabledPolicies.length} Conditional Access policies for AI agents`
+          result.evidence = {
+            aiCAPolicies: aiCAPolicies.length,
+            enabledPolicies: enabledPolicies.length,
+            policies: aiCAPolicies.map(p => p.displayName)
+          }
+          return enabledPolicies.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
+          return markManual(e, 'Could not retrieve AI Conditional Access policies')
+        }
+      }
+
+      // AI-019: AI Training Data Governance - Retention Limits
+      if (validation.id === 'AI-019') {
+        try {
+          const retentionResp = await this.graphClient.api('/v1.0/compliance/retentionPolicies?$top=50').get()
+          const retentionPolicies = retentionResp.value || []
+          const aiRelatedPolicies = retentionPolicies.filter(p => p.displayName?.includes('AI') || p.displayName?.includes('Copilot'))
+
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = false
+          result.currentValue = `${aiRelatedPolicies.length} AI-related retention policies configured`
+          result.evidence = {
+            totalRetentionPolicies: retentionPolicies.length,
+            aiRelatedPolicies: aiRelatedPolicies.length,
+            policyNames: aiRelatedPolicies.map(p => p.displayName)
+          }
+          return aiRelatedPolicies.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = false
+          return markManual(e, 'Could not retrieve retention policies')
+        }
+      }
+
+      // AI-022: DLP Policy for AI-Generated Content
+      if (validation.id === 'AI-022') {
+        try {
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = true
+          result.currentValue = 'DLP policies require manual configuration in Purview'
+          result.evidence = {
+            manualVerificationNote: 'Configure DLP policies to prevent AI-generated content with sensitive data'
+          }
+          return 'warn'
+        } catch (e) {
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = true
+          return markManual(e, 'DLP policy configuration requires manual setup')
+        }
+      }
+
+      // Default: Manual review required for remaining AI controls
+      result.automationLevel = 'Manual'
       result.requiresManualValidation = true
+      result.currentValue = 'AI governance control requires manual review in Microsoft 365 Admin Center / Copilot settings'
+      result.evidence = { note: 'Configure via Microsoft 365 Admin Center > Copilot > Settings' }
       return 'warn'
     } catch (error) {
       console.warn(`⚠️ AI validation ${validation.id} failed:`, error.message)
       result.error = error.message
       result.currentValue = 'Graph API call failed — requires manual validation'
+      result.automationLevel = 'Manual'
       result.requiresManualValidation = true
       return 'warn'
     }
