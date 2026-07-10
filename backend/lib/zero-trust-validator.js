@@ -3128,6 +3128,7 @@ export class ZeroTrustValidator {
           const totalScore = scoreCAExists + scoreDevices
 
           result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = false
           result.currentValue = caPolicy
             ? `CA policy enforcing device compliance — ${managedDevices} managed devices — score ${totalScore}%`
             : 'No Conditional Access policy enforcing device compliance found'
@@ -3144,6 +3145,7 @@ export class ZeroTrustValidator {
         } catch (e) {
           console.warn(`⚠️ DEV-069 error: ${e.message}`)
           result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = false
           result.currentValue = 'Could not verify MDM enrollment policy'
           result.evidence = { error: e.message, manualReviewRequired: true }
           return 'warn'
@@ -3181,6 +3183,7 @@ export class ZeroTrustValidator {
           const totalScore = scoreExists + scoreAssigned + scoreCoverage
 
           result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = policies.length === 0
             ? 'No compliance policies found'
             : `${policies.length} policies — ${assignedCount} assigned — ${compliantCount}/${totalDevices} devices compliant (${compliancePct}%) — score ${totalScore}%`
@@ -3199,6 +3202,7 @@ export class ZeroTrustValidator {
         } catch (e) {
           console.warn(`⚠️ DEV-070 error: ${e.message}`)
           result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = 'Could not retrieve compliance policies'
           return 'warn'
         }
@@ -3241,6 +3245,7 @@ export class ZeroTrustValidator {
           const totalScore = scoreExists + scoreAssigned + scoreCoverage
 
           result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = policies.length === 0
             ? 'No BitLocker encryption policies found'
             : `${policies.length} BitLocker policies — ${assignedCount} assigned — ${windowsDevices} Windows devices — score ${totalScore}%`
@@ -3257,6 +3262,7 @@ export class ZeroTrustValidator {
         } catch (e) {
           console.warn(`⚠️ DEV-071 error: ${e.message}`)
           result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           return 'warn'
         }
       }
@@ -3299,6 +3305,7 @@ export class ZeroTrustValidator {
           const totalScore = scoreExists + scoreAssigned + scoreCoverage
 
           result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = totalPolicies === 0
             ? 'No Defender policies found'
             : `${totalPolicies} Defender policies (${defenderIntents.length} intents + ${defenderPolicies.length} catalog) — ${assignedCount} assigned — score ${totalScore}%`
@@ -3315,6 +3322,7 @@ export class ZeroTrustValidator {
         } catch (e) {
           console.warn(`⚠️ DEV-072 error: ${e.message}`)
           result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           return 'warn'
         }
       }
@@ -3347,6 +3355,7 @@ export class ZeroTrustValidator {
           const totalScore = scoreManaged + scoreEnrollment + scoreCoverage
 
           result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = managedCount === 0
             ? 'No managed devices found'
             : `${managedCount} managed devices — ${enrollmentConfigs.length} enrollment configurations — score ${totalScore}%`
@@ -3364,6 +3373,7 @@ export class ZeroTrustValidator {
         } catch (e) {
           console.warn(`⚠️ DEV-073 error: ${e.message}`)
           result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           return 'warn'
         }
       }
@@ -3402,6 +3412,7 @@ export class ZeroTrustValidator {
           const totalScore = scoreStaleDevices + scoreCleanupRule
 
           result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = false
           result.currentValue = devices.length === 0
             ? 'No managed devices found'
             : `${devices.length} managed devices — ${staleDevices.length} stale (${stalePct}%) — cleanup rule config requires manual verification — score ${totalScore}%`
@@ -3423,6 +3434,7 @@ export class ZeroTrustValidator {
         } catch (e) {
           console.warn(`⚠️ DEV-027 error: ${e.message}`)
           result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = false
           return 'warn'
         }
       }
