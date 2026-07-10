@@ -69,6 +69,33 @@ function renderSettings(el) {
           <input type="email" class="form-input" id="settings-alert-email" value="${s.agentAlertEmail}">
         </div>
       </div>
+
+      <!-- Validation Scheduler -->
+      <div class="card mb-3">
+        <div class="card-title mb-3"><i class="ti ti-clock"></i> Validation Scheduler</div>
+        <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px;margin-bottom:12px">
+          <div style="display:grid;gap:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border-primary)">
+              <div>
+                <strong style="font-size:11px;color:var(--color-text-primary)">🌙 Last Run</strong>
+                <div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px" id="settings-last-run">Loading...</div>
+              </div>
+              <span id="settings-last-run-time" style="font-size:12px;font-weight:600;color:var(--color-text-primary)">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
+              <div>
+                <strong style="font-size:11px;color:var(--color-text-primary)">📅 Next Run</strong>
+                <div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px">Scheduled nightly @ 2 AM</div>
+              </div>
+              <span id="settings-next-run-time" style="font-size:12px;font-weight:600;color:var(--clr-info-text)">2:00 AM</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" id="settings-validation-run-now" style="flex:1"><i class="ti ti-player-play"></i> Run Now</button>
+          <button class="btn" id="settings-validation-refresh" style="flex:1"><i class="ti ti-refresh"></i> Refresh Status</button>
+        </div>
+      </div>
     </div>
 
     <!-- PHASE 3: AUTHENTICATION & AI -->
@@ -1317,6 +1344,66 @@ SHAREPOINT_ZEROTRUST_HISTORY_LIST_ID=${result.historyListId}`
     renderSettings(el)
     showToast('Settings reset to defaults.', 'info')
   })
+
+  // ---- Validation Scheduler ----
+  const runNowBtn = el.querySelector('#settings-validation-run-now')
+  const refreshBtn = el.querySelector('#settings-validation-refresh')
+
+  async function loadSchedulerStatus() {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/scheduler/status`)
+      const data = await response.json()
+
+      const lastRunEl = el.querySelector('#settings-last-run-time')
+      const nextRunEl = el.querySelector('#settings-next-run-time')
+
+      if (data.lastRunTime) {
+        const lastRunDate = new Date(data.lastRunTime)
+        lastRunEl.textContent = lastRunDate.toLocaleString()
+      } else {
+        lastRunEl.textContent = 'Never'
+      }
+
+      if (data.nextRunTime) {
+        const nextRunDate = new Date(data.nextRunTime)
+        nextRunEl.textContent = nextRunDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    } catch (err) {
+      console.error('Failed to load scheduler status:', err)
+    }
+  }
+
+  // Load initial status
+  loadSchedulerStatus()
+
+  if (runNowBtn) {
+    runNowBtn.addEventListener('click', async () => {
+      runNowBtn.disabled = true
+      runNowBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Running...'
+      try {
+        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/scheduler/run-now`, { method: 'POST' })
+        showToast('Validations triggered! Status will update shortly...', 'success')
+        setTimeout(loadSchedulerStatus, 2000)
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error')
+      } finally {
+        runNowBtn.disabled = false
+        runNowBtn.innerHTML = '<i class="ti ti-player-play"></i> Run Now'
+      }
+    })
+  }
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      refreshBtn.disabled = true
+      refreshBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Refreshing...'
+      await new Promise(r => setTimeout(r, 500))
+      await loadSchedulerStatus()
+      showToast('Status refreshed', 'info')
+      refreshBtn.disabled = false
+      refreshBtn.innerHTML = '<i class="ti ti-refresh"></i> Refresh Status'
+    })
+  }
 
   // ---- Claude API Configuration ----
   loadClaudeStatus(el)
