@@ -3249,22 +3249,6 @@
       "impactScore": 65
     },
     {
-      "id": "DATA-026",
-      "name": "Insider Risk Management Enabled",
-      "pillar": "Data Protection & Compliance",
-      "category": "Monitoring & Audit",
-      "severity": "High",
-      "description": "Insider Risk Management policies detect and respond to risky user behaviors",
-      "graphApi": "N/A - Purview API required",
-      "powershell": "Get-InsiderRiskPolicy | Measure-Object",
-      "expectedValue": "Insider risk policies configured and enabled",
-      "evidence": "Count of active policies and detections",
-      "remediation": "Create insider risk policies. Configure risk indicators. Enable Azure AD audit logging. Implement alerts and case management.",
-      "autoRemediationAvailable": false,
-      "priority": 4,
-      "impactScore": 75
-    },
-    {
       "id": "DATA-027",
       "name": "Communication Compliance Policies",
       "pillar": "Data Protection & Compliance",
@@ -3489,22 +3473,6 @@
       "impactScore": 50
     },
     {
-      "id": "INFRA-001",
-      "name": "Legacy Authentication Blocked",
-      "pillar": "Infrastructure & Workload Security",
-      "category": "Exchange Online",
-      "severity": "Critical",
-      "description": "Block legacy auth via Conditional Access policy",
-      "graphApi": "GET /v1.0/identity/conditionalAccess/policies",
-      "powershell": "Get-AzureADConditionalAccessPolicy",
-      "expectedValue": "CA policy blocking legacy auth enabled",
-      "evidence": "Policy status and client app types blocked",
-      "remediation": "Create CA policy blocking exchangeActiveSync and 'other' client types",
-      "autoRemediationAvailable": true,
-      "priority": 5,
-      "impactScore": 90
-    },
-    {
       "id": "INFRA-002",
       "name": "Modern Authentication Enabled",
       "pillar": "Infrastructure & Workload Security",
@@ -3535,22 +3503,6 @@
       "autoRemediationAvailable": false,
       "priority": 4,
       "impactScore": 70
-    },
-    {
-      "id": "INFRA-004",
-      "name": "Mailbox Auditing Enabled",
-      "pillar": "Infrastructure & Workload Security",
-      "category": "Exchange Online",
-      "severity": "High",
-      "description": "Audit all mailbox operations",
-      "graphApi": "GET /v1.0/users",
-      "powershell": "Get-Mailbox -ResultSize Unlimited | Where-Object {$_.AuditEnabled -eq $false}",
-      "expectedValue": "Mailbox auditing enabled for all mailboxes",
-      "evidence": "Count of audited vs. non-audited mailboxes",
-      "remediation": "Enable mailbox auditing: Set-Mailbox -AuditEnabled $true -AuditLogAgeLimit 365",
-      "autoRemediationAvailable": false,
-      "priority": 4,
-      "impactScore": 75
     },
     {
       "id": "INFRA-005",
@@ -3905,22 +3857,6 @@
       "impactScore": 55
     },
     {
-      "id": "INFRA-027",
-      "name": "SharePoint Site Classification",
-      "pillar": "Infrastructure & Workload Security",
-      "category": "SharePoint Online",
-      "severity": "Medium",
-      "description": "Classify sites with sensitivity labels",
-      "graphApi": "GET /v1.0/sites",
-      "powershell": "Get-PnPSite | Select-Object -Property Classification",
-      "expectedValue": "Sites classified by sensitivity",
-      "evidence": "Classification coverage",
-      "remediation": "Apply site classification labels",
-      "autoRemediationAvailable": false,
-      "priority": 3,
-      "impactScore": 50
-    },
-    {
       "id": "INFRA-028",
       "name": "SharePoint Hub Sites",
       "pillar": "Infrastructure & Workload Security",
@@ -4047,22 +3983,6 @@
       "autoRemediationAvailable": false,
       "priority": 3,
       "impactScore": 55
-    },
-    {
-      "id": "INFRA-036",
-      "name": "Teams Guest Access Restricted",
-      "pillar": "Infrastructure & Workload Security",
-      "category": "Microsoft Teams",
-      "severity": "High",
-      "description": "Limit guest access to authenticated users",
-      "graphApi": "GET /v1.0/teams",
-      "powershell": "Get-TeamFunSettings | Select-Object -Property AllowGuestUser",
-      "expectedValue": "Guest access restricted",
-      "evidence": "Guest access policy",
-      "remediation": "Restrict guest access via team settings",
-      "autoRemediationAvailable": false,
-      "priority": 4,
-      "impactScore": 70
     },
     {
       "id": "INFRA-037",
