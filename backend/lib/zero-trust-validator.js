@@ -4129,6 +4129,158 @@ export class ZeroTrustValidator {
           return totalAssigned > 0 ? 'pass' : 'warn'
         }
 
+        // ── Shared helper for device restriction controls (DEV-047 to DEV-053) ──
+        // Scoring: setting verified (40%) + policy assigned (30%) + coverage (30%)
+        case 'DEV-047':
+        case 'DEV-048':
+        case 'DEV-049':
+        case 'DEV-050':
+        case 'DEV-051':
+        case 'DEV-052':
+        case 'DEV-053': {
+          const VID = validation.id
+
+          const CTRL_CFG = {
+            'DEV-047': {
+              label: 'USB restrictions',
+              nameKw: ['usb', 'device restriction', 'removable storage'],
+              settingKw: ['usb', 'removablestorage', 'usbdebugging', 'usbfiletransfer', 'usbdataaccess'],
+              legacyTypes: ['android', 'windows10'],
+              legacyProps: ['defenderRemovableDrivesScanEnabled'],
+              platforms: ['android', 'windows'],
+              restrictedValues: ['0', 'false', 'blocked', 'disabled', 'notallowed']
+            },
+            'DEV-048': {
+              label: 'Developer mode disabled',
+              nameKw: ['developer', 'dev mode', 'dev option', 'device restriction'],
+              settingKw: ['developermode', 'developeroption', 'usbdebugging', 'developerunlock', 'adb'],
+              legacyTypes: ['android', 'ios', 'windows10'],
+              legacyProps: [],
+              platforms: ['android', 'ios', 'windows'],
+              restrictedValues: ['0', 'false', 'blocked', 'disabled', 'notallowed']
+            },
+            'DEV-049': {
+              label: 'Camera disabled',
+              nameKw: ['camera', 'device restriction'],
+              settingKw: ['camera', 'allowcamera', 'usecamera', 'camerablocked'],
+              legacyTypes: ['android', 'ios', 'windows10'],
+              legacyProps: ['cameraBlocked'],
+              platforms: ['android', 'ios', 'windows'],
+              restrictedValues: ['0', 'false', 'blocked', 'disabled', 'notallowed']
+            },
+            'DEV-050': {
+              label: 'Unknown sources blocked',
+              nameKw: ['unknown source', 'sideload', 'install app', 'device restriction', 'android'],
+              settingKw: ['unknownsource', 'sideload', 'installunknown', 'allowunknownsource'],
+              legacyTypes: ['android'],
+              legacyProps: [],
+              platforms: ['android'],
+              restrictedValues: ['0', 'false', 'blocked', 'disabled', 'notallowed']
+            },
+            'DEV-051': {
+              label: 'Bluetooth restricted',
+              nameKw: ['bluetooth', 'device restriction'],
+              settingKw: ['bluetooth', 'bluetoothsharing', 'bluetoothdiscoverability', 'bluetoothpairing'],
+              legacyTypes: ['android', 'ios', 'windows10'],
+              legacyProps: ['bluetoothBlocked', 'bluetoothBlockModification'],
+              platforms: ['android', 'ios', 'windows'],
+              restrictedValues: ['0', 'false', 'blocked', 'disabled', 'notallowed']
+            },
+            'DEV-052': {
+              label: 'NFC disabled',
+              nameKw: ['nfc', 'near field', 'device restriction', 'android'],
+              settingKw: ['nfc', 'nearfieldcommunication', 'allownfc'],
+              legacyTypes: ['android'],
+              legacyProps: ['nfcBeamBlocked'],
+              platforms: ['android'],
+              restrictedValues: ['0', 'false', 'blocked', 'disabled', 'notallowed']
+            },
+            'DEV-053': {
+              label: 'Screen capture disabled',
+              nameKw: ['screen capture', 'screenshot', 'screen record', 'device restriction'],
+              settingKw: ['screencapture', 'screenshot', 'screenrecord', 'allowscreencapture'],
+              legacyTypes: ['android', 'ios'],
+              legacyProps: ['screenCaptureBlocked'],
+              platforms: ['android', 'ios'],
+              restrictedValues: ['0', 'false', 'blocked', 'disabled', 'notallowed']
+            }
+          }
+
+          const cfg = CTRL_CFG[VID]
+          const allPolicies = deviceData.configuration?.all || []
+          const assignmentData = deviceData.configurationAssignments?.policies || []
+          const devByPlatform = deviceData.managedDevices?.byPlatform || {}
+
+          // Step 1: Find matching Settings Catalog policies by name keywords
+          const catalogMatches = allPolicies.filter(p =>
+            cfg.nameKw.some(k => p.name?.toLowerCase().includes(k))
+          )
+
+          // Step 2: Check assignments from pre-collected data
+          const assignedPolicies = catalogMatches.filter(p =>
+            assignmentData.find(a => a.id === p.id)?.assigned
+          )
+
+          // Step 3 (40% weight): Fetch settings for assigned policies to verify restriction value
+          let settingVerified = false
+          const settingDetails = []
+          for (const policy of assignedPolicies.slice(0, 3)) {
+            try {
+              const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
+              for (const s of (sResp.value || [])) {
+                const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
+                const valStr = JSON.stringify(s.settingInstance || '').toLowerCase()
+                if (cfg.settingKw.some(k => defId.includes(k)) &&
+                    cfg.restrictedValues.some(v => valStr.includes(`"${v}"`))) {
+                  settingVerified = true
+                  settingDetails.push({ policy: policy.name, settingId: s.settingInstance?.settingDefinitionId })
+                  break
+                }
+              }
+              if (settingVerified) break
+            } catch (_) { /* settings fetch optional */ }
+          }
+
+          // Step 3b: Check legacy deviceConfigurations for blocking properties
+          let legacyProfiles = []
+          try {
+            const props = ['id', 'displayName', '@odata.type', ...cfg.legacyProps].join(',')
+            const lResp = await this.graphClient.api(`/deviceManagement/deviceConfigurations?$select=${props}&$top=200`).get()
+            legacyProfiles = (lResp.value || []).filter(p => {
+              const t = (p['@odata.type'] || '').toLowerCase()
+              return cfg.legacyTypes.some(lt => t.includes(lt)) &&
+                     cfg.legacyProps.some(prop => p[prop] === true)
+            })
+            if (legacyProfiles.length > 0) settingVerified = true
+          } catch (_) { /* optional */ }
+
+          const platformCount = cfg.platforms.reduce((s, p) => s + (devByPlatform[p] || 0), 0)
+          const totalAssigned = assignedPolicies.length + legacyProfiles.length
+          const totalFound = catalogMatches.length + legacyProfiles.length
+
+          const scoreS = settingVerified ? 40 : (totalAssigned > 0 ? 20 : 0)
+          const scoreA = totalAssigned > 0 ? 30 : 0
+          const scoreC = (totalAssigned > 0 && platformCount > 0) || (totalAssigned > 0 && platformCount === 0) ? 30 : 0
+          const totalScore = scoreS + scoreA + scoreC
+
+          result.currentValue = totalFound === 0
+            ? `No ${cfg.label} policy found (${platformCount} managed device(s) on relevant platform(s))`
+            : `${totalFound} policy(ies) found — ${totalAssigned} assigned — restriction ${settingVerified ? 'verified ✓' : 'unconfirmed in settings'} — score ${totalScore}%`
+          result.evidence = {
+            catalogPolicies: catalogMatches.map(p => p.name),
+            legacyProfiles: legacyProfiles.map(p => p.displayName),
+            totalFound, totalAssigned, settingVerified, settingDetails,
+            platformDeviceCount: platformCount,
+            platforms: cfg.platforms,
+            scoreBreakdown: { settingVerified: `${scoreS}%`, assigned: `${scoreA}%`, coverage: `${scoreC}%`, total: `${totalScore}%` }
+          }
+
+          if (totalFound === 0) return 'fail'
+          if (totalScore >= 90) return 'pass'
+          if (totalScore >= 50) return 'warn'
+          return 'fail'
+        }
+
         // DEV-034: macOS Firewall Policies
         case 'DEV-034': {
           const allPolicies = deviceData.configuration?.all || []
