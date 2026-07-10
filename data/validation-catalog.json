@@ -1825,22 +1825,6 @@
       "impactScore": 65
     },
     {
-      "id": "DEV-021",
-      "name": "Device Enrollment Notifications - Enforced",
-      "pillar": "Device Security",
-      "category": "MDM Enrollment",
-      "severity": "Medium",
-      "description": "Device enrollment notifications enforced for user awareness and secure onboarding",
-      "graphApi": "GET /v1.0/deviceManagement/deviceEnrollmentConfigurations",
-      "powershell": "Get-MgDeviceManagementDeviceEnrollmentConfiguration | Measure-Object",
-      "expectedValue": "Enrollment notification policies configured",
-      "evidence": "Policy configuration status",
-      "remediation": "Configure device enrollment notification settings in Intune to alert users during device enrollment.",
-      "autoRemediationAvailable": true,
-      "priority": 3,
-      "impactScore": 50
-    },
-    {
       "id": "DEV-022",
       "name": "Windows Security Baselines - Applied",
       "pillar": "Device Security",
