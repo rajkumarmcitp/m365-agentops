@@ -124,31 +124,39 @@ export class IdentityCollectors {
     if (this.cache.roles) return this.cache.roles
 
     try {
-      const response = await unifiedGraphClient.get('/directoryRoles')
-      const roles = response.value || []
+      // Use stable roleTemplateId for Global Admins — works even if role isn't activated
+      const GLOBAL_ADMIN_TEMPLATE_ID = '62e90394-69f5-4237-9190-012177145e10'
 
-      const roleMap = {}
-      const roleIds = {}
-
-      roles.forEach(role => {
-        roleIds[role.displayName] = role.id
-      })
-
-      const [globalAdminResponse, tenantCreatorResponse] = await Promise.all([
-        roleIds['Global Administrator'] ?
-          this.graphClient.api(`/directoryRoles/${roleIds['Global Administrator']}/members`).get()
-          : Promise.resolve({ value: [] }),
-        roleIds['Tenant Creator'] ?
-          this.graphClient.api(`/directoryRoles/${roleIds['Tenant Creator']}/members`).get()
-          : Promise.resolve({ value: [] })
+      const [globalAdminResponse, rolesResponse] = await Promise.all([
+        unifiedGraphClient.get(
+          `/directoryRoles/roleTemplateId=${GLOBAL_ADMIN_TEMPLATE_ID}/members?$select=id,userPrincipalName,displayName`
+        ),
+        unifiedGraphClient.get('/directoryRoles')
       ])
+
+      const roles = rolesResponse.value || []
+      const globalAdmins = globalAdminResponse.value || []
+
+      // Fetch Tenant Creator members separately using dynamic role ID (less critical)
+      let tenantCreators = []
+      try {
+        const tenantCreatorRole = roles.find(r => r.displayName === 'Tenant Creator')
+        if (tenantCreatorRole) {
+          const tcResponse = await unifiedGraphClient.get(
+            `/directoryRoles/${tenantCreatorRole.id}/members?$select=id,userPrincipalName,displayName`
+          )
+          tenantCreators = tcResponse.value || []
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not fetch Tenant Creator members:', e.message)
+      }
 
       const data = {
         allRoles: roles,
-        globalAdmins: globalAdminResponse.value || [],
-        globalAdminCount: (globalAdminResponse.value || []).length,
-        tenantCreators: tenantCreatorResponse.value || [],
-        tenantCreatorCount: (tenantCreatorResponse.value || []).length,
+        globalAdmins,
+        globalAdminCount: globalAdmins.length,
+        tenantCreators,
+        tenantCreatorCount: tenantCreators.length,
         timestamp: new Date().toISOString()
       }
 

@@ -22,6 +22,7 @@ import { skeletonLoader } from '../lib/skeleton-loader.js'
 let realValidations = null
 let realTrends = null
 let priorityActions = null
+let lastRunTime = null
 let activeTab = 'overview'
 let lazyLoadedPillars = {}
 
@@ -29,20 +30,78 @@ export function initZeroTrust() {
   const el = document.getElementById('page-zerotrust')
   if (!el) return
 
-  // Show skeleton immediately (no data yet)
-  renderZeroTrustSkeleton(el)
+  // Re-use in-memory data if already loaded this session
+  if (realValidations) {
+    renderZeroTrustWithData(el)
+    return
+  }
 
-  // Load real data in background with minimum skeleton display time
-  setTimeout(() => {
-    loadZeroTrustData(el)
-  }, 300)
+  renderZeroTrustSkeleton(el)
+  setTimeout(() => loadCachedZeroTrustData(el), 300)
 }
 
-async function loadZeroTrustData(el) {
+async function loadCachedZeroTrustData(el) {
   try {
-    console.log('🔍 Loading Zero Trust validation data...')
+    const [cachedResult, trendsResult] = await Promise.all([
+      callAPI('/zero-trust/last-results'),
+      callAPI('/zero-trust/trends')
+    ])
 
-    // Fetch all data in parallel
+    if (cachedResult.success && cachedResult.hasResults && cachedResult.validations?.length > 0) {
+      const validations = cachedResult.validations
+      const summary = cachedResult.summary || { pass: 0, fail: 0, warn: 0 }
+
+      // Compute byPillar from validation objects (in-memory cache has full fields)
+      const byPillar = {}
+      for (const v of validations) {
+        if (v.pillar) {
+          if (!byPillar[v.pillar]) byPillar[v.pillar] = { pass: 0, fail: 0, warn: 0 }
+          if (v.status === 'pass') byPillar[v.pillar].pass++
+          else if (v.status === 'fail') byPillar[v.pillar].fail++
+          else byPillar[v.pillar].warn++
+        }
+      }
+
+      realValidations = {
+        validations,
+        summary: { ...summary, byPillar: Object.keys(byPillar).length > 0 ? byPillar : (summary.byPillar || {}) },
+        overallScore: cachedResult.overallScore || cachedResult.compliance || 0,
+        totalValidations: cachedResult.totalValidations || validations.length
+      }
+      lastRunTime = cachedResult.lastRunTime
+
+      // Derive priority actions locally from failed/warning validations
+      priorityActions = validations
+        .filter(v => v.status === 'fail' || v.status === 'warning')
+        .sort((a, b) => (a.severity === 'Critical' ? -1 : b.severity === 'Critical' ? 1 : 0))
+        .slice(0, 10)
+        .map(v => ({
+          id: v.id,
+          name: v.name || v.id,
+          pillar: v.pillar || 'Unknown',
+          severity: v.severity || 'High',
+          description: v.description || '',
+          currentValue: v.currentValue || v.status,
+          status: v.status
+        }))
+    } else {
+      renderZeroTrustNoData(el)
+      return
+    }
+
+    if (trendsResult.success && trendsResult.data) {
+      realTrends = trendsResult.data
+    }
+
+    renderZeroTrustWithData(el)
+  } catch (error) {
+    console.warn('⚠️ Failed to load Zero Trust data:', error.message)
+    renderZeroTrustError(el, error.message)
+  }
+}
+
+async function runFullScan(el) {
+  try {
     const [validationsResult, trendsResult, actionsResult] = await Promise.all([
       callAPI('/zero-trust/validations'),
       callAPI('/zero-trust/trends'),
@@ -51,26 +110,45 @@ async function loadZeroTrustData(el) {
 
     if (validationsResult.success && validationsResult.data) {
       realValidations = validationsResult.data
-      console.log(`✅ Loaded ${realValidations.totalValidations} validations`)
+      lastRunTime = new Date().toISOString()
     }
+    if (trendsResult.success && trendsResult.data) realTrends = trendsResult.data
+    if (actionsResult.success && actionsResult.data) priorityActions = actionsResult.data
 
-    if (trendsResult.success && trendsResult.data) {
-      realTrends = trendsResult.data
-      console.log('✅ Loaded trend data')
-    }
-
-    if (actionsResult.success && actionsResult.data) {
-      priorityActions = actionsResult.data
-      console.log(`✅ Loaded ${priorityActions.length} priority actions`)
-    }
-
-    // Render with real data only (no demo data fallback)
     renderZeroTrustWithData(el)
+    showToast('Zero Trust scan complete — all controls re-evaluated.', 'success')
   } catch (error) {
-    console.warn('⚠️ Failed to fetch Zero Trust data:', error.message)
-    // Show error message, not demo data
-    renderZeroTrustError(el, error.message)
+    showToast('Scan failed: ' + error.message, 'error')
+    const btn = el.querySelector('#zt-rescan')
+    if (btn) { btn.innerHTML = '<i class="ti ti-refresh"></i> Refresh'; btn.disabled = false }
   }
+}
+
+function renderZeroTrustNoData(el) {
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
+        <div class="page-subtitle">No assessment data found</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" id="zt-first-scan"><i class="ti ti-player-play"></i> Run First Scan</button>
+      </div>
+    </div>
+    <div class="card" style="text-align:center;padding:40px;color:var(--color-text-secondary)">
+      <i class="ti ti-shield-off" style="font-size:40px;margin-bottom:12px;display:block;opacity:0.4"></i>
+      <div style="font-size:14px;font-weight:600;margin-bottom:8px">No assessment results yet</div>
+      <div style="font-size:12px;margin-bottom:20px">Run the first scan to evaluate all Zero Trust controls. Results are saved to SharePoint and loaded on subsequent visits.</div>
+      <button class="btn btn-primary" id="zt-first-scan-2"><i class="ti ti-player-play"></i> Run Assessment Now</button>
+    </div>
+  `
+
+  const startScan = async () => {
+    renderZeroTrustSkeleton(el)
+    await runFullScan(el)
+  }
+  el.querySelector('#zt-first-scan')?.addEventListener('click', startScan)
+  el.querySelector('#zt-first-scan-2')?.addEventListener('click', startScan)
 }
 
 function renderZeroTrustError(el, errorMsg) {
@@ -254,7 +332,7 @@ function renderZeroTrustWithData(el) {
     <div class="page-header">
       <div>
         <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
-        <div class="page-subtitle">${totalValidations} security controls validated across 7 pillars</div>
+        <div class="page-subtitle">${totalValidations} security controls · Last run: ${lastRunTime ? new Date(lastRunTime).toLocaleString() : 'Unknown'}</div>
       </div>
       <div class="page-actions">
         <button class="btn" id="zt-rescan"><i class="ti ti-refresh"></i> Refresh</button>
@@ -375,6 +453,8 @@ function renderZTTabContent(el) {
     const pillarStats = realValidations.summary.byPillar[pillarName]
     const pillarValidations = realValidations.validations.filter(v => v.pillar === pillarName)
     contentEl.innerHTML = renderZTPillarContent(pillarName, pillarStats, pillarValidations)
+    // Apply "All" as the default active filter
+    window.ztApplyFilter('all')
   }
 }
 
@@ -435,30 +515,25 @@ function renderZTOverview() {
           <span class="badge danger">${priorityActions.length} issues</span>
         </div>
         <div style="overflow-x:auto">
-          <table>
-            <thead><tr>
-              <th style="width:12%">Severity</th>
-              <th style="width:35%">Control</th>
-              <th style="width:15%">Pillar</th>
-              <th style="width:20%">Current Status</th>
-              <th style="width:8%"></th>
-            </tr></thead>
-            <tbody>
-              ${priorityActions.slice(0, 10).map(action => `
-                <tr class="validation-row" data-validation-id="${action.id}">
-                  <td data-label="Severity"><span class="badge ${action.severity === 'Critical' ? 'danger' : 'warning'}">${action.severity}</span></td>
-                  <td style="font-size:11px;font-weight:500" data-label="Control">
-                    <div style="font-weight:600">${action.name}</div>
-                    <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:3px">${action.description || 'No description'}</div>
-                  </td>
-                  <td data-label="Pillar"><span class="pill" style="font-size:10px">${action.pillar}</span></td>
-                  <td style="font-size:10px;color:var(--color-text-secondary)" data-label="Status">
-                    ${action.currentValue || action.status}
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+          <div style="width:100%;min-width:0">
+            <div style="display:grid;grid-template-columns:110px 1fr 160px 200px;padding:6px 10px;background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-secondary);border-radius:4px 4px 0 0">
+              <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.4px">Severity</div>
+              <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.4px">Control</div>
+              <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.4px">Pillar</div>
+              <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.4px">Current Status</div>
+            </div>
+            ${priorityActions.slice(0, 10).map(action => `
+              <div style="display:grid;grid-template-columns:110px 1fr 160px 200px;padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);align-items:start" class="validation-row" data-validation-id="${action.id}">
+                <div><span class="badge ${action.severity === 'Critical' ? 'danger' : 'warning'}">${action.severity}</span></div>
+                <div style="min-width:0">
+                  <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${action.name}</div>
+                  <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${action.description || ''}</div>
+                </div>
+                <div><span class="pill" style="font-size:10px">${action.pillar}</span></div>
+                <div style="font-size:10px;color:var(--color-text-secondary)">${action.currentValue || action.status}</div>
+              </div>
+            `).join('')}
+          </div>
         </div>
       </div>
     ` : ''}
@@ -595,8 +670,16 @@ function renderZTPillarContentDemo(pillar) {
 }
 
 function renderZTPillarContent(pillarName, stats, validations) {
-  const total = stats.pass + stats.fail + stats.warn
-  const pillarScore = Math.round((stats.pass / total) * 100) || 0
+  if (!stats || !validations) return '<div class="card" style="padding:20px;text-align:center;color:var(--color-text-tertiary)">No data for this pillar</div>'
+
+  const pass = stats.pass || 0
+  const fail = stats.fail || 0
+  const warn = stats.warn || 0
+  const total = pass + fail + warn
+  const manualCount = validations.filter(v => v.requiresManualValidation).length
+  const passPct  = total > 0 ? Math.round((pass / total) * 100) : 0
+  const failPct  = total > 0 ? Math.round((fail / total) * 100) : 0
+  const warnPct  = total > 0 ? Math.round((warn / total) * 100) : 0
 
   // Group validations by category
   const byCategory = {}
@@ -606,74 +689,113 @@ function renderZTPillarContent(pillarName, stats, validations) {
     byCategory[cat].push(v)
   })
 
+  const statusIcon = (status) => {
+    if (status === 'pass') return '<span style="color:var(--clr-success-text);font-size:15px;font-weight:700">✓</span>'
+    if (status === 'fail') return '<span style="color:var(--clr-danger-text);font-size:15px;font-weight:700">✗</span>'
+    return '<span style="color:var(--clr-warning-text);font-size:15px">⚠</span>'
+  }
+
+  const filterBtn = (filterVal, label, pct, count, bg, color, border) => `
+    <button onclick="window.ztApplyFilter('${filterVal}')"
+      data-zt-filter="${filterVal}"
+      style="display:flex;flex-direction:column;align-items:center;padding:10px 16px;border-radius:8px;border:2px solid ${border};background:${bg};color:${color};cursor:pointer;transition:all 150ms;min-width:90px;font-family:inherit">
+      <span style="font-size:20px;font-weight:700;line-height:1">${pct}%</span>
+      <span style="font-size:10px;font-weight:600;margin-top:3px;text-transform:uppercase;letter-spacing:0.4px">${label}</span>
+      <span style="font-size:10px;margin-top:1px;opacity:0.75">${count} controls</span>
+    </button>`
+
   return `
-    <div class="card mb-3">
+    <div class="card mb-3" id="zt-pillar-header">
       <div class="card-header">
         <span class="card-title">${pillarName}</span>
-        <span class="badge ${pillarScore >= 80 ? 'success' : pillarScore >= 60 ? 'warning' : 'danger'}">${pillarScore}% Compliance</span>
+        ${manualCount > 0 ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:#fff3cd;color:#92400e;border:1px solid #fbbf24"><i class="ti ti-hand"></i> ${manualCount} manual</span>` : ''}
       </div>
-      <div style="padding:16px 0">
-        <div style="display:flex;gap:24px;align-items:center;padding:0 16px">
-          <div>
-            <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:4px">Passed</div>
-            <div style="font-size:20px;font-weight:700;color:var(--clr-success-text)">${stats.pass}</div>
-          </div>
-          <div>
-            <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:4px">Warnings</div>
-            <div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">${stats.warn}</div>
-          </div>
-          <div>
-            <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:4px">Failed</div>
-            <div style="font-size:20px;font-weight:700;color:var(--clr-danger-text)">${stats.fail}</div>
-          </div>
-        </div>
+      <div style="display:flex;gap:10px;align-items:stretch;padding:14px 16px;flex-wrap:wrap">
+        <button onclick="window.ztApplyFilter('all')"
+          data-zt-filter="all"
+          style="display:flex;flex-direction:column;align-items:center;padding:10px 16px;border-radius:8px;border:2px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);cursor:pointer;transition:all 150ms;min-width:80px;font-family:inherit">
+          <span style="font-size:20px;font-weight:700;line-height:1">${total}</span>
+          <span style="font-size:10px;font-weight:600;margin-top:3px;text-transform:uppercase;letter-spacing:0.4px">All</span>
+        </button>
+        ${filterBtn('pass',  'Compliant', passPct, pass, '#f0fdf4', '#15803d', '#86efac')}
+        ${filterBtn('fail',  'Failed',    failPct, fail, '#fff1f2', '#be123c', '#fda4af')}
+        ${filterBtn('warn',  'Warning',   warnPct, warn, '#fffbeb', '#b45309', '#fcd34d')}
+        ${manualCount > 0 ? filterBtn('manual', 'Manual', Math.round((manualCount/total)*100), manualCount, '#fff7ed', '#c2410c', '#fdba74') : ''}
       </div>
     </div>
 
+    <div id="zt-pillar-body">
     ${Object.entries(byCategory).map(([category, controls]) => `
-      <div class="card mb-3">
-        <div class="card-header" style="background:var(--color-bg-secondary);border-bottom:1px solid var(--color-border-secondary)">
-          <span style="font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase">${category}</span>
-          <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:12px">(${controls.length} control${controls.length !== 1 ? 's' : ''})</span>
+      <div class="card mb-3 zt-category-card">
+        <div class="card-header">
+          <span style="font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.4px">${category}</span>
+          <span class="zt-category-count" style="font-size:10px;color:var(--color-text-tertiary)">${controls.length} control${controls.length !== 1 ? 's' : ''}</span>
         </div>
-        <div style="overflow-x:auto">
-          <table>
-            <thead><tr>
-              <th style="width:5%"></th>
-              <th style="width:35%">Control</th>
-              <th style="width:25%">Expected</th>
-              <th style="width:25%">Current</th>
-              <th style="width:10%"></th>
-            </tr></thead>
-            <tbody>
-              ${controls.map(v => `
-                <tr class="validation-detail-row" data-validation-id="${v.id}" style="cursor:pointer">
-                  <td style="text-align:center;font-size:16px">
-                    ${v.status === 'pass' ? '<span style="color:var(--clr-success-text)">✓</span>' :
-                      v.status === 'fail' ? '<span style="color:var(--clr-danger-text)">✗</span>' :
-                      '<span style="color:var(--clr-warning-text)">⚠</span>'}
-                  </td>
-                  <td style="font-size:11px;font-weight:500" data-label="Control">
-                    <div style="font-weight:600">${v.name}</div>
-                    <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:3px">${v.description || 'No description'}</div>
-                  </td>
-                  <td style="font-size:10px;color:var(--color-text-secondary)" data-label="Expected">
-                    ${v.expectedValue || '—'}
-                  </td>
-                  <td style="font-size:10px;color:var(--color-text-secondary)" data-label="Current">
-                    ${v.currentValue || '—'}
-                  </td>
-                  <td style="text-align:right" data-label="">
-                    <span class="badge ${v.severity === 'Critical' ? 'danger' : v.severity === 'High' ? 'warning' : 'secondary'}" style="font-size:10px">${v.severity}</span>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+        <div style="display:grid;grid-template-columns:32px 1fr 200px 200px 90px;padding:6px 12px;background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-secondary)">
+          <div></div>
+          <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.4px">Control</div>
+          <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.4px">Expected</div>
+          <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.4px">Current Status</div>
+          <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.4px;text-align:right">Severity</div>
         </div>
+        ${controls.map(v => `
+          <div style="display:grid;grid-template-columns:32px 1fr 200px 200px 90px;padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);align-items:start;cursor:pointer"
+               class="validation-detail-row zt-control-row"
+               data-validation-id="${v.id}"
+               data-status="${v.status}"
+               data-manual="${v.requiresManualValidation ? 'true' : 'false'}"
+               onmouseover="this.style.background='var(--color-background-secondary)'"
+               onmouseout="this.style.background=''">
+            <div style="padding-top:2px;text-align:center">${statusIcon(v.status)}</div>
+            <div style="min-width:0">
+              <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                ${v.name}
+                ${v.requiresManualValidation ? '<span style="display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;background:#fff3cd;color:#92400e;border:1px solid #fbbf24;letter-spacing:0.3px">MANUAL</span>' : ''}
+              </div>
+              <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.description || ''}</div>
+            </div>
+            <div style="font-size:10px;color:var(--color-text-secondary);padding-right:8px">${v.expectedValue || '—'}</div>
+            <div style="font-size:10px;color:${v.requiresManualValidation ? 'var(--clr-warning-text)' : 'var(--color-text-secondary)'}">
+              ${v.currentValue || '—'}
+            </div>
+            <div style="text-align:right">
+              <span class="badge ${v.severity === 'Critical' ? 'danger' : v.severity === 'High' ? 'warning' : 'secondary'}" style="font-size:9px">${v.severity || '—'}</span>
+            </div>
+          </div>
+        `).join('')}
       </div>
     `).join('')}
+    </div>
   `
+}
+
+// Global filter function — called by onclick on filter buttons
+window.ztApplyFilter = function(filterVal) {
+  // Update button active states
+  document.querySelectorAll('[data-zt-filter]').forEach(btn => {
+    const isActive = btn.dataset.ztFilter === filterVal
+    btn.style.opacity = isActive ? '1' : '0.55'
+    btn.style.transform = isActive ? 'scale(1.04)' : 'scale(1)'
+    btn.style.boxShadow = isActive ? '0 2px 8px rgba(0,0,0,0.12)' : 'none'
+  })
+
+  // Show/hide control rows — must restore 'grid' (not '') to preserve column layout
+  document.querySelectorAll('.zt-control-row').forEach(row => {
+    let show = false
+    if (filterVal === 'all')         show = true
+    else if (filterVal === 'manual') show = row.dataset.manual === 'true'
+    else                             show = row.dataset.status === filterVal
+    row.style.display = show ? 'grid' : 'none'
+  })
+
+  // Hide category cards where all rows are hidden; update visible count
+  document.querySelectorAll('.zt-category-card').forEach(card => {
+    const rows = card.querySelectorAll('.zt-control-row')
+    const visible = [...rows].filter(r => r.style.display !== 'none')
+    card.style.display = visible.length === 0 ? 'none' : ''
+    const countEl = card.querySelector('.zt-category-count')
+    if (countEl) countEl.textContent = `${visible.length} control${visible.length !== 1 ? 's' : ''}`
+  })
 }
 
 
@@ -807,16 +929,12 @@ function attachZTEventListeners(el) {
     })
   })
 
-  // Refresh button
-  el.querySelector('#zt-rescan')?.addEventListener('click', () => {
+  // Refresh button — runs a full live scan
+  el.querySelector('#zt-rescan')?.addEventListener('click', async () => {
     const btn = el.querySelector('#zt-rescan')
-    btn.innerHTML = '<span class="spinner dark"></span> Validating...'
+    btn.innerHTML = '<span class="spinner dark"></span> Scanning...'
     btn.disabled = true
-    setTimeout(() => {
-      btn.innerHTML = '<i class="ti ti-refresh"></i> Refresh'
-      btn.disabled = false
-      showToast('Zero Trust validation refreshed — all 80 controls re-evaluated.', 'success')
-    }, 2200)
+    await runFullScan(el)
   })
 
   // Export button

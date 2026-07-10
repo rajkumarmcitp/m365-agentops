@@ -258,7 +258,7 @@
     flex-direction: column;
     text-align: center;
     gap: 0px;
-    padding: 2px 16px;
+    padding: 8px 16px;
     margin-bottom: 12px;
     border-radius: 10px;
   }
@@ -266,6 +266,7 @@
   .dashboard-header-title {
     font-size: 22px;
     font-weight: 700;
+    line-height: 1.2;
   }
 
   .dashboard-header-subtitle {
@@ -360,14 +361,14 @@
   }
 
   .dashboard-header {
-    padding: 16px;
+    padding: 10px 16px;
     margin-bottom: 20px;
     border-radius: 10px;
   }
 
   .dashboard-header-title {
     font-size: 20px;
-    line-height: 1.3;
+    line-height: 1.2;
   }
 
   .dashboard-header-subtitle {
@@ -628,9 +629,13 @@
 }
 
 /* Hide setup wizard on mobile */
-@media (max-width: 768px) {
+#setup-status-banner {
+  display: none !important;
+}
+
+@media (min-width: 1024px) {
   #setup-status-banner {
-    display: none;
+    display: block !important;
   }
 }
 
@@ -695,4 +700,82 @@
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* ====== MOBILE RESPONSIVE - DASHBOARD CARDS ====== */
+@media (max-width: 768px) {
+  /* Stack dashboard cards on mobile */
+  .dash-cards-row {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Remove grid-column span on mobile */
+  .dash-cards-row .card {
+    grid-column: auto !important;
+  }
+
+  /* Adjust card padding on mobile */
+  .card {
+    padding: 12px !important;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px !important;
+  }
+
+  /* Hide table on mobile - show simplified list instead */
+  table {
+    display: none !important;
+  }
+
+  /* Show simplified list for Service Health on mobile */
+  .service-health-list {
+    display: block !important;
+  }
+
+  .service-health-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-border-secondary);
+    font-size: 12px;
+  }
+
+  .service-health-item:last-child {
+    border-bottom: none;
+  }
+
+  .service-health-title {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 4px;
+    word-break: break-word;
+  }
+
+  .service-health-service {
+    font-size: 10px;
+    color: var(--color-text-secondary);
+  }
+
+  /* Change Intelligence mobile view */
+  .change-intel-mobile {
+    display: block !important;
+  }
+
+  .change-intel-desktop {
+    display: none !important;
+  }
+}
+
+/* Desktop view */
+@media (min-width: 769px) {
+  .change-intel-mobile {
+    display: none !important;
+  }
+
+  .service-health-list {
+    display: none !important;
+  }
 }

@@ -1,5 +1,5 @@
 import { go, state } from '../app.js'
-import { getDevices, getUsers, getSecurityScore, callAPI, getMessageCenterMessages, getServiceHealth } from '../lib/api-client.js'
+import { getDevices, getUsers, getSecurityScore, getPrivilegedAccounts, callAPI, getMessageCenterMessages, getServiceHealth } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { MC_MESSAGES, SVC_HEALTH, SVC_META } from '../data/msgcenter-data.js'
 import { showToast } from '../components/toast.js'
@@ -37,15 +37,10 @@ export async function initDashboard() {
 function renderDashboardSkeleton(el) {
   el.innerHTML = `
     <!-- HEADER -->
-    <div class="dashboard-header">
+    <div class="page-header">
       <div>
-        <div class="dashboard-header-title">
-          <i class="ti ti-layout-dashboard"></i> M365 AgentOps Dashboard
-        </div>
-      </div>
-      <div class="dashboard-controls">
-        <button class="btn"><i class="ti ti-refresh"></i> Refresh</button>
-        <button class="btn"><i class="ti ti-settings"></i> Settings</button>
+        <div class="page-title"><i class="ti ti-layout-dashboard"></i> M365 AgentOps Dashboard</div>
+        <div class="page-subtitle">Enterprise tenant administration and monitoring</div>
       </div>
     </div>
 
@@ -157,7 +152,9 @@ function renderDashboardSkeleton(el) {
   buildChangeIntelWidget().then(ciHtml => {
     ciSection.innerHTML = ciHtml
     console.log('✓ Change Intelligence loaded')
+    // Attach event listeners for buttons
     ciSection.querySelector('#dash-to-messages')?.addEventListener('click', async () => await go('messages'))
+    ciSection.querySelector('#dash-to-msgcenter')?.addEventListener('click', async () => await go('msgcenter'))
   }).catch(ciError => {
     console.error('❌ Error loading Change Intelligence:', ciError.message)
     ciSection.innerHTML = `<div style="padding:20px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)"><div style="color:var(--color-text-secondary);font-size:11px">Failed to load Change Intelligence</div></div>`
@@ -207,7 +204,7 @@ async function loadDashboardData(el) {
     console.log('📡 Using API URL:', apiUrl)
 
     // Fetch all data in parallel
-    const [devicesResult, usersResult, scoreResult, setupResult, requestsResult, licensesResult, zeroTrustResult, cisResult] = await Promise.all([
+    const [devicesResult, usersResult, scoreResult, setupResult, requestsResult, licensesResult, zeroTrustResult, cisResult, privAcctsResult] = await Promise.all([
       getDevices().catch(e => { console.warn('⚠️ Devices fetch failed:', e.message); return { count: 0, data: [] } }),
       getUsers().catch(e => { console.warn('⚠️ Users fetch failed:', e.message); return { count: 0, data: [] } }),
       getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return { data: {} } }),
@@ -230,12 +227,14 @@ async function loadDashboardData(el) {
         return { success: false, summary: { utilizationPct: 0, total: 0, consumed: 0 }, count: 0 }
       }),
       fetch(`${apiUrl}/api/zero-trust/last-results`).then(r => r.json()).catch(e => { console.warn('⚠️ Zero Trust last results fetch failed:', e.message); return { success: false, hasResults: false } }),
-      fetch(`${apiUrl}/api/config/cis-results/last`).then(r => r.json()).catch(e => { console.warn('⚠️ CIS results fetch failed:', e.message); return { success: false, hasResults: false } })
+      fetch(`${apiUrl}/api/config/cis-results/last`).then(r => r.json()).catch(e => { console.warn('⚠️ CIS results fetch failed:', e.message); return { success: false, hasResults: false } }),
+      getPrivilegedAccounts().catch(e => { console.warn('⚠️ Privileged accounts fetch failed:', e.message); return { count: 0, data: [] } })
     ])
 
     console.log('✅ API responses received:')
     console.log(`   - Devices: ${devicesResult.count || 0}`)
     console.log(`   - Users: ${usersResult.count || 0}`)
+    console.log(`   - Privileged Accounts: ${privAcctsResult.count || 0}`)
     console.log(`   - Security Score: ${scoreResult.data?.currentScore || 'N/A'}`)
     console.log(`   - Requests: ${requestsResult.requests?.length || 0}`)
     console.log(`   - Licenses: ${licensesResult.count || 0} SKUs, ${licensesResult.summary?.utilizationPct || 0}% utilized`)
@@ -248,7 +247,7 @@ async function loadDashboardData(el) {
     }
 
     // Update KPI tiles with REAL data
-    updateKpiTiles(el, devicesResult, usersResult, scoreResult)
+    updateKpiTiles(el, devicesResult, usersResult, scoreResult, privAcctsResult)
 
     // Update CRITICAL ALERTS with REAL data
     updateCriticalAlerts(el, requestsResult)
@@ -276,7 +275,7 @@ function updateSetupBanner(el, setupConfig) {
     <div style="display:flex;align-items:center;gap:16px;padding:12px 16px;background:#fafafa">
       <i class="ti ti-sparkles" style="color:#FF9800;font-size:28px;flex-shrink:0"></i>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:700;font-size:14px;line-height:1.2;color:#1f2937;margin-bottom:4px">Setup Wizard<br/>in Progress</div>
+        <div style="font-weight:700;font-size:14px;line-height:1.2;color:#1f2937;margin-bottom:4px;white-space:nowrap">Setup Wizard in Progress</div>
         <div style="font-size:11px;color:#6b7280;margin-bottom:6px">${completedCount} of 8 steps completed</div>
         <div style="background:#e5e7eb;height:4px;border-radius:2px;overflow:hidden">
           <div style="background:#FF9800;height:100%;border-radius:2px;width:${progressPercent}%;transition:width 0.3s ease"></div>
@@ -291,7 +290,7 @@ function updateSetupBanner(el, setupConfig) {
   banner.style.marginBottom = '20px'
 }
 
-function updateKpiTiles(el, devicesResult, usersResult, scoreResult) {
+function updateKpiTiles(el, devicesResult, usersResult, scoreResult, privAcctsResult) {
   // Update Total Users
   const userCount = usersResult.count || (usersResult.data?.length) || (usersResult.data?.value?.length) || 0
   if (userCount > 0) {
@@ -320,31 +319,38 @@ function updateKpiTiles(el, devicesResult, usersResult, scoreResult) {
     console.log(`✅ Updated security score to: ${current}/${max}`)
   }
 
-  // Calculate and display MFA Enrollment (based on users with MFA capability)
-  const mfaEnrollment = userCount > 0 ? Math.floor(Math.random() * 40 + 60) : 0 // 60-100% for demo
+  // Update MFA Enrollment - No fallback, show actual data or dash
   const mfaEl = el.querySelector('#dash-mfa-enrollment')
-  if (mfaEl) mfaEl.textContent = mfaEnrollment
-  console.log(`📊 MFA Enrollment: ${mfaEnrollment}%`)
+  if (mfaEl) {
+    mfaEl.textContent = '—'
+    console.log(`📊 MFA Enrollment: No real data available`)
+  }
 
-  // Calculate Privileged Accounts (typically 5-15% of users)
-  const privileledCount = Math.ceil(userCount * 0.08)
+  // Update Privileged Accounts from API (NOT calculated)
+  const privCount = privAcctsResult.count || (privAcctsResult.data?.length) || 0
   const privEl = el.querySelector('#dash-priv-count')
-  if (privEl) privEl.textContent = privileledCount
-  console.log(`📊 Privileged Accounts: ${privileledCount}`)
+  if (privEl) privEl.textContent = privCount > 0 ? privCount : '—'
+  if (privCount > 0) {
+    console.log(`✅ Updated privileged accounts to: ${privCount}`)
+  } else {
+    console.log(`⚠️ Privileged accounts data not available`)
+  }
 
-  // Calculate Guest Accounts (typically 5-10% of users)
-  const guestCount = Math.ceil(userCount * 0.07)
+  // Update Guest Accounts - No fallback, show actual data or dash
   const guestEl = el.querySelector('#dash-guest-count')
-  if (guestEl) guestEl.textContent = guestCount
-  console.log(`📊 Guest Accounts: ${guestCount}`)
+  if (guestEl) {
+    guestEl.textContent = '—'
+    console.log(`📊 Guest Accounts: No real data available`)
+  }
 
-  // Calculate Inactive Users (typically 10-20% of users)
-  const inactiveCount = Math.ceil(userCount * 0.12)
+  // Update Inactive Users - No fallback, show actual data or dash
   const inactiveEl = el.querySelector('#dash-inactive-count')
-  if (inactiveEl) inactiveEl.textContent = inactiveCount
-  const inactiveInfoEl = el.querySelector('#dash-inactive-info')
-  if (inactiveInfoEl) inactiveInfoEl.textContent = `${inactiveCount} not logged in 30+ days`
-  console.log(`📊 Inactive Users: ${inactiveCount}`)
+  if (inactiveEl) {
+    inactiveEl.textContent = '—'
+    const inactiveInfoEl = el.querySelector('#dash-inactive-info')
+    if (inactiveInfoEl) inactiveInfoEl.textContent = 'Not logged in 30+ days'
+    console.log(`📊 Inactive Users: No real data available`)
+  }
 }
 
 function updateCriticalAlerts(el, requestsData = {}) {
@@ -809,6 +815,13 @@ function renderDemoDashboard(el) {
     if (tableEl && tableEl.querySelector('table')) tableEl.style.display = 'none'
     localStorage.setItem('dashboard_consents_dismissed', new Date().getTime())
   })
+  // Setup demo dashboard event listeners after HTML is rendered
+  setTimeout(() => {
+    setupDemoDashboardEventListeners(el)
+  }, 50)
+}
+
+function setupDemoDashboardEventListeners(el) {
   el.querySelector('#dash-to-requests')?.addEventListener('click', async () => await go('requests'))
   el.querySelector('#dash-to-security')?.addEventListener('click', async () => await go('security'))
   el.querySelector('#dash-to-tenantguard')?.addEventListener('click', async () => await go('tenantguard'))
@@ -816,7 +829,6 @@ function renderDemoDashboard(el) {
   el.querySelector('#dash-to-zt')?.addEventListener('click', async (e) => {
     const btn = e.target.closest('.btn')
     if (btn && (btn.textContent.includes('Request') || btn.textContent.includes('Re-run'))) {
-      // Run assessment
       btn.disabled = true
       const origText = btn.textContent
       btn.textContent = '⏳ Running...'
@@ -831,7 +843,6 @@ function renderDemoDashboard(el) {
         btn.textContent = origText
       }
     } else {
-      // Navigate to Zero Trust page
       await go('zerotrust')
     }
   })
@@ -936,19 +947,11 @@ async function buildChangeIntelWidget() {
           </span>
         </div>
         <div style="margin-bottom:10px">
-          ${critical.map(m => {
-            const svc = SVC_META[m.service] || { icon: 'ti-apps', color: '#185FA5', bg: '#E6F1FB' }
-            return `<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
-              <div style="width:20px;height:20px;border-radius:4px;background:${svc.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:${svc.color}">
-                <i class="ti ${svc.icon}"></i>
-              </div>
-              <div style="flex:1;min-width:0">
-                <div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.title}</div>
-                <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:1px">${m.id} · ${m.service} · Act by: <strong style="color:var(--clr-danger-text)">${m.actionByDate}</strong></div>
-              </div>
-              <span class="badge danger" style="font-size:8px;flex-shrink:0">High</span>
-            </div>`
-          }).join('')}
+          ${critical.map(m => `
+            <div style="padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+              <div style="font-size:11px;font-weight:600;color:var(--color-text-primary);margin-bottom:2px">${m.title}</div>
+              <div style="font-size:10px;color:var(--color-text-tertiary)">${m.id} · ${m.service} · Act by: <strong style="color:var(--clr-danger-text)">${m.actionByDate}</strong></div>
+            </div>`).join('')}
         </div>
         <button class="btn btn-primary" id="dash-to-msgcenter"><i class="ti ti-arrow-right"></i> View all messages</button>
       </div>
@@ -960,54 +963,23 @@ async function buildChangeIntelWidget() {
           <span class="badge ${allActiveIssues.length > 0 ? 'warning' : 'success'}">${allActiveIssues.length > 0 ? allActiveIssues.length + ' active' : 'All clear'}</span>
         </div>
 
-        <!-- Status Dots -->
-        <div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:12px">
-          ${svcHealthDots}
-        </div>
-
-        <!-- Table View -->
         ${allActiveIssues.length > 0 ? `
-          <div style="overflow-x:auto;font-size:10px">
-            <table style="width:100%;border-collapse:collapse">
-              <thead>
-                <tr style="border-bottom:1px solid var(--color-border-secondary);background:var(--color-background-secondary)">
-                  <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-primary)">Service</th>
-                  <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-primary)">Issue</th>
-                  <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-primary)">Type</th>
-                  <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-primary)">Started</th>
-                  <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-primary)">Impact</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${activeIssues.slice(0, 5).map(h => `
-                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary);hover:background:var(--color-background-secondary)">
-                    <td style="padding:8px;font-weight:600">${h.service}</td>
-                    <td style="padding:8px;color:var(--color-text-secondary);max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${h.title}">${h.title}</td>
-                    <td style="padding:8px">
-                      <span class="badge ${h.severity === 'high' ? 'danger' : h.severity === 'medium' ? 'warning' : 'info'}" style="font-size:8px">${(h.severity || 'medium').toUpperCase()}</span>
-                    </td>
-                    <td style="padding:8px;color:var(--color-text-secondary);font-size:9px">
-                      ${h.startDate ? new Date(h.startDate).toLocaleDateString() : 'N/A'}
-                    </td>
-                    <td style="padding:8px">
-                      <span style="color:var(--color-text-secondary);font-size:9px">${h.userImpact ? h.userImpact.substring(0, 30) + '...' : 'See details'}</span>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-            ${activeIssues.length > 5 ? `<div style="padding:8px;color:var(--color-text-secondary);font-size:9px">...and ${activeIssues.length - 5} more issues</div>` : ''}
+          <div style="margin-bottom:10px">
+            ${activeIssues.slice(0, 5).map(h => `
+              <div style="padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+                <div style="font-size:11px;font-weight:600;color:var(--color-text-primary);margin-bottom:2px">${h.title}</div>
+                <div style="font-size:10px;color:var(--color-text-tertiary)">${h.service}${h.startDate ? ' · ' + new Date(h.startDate).toLocaleDateString() : ''}</div>
+              </div>`).join('')}
+            ${activeIssues.length > 5 ? `<div style="padding:6px 0;color:var(--color-text-tertiary);font-size:10px">...and ${activeIssues.length - 5} more issues</div>` : ''}
           </div>
         ` : `
           <div style="font-size:11px;color:var(--clr-success-text);display:flex;align-items:center;gap:6px;padding:20px;text-align:center;justify-content:center">
             <i class="ti ti-circle-check"></i> All ${Object.keys(SVC_META).length} monitored services operational
           </div>
         `}
-
-        <!-- Action Button -->
-        <div style="margin-top:12px;display:flex;gap:8px">
-          <button class="btn btn-sm btn-primary" id="dash-to-messages" style="flex:1">
-            <i class="ti ti-arrow-right"></i> View Details
+        <div style="margin-top:12px">
+          <button class="btn btn-primary" id="dash-to-messages" style="width:100%">
+            <i class="ti ti-arrow-right"></i> View all messages
           </button>
         </div>
       </div>

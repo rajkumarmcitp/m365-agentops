@@ -10713,6 +10713,7 @@ app.get('/api/zero-trust/last-results', async (req, res) => {
         validations: validations,
         summary: summary,
         compliance: compliance,
+        overallScore: compliance,
         totalValidations: validations.length,
         source: 'cache'
       })

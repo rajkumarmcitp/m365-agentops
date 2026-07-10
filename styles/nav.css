@@ -34,7 +34,7 @@
 .nav-logo-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, var(--clr-primary) 0%, #1350882 100%);
+  background: #0d47a1 !important;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -48,13 +48,13 @@
 .nav-logo-text {
   font-size: 14px;
   font-weight: 800;
-  color: var(--clr-primary);
+  color: #0d47a1 !important;
   line-height: 1.2;
   letter-spacing: -0.3px;
 }
 .nav-logo-sub {
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: #1565c0 !important;
   text-transform: uppercase;
   letter-spacing: 0.6px;
   font-weight: 600;

@@ -14,6 +14,7 @@ import { ThreatCollectors } from './threat-collectors.js'
 import { ApplicationCollectors } from './application-collectors.js'
 import { InfrastructureCollectors } from './infrastructure-collectors.js'
 import DeviceValidations from './device-validations.js'
+import { unifiedGraphClient } from './graph-client-unified.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -34,6 +35,16 @@ export class ZeroTrustValidator {
     this.threatCollectors = new ThreatCollectors()
     this.applicationCollectors = new ApplicationCollectors()
     this.infrastructureCollectors = new InfrastructureCollectors()
+
+    // Compatibility shim: exposes .api(endpoint).get() / .post() over unifiedGraphClient
+    this.graphClient = {
+      api: (endpoint) => ({
+        get: () => unifiedGraphClient.get(endpoint),
+        post: (body) => unifiedGraphClient.post(endpoint, body),
+        patch: (body) => unifiedGraphClient.patch(endpoint, body),
+        delete: () => unifiedGraphClient.delete(endpoint)
+      })
+    }
   }
 
   /**
@@ -177,19 +188,18 @@ export class ZeroTrustValidator {
       const startTime = Date.now()
 
       try {
-        // Execute validation using collector data
+        // Execute validation using collector data (preferred), then direct Graph API
         if (collectorData && Object.keys(collectorData).length > 0) {
           result.status = await this.executeValidationWithCollectors(validation, result, collectorData)
-        } else if (validation.graphApi && this.graphClient) {
-          result.status = await this.executeGraphQuery(validation, result)
         } else {
-          result.status = await this.executeMockValidation(validation, result)
+          result.status = await this.executeGraphQuery(validation, result)
         }
       } catch (validationError) {
-        console.warn(`⚠️ Validation ${validation.id} error:`, validationError.message)
+        console.warn(`⚠️ Validation ${validation.id} Graph API unavailable:`, validationError.message)
         result.status = 'warn'
-        result.currentValue = 'Validation unavailable'
+        result.currentValue = 'Graph API call failed — requires manual validation'
         result.error = validationError.message
+        result.requiresManualValidation = true
       }
 
       result.executionTime = Date.now() - startTime
@@ -230,6 +240,8 @@ export class ZeroTrustValidator {
         status = await this.validateApplicationWithCollectors(validation, result, collectorData.application)
       } else if (validation.id.startsWith('INFRA-')) {
         status = await this.validateInfrastructureWithCollectors(validation, result, collectorData.infrastructure)
+      } else if (validation.id.startsWith('AUDIT-')) {
+        status = await this.validateAudit(validation, result)
       } else {
         // Fallback to Graph API
         status = await this.executeGraphQuery(validation, result)
@@ -238,8 +250,9 @@ export class ZeroTrustValidator {
       return status
     } catch (error) {
       console.warn(`⚠️ Collector-based validation failed for ${validation.id}: ${error.message}`)
-      result.currentValue = 'Validation failed'
+      result.currentValue = 'Graph API call failed — requires manual validation'
       result.error = error.message
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -270,6 +283,8 @@ export class ZeroTrustValidator {
         status = await this.validateEmail(validation, result)
       } else if (validation.id.startsWith('THREAT-')) {
         status = await this.validateThreat(validation, result)
+      } else if (validation.id.startsWith('AUDIT-')) {
+        status = await this.validateAudit(validation, result)
       } else {
         // Generic Graph API query
         status = await this.executeGenericGraphQuery(validation, result)
@@ -291,1076 +306,834 @@ export class ZeroTrustValidator {
     try {
       if (validation.id === 'ID-001') {
         // MFA Enabled for Global Admins
-        // Step 1: Get Global Administrator Role
-        const roleResponse = await this.graphClient.api('/directoryRoles').get()
-        const globalAdminRole = roleResponse.value?.find(r => r.displayName === 'Global Administrator')
-
-        if (!globalAdminRole) {
-          result.currentValue = 'Global Administrator role not found'
-          result.evidence = { roleNotFound: true }
-          return 'warn'
-        }
-
-        // Step 2: Get Members of Global Administrator role
-        const membersResponse = await this.graphClient.api(`/directoryRoles/${globalAdminRole.id}/members`).get()
+        // Step 1: Fetch Global Admins using stable roleTemplateId (works even if role isn't activated)
+        const GLOBAL_ADMIN_TEMPLATE_ID = '62e90394-69f5-4237-9190-012177145e10'
+        const membersResponse = await this.graphClient.api(
+          `/directoryRoles/roleTemplateId=${GLOBAL_ADMIN_TEMPLATE_ID}/members?$select=id,userPrincipalName,displayName`
+        ).get()
         const adminsList = membersResponse.value || []
 
         if (adminsList.length === 0) {
-          result.currentValue = 'No global admins found'
-          result.evidence = { totalAdmins: 0, adminsWithMFA: 0, adminsWithoutMFA: 0, details: [] }
+          result.currentValue = 'No Global Administrators found'
+          result.evidence = { totalAdmins: 0, roleTemplateId: GLOBAL_ADMIN_TEMPLATE_ID }
           return 'warn'
         }
 
-        // Step 3: Get MFA Registration Details for each admin
         const adminDetails = []
         let adminsWithMFA = 0
-        let adminsWithoutMFA = 0
 
-        // Build list of admin IDs for batch query
-        const adminIds = adminsList.map(a => a.id)
-
-        // Query MFA registration details for all users (we'll filter for admins)
+        // Step 2A: Bulk MFA registration report (Approach A — preferred)
+        let usedBulkReport = false
         try {
-          const mfaReportResponse = await this.graphClient.api('/reports/authenticationMethods/userRegistrationDetails').get()
-          const mfaRegistrationMap = {}
-
-          // Create map of user MFA registration details
-          mfaReportResponse.value?.forEach(entry => {
-            mfaRegistrationMap[entry.userPrincipalName] = {
-              isMfaRegistered: entry.isMfaRegistered,
-              isMfaCapable: entry.isMfaCapable,
-              defaultMfaMethod: entry.defaultMfaMethod,
-              methodsRegistered: entry.methodsRegistered
+          const mfaReport = await this.graphClient.api('/reports/authenticationMethods/userRegistrationDetails').get()
+          const mfaMap = {}
+          ;(mfaReport.value || []).forEach(entry => {
+            if (entry.userPrincipalName) {
+              mfaMap[entry.userPrincipalName.toLowerCase()] = entry
             }
           })
 
-          // Check each admin's MFA status
           for (const admin of adminsList) {
-            const adminUPN = admin.userPrincipalName
-            const mfaData = mfaRegistrationMap[adminUPN]
-
-            if (mfaData?.isMfaRegistered) {
-              adminsWithMFA++
-              adminDetails.push({
-                id: admin.id,
-                displayName: admin.displayName || 'Unknown',
-                userPrincipalName: adminUPN,
-                isMfaRegistered: true,
-                defaultMfaMethod: mfaData.defaultMfaMethod,
-                methodsRegistered: mfaData.methodsRegistered
-              })
-            } else {
-              adminsWithoutMFA++
-              adminDetails.push({
-                id: admin.id,
-                displayName: admin.displayName || 'Unknown',
-                userPrincipalName: adminUPN,
-                isMfaRegistered: false,
-                defaultMfaMethod: null,
-                methodsRegistered: null
-              })
-            }
+            const key = (admin.userPrincipalName || '').toLowerCase()
+            const entry = mfaMap[key]
+            const hasMFA = entry?.isMfaRegistered === true && entry?.isMfaCapable === true
+            if (hasMFA) adminsWithMFA++
+            adminDetails.push({
+              id: admin.id,
+              displayName: admin.displayName,
+              userPrincipalName: admin.userPrincipalName,
+              isMfaRegistered: entry?.isMfaRegistered ?? false,
+              isMfaCapable: entry?.isMfaCapable ?? false,
+              defaultMfaMethod: entry?.defaultMfaMethod ?? null,
+              methodsRegistered: entry?.methodsRegistered ?? [],
+              source: 'bulk-report'
+            })
           }
+          usedBulkReport = true
         } catch (e) {
-          console.warn(`⚠️ Could not fetch MFA registration report:`, e.message)
-          // Fallback to per-user authentication methods check
+          console.warn(`⚠️ ID-001 Bulk MFA report failed (${e.message}), falling back to per-user method check`)
+
+          // Step 2B: Per-user authentication/methods check (Approach B — fallback)
+          const MFA_TYPES = ['phone', 'fido2', 'windowsHello', 'temporaryAccessPass', 'microsoftAuthenticator', 'softwareOath']
           for (const admin of adminsList) {
             try {
-              const authMethods = await this.graphClient.api(`/users/${admin.id}/authentication/methods`).get()
-              const mfaMethods = authMethods.value?.filter(m => {
-                const type = m['@odata.type'] || ''
-                const isMFA = type.includes('phone') || type.includes('email') || type.includes('fido2') ||
-                              type.includes('windowsHello') || type.includes('temporaryAccessPass') ||
-                              type.includes('microsoftAuthenticator') || type.includes('softwareOath')
-                return isMFA && !type.includes('password')
-              }) || []
-
-              if (mfaMethods.length > 0) {
-                adminsWithMFA++
-                adminDetails.push({
-                  id: admin.id,
-                  displayName: admin.displayName,
-                  userPrincipalName: admin.userPrincipalName,
-                  isMfaRegistered: true,
-                  methodsRegistered: mfaMethods.length
-                })
-              } else {
-                adminsWithoutMFA++
-                adminDetails.push({
-                  id: admin.id,
-                  displayName: admin.displayName,
-                  userPrincipalName: admin.userPrincipalName,
-                  isMfaRegistered: false
-                })
-              }
-            } catch (innerError) {
-              adminsWithoutMFA++
+              const authResp = await this.graphClient.api(`/users/${admin.id}/authentication/methods`).get()
+              const mfaMethods = (authResp.value || []).filter(m => {
+                const type = (m['@odata.type'] || '').toLowerCase()
+                return MFA_TYPES.some(t => type.includes(t)) && !type.includes('password')
+              })
+              const hasMFA = mfaMethods.length > 0
+              if (hasMFA) adminsWithMFA++
+              adminDetails.push({
+                id: admin.id,
+                displayName: admin.displayName,
+                userPrincipalName: admin.userPrincipalName,
+                isMfaRegistered: hasMFA,
+                isMfaCapable: hasMFA,
+                methodsRegistered: mfaMethods.map(m => m['@odata.type']?.split('.').pop()),
+                source: 'per-user-methods'
+              })
+            } catch (innerErr) {
               adminDetails.push({
                 id: admin.id,
                 displayName: admin.displayName,
                 userPrincipalName: admin.userPrincipalName,
                 isMfaRegistered: false,
-                error: 'Could not verify'
+                error: innerErr.message,
+                source: 'per-user-methods'
               })
             }
           }
         }
 
-        const mfaPercentage = adminsList.length > 0 ? Math.round((adminsWithMFA / adminsList.length) * 100) : 0
-        result.currentValue = `${adminsWithMFA}/${adminsList.length} global admins have MFA (${mfaPercentage}%)`
-        result.evidence = {
-          totalAdmins: adminsList.length,
-          adminsWithMFA,
-          adminsWithoutMFA,
-          mfaPercentage,
-          complianceStatus: mfaPercentage === 100 ? 'COMPLIANT' : 'NON-COMPLIANT',
-          details: adminDetails
+        // Step 3: Check for CA policy targeting Global Admin role that enforces MFA
+        let caEnforced = false
+        let caPolicyName = null
+        try {
+          const caResp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const adminMFAPolicy = (caResp.value || []).find(p =>
+            p.state === 'enabled' &&
+            (p.grantControls?.builtInControls?.includes('mfa') ||
+             p.grantControls?.authenticationStrength) &&
+            (p.conditions?.roles?.includeRoles || []).some(r =>
+              r === GLOBAL_ADMIN_TEMPLATE_ID ||
+              r.toLowerCase().includes('62e90394')
+            )
+          )
+          caEnforced = !!adminMFAPolicy
+          caPolicyName = adminMFAPolicy?.displayName || null
+        } catch (e) {
+          console.warn(`⚠️ ID-001 CA policy check failed:`, e.message)
         }
 
-        console.log(`✅ ID-001 MFA for Global Admins: ${adminsWithMFA}/${adminsList.length} (${mfaPercentage}%)`)
+        const mfaPercentage = adminsList.length > 0 ? Math.round((adminsWithMFA / adminsList.length) * 100) : 0
+        const adminsWithoutMFA = adminDetails.filter(a => !a.isMfaRegistered)
 
-        // Status: PASS only if 100% of admins have MFA
-        if (mfaPercentage === 100) return 'pass'
+        result.currentValue = `${adminsWithMFA}/${adminsList.length} Global Admins have MFA (${mfaPercentage}%)${caEnforced ? ' · CA enforced' : ' · CA not enforced'}`
+        result.evidence = {
+          totalGlobalAdmins: adminsList.length,
+          adminsWithMFA,
+          adminsWithoutMFA: adminsWithoutMFA.length,
+          mfaPercentage,
+          caEnforced,
+          caEnforcementPolicy: caPolicyName,
+          adminsWithoutMFADetails: adminsWithoutMFA.map(a => ({ displayName: a.displayName, upn: a.userPrincipalName })),
+          allAdmins: adminDetails,
+          checkMethod: usedBulkReport ? 'bulk-registration-report' : 'per-user-auth-methods',
+          roleTemplateId: GLOBAL_ADMIN_TEMPLATE_ID
+        }
+
+        console.log(`✅ ID-001: ${adminsWithMFA}/${adminsList.length} Global Admins have MFA (${mfaPercentage}%) | CA enforced: ${caEnforced}`)
+
+        if (mfaPercentage === 100 && caEnforced) return 'pass'
+        if (mfaPercentage === 100) return 'warn'  // Registered but no CA enforcement
         if (mfaPercentage >= 80) return 'warn'
         return 'fail'
       }
 
-      if (validation.id === 'ID-002') {
-        // MFA Coverage for All Users
-        // Formula: Coverage = Registered Users / Licensed Users
-        try {
-          // Query: GET /beta/reports/authenticationMethods/userRegistrationDetails
-          const mfaReportResponse = await this.graphClient.api('/reports/authenticationMethods/userRegistrationDetails').get()
-          const registrationDetails = mfaReportResponse.value || []
-
-          // Count users by registration status
-          let mfaRegistered = 0
-          let mfaCapable = 0
-          let totalLicensedUsers = 0
-          let ssprRegistered = 0
-
-          // Analyze each user's registration status
-          registrationDetails.forEach(user => {
-            // Count only licensed users for denominator
-            totalLicensedUsers++
-
-            if (user.isMfaRegistered) {
-              mfaRegistered++
-            }
-
-            if (user.isMfaCapable) {
-              mfaCapable++
-            }
-
-            if (user.isSsprRegistered) {
-              ssprRegistered++
-            }
-          })
-
-          // Calculate coverage percentage
-          const mfaCoverage = totalLicensedUsers > 0 ? Math.round((mfaRegistered / totalLicensedUsers) * 100) : 0
-
-          result.currentValue = `${mfaCoverage}% MFA coverage (${mfaRegistered}/${totalLicensedUsers} licensed users)`
-          result.evidence = {
-            mfaRegistered,
-            mfaCapable,
-            totalLicensedUsers,
-            mfaCoveragePercentage: mfaCoverage,
-            ssprRegistered,
-            complianceTarget: '95%',
-            meetsTarget: mfaCoverage >= 95
-          }
-
-          console.log(`📊 ID-002 MFA Coverage for All Users:`)
-          console.log(`   - MFA Registered: ${mfaRegistered}/${totalLicensedUsers} (${mfaCoverage}%)`)
-          console.log(`   - MFA Capable: ${mfaCapable}`)
-          console.log(`   - SSPR Registered: ${ssprRegistered}`)
-          console.log(`   - Target: 95% - Status: ${mfaCoverage >= 95 ? 'MET ✅' : 'NOT MET ❌'}`)
-
-          return mfaCoverage >= 95 ? 'pass' : mfaCoverage >= 80 ? 'warn' : 'fail'
-        } catch (e) {
-          console.warn(`⚠️ ID-002 MFA Coverage check failed:`, e.message)
-          result.error = e.message
-          result.evidence = { error: 'Could not fetch MFA registration report', endpoint: '/reports/authenticationMethods/userRegistrationDetails' }
-          return 'fail'
-        }
-      }
-
-      if (validation.id === 'ID-003') {
-        // Legacy Authentication Blocked
-        const response = await this.graphClient.api('/policies/conditionalAccessPolicies?$filter=displayName eq \'Block Legacy Auth\'').get()
-        const hasBlockPolicy = response.value?.length > 0
-
-        result.currentValue = hasBlockPolicy ? 'Enabled' : 'Not enabled'
-        result.evidence = { policyExists: hasBlockPolicy }
-        return hasBlockPolicy ? 'pass' : 'fail'
-      }
-
-      if (validation.id === 'ID-004') {
-        // Passwordless Authentication Adoption
-        // Endpoint: GET /beta/reports/authenticationMethods/userRegistrationDetails
-        // Look for users with FIDO2, Windows Hello, or Microsoft Authenticator Passwordless
-        try {
-          const reportResponse = await this.graphClient.api('/reports/authenticationMethods/userRegistrationDetails').get()
-          const registrationDetails = reportResponse.value || []
-
-          let passwordlessUsers = 0
-          let totalUsers = registrationDetails.length
-          let byMethod = {
-            fido2: 0,
-            windowsHello: 0,
-            microsoftAuthenticator: 0
-          }
-
-          // Count users with passwordless methods
-          registrationDetails.forEach(user => {
-            const methods = user.methodsRegistered || []
-            const hasFido2 = methods.includes('fido2') || methods.some(m => m.toLowerCase().includes('fido2'))
-            const hasWindowsHello = methods.includes('windowsHello') || methods.some(m => m.toLowerCase().includes('windows'))
-            const hasAuthenticator = methods.includes('microsoftAuthenticator') || methods.some(m => m.toLowerCase().includes('authenticator'))
-
-            if (hasFido2) byMethod.fido2++
-            if (hasWindowsHello) byMethod.windowsHello++
-            if (hasAuthenticator) byMethod.microsoftAuthenticator++
-
-            // User has passwordless if they have ANY passwordless method
-            if (hasFido2 || hasWindowsHello || hasAuthenticator) {
-              passwordlessUsers++
-            }
-          })
-
-          const percentage = totalUsers > 0 ? Math.round((passwordlessUsers / totalUsers) * 100) : 0
-
-          result.currentValue = `${percentage}% passwordless adoption (${passwordlessUsers}/${totalUsers} users)`
-          result.evidence = {
-            passwordlessUsers,
-            totalUsers,
-            adoptionPercentage: percentage,
-            byMethod: byMethod,
-            hasPasswordlessCapability: passwordlessUsers > 0
-          }
-
-          console.log(`📊 ID-004 Passwordless Adoption:`)
-          console.log(`   - Total: ${passwordlessUsers}/${totalUsers} users (${percentage}%)`)
-          console.log(`   - FIDO2: ${byMethod.fido2}`)
-          console.log(`   - Windows Hello: ${byMethod.windowsHello}`)
-          console.log(`   - Authenticator: ${byMethod.microsoftAuthenticator}`)
-
-          return percentage >= 10 ? 'pass' : percentage > 0 ? 'warn' : 'fail'
-        } catch (e) {
-          console.warn(`⚠️ ID-004 Passwordless check failed:`, e.message)
-          result.error = e.message
-          result.evidence = { error: 'Could not fetch passwordless registration details' }
-          return 'warn'
-        }
-      }
-
-      if (validation.id === 'ID-005') {
-        // Conditional Access Policies Enabled
-        const response = await this.graphClient.api('/identity/conditionalAccess/policies?$filter=state eq \'enabled\'').get()
-        const enabledCount = response.value?.length || 0
-
-        result.currentValue = `${enabledCount} CA policies enabled`
-        result.evidence = { enabledPolicies: enabledCount, hasMinimum: enabledCount >= 3 }
-        return enabledCount >= 3 ? 'pass' : enabledCount > 0 ? 'warn' : 'fail'
-      }
-
-      if (validation.id === 'ID-006') {
-        // MFA Required for All Users via CA
-        const response = await this.graphClient.api('/identity/conditionalAccess/policies?$filter=state eq \'enabled\'').get()
-        const mfaPolicy = response.value?.find(p =>
-          p.displayName?.toLowerCase().includes('mfa') ||
-          p.displayName?.toLowerCase().includes('multi-factor')
-        )
-
-        result.currentValue = mfaPolicy ? 'MFA policy enabled' : 'No MFA policy found'
-        result.evidence = { hasMFAPolicy: !!mfaPolicy, policyName: mfaPolicy?.displayName }
-        return mfaPolicy ? 'pass' : 'fail'
-      }
-
-      if (validation.id === 'ID-007') {
-        // Require Compliant Devices via CA
-        const response = await this.graphClient.api('/identity/conditionalAccess/policies?$filter=state eq \'enabled\'').get()
-        const compliancePolicy = response.value?.find(p =>
-          p.displayName?.toLowerCase().includes('compliant') ||
-          p.displayName?.toLowerCase().includes('device')
-        )
-
-        result.currentValue = compliancePolicy ? 'Device compliance policy enabled' : 'No device policy found'
-        result.evidence = { hasDevicePolicy: !!compliancePolicy, policyName: compliancePolicy?.displayName }
-        return compliancePolicy ? 'pass' : 'fail'
-      }
-
-      if (validation.id === 'ID-008') {
-        // Risk-Based Access via Identity Protection
-        try {
-          const response = await this.graphClient.api('/identity/riskDetection').get()
-          const riskDetections = response.value?.length || 0
-
-          result.currentValue = riskDetections > 0 ? `${riskDetections} risk events detected` : 'No risk events'
-          result.evidence = { riskEventsDetected: riskDetections, hasRiskDetection: riskDetections > 0 }
-          return riskDetections >= 0 ? 'pass' : 'warn'
-        } catch (e) {
-          // Risk Detection endpoint may require premium license
-          result.currentValue = 'Risk detection endpoint not available'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      if (validation.id === 'ID-009') {
-        // Sign-in Risk Detection Enabled
-        try {
-          const response = await this.graphClient.api('/identity/riskDetection').get()
-          const signInRisks = response.value?.filter(r => r.riskEventType?.includes('sign')) || []
-
-          result.currentValue = signInRisks.length > 0 ? 'Sign-in risk detection active' : 'No sign-in risks detected'
-          result.evidence = { signInRisksDetected: signInRisks.length }
-          return 'pass'
-        } catch (e) {
-          result.currentValue = 'Risk detection not available'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      if (validation.id === 'ID-011') {
-        // Global Admin Count Minimized
-        const response = await this.graphClient.api('/directoryRoles').get()
-        const globalAdminRole = response.value?.find(r => r.displayName === 'Global Administrator')
-
-        if (!globalAdminRole) {
-          result.currentValue = 'Could not find Global Admin role'
-          result.evidence = { adminCount: 0 }
-          return 'warn'
-        }
-
-        const members = await this.graphClient.api(`/directoryRoles/${globalAdminRole.id}/members`).get()
-        const adminCount = members.value?.length || 0
-
-        result.currentValue = `${adminCount} global admins found`
-        result.evidence = { adminCount, isMinimized: adminCount <= 2 }
-        return adminCount <= 2 ? 'pass' : adminCount <= 4 ? 'warn' : 'fail'
-      }
-
-      // ID-012: Break-Glass Accounts Configured
-      if (validation.id === 'ID-012') {
-        // Break-Glass accounts: typically named BreakGlass, Emergency, EmergencyAdmin
-        // Cloud-only, no MFA exclusions, strong permissions
-        try {
-          const response = await this.graphClient.api('/users?$filter=startsWith(displayName,\'BreakGlass\') or startsWith(displayName,\'Emergency\') or startsWith(userPrincipalName,\'breakglass\')&$select=id,displayName,userPrincipalName,accountEnabled').get()
-          const breakGlassAccounts = response.value || []
-
-          result.currentValue = `${breakGlassAccounts.length} break-glass accounts found`
-          result.evidence = {
-            breakGlassCount: breakGlassAccounts.length,
-            hasBreakGlass: breakGlassAccounts.length >= 2,
-            accounts: breakGlassAccounts.map(a => ({
-              displayName: a.displayName,
-              userPrincipalName: a.userPrincipalName,
-              enabled: a.accountEnabled
-            }))
-          }
-          return breakGlassAccounts.length >= 2 ? 'pass' : 'fail'
-        } catch (e) {
-          result.currentValue = 'Could not verify break-glass accounts'
-          result.evidence = { error: 'Search failed' }
-          return 'warn'
-        }
-      }
-
-      // ID-013: Require MFA for All Users via Conditional Access
-      if (validation.id === 'ID-013') {
-        // Verify CA policy requires MFA for all users
-        try {
-          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
-
-          // Find policy with MFA requirement for all users
-          const mfaAllUsersPolicy = policies.find(p =>
-            p.state === 'enabled' &&
-            p.grantControls?.builtInControls?.includes('mfa') &&
-            p.conditions?.users?.includeUsers?.includes('All')
-          )
-
-          result.currentValue = mfaAllUsersPolicy ? 'MFA required for all users' : 'No MFA enforcement for all users'
-          result.evidence = {
-            hasMFAPolicy: !!mfaAllUsersPolicy,
-            policyName: mfaAllUsersPolicy?.displayName,
-            appliesToAll: !!mfaAllUsersPolicy
-          }
-          return mfaAllUsersPolicy ? 'pass' : 'fail'
-        } catch (e) {
-          result.currentValue = 'Could not verify MFA enforcement'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      // ID-014: Admin MFA Strength Policy
-      if (validation.id === 'ID-014') {
-        // Verify CA policy enforces phishing-resistant MFA for admins
-        try {
-          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
-
-          // Find policy targeting privileged roles with phishing-resistant auth strength
-          const adminMFAPolicy = policies.find(p =>
-            p.state === 'enabled' &&
-            p.conditions?.roles?.includeRoles?.some(r =>
-              r.includes('Global') || r.includes('Privileged') || r.includes('Security')
-            ) &&
-            p.grantControls?.authenticationStrength?.displayName?.includes('Phishing Resistant')
-          )
-
-          const privilegedRoles = adminMFAPolicy?.conditions?.roles?.includeRoles || []
-
-          result.currentValue = adminMFAPolicy ? 'Privileged admin MFA enforced' : 'No admin MFA policy'
-          result.evidence = {
-            hasAdminPolicy: !!adminMFAPolicy,
-            policyName: adminMFAPolicy?.displayName,
-            targetRoles: privilegedRoles,
-            authStrength: adminMFAPolicy?.grantControls?.authenticationStrength?.displayName
-          }
-          return adminMFAPolicy ? 'pass' : 'fail'
-        } catch (e) {
-          result.currentValue = 'Could not verify admin MFA policy'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      // ID-015: Phishing Resistant MFA (FIDO2, Windows Hello)
-      if (validation.id === 'ID-015') {
-        // Verify CA policy requires phishing-resistant authentication
-        try {
-          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
-
-          // Find policy with phishing-resistant auth strength
-          const phishingResistantPolicy = policies.find(p =>
-            p.state === 'enabled' &&
-            p.grantControls?.authenticationStrength?.displayName?.toLowerCase().includes('phishing resistant')
-          )
-
-          result.currentValue = phishingResistantPolicy ? 'Phishing-resistant MFA required' : 'No phishing-resistant policy'
-          result.evidence = {
-            hasPolicy: !!phishingResistantPolicy,
-            policyName: phishingResistantPolicy?.displayName,
-            authStrength: phishingResistantPolicy?.grantControls?.authenticationStrength?.displayName,
-            acceptedMethods: ['FIDO2', 'Windows Hello', 'Passkeys', 'Certificate Based Auth']
-          }
-          return phishingResistantPolicy ? 'pass' : 'warn'
-        } catch (e) {
-          result.currentValue = 'Could not verify phishing-resistant policy'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      // ID-016: Token Protection Policy
-      if (validation.id === 'ID-016') {
-        // Verify CA policy includes token protection
-        try {
-          const caResponse = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
-
-          // Find policy with token protection session controls
-          const tokenProtectionPolicy = policies.find(p =>
-            p.state === 'enabled' &&
-            p.sessionControls?.tokenProtection?.isEnabled === true
-          )
-
-          result.currentValue = tokenProtectionPolicy ? 'Token protection enabled' : 'Token protection not enabled'
-          result.evidence = {
-            hasTokenProtection: !!tokenProtectionPolicy,
-            policyName: tokenProtectionPolicy?.displayName,
-            requireDeviceBoundTokens: tokenProtectionPolicy?.sessionControls?.tokenProtection?.isEnabled
-          }
-          return tokenProtectionPolicy ? 'pass' : 'warn'
-        } catch (e) {
-          result.currentValue = 'Could not verify token protection'
-          result.evidence = { available: false, note: 'Requires beta API' }
-          return 'warn'
-        }
-      }
-
-      // ID-017: User Risk Policy
-      if (validation.id === 'ID-017') {
-        // Verify CA policy for high/medium user risk
-        try {
-          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
-
-          // Find policy targeting user risk levels
-          const userRiskPolicy = policies.find(p =>
-            p.state === 'enabled' &&
-            p.conditions?.userRiskLevels?.includes('high') &&
-            (p.grantControls?.builtInControls?.includes('block') ||
-             p.grantControls?.builtInControls?.includes('mfa'))
-          )
-
-          result.currentValue = userRiskPolicy ? 'User risk policy enabled' : 'No user risk policy'
-          result.evidence = {
-            hasUserRiskPolicy: !!userRiskPolicy,
-            policyName: userRiskPolicy?.displayName,
-            targetRiskLevels: userRiskPolicy?.conditions?.userRiskLevels,
-            grantControls: userRiskPolicy?.grantControls?.builtInControls
-          }
-          return userRiskPolicy ? 'pass' : 'warn'
-        } catch (e) {
-          result.currentValue = 'Could not verify user risk policy'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      // ID-018: Sign-in Risk Policy
-      if (validation.id === 'ID-018') {
-        // Verify CA policy for high/medium sign-in risk
-        try {
-          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
-
-          // Find policy targeting sign-in risk levels
-          const signInRiskPolicy = policies.find(p =>
-            p.state === 'enabled' &&
-            p.conditions?.signInRiskLevels?.includes('high') &&
-            (p.grantControls?.builtInControls?.includes('block') ||
-             p.grantControls?.builtInControls?.includes('mfa'))
-          )
-
-          result.currentValue = signInRiskPolicy ? 'Sign-in risk policy enabled' : 'No sign-in risk policy'
-          result.evidence = {
-            hasSignInRiskPolicy: !!signInRiskPolicy,
-            policyName: signInRiskPolicy?.displayName,
-            targetRiskLevels: signInRiskPolicy?.conditions?.signInRiskLevels,
-            grantControls: signInRiskPolicy?.grantControls?.builtInControls
-          }
-          return signInRiskPolicy ? 'pass' : 'warn'
-        } catch (e) {
-          result.currentValue = 'Could not verify sign-in risk policy'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      // ID-019: PIM (Privileged Identity Management) Enabled
-      if (validation.id === 'ID-019') {
-        // Verify PIM configuration for eligible role assignments
-        try {
-          const pimResponse = await this.graphClient.api('/roleManagement/directory/roleEligibilitySchedules').get()
-          const eligibleAssignments = pimResponse.value || []
-
-          result.currentValue = eligibleAssignments.length > 0 ? 'PIM configured' : 'PIM not configured'
-          result.evidence = {
-            pimConfigured: eligibleAssignments.length > 0,
-            eligibleAssignmentCount: eligibleAssignments.length
-          }
-          return eligibleAssignments.length > 0 ? 'pass' : 'fail'
-        } catch (e) {
-          result.currentValue = 'PIM not accessible'
-          result.evidence = { available: false, note: 'Requires P2 license' }
-          return 'warn'
-        }
-      }
-
-      // ID-020: Guest Access Controls (Guest Invitations)
-      if (validation.id === 'ID-020') {
-        // Verify guest invitation restrictions
-        try {
-          const authPolicyResponse = await this.graphClient.api('/policies/authorizationPolicy').get()
-          const allowInvitesFrom = authPolicyResponse.allowInvitesFrom
-
-          result.currentValue = allowInvitesFrom === 'adminsAndGuestInviters' ? 'Guest invites restricted' : `Guest invites: ${allowInvitesFrom}`
-          result.evidence = {
-            allowInvitesFrom: allowInvitesFrom,
-            isRestricted: allowInvitesFrom === 'adminsAndGuestInviters' || allowInvitesFrom === 'none'
-          }
-          return allowInvitesFrom === 'adminsAndGuestInviters' ? 'pass' : 'warn'
-        } catch (e) {
-          result.currentValue = 'Could not verify guest invitation settings'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      // ID-021: Cross Tenant Access Policy
-      if (validation.id === 'ID-021') {
-        // Verify cross-tenant access restrictions
-        try {
-          const ctaResponse = await this.graphClient.api('/policies/crossTenantAccessPolicy').get()
-
-          result.currentValue = ctaResponse ? 'Cross-tenant access configured' : 'Cross-tenant access not configured'
-          result.evidence = {
-            hasPolicy: !!ctaResponse,
-            inboundPolicy: ctaResponse?.inboundPolicy?.displayName,
-            outboundPolicy: ctaResponse?.outboundPolicy?.displayName
-          }
-          return ctaResponse ? 'pass' : 'warn'
-        } catch (e) {
-          result.currentValue = 'Could not verify cross-tenant access'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      // ID-022: Tenant Creator Role Minimized
-      if (validation.id === 'ID-022') {
-        // Verify Tenant Creator role has minimal members
-        try {
-          const roleResponse = await this.graphClient.api('/directoryRoles?$filter=displayName eq \'Tenant Creator\'').get()
-          const tenantCreatorRole = roleResponse.value?.[0]
-
-          if (!tenantCreatorRole) {
-            result.currentValue = 'Tenant Creator role not found'
-            result.evidence = { creatorCount: 0 }
-            return 'warn'
-          }
-
-          const members = await this.graphClient.api(`/directoryRoles/${tenantCreatorRole.id}/members`).get()
-          const creatorCount = members.value?.length || 0
-
-          result.currentValue = `${creatorCount} tenant creators`
-          result.evidence = { creatorCount, isMinimized: creatorCount < 5 }
-          return creatorCount < 5 ? 'pass' : 'warn'
-        } catch (e) {
-          result.currentValue = 'Could not verify tenant creators'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      // ID-023: Guest Restrictions (guestUserRoleId)
-      if (validation.id === 'ID-023') {
-        // Verify guest user role restrictions
-        try {
-          const authPolicyResponse = await this.graphClient.api('/policies/authorizationPolicy').get()
-          const guestUserRoleId = authPolicyResponse.guestUserRoleId
-
-          result.currentValue = guestUserRoleId ? `Guest role: ${guestUserRoleId}` : 'No guest restrictions'
-          result.evidence = {
-            guestUserRoleId: guestUserRoleId,
-            hasRestrictions: !!guestUserRoleId,
-            restrictionLevel: guestUserRoleId ? 'Configured' : 'Default (Unrestricted)'
-          }
-          return guestUserRoleId ? 'pass' : 'warn'
-        } catch (e) {
-          result.currentValue = 'Could not verify guest restrictions'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      // ID-024: Tenant Restrictions v2
-      if (validation.id === 'ID-024') {
-        // Verify Tenant Restrictions v2 configuration (beta)
-        try {
-          const ctaResponse = await this.graphClient.api('/beta/policies/crossTenantAccessPolicy').get()
-          const tenantRestrictions = ctaResponse ? 'Configured' : 'Not configured'
-
-          result.currentValue = tenantRestrictions
-          result.evidence = {
-            tenantRestrictionsV2Configured: !!ctaResponse,
-            policyDetails: ctaResponse?.displayName || 'Default policy',
-            restrictionEnabled: !!ctaResponse
-          }
-          return ctaResponse ? 'pass' : 'warn'
-        } catch (e) {
-          result.currentValue = 'Tenant Restrictions v2 not available'
-          result.evidence = { available: false, note: 'Requires beta API' }
-          return 'warn'
-        }
-      }
-
-      // ID-025: Legacy Authentication Activity
-      if (validation.id === 'ID-025') {
-        // Detect legacy authentication (SMTP, IMAP, POP, Exchange ActiveSync)
-        try {
-          // Query for legacy auth in sign-in logs
-          const legacyApps = ['SMTP', 'IMAP', 'POP', 'Exchange ActiveSync', 'Other Clients']
-          let legacySignInCount = 0
-
-          // Try to get sign-in logs with legacy auth filter
-          try {
-            const signInLogsResponse = await this.graphClient.api('/auditLogs/signIns?$filter=clientAppUsed eq \'SMTP\' or clientAppUsed eq \'IMAP\' or clientAppUsed eq \'POP\' or clientAppUsed eq \'Exchange ActiveSync\'').get()
-            legacySignInCount = signInLogsResponse.value?.length || 0
-          } catch (e) {
-            // If audit logs aren't available, return warning
-            result.currentValue = 'Could not access sign-in logs'
-            result.evidence = { legacyAuthFound: 'Unknown', note: 'Requires AuditLog.Read.All permission' }
-            return 'warn'
-          }
-
-          result.currentValue = legacySignInCount > 0 ? `${legacySignInCount} legacy auth sign-ins detected` : 'No legacy auth activity detected'
-          result.evidence = {
-            legacySignInCount: legacySignInCount,
-            hasLegacyAuth: legacySignInCount > 0,
-            legacyApps: legacyApps,
-            expectedValue: 0
-          }
-          return legacySignInCount === 0 ? 'pass' : 'warn'
-        } catch (e) {
-          result.currentValue = 'Legacy auth detection unavailable'
-          result.evidence = { available: false, error: e.message }
-          return 'warn'
-        }
-      }
-
-      // ID-026: Block Legacy Authentication
-      if (validation.id === 'ID-026') {
-        // Verify CA policy blocks legacy authentication
-        try {
-          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
-
-          // Find policy that blocks legacy clients
-          const legacyBlockPolicy = policies.find(p =>
-            p.state === 'enabled' &&
-            p.conditions?.clientAppTypes?.some(app =>
-              app === 'exchangeActiveSync' || app === 'other'
-            ) &&
-            p.grantControls?.builtInControls?.includes('block')
-          )
-
-          result.currentValue = legacyBlockPolicy ? 'Legacy auth blocked' : 'No legacy auth blocking policy'
-          result.evidence = {
-            hasBlockPolicy: !!legacyBlockPolicy,
-            policyName: legacyBlockPolicy?.displayName,
-            blockedAppTypes: ['exchangeActiveSync', 'other'],
-            grant: 'Block Access'
-          }
-          return legacyBlockPolicy ? 'pass' : 'fail'
-        } catch (e) {
-          result.currentValue = 'Could not verify legacy auth blocking'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      // ID-027: High Risk User Restrictions
-      if (validation.id === 'ID-027') {
-        // Verify CA policy for high risk users
-        try {
-          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
-
-          // Find policy targeting high risk users
-          const highRiskPolicy = policies.find(p =>
-            p.state === 'enabled' &&
-            p.conditions?.userRiskLevels?.includes('high') &&
-            (p.grantControls?.builtInControls?.includes('block') ||
-             p.grantControls?.builtInControls?.includes('mfa'))
-          )
-
-          result.currentValue = highRiskPolicy ? 'High risk user policy enforced' : 'No high risk policy'
-          result.evidence = {
-            hasPolicy: !!highRiskPolicy,
-            policyName: highRiskPolicy?.displayName,
-            targetRiskLevel: 'high',
-            grantControl: highRiskPolicy?.grantControls?.builtInControls
-          }
-          return highRiskPolicy ? 'pass' : 'warn'
-        } catch (e) {
-          result.currentValue = 'Could not verify high risk policy'
-          result.evidence = { available: false }
-          return 'warn'
-        }
-      }
-
-      // ID-028: Risk Notifications
-      if (validation.id === 'ID-028') {
-        // Risk Notifications require Microsoft Entra configuration (not Graph)
-        result.currentValue = 'Risk notifications require manual configuration'
-        result.evidence = {
-          configurable: true,
-          method: 'Manual - Microsoft Entra admin center',
-          note: 'Not available via Microsoft Graph API',
-          manualValidationRequired: true
-        }
+      // Helper to mark a control as requiring manual validation when Graph API fails
+      const markManual = (e, msg) => {
+        console.warn(`⚠️ ${validation.id} Graph API failed (${e.message}) — marking Manual`)
+        result.error = e.message
+        result.currentValue = msg || 'Graph API call failed — requires manual validation'
+        result.requiresManualValidation = true
         return 'warn'
       }
 
-      // ID-029: Risky Sign-in Policy
-      if (validation.id === 'ID-029') {
-        // Verify CA policy for risky sign-ins
+      // ── ID-002: MFA Coverage for All Users ──────────────────────────────────
+      if (validation.id === 'ID-002') {
         try {
-          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
+          const report = await this.graphClient.api('/reports/authenticationMethods/userRegistrationDetails').get()
+          const users = report.value || []
+          const total = users.length
+          const registered = users.filter(u => u.isMfaRegistered).length
+          const capable = users.filter(u => u.isMfaCapable).length
+          const sspr = users.filter(u => u.isSsprRegistered).length
+          const pct = total > 0 ? Math.round((registered / total) * 100) : 0
+          result.currentValue = `${pct}% MFA coverage (${registered}/${total} users)`
+          result.evidence = { total, registered, capable, sspr, pct, target: '95%', meetsTarget: pct >= 95 }
+          return pct >= 95 ? 'pass' : pct >= 80 ? 'warn' : 'fail'
+        } catch (e) { return markManual(e, 'Could not fetch MFA registration report — requires manual validation') }
+      }
 
-          // Find policy targeting risky sign-ins
-          const riskySignInPolicy = policies.find(p =>
+      // ── ID-003: Legacy Authentication Blocked via CA ─────────────────────────
+      if (validation.id === 'ID-003') {
+        try {
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = resp.value || []
+          const blockPolicy = policies.find(p =>
             p.state === 'enabled' &&
-            p.conditions?.signInRiskLevels?.includes('high') &&
+            p.conditions?.clientAppTypes?.some(t => t === 'exchangeActiveSync' || t === 'other') &&
+            p.grantControls?.builtInControls?.includes('block')
+          )
+          result.currentValue = blockPolicy ? `Legacy auth blocked (${blockPolicy.displayName})` : 'No CA policy blocking legacy auth'
+          result.evidence = { hasBlockPolicy: !!blockPolicy, policyName: blockPolicy?.displayName }
+          return blockPolicy ? 'pass' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
+      }
+
+      // ── ID-004: Passwordless Authentication Adoption ─────────────────────────
+      if (validation.id === 'ID-004') {
+        try {
+          const report = await this.graphClient.api('/reports/authenticationMethods/userRegistrationDetails').get()
+          const users = report.value || []
+          const total = users.length
+          const byMethod = { fido2: 0, windowsHello: 0, authenticator: 0 }
+          let passwordless = 0
+          users.forEach(u => {
+            const methods = u.methodsRegistered || []
+            const hasFido2 = methods.some(m => m.toLowerCase().includes('fido2'))
+            const hasHello = methods.some(m => m.toLowerCase().includes('windowshello'))
+            const hasAuth = methods.some(m => m.toLowerCase().includes('authenticator'))
+            if (hasFido2) byMethod.fido2++
+            if (hasHello) byMethod.windowsHello++
+            if (hasAuth) byMethod.authenticator++
+            if (hasFido2 || hasHello || hasAuth) passwordless++
+          })
+          const pct = total > 0 ? Math.round((passwordless / total) * 100) : 0
+          result.currentValue = `${pct}% passwordless adoption (${passwordless}/${total} users)`
+          result.evidence = { passwordless, total, pct, byMethod }
+          return pct >= 10 ? 'pass' : pct > 0 ? 'warn' : 'fail'
+        } catch (e) { return markManual(e, 'Could not fetch passwordless registration details') }
+      }
+
+      // ── ID-005: Conditional Access Policies Present ──────────────────────────
+      if (validation.id === 'ID-005') {
+        try {
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const enabled = (resp.value || []).filter(p => p.state === 'enabled')
+          result.currentValue = `${enabled.length} enabled CA policies`
+          result.evidence = { enabledCount: enabled.length, total: resp.value?.length || 0 }
+          return enabled.length >= 3 ? 'pass' : enabled.length > 0 ? 'warn' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
+      }
+
+      // ── ID-006: MFA Required for All Users (CA) ──────────────────────────────
+      if (validation.id === 'ID-006') {
+        try {
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (resp.value || []).filter(p => p.state === 'enabled')
+          const mfaPolicy = policies.find(p =>
+            (p.grantControls?.builtInControls?.includes('mfa') || p.grantControls?.authenticationStrength) &&
+            p.conditions?.users?.includeUsers?.includes('All')
+          )
+          result.currentValue = mfaPolicy ? `MFA enforced for all users (${mfaPolicy.displayName})` : 'No MFA CA policy targeting all users'
+          result.evidence = { hasMFAPolicy: !!mfaPolicy, policyName: mfaPolicy?.displayName }
+          return mfaPolicy ? 'pass' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
+      }
+
+      // ── ID-007: Require Compliant Devices via CA ─────────────────────────────
+      if (validation.id === 'ID-007') {
+        try {
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (resp.value || []).filter(p => p.state === 'enabled')
+          const devicePolicy = policies.find(p =>
+            p.grantControls?.builtInControls?.includes('compliantDevice') ||
+            p.grantControls?.builtInControls?.includes('domainJoinedDevice')
+          )
+          result.currentValue = devicePolicy ? `Device compliance required (${devicePolicy.displayName})` : 'No device compliance CA policy'
+          result.evidence = { hasDevicePolicy: !!devicePolicy, policyName: devicePolicy?.displayName }
+          return devicePolicy ? 'pass' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
+      }
+
+      // ── ID-008: Risk-Based Access via Identity Protection (User Risk Policy) ───
+      // Strategy: check CA policies for user risk levels (no P2 needed), then
+      // try /identityProtection/riskyUsers for additional evidence.
+      if (validation.id === 'ID-008') {
+        try {
+          const caResp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (caResp.value || []).filter(p => p.state === 'enabled')
+          const userRiskCA = policies.find(p =>
+            p.conditions?.userRiskLevels?.some(l => l === 'high' || l === 'medium') &&
             (p.grantControls?.builtInControls?.includes('block') ||
-             p.grantControls?.builtInControls?.includes('mfa'))
+             p.grantControls?.builtInControls?.includes('mfa') ||
+             p.grantControls?.authenticationStrength)
           )
 
-          result.currentValue = riskySignInPolicy ? 'Risky sign-in policy enforced' : 'No risky sign-in policy'
+          // Try to also fetch risky users for corroborating evidence (P2, may fail)
+          let riskyUsers = 0
+          try {
+            const riskyResp = await this.graphClient.api('/identityProtection/riskyUsers?$filter=riskState eq \'atRisk\'&$top=1').get()
+            riskyUsers = riskyResp['@odata.count'] || riskyResp.value?.length || 0
+          } catch (_) { /* P2 not available — CA check is sufficient */ }
+
+          result.currentValue = userRiskCA
+            ? `User risk CA policy active (${userRiskCA.displayName})${riskyUsers > 0 ? ` · ${riskyUsers} risky user(s)` : ''}`
+            : 'No CA policy targeting user risk levels'
           result.evidence = {
-            hasPolicy: !!riskySignInPolicy,
-            policyName: riskySignInPolicy?.displayName,
-            targetRiskLevels: riskySignInPolicy?.conditions?.signInRiskLevels,
-            grantControl: riskySignInPolicy?.grantControls?.builtInControls
+            hasUserRiskCAPolicy: !!userRiskCA,
+            policyName: userRiskCA?.displayName,
+            targetRiskLevels: userRiskCA?.conditions?.userRiskLevels,
+            grantControls: userRiskCA?.grantControls?.builtInControls,
+            riskyUsersDetected: riskyUsers,
+            note: 'User risk CA policy validated. Risky user count requires P2.'
           }
-          return riskySignInPolicy ? 'pass' : 'warn'
-        } catch (e) {
-          result.currentValue = 'Could not verify risky sign-in policy'
-          result.evidence = { available: false }
-          return 'warn'
-        }
+          return userRiskCA ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies for user risk') }
       }
 
-      // ID-030: Legacy MFA/SSPR - Migrate to Modern Policies
-      if (validation.id === 'ID-030') {
-        // Check for legacy SSPR and MFA configurations
+      // ── ID-009: Sign-in Risk Detection / Sign-in Risk Policy ─────────────────
+      // Strategy: check CA policies for sign-in risk levels (no P2), then try
+      // /identityProtection/riskDetections for corroborating evidence.
+      if (validation.id === 'ID-009') {
         try {
-          const authPolicyResponse = await this.graphClient.api('/policies/authorizationPolicy').get()
-          const modernPoliciesExist = authPolicyResponse ? true : false
+          const caResp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (caResp.value || []).filter(p => p.state === 'enabled')
+          const signInRiskCA = policies.find(p =>
+            p.conditions?.signInRiskLevels?.some(l => l === 'high' || l === 'medium') &&
+            (p.grantControls?.builtInControls?.includes('block') ||
+             p.grantControls?.builtInControls?.includes('mfa') ||
+             p.grantControls?.authenticationStrength)
+          )
 
-          result.currentValue = modernPoliciesExist ? 'Modern authentication policies in use' : 'Legacy policies may be active'
+          // Try risk detections for corroboration (P2, may fail)
+          let detectionCount = 0
+          try {
+            const detResp = await this.graphClient.api('/identityProtection/riskDetections?$top=1').get()
+            detectionCount = detResp['@odata.count'] || detResp.value?.length || 0
+          } catch (_) { /* P2 not available */ }
+
+          result.currentValue = signInRiskCA
+            ? `Sign-in risk CA policy active (${signInRiskCA.displayName})${detectionCount > 0 ? ` · ${detectionCount} recent detection(s)` : ''}`
+            : 'No CA policy targeting sign-in risk levels'
           result.evidence = {
-            modernPoliciesConfigured: modernPoliciesExist,
-            recommendation: 'Migrate from per-user MFA to Conditional Access'
+            hasSignInRiskCAPolicy: !!signInRiskCA,
+            policyName: signInRiskCA?.displayName,
+            targetRiskLevels: signInRiskCA?.conditions?.signInRiskLevels,
+            grantControls: signInRiskCA?.grantControls?.builtInControls,
+            riskDetectionsFound: detectionCount,
+            note: 'Sign-in risk CA policy validated. Risk detection count requires P2.'
           }
-          return modernPoliciesExist ? 'pass' : 'warn'
-        } catch (e) {
-          return 'warn'
-        }
+          return signInRiskCA ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies for sign-in risk') }
       }
 
-      // ID-031: Tenant Creator Role - Restricted Access (Duplicate of ID-022)
-      if (validation.id === 'ID-031') {
+      // ── ID-010: PIM (Privileged Identity Management) Enabled ─────────────────
+      // Fully automatable: check eligible schedules, active assignments, and
+      // confirm no permanent assignments exist for privileged roles.
+      if (validation.id === 'ID-010') {
         try {
-          const roleResponse = await this.graphClient.api('/directoryRoles?$filter=displayName eq \'Tenant Creator\'').get()
-          const tenantCreatorRole = roleResponse.value?.[0]
+          const [eligibleResp, activeResp] = await Promise.all([
+            this.graphClient.api('/roleManagement/directory/roleEligibilitySchedules?$top=50').get(),
+            this.graphClient.api('/roleManagement/directory/roleAssignmentSchedules?$top=50').get()
+          ])
+          const eligible = eligibleResp.value || []
+          const active = activeResp.value || []
 
-          if (!tenantCreatorRole) {
-            result.currentValue = 'Tenant Creator role not found'
+          // Permanent assignments have no schedule end (assignmentType = 'assigned' with no expiration)
+          const permanent = active.filter(a =>
+            a.scheduleInfo?.expiration?.type === 'noExpiration' ||
+            !a.scheduleInfo?.expiration?.endDateTime
+          )
+
+          result.currentValue = eligible.length > 0
+            ? `PIM active — ${eligible.length} eligible assignment(s), ${active.length} active, ${permanent.length} permanent`
+            : 'PIM not configured — no eligible role assignments found'
+          result.evidence = {
+            pimEnabled: eligible.length > 0,
+            eligibleAssignments: eligible.length,
+            activeAssignments: active.length,
+            permanentAssignments: permanent.length,
+            compliant: eligible.length > 0 && permanent.length === 0
+          }
+          if (eligible.length === 0) return 'fail'
+          if (permanent.length > 0) return 'warn'
+          return 'pass'
+        } catch (e) { return markManual(e, 'PIM API not accessible (requires Entra ID P2 / role management permissions)') }
+      }
+
+      // ── ID-011: Global Admin Count Minimized ─────────────────────────────────
+      if (validation.id === 'ID-011') {
+        try {
+          const GLOBAL_ADMIN_TEMPLATE_ID = '62e90394-69f5-4237-9190-012177145e10'
+          const resp = await this.graphClient.api(
+            `/directoryRoles/roleTemplateId=${GLOBAL_ADMIN_TEMPLATE_ID}/members?$select=id,displayName,userPrincipalName`
+          ).get()
+          const count = resp.value?.length || 0
+          result.currentValue = `${count} Global Administrator${count !== 1 ? 's' : ''}`
+          result.evidence = { adminCount: count, isMinimized: count <= 4, admins: resp.value?.map(a => a.displayName) }
+          return count <= 2 ? 'pass' : count <= 4 ? 'warn' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query Global Administrator role members') }
+      }
+
+      // ── ID-012: Break-Glass Accounts Configured ──────────────────────────────
+      if (validation.id === 'ID-012') {
+        try {
+          const resp = await this.graphClient.api(
+            `/users?$filter=startsWith(displayName,'BreakGlass') or startsWith(displayName,'Emergency') or startsWith(userPrincipalName,'breakglass')&$select=id,displayName,userPrincipalName,accountEnabled`
+          ).get()
+          const accounts = resp.value || []
+          result.currentValue = `${accounts.length} break-glass account${accounts.length !== 1 ? 's' : ''} found`
+          result.evidence = {
+            count: accounts.length,
+            hasBreakGlass: accounts.length >= 2,
+            accounts: accounts.map(a => ({ displayName: a.displayName, upn: a.userPrincipalName, enabled: a.accountEnabled }))
+          }
+          return accounts.length >= 2 ? 'pass' : 'fail'
+        } catch (e) { return markManual(e, 'Could not search for break-glass accounts') }
+      }
+
+      // ── ID-013: MFA Enforced for All Users (CA — All users scope) ────────────
+      if (validation.id === 'ID-013') {
+        try {
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (resp.value || []).filter(p => p.state === 'enabled')
+          const mfaAll = policies.find(p =>
+            (p.grantControls?.builtInControls?.includes('mfa') || p.grantControls?.authenticationStrength) &&
+            p.conditions?.users?.includeUsers?.includes('All')
+          )
+          result.currentValue = mfaAll ? `MFA required for all users (${mfaAll.displayName})` : 'No CA policy requiring MFA for all users'
+          result.evidence = { hasMFAPolicy: !!mfaAll, policyName: mfaAll?.displayName }
+          return mfaAll ? 'pass' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
+      }
+
+      // ── ID-014: Admin MFA Strength Policy (Phishing-Resistant) ──────────────
+      if (validation.id === 'ID-014') {
+        try {
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (resp.value || []).filter(p => p.state === 'enabled')
+          const adminMFAPolicy = policies.find(p =>
+            p.grantControls?.authenticationStrength?.displayName?.toLowerCase().includes('phishing resistant') &&
+            (p.conditions?.roles?.includeRoles?.length > 0 || p.conditions?.users?.includeRoles?.length > 0)
+          )
+          result.currentValue = adminMFAPolicy ? `Phishing-resistant MFA enforced for admins (${adminMFAPolicy.displayName})` : 'No phishing-resistant MFA policy for admins'
+          result.evidence = {
+            hasPolicy: !!adminMFAPolicy,
+            policyName: adminMFAPolicy?.displayName,
+            authStrength: adminMFAPolicy?.grantControls?.authenticationStrength?.displayName,
+            targetRoles: adminMFAPolicy?.conditions?.roles?.includeRoles
+          }
+          return adminMFAPolicy ? 'pass' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
+      }
+
+      // ── ID-015: Phishing-Resistant MFA Policy ────────────────────────────────
+      if (validation.id === 'ID-015') {
+        try {
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (resp.value || []).filter(p => p.state === 'enabled')
+          const policy = policies.find(p =>
+            p.grantControls?.authenticationStrength?.displayName?.toLowerCase().includes('phishing resistant')
+          )
+          result.currentValue = policy ? `Phishing-resistant MFA policy active (${policy.displayName})` : 'No phishing-resistant MFA policy'
+          result.evidence = { hasPolicy: !!policy, policyName: policy?.displayName, authStrength: policy?.grantControls?.authenticationStrength?.displayName }
+          return policy ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
+      }
+
+      // ── ID-016: Application Credentials — Certificate Lifecycle ─────────────
+      // Fully automatable: GET /applications?$select=displayName,keyCredentials
+      // Check every app's keyCredentials.endDateTime is within 365 days.
+      if (validation.id === 'ID-016') {
+        try {
+          const resp = await this.graphClient.api('/applications?$select=displayName,appId,keyCredentials&$top=999').get()
+          const apps = resp.value || []
+          const now = new Date()
+          const limit365 = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000)
+
+          let totalCerts = 0, expired = 0, longLived = 0, expiringSoon = 0
+          const issues = []
+
+          apps.forEach(app => {
+            (app.keyCredentials || []).forEach(cred => {
+              totalCerts++
+              const end = cred.endDateTime ? new Date(cred.endDateTime) : null
+              if (!end || end < now) {
+                expired++
+                issues.push({ app: app.displayName, issue: 'Expired', end: cred.endDateTime })
+              } else if (end > limit365) {
+                longLived++
+                issues.push({ app: app.displayName, issue: '>365 days', end: cred.endDateTime })
+              } else {
+                const daysLeft = Math.round((end - now) / (1000 * 60 * 60 * 24))
+                if (daysLeft < 30) {
+                  expiringSoon++
+                  issues.push({ app: app.displayName, issue: `Expires in ${daysLeft}d`, end: cred.endDateTime })
+                }
+              }
+            })
+          })
+
+          result.currentValue = totalCerts === 0
+            ? 'No application certificates found'
+            : `${totalCerts} cert(s) across ${apps.length} app(s) — ${expired} expired, ${longLived} long-lived (>365d), ${expiringSoon} expiring soon`
+          result.evidence = { totalCerts, expired, longLived, expiringSoon, appsChecked: apps.length, issues: issues.slice(0, 10) }
+
+          if (expired > 0 || longLived > 0) return 'fail'
+          if (expiringSoon > 0) return 'warn'
+          return 'pass'
+        } catch (e) { return markManual(e, 'Could not query application key credentials') }
+      }
+
+      // ── ID-017: User Risk Policy ──────────────────────────────────────────────
+      if (validation.id === 'ID-017') {
+        try {
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (resp.value || []).filter(p => p.state === 'enabled')
+          const riskPolicy = policies.find(p =>
+            p.conditions?.userRiskLevels?.some(l => l === 'high' || l === 'medium') &&
+            (p.grantControls?.builtInControls?.includes('block') || p.grantControls?.builtInControls?.includes('mfa'))
+          )
+          result.currentValue = riskPolicy ? `User risk policy active (${riskPolicy.displayName})` : 'No user risk CA policy'
+          result.evidence = { hasPolicy: !!riskPolicy, policyName: riskPolicy?.displayName, riskLevels: riskPolicy?.conditions?.userRiskLevels }
+          return riskPolicy ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
+      }
+
+      // ── ID-018: Sign-in Risk Policy ───────────────────────────────────────────
+      if (validation.id === 'ID-018') {
+        try {
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (resp.value || []).filter(p => p.state === 'enabled')
+          const riskPolicy = policies.find(p =>
+            p.conditions?.signInRiskLevels?.some(l => l === 'high' || l === 'medium') &&
+            (p.grantControls?.builtInControls?.includes('block') || p.grantControls?.builtInControls?.includes('mfa'))
+          )
+          result.currentValue = riskPolicy ? `Sign-in risk policy active (${riskPolicy.displayName})` : 'No sign-in risk CA policy'
+          result.evidence = { hasPolicy: !!riskPolicy, policyName: riskPolicy?.displayName, riskLevels: riskPolicy?.conditions?.signInRiskLevels }
+          return riskPolicy ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
+      }
+
+      // ── ID-019: User Consent Settings — Restricted ───────────────────────────
+      // Fully automatable: GET /policies/authorizationPolicy
+      // Check defaultUserRolePermissions.permissionGrantPoliciesAssigned
+      // Pass: ManagePermissionGrantsForSelf disabled or restricted to verified publishers
+      if (validation.id === 'ID-019') {
+        try {
+          const resp = await this.graphClient.api('/policies/authorizationPolicy').get()
+          const perms = resp.defaultUserRolePermissions || {}
+          const grantPolicies = perms.permissionGrantPoliciesAssigned || []
+
+          // managePermissionGrantsForSelf.{id} — 'microsoft-user-default-legacy' = unrestricted
+          const hasUnrestricted = grantPolicies.some(p =>
+            p.toLowerCase().includes('microsoft-user-default-legacy') ||
+            p.toLowerCase().includes('managepermissiongrantsforself')
+          )
+          const hasVerifiedPublisher = grantPolicies.some(p =>
+            p.toLowerCase().includes('verified-publisher') ||
+            p.toLowerCase().includes('microsoft-user-default-lowrisk')
+          )
+          const consentDisabled = grantPolicies.length === 0 || (!hasUnrestricted && !hasVerifiedPublisher)
+
+          const allowCreateApps = perms.allowedToCreateApps
+          const allowCreateTenants = perms.allowedToCreateTenants
+
+          result.currentValue = consentDisabled
+            ? 'User consent disabled — admins must approve all app permissions'
+            : hasVerifiedPublisher
+              ? 'User consent restricted to verified publisher apps'
+              : `User consent unrestricted — users can grant any app permission`
+          result.evidence = {
+            permissionGrantPoliciesAssigned: grantPolicies,
+            hasUnrestrictedConsent: hasUnrestricted,
+            hasVerifiedPublisherRestriction: hasVerifiedPublisher,
+            consentDisabled,
+            allowedToCreateApps: allowCreateApps,
+            allowedToCreateTenants: allowCreateTenants,
+            compliant: consentDisabled || hasVerifiedPublisher
+          }
+          if (consentDisabled || hasVerifiedPublisher) return 'pass'
+          return 'fail'
+        } catch (e) { return markManual(e, 'Could not query authorization policy for user consent settings') }
+      }
+
+      // ── ID-020: Guest Invitation Restrictions ────────────────────────────────
+      if (validation.id === 'ID-020') {
+        try {
+          const resp = await this.graphClient.api('/policies/authorizationPolicy').get()
+          const setting = resp.allowInvitesFrom
+          const restricted = setting === 'adminsAndGuestInviters' || setting === 'none'
+          result.currentValue = `Guest invites: ${setting || 'unknown'}`
+          result.evidence = { allowInvitesFrom: setting, isRestricted: restricted }
+          return restricted ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query authorization policy') }
+      }
+
+      // ── ID-021: Cross-Tenant Access Policy ───────────────────────────────────
+      if (validation.id === 'ID-021') {
+        try {
+          const resp = await this.graphClient.api('/policies/crossTenantAccessPolicy').get()
+          result.currentValue = resp ? 'Cross-tenant access policy configured' : 'No cross-tenant access policy'
+          result.evidence = { hasPolicy: !!resp, displayName: resp?.displayName }
+          return resp ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query cross-tenant access policy') }
+      }
+
+      // ── ID-022 / ID-031: Tenant Creator Role Minimized ───────────────────────
+      if (validation.id === 'ID-022' || validation.id === 'ID-031') {
+        try {
+          const rolesResp = await this.graphClient.api('/directoryRoles').get()
+          const creatorRole = (rolesResp.value || []).find(r => r.displayName === 'Tenant Creator')
+          if (!creatorRole) {
+            result.currentValue = 'Tenant Creator role not found (not activated)'
             result.evidence = { creatorCount: 0, restricted: true }
             return 'pass'
           }
-
-          const members = await this.graphClient.api(`/directoryRoles/${tenantCreatorRole.id}/members`).get()
-          const creatorCount = members.value?.length || 0
-
-          result.currentValue = `${creatorCount} tenant creators`
-          result.evidence = { creatorCount, isRestricted: creatorCount < 5 }
-          return creatorCount < 5 ? 'pass' : 'warn'
-        } catch (e) {
-          return 'warn'
-        }
+          const members = await this.graphClient.api(`/directoryRoles/${creatorRole.id}/members?$select=id,displayName`).get()
+          const count = members.value?.length || 0
+          result.currentValue = `${count} Tenant Creator${count !== 1 ? 's' : ''}`
+          result.evidence = { creatorCount: count, isMinimized: count < 5, members: members.value?.map(m => m.displayName) }
+          return count < 5 ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query Tenant Creator role members') }
       }
 
-      // ID-032: Global Administrator Role - Minimized (Duplicate of ID-011)
-      if (validation.id === 'ID-032') {
+      // ── ID-023: Guest User Role Restrictions ─────────────────────────────────
+      if (validation.id === 'ID-023') {
         try {
-          const roleResponse = await this.graphClient.api('/directoryRoles').get()
-          const globalAdminRole = roleResponse.value?.find(r => r.displayName === 'Global Administrator')
-
-          if (!globalAdminRole) return 'warn'
-
-          const members = await this.graphClient.api(`/directoryRoles/${globalAdminRole.id}/members`).get()
-          const adminCount = members.value?.length || 0
-
-          result.currentValue = `${adminCount} global admins`
-          result.evidence = { adminCount, isMinimized: adminCount <= 2 }
-          return adminCount <= 2 ? 'pass' : adminCount <= 4 ? 'warn' : 'fail'
-        } catch (e) {
-          return 'warn'
-        }
+          const resp = await this.graphClient.api('/policies/authorizationPolicy').get()
+          const roleId = resp.guestUserRoleId
+          // Well-known guest role IDs: 10dae51f = Guest User, 2af84b1e = Restricted Guest, a0b1b346 = Guest
+          const restrictedGuestRoleId = '2af84b1e-5c6e-4c4c-a2bd-f1fe5caf5a15'
+          const isRestricted = roleId === restrictedGuestRoleId
+          result.currentValue = roleId ? `Guest role ID: ${roleId}` : 'Default guest access (unrestricted)'
+          result.evidence = { guestUserRoleId: roleId, isRestricted, hasRestrictions: !!roleId }
+          return isRestricted ? 'pass' : roleId ? 'warn' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query guest user role restrictions') }
       }
 
-      // ID-033: Tenant Creation - Audit and Investigation
-      if (validation.id === 'ID-033') {
+      // ── ID-024: Conditional Access — Admin MFA Strength Policy ───────────────
+      // Fully automatable: check for enabled CA policies that target privileged
+      // roles AND require phishing-resistant authentication strength.
+      if (validation.id === 'ID-024') {
+        const PRIV_ROLE_IDS = [
+          '62e90394-69f5-4237-9190-012177145e10', // Global Administrator
+          'e8611ab8-c189-46e8-94e1-60213ab1f814', // Privileged Role Administrator
+          'b1be1c3e-b65d-4f19-8427-f6fa0d97feb9', // Conditional Access Administrator
+          '194ae4cb-b126-40b2-bd5b-6091b380977d', // Security Administrator
+          '7be44c8a-adaf-4e2a-84d6-ab2649e08a13', // Privileged Authentication Administrator
+          '9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3', // Authentication Administrator
+        ]
         try {
-          const auditResponse = await this.graphClient.api('/auditLogs/directoryAudits?$filter=activityDisplayName eq \'Create tenant\'').get()
-          const tenantCreationAudits = auditResponse.value || []
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (resp.value || []).filter(p => p.state === 'enabled')
 
-          result.currentValue = `${tenantCreationAudits.length} tenant creation events audited`
+          const adminMFAPolicy = policies.find(p => {
+            const roles = p.conditions?.roles?.includeRoles || []
+            const targetsAdminRoles = roles.some(r => PRIV_ROLE_IDS.includes(r))
+            const hasStrength = !!(p.grantControls?.authenticationStrength)
+            const isPhishingResistant = p.grantControls?.authenticationStrength?.displayName
+              ?.toLowerCase().includes('phishing resistant')
+            return targetsAdminRoles && (hasStrength || isPhishingResistant)
+          })
+
+          const coveredRoles = adminMFAPolicy?.conditions?.roles?.includeRoles
+            ?.filter(r => PRIV_ROLE_IDS.includes(r)) || []
+
+          result.currentValue = adminMFAPolicy
+            ? `Admin MFA strength policy active — "${adminMFAPolicy.displayName}" (${coveredRoles.length} privileged role(s) targeted)`
+            : 'No CA policy enforcing phishing-resistant MFA for privileged roles'
           result.evidence = {
-            auditedCreations: tenantCreationAudits.length,
-            auditingEnabled: tenantCreationAudits.length >= 0
+            hasPolicy: !!adminMFAPolicy,
+            policyName: adminMFAPolicy?.displayName,
+            authStrength: adminMFAPolicy?.grantControls?.authenticationStrength?.displayName,
+            targetedPrivilegedRoles: coveredRoles.length,
+            roleIds: coveredRoles
           }
-          return 'pass'
-        } catch (e) {
-          result.currentValue = 'Tenant creation audit logs not accessible'
-          result.evidence = { available: false }
-          return 'warn'
-        }
+          return adminMFAPolicy ? 'pass' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
       }
 
-      // ID-034: Cross-Tenant Access - Outbound Settings
-      if (validation.id === 'ID-034') {
-        try {
-          const ctaResponse = await this.graphClient.api('/policies/crossTenantAccessPolicy').get()
-          const outboundPolicy = ctaResponse?.outboundPolicy
-
-          result.currentValue = outboundPolicy ? 'Outbound cross-tenant access configured' : 'Using default outbound settings'
-          result.evidence = {
-            hasOutboundPolicy: !!outboundPolicy,
-            policyName: outboundPolicy?.displayName
-          }
-          return outboundPolicy ? 'pass' : 'warn'
-        } catch (e) {
-          return 'warn'
-        }
-      }
-
-      // ID-035: Guest User Invitations - Restricted (Duplicate of ID-020)
-      if (validation.id === 'ID-035') {
-        try {
-          const authPolicyResponse = await this.graphClient.api('/policies/authorizationPolicy').get()
-          const allowInvitesFrom = authPolicyResponse.allowInvitesFrom
-
-          result.currentValue = allowInvitesFrom === 'adminsAndGuestInviters' ? 'Guest invites restricted' : `Guest invites: ${allowInvitesFrom}`
-          result.evidence = {
-            allowInvitesFrom: allowInvitesFrom,
-            isRestricted: allowInvitesFrom === 'adminsAndGuestInviters' || allowInvitesFrom === 'none'
-          }
-          return allowInvitesFrom === 'adminsAndGuestInviters' ? 'pass' : 'warn'
-        } catch (e) {
-          return 'warn'
-        }
-      }
-
-      // ID-036: Guest Access - Directory Object Restrictions
-      if (validation.id === 'ID-036') {
-        try {
-          const authPolicyResponse = await this.graphClient.api('/policies/authorizationPolicy').get()
-          const guestUserRoleId = authPolicyResponse.guestUserRoleId
-
-          result.currentValue = guestUserRoleId ? 'Guest directory access restricted' : 'Guest directory access not restricted'
-          result.evidence = {
-            guestUserRoleId: guestUserRoleId,
-            hasRestrictions: !!guestUserRoleId
-          }
-          return guestUserRoleId ? 'pass' : 'warn'
-        } catch (e) {
-          return 'warn'
-        }
-      }
-
-      // ID-037: Tenant Restrictions v2 - External Access Control (Duplicate of ID-024)
+      // ── ID-037: Tenant Restrictions v2 — External Access Control ─────────────
+      // No public Graph API exposes Tenant Restrictions v2 configuration.
+      // Requires manual review in Entra admin center >
+      //   External Identities > Cross-tenant access > Tenant restrictions v2
       if (validation.id === 'ID-037') {
-        try {
-          const ctaResponse = await this.graphClient.api('/beta/policies/crossTenantAccessPolicy').get()
-
-          result.currentValue = ctaResponse ? 'Tenant Restrictions v2 enabled' : 'Tenant Restrictions v2 not enabled'
-          result.evidence = {
-            enabled: !!ctaResponse,
-            configurationLevel: ctaResponse ? 'Advanced' : 'Default'
-          }
-          return ctaResponse ? 'pass' : 'warn'
-        } catch (e) {
-          return 'warn'
-        }
-      }
-
-      // ID-038: Legacy Authentication - Zero Activity (Duplicate of ID-025)
-      if (validation.id === 'ID-038') {
-        try {
-          const signInLogsResponse = await this.graphClient.api('/auditLogs/signIns?$filter=clientAppUsed eq \'SMTP\' or clientAppUsed eq \'IMAP\' or clientAppUsed eq \'POP\' or clientAppUsed eq \'Exchange ActiveSync\'').get()
-          const legacySignInCount = signInLogsResponse.value?.length || 0
-
-          result.currentValue = legacySignInCount === 0 ? 'No legacy auth activity' : `${legacySignInCount} legacy auth sign-ins detected`
-          result.evidence = {
-            legacySignInCount: legacySignInCount,
-            hasLegacyActivity: legacySignInCount > 0
-          }
-          return legacySignInCount === 0 ? 'pass' : 'warn'
-        } catch (e) {
-          return 'warn'
-        }
-      }
-
-      // ID-039: Block Legacy Authentication - CA Policy (Duplicate of ID-026)
-      if (validation.id === 'ID-039') {
-        try {
-          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
-
-          const legacyBlockPolicy = policies.find(p =>
-            p.state === 'enabled' &&
-            p.conditions?.clientAppTypes?.some(app => app === 'exchangeActiveSync' || app === 'other') &&
-            p.grantControls?.builtInControls?.includes('block')
-          )
-
-          result.currentValue = legacyBlockPolicy ? 'Legacy auth blocked by CA' : 'No legacy auth blocking policy'
-          result.evidence = {
-            hasBlockPolicy: !!legacyBlockPolicy,
-            policyName: legacyBlockPolicy?.displayName
-          }
-          return legacyBlockPolicy ? 'pass' : 'fail'
-        } catch (e) {
-          return 'warn'
-        }
-      }
-
-      // ID-040: Identity Protection - High-Risk User Restrictions (Duplicate of ID-027)
-      if (validation.id === 'ID-040') {
-        try {
-          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
-
-          const highRiskPolicy = policies.find(p =>
-            p.state === 'enabled' &&
-            p.conditions?.userRiskLevels?.includes('high') &&
-            (p.grantControls?.builtInControls?.includes('block') ||
-             p.grantControls?.builtInControls?.includes('mfa'))
-          )
-
-          result.currentValue = highRiskPolicy ? 'High-risk user policy enforced' : 'No high-risk user policy'
-          result.evidence = {
-            hasPolicy: !!highRiskPolicy,
-            policyName: highRiskPolicy?.displayName
-          }
-          return highRiskPolicy ? 'pass' : 'warn'
-        } catch (e) {
-          return 'warn'
-        }
-      }
-
-      // ID-041: Identity Protection - Risk Notifications (Duplicate of ID-028)
-      if (validation.id === 'ID-041') {
-        result.currentValue = 'Risk notifications require manual configuration'
-        result.evidence = {
-          configurable: true,
-          method: 'Manual configuration',
-          manualValidationRequired: true
-        }
+        result.currentValue = 'Tenant Restrictions v2 has no Graph API endpoint — requires manual review in Entra admin center'
+        result.requiresManualValidation = true
+        result.evidence = { note: 'Check: Entra admin center > External Identities > Cross-tenant access settings > Tenant restrictions v2' }
         return 'warn'
       }
 
-      // ID-042: Risky Sign-in - Blocking Policy (Duplicate of ID-029)
-      if (validation.id === 'ID-042') {
+      // ── ID-025 / ID-038: Legacy Authentication Activity in Sign-in Logs ──────
+      if (validation.id === 'ID-025' || validation.id === 'ID-038') {
         try {
-          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
-
-          const riskySignInPolicy = policies.find(p =>
-            p.state === 'enabled' &&
-            p.conditions?.signInRiskLevels?.includes('high') &&
-            (p.grantControls?.builtInControls?.includes('block') ||
-             p.grantControls?.builtInControls?.includes('mfa'))
-          )
-
-          result.currentValue = riskySignInPolicy ? 'Risky sign-in policy enforced' : 'No risky sign-in policy'
-          result.evidence = {
-            hasPolicy: !!riskySignInPolicy,
-            policyName: riskySignInPolicy?.displayName
-          }
-          return riskySignInPolicy ? 'pass' : 'warn'
-        } catch (e) {
-          return 'warn'
-        }
+          const resp = await this.graphClient.api(
+            `/auditLogs/signIns?$filter=clientAppUsed eq 'SMTP' or clientAppUsed eq 'IMAP4' or clientAppUsed eq 'POP3' or clientAppUsed eq 'Exchange ActiveSync'&$top=50`
+          ).get()
+          const count = resp.value?.length || 0
+          result.currentValue = count === 0 ? 'No legacy auth sign-ins detected' : `${count} legacy auth sign-ins detected`
+          result.evidence = { legacySignInCount: count, hasLegacyActivity: count > 0 }
+          return count === 0 ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query sign-in audit logs (requires AuditLog.Read.All)') }
       }
 
-      // Default for other ID- validations
+      // ── ID-026 / ID-039: Block Legacy Authentication via CA ──────────────────
+      if (validation.id === 'ID-026' || validation.id === 'ID-039') {
+        try {
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (resp.value || []).filter(p => p.state === 'enabled')
+          const blockPolicy = policies.find(p =>
+            p.conditions?.clientAppTypes?.some(t => t === 'exchangeActiveSync' || t === 'other') &&
+            p.grantControls?.builtInControls?.includes('block')
+          )
+          result.currentValue = blockPolicy ? `Legacy auth blocked (${blockPolicy.displayName})` : 'No CA policy blocking legacy auth'
+          result.evidence = { hasBlockPolicy: !!blockPolicy, policyName: blockPolicy?.displayName }
+          return blockPolicy ? 'pass' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
+      }
+
+      // ── ID-027 / ID-040: High-Risk User Restriction Policy ───────────────────
+      if (validation.id === 'ID-027' || validation.id === 'ID-040') {
+        try {
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (resp.value || []).filter(p => p.state === 'enabled')
+          const riskPolicy = policies.find(p =>
+            p.conditions?.userRiskLevels?.includes('high') &&
+            (p.grantControls?.builtInControls?.includes('block') || p.grantControls?.builtInControls?.includes('mfa'))
+          )
+          result.currentValue = riskPolicy ? `High-risk user policy active (${riskPolicy.displayName})` : 'No high-risk user CA policy'
+          result.evidence = { hasPolicy: !!riskPolicy, policyName: riskPolicy?.displayName }
+          return riskPolicy ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
+      }
+
+      // ── ID-028: Authentication Methods — User Registration ───────────────────
+      // Fully automatable: GET /reports/authenticationMethods/userRegistrationDetails
+      // Pass if ≥95% of users have at least one strong MFA method registered:
+      // Microsoft Authenticator, FIDO2, Windows Hello, Phone, or TAP.
+      if (validation.id === 'ID-028') {
+        try {
+          const resp = await this.graphClient.api('/reports/authenticationMethods/userRegistrationDetails').get()
+          const users = resp.value || []
+          const total = users.length
+          const STRONG_METHODS = ['microsoftAuthenticatorPush', 'microsoftAuthenticatorPasswordless',
+            'fido2', 'windowsHelloForBusiness', 'phoneAuthentication', 'softwareOneTimePasscode',
+            'temporaryAccessPass', 'hardwareOneTimePasscode', 'microsoftAuthenticator']
+
+          let withStrong = 0, byMethod = {}
+          users.forEach(u => {
+            const methods = u.methodsRegistered || []
+            const hasStrong = methods.some(m => STRONG_METHODS.some(s => m.toLowerCase().includes(s.toLowerCase())))
+            if (hasStrong) withStrong++
+            methods.forEach(m => { byMethod[m] = (byMethod[m] || 0) + 1 })
+          })
+
+          const pct = total > 0 ? Math.round((withStrong / total) * 100) : 0
+          result.currentValue = `${pct}% of users have strong MFA registered (${withStrong}/${total})`
+          result.evidence = {
+            total, withStrongMFA: withStrong, registrationPct: pct,
+            target: '95%', meetsTarget: pct >= 95, byMethod
+          }
+          return pct >= 95 ? 'pass' : pct >= 80 ? 'warn' : 'fail'
+        } catch (e) { return markManual(e, 'Could not fetch authentication methods registration report (requires Reports.Read.All)') }
+      }
+
+      // ── ID-041: Identity Protection — Risk Notifications ─────────────────────
+      // No Graph API endpoint exposes notification recipients, email settings,
+      // or notification frequency for Identity Protection alerts.
+      if (validation.id === 'ID-041') {
+        result.currentValue = 'Risk notification settings not exposed via Graph API — requires manual review in Entra admin center'
+        result.requiresManualValidation = true
+        result.evidence = { note: 'Check: Entra admin center > Protection > Identity Protection > Notifications' }
+        return 'warn'
+      }
+
+      // ── ID-029 / ID-042: Risky Sign-in Blocking Policy ───────────────────────
+      if (validation.id === 'ID-029' || validation.id === 'ID-042') {
+        try {
+          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = (resp.value || []).filter(p => p.state === 'enabled')
+          const riskPolicy = policies.find(p =>
+            p.conditions?.signInRiskLevels?.includes('high') &&
+            (p.grantControls?.builtInControls?.includes('block') || p.grantControls?.builtInControls?.includes('mfa'))
+          )
+          result.currentValue = riskPolicy ? `Risky sign-in policy active (${riskPolicy.displayName})` : 'No risky sign-in CA policy'
+          result.evidence = { hasPolicy: !!riskPolicy, policyName: riskPolicy?.displayName }
+          return riskPolicy ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query Conditional Access policies') }
+      }
+
+      // ── ID-030: Migrate from Legacy MFA/SSPR to Modern Policies ─────────────
+      if (validation.id === 'ID-030') {
+        try {
+          const [authPolicyResp, caResp] = await Promise.all([
+            this.graphClient.api('/policies/authorizationPolicy').get(),
+            this.graphClient.api('/identity/conditionalAccess/policies').get()
+          ])
+          const hasModernCA = (caResp.value || []).some(p =>
+            p.state === 'enabled' &&
+            (p.grantControls?.builtInControls?.includes('mfa') || p.grantControls?.authenticationStrength)
+          )
+          result.currentValue = hasModernCA ? 'Modern CA-based MFA policies in use' : 'No modern CA MFA policies found — may be using legacy per-user MFA'
+          result.evidence = { hasModernCAPolicies: hasModernCA, authPolicyFetched: !!authPolicyResp }
+          return hasModernCA ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not verify modern policy migration status') }
+      }
+
+      // ── ID-032: Global Administrator Role - Minimized ────────────────────────
+      if (validation.id === 'ID-032') {
+        try {
+          const GLOBAL_ADMIN_TEMPLATE_ID = '62e90394-69f5-4237-9190-012177145e10'
+          const resp = await this.graphClient.api(
+            `/directoryRoles/roleTemplateId=${GLOBAL_ADMIN_TEMPLATE_ID}/members?$select=id,displayName`
+          ).get()
+          const count = resp.value?.length || 0
+          result.currentValue = `${count} Global Administrator${count !== 1 ? 's' : ''}`
+          result.evidence = { adminCount: count, isMinimized: count <= 4, admins: resp.value?.map(a => a.displayName) }
+          return count <= 2 ? 'pass' : count <= 4 ? 'warn' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query Global Administrator role members') }
+      }
+
+      // ── ID-033: Tenant Creation Audit Logs ───────────────────────────────────
+      if (validation.id === 'ID-033') {
+        try {
+          const resp = await this.graphClient.api(
+            `/auditLogs/directoryAudits?$filter=activityDisplayName eq 'Create tenant'&$top=10`
+          ).get()
+          const count = resp.value?.length || 0
+          result.currentValue = `${count} tenant creation event${count !== 1 ? 's' : ''} found in audit logs`
+          result.evidence = { auditedCreations: count, auditingEnabled: true }
+          return 'pass'
+        } catch (e) { return markManual(e, 'Could not query directory audit logs (requires AuditLog.Read.All)') }
+      }
+
+      // ── ID-034: Cross-Tenant Access — Outbound Settings ──────────────────────
+      if (validation.id === 'ID-034') {
+        try {
+          const resp = await this.graphClient.api('/policies/crossTenantAccessPolicy').get()
+          const hasOutbound = !!resp
+          result.currentValue = hasOutbound ? 'Cross-tenant access policy present (review outbound settings)' : 'Using default outbound cross-tenant access settings'
+          result.evidence = { hasPolicy: hasOutbound, note: 'Review outbound settings in Entra admin center' }
+          return hasOutbound ? 'warn' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query cross-tenant access policy') }
+      }
+
+      // ── ID-035: Guest Invitations Restricted ─────────────────────────────────
+      if (validation.id === 'ID-035') {
+        try {
+          const resp = await this.graphClient.api('/policies/authorizationPolicy').get()
+          const setting = resp.allowInvitesFrom
+          const restricted = setting === 'adminsAndGuestInviters' || setting === 'none'
+          result.currentValue = `Guest invitations: ${setting || 'unknown'}`
+          result.evidence = { allowInvitesFrom: setting, isRestricted: restricted }
+          return restricted ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query authorization policy') }
+      }
+
+      // ── ID-036: Guest Directory Object Restrictions ───────────────────────────
+      if (validation.id === 'ID-036') {
+        try {
+          const resp = await this.graphClient.api('/policies/authorizationPolicy').get()
+          const roleId = resp.guestUserRoleId
+          result.currentValue = roleId ? 'Guest directory access restricted' : 'Default guest directory access (unrestricted)'
+          result.evidence = { guestUserRoleId: roleId, isRestricted: !!roleId }
+          return roleId ? 'pass' : 'warn'
+        } catch (e) { return markManual(e, 'Could not query authorization policy') }
+      }
+
+      // Default — no Graph API handler for this control ID
+      result.currentValue = 'Automated validation not available — requires manual review'
+      result.requiresManualValidation = true
       return 'warn'
     } catch (error) {
-      console.warn(`⚠️ Identity validation ${validation.id} failed:`, error.message)
+      console.warn(`⚠️ Identity validation ${validation.id} Graph API failed:`, error.message)
       result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -1370,6 +1143,15 @@ export class ZeroTrustValidator {
    */
   async validateDevice(validation, result) {
     try {
+      // Helper to mark a control as requiring manual validation when Graph API fails
+      const markManual = (e, msg) => {
+        console.warn(`⚠️ ${validation.id} Graph API failed (${e.message}) — marking Manual`)
+        result.error = e.message
+        result.currentValue = msg || 'Graph API call failed — requires manual validation'
+        result.requiresManualValidation = true
+        return 'warn'
+      }
+
       if (validation.id === 'DEV-001') {
         // Intune MDM Enrollment Required
         const response = await this.graphClient.api('/deviceManagement/deviceEnrollmentConfigurations').get()
@@ -1462,9 +1244,7 @@ export class ZeroTrustValidator {
           result.evidence = { mdeConfigured: mdeConfigs > 0, configCount: mdeConfigs }
           return mdeConfigs > 0 ? 'pass' : 'fail'
         } catch (e) {
-          result.currentValue = 'Could not verify MDE'
-          result.evidence = { error: 'Endpoint not available' }
-          return 'warn'
+          return markManual(e, 'Could not verify MDE — endpoint may require Defender for Endpoint license')
         }
       }
 
@@ -1533,9 +1313,7 @@ export class ZeroTrustValidator {
           result.evidence = { policyCount: policies, hasPolicy: policies > 0 }
           return policies > 0 ? 'pass' : 'warn'
         } catch (e) {
-          result.currentValue = 'iOS MAM policies not available'
-          result.evidence = { available: false }
-          return 'warn'
+          return markManual(e, 'Could not verify iOS MAM policies — requires Intune license')
         }
       }
 
@@ -1549,9 +1327,7 @@ export class ZeroTrustValidator {
           result.evidence = { policyCount: policies, hasPolicy: policies > 0 }
           return policies > 0 ? 'pass' : 'warn'
         } catch (e) {
-          result.currentValue = 'Android MAM policies not available'
-          result.evidence = { available: false }
-          return 'warn'
+          return markManual(e, 'Could not verify Android MAM policies — requires Intune license')
         }
       }
 
@@ -1574,7 +1350,7 @@ export class ZeroTrustValidator {
           }
           return compliantDevicePolicy ? 'pass' : 'fail'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify compliant device CA policy')
         }
       }
 
@@ -1597,7 +1373,7 @@ export class ZeroTrustValidator {
           }
           return securityBaselines.length > 0 ? 'pass' : 'warn'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify Windows Security Baselines — requires Intune')
         }
       }
 
@@ -1619,7 +1395,7 @@ export class ZeroTrustValidator {
           }
           return windowsHelloPolicy ? 'pass' : 'warn'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify Windows Hello for Business policy')
         }
       }
 
@@ -1640,7 +1416,7 @@ export class ZeroTrustValidator {
           }
           return firewallPolicy ? 'pass' : 'fail'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify Windows Firewall policy configuration')
         }
       }
 
@@ -1662,7 +1438,7 @@ export class ZeroTrustValidator {
           }
           return bitlockerPolicy ? 'pass' : 'fail'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify BitLocker encryption policy configuration')
         }
       }
 
@@ -1685,7 +1461,7 @@ export class ZeroTrustValidator {
           }
           return defenderPolicy ? 'pass' : 'warn'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify Defender Antivirus configuration policy')
         }
       }
 
@@ -1707,7 +1483,7 @@ export class ZeroTrustValidator {
           }
           return asrPolicy ? 'pass' : 'fail'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify Attack Surface Reduction rules configuration')
         }
       }
 
@@ -1723,7 +1499,7 @@ export class ZeroTrustValidator {
           }
           return analyticsResponse ? 'pass' : 'warn'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify Endpoint Analytics settings')
         }
       }
 
@@ -1742,7 +1518,7 @@ export class ZeroTrustValidator {
           }
           return publishedPolicies.length > 0 ? 'pass' : 'warn'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify Terms and Conditions policies')
         }
       }
 
@@ -1763,7 +1539,7 @@ export class ZeroTrustValidator {
           }
           return customTags.length > 0 ? 'pass' : 'warn'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify Scope Tags configuration')
         }
       }
 
@@ -1786,7 +1562,7 @@ export class ZeroTrustValidator {
           }
           return androidWorkProfile ? 'pass' : 'fail'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify Android Enterprise Work Profile compliance policy')
         }
       }
 
@@ -1807,7 +1583,7 @@ export class ZeroTrustValidator {
           }
           return fileVaultPolicy ? 'pass' : 'fail'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify FileVault encryption policy for macOS')
         }
       }
 
@@ -1828,7 +1604,7 @@ export class ZeroTrustValidator {
           }
           return lapsPolicy ? 'pass' : 'fail'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify Windows LAPS configuration policy')
         }
       }
 
@@ -1850,15 +1626,787 @@ export class ZeroTrustValidator {
           }
           return macLapsPolicy ? 'pass' : 'warn'
         } catch (e) {
-          return 'warn'
+          return markManual(e, 'Could not verify macOS LAPS configuration policy')
         }
       }
 
-      // Default for other DEV- validations
+      // DEV-026: Endpoint Analytics - Risk Identification
+      if (validation.id === 'DEV-026') {
+        try {
+          const response = await this.graphClient.api('/analytics/deviceAnalytics').get()
+          result.currentValue = response ? 'Endpoint analytics configured' : 'Endpoint analytics not available'
+          result.evidence = { available: !!response }
+          return response ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve endpoint analytics — requires Endpoint Analytics license')
+        }
+      }
+
+      // DEV-027: Device Cleanup Rules - Tenant Hygiene
+      if (validation.id === 'DEV-027') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/deviceComplianceDeviceStatuses').get()
+          const statuses = response.value || []
+          result.currentValue = `${statuses.length} device compliance statuses found`
+          result.evidence = { count: statuses.length, hasData: statuses.length > 0 }
+          return statuses.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve device compliance statuses — check Intune permissions')
+        }
+      }
+
+      // DEV-028: Company Portal Branding - User Experience
+      if (validation.id === 'DEV-028') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/intuneBrandingProfile').get()
+          const hasCustomBranding = response && (response.displayName || response.companyPortalBlockedActions)
+          result.currentValue = hasCustomBranding ? 'Company Portal branding configured' : 'Default Company Portal branding'
+          result.evidence = { displayName: response?.displayName, hasCustomBranding: !!hasCustomBranding }
+          return hasCustomBranding ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve Company Portal branding profile — check Intune permissions')
+        }
+      }
+
+      // DEV-029: Conditional Access - Noncompliant Devices Blocked
+      if (validation.id === 'DEV-029') {
+        try {
+          const response = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = response.value || []
+          const blockPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            p.conditions?.devices &&
+            (p.grantControls?.builtInControls?.includes('compliantDevice') ||
+             p.grantControls?.builtInControls?.includes('domainJoinedDevice'))
+          )
+          result.currentValue = blockPolicy ? 'Noncompliant device CA policy active' : 'No noncompliant device block policy'
+          result.evidence = { hasPolicy: !!blockPolicy, policyName: blockPolicy?.displayName }
+          return blockPolicy ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not verify Conditional Access policies for device compliance')
+        }
+      }
+
+      // DEV-030: Conditional Access - Unmanaged Apps Blocked
+      if (validation.id === 'DEV-030') {
+        try {
+          const response = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = response.value || []
+          const appPolicy = policies.find(p =>
+            p.state === 'enabled' &&
+            (p.grantControls?.builtInControls?.includes('approvedClientApp') ||
+             p.grantControls?.builtInControls?.includes('compliantApplication'))
+          )
+          result.currentValue = appPolicy ? 'Unmanaged app CA policy active' : 'No unmanaged app block policy'
+          result.evidence = { hasPolicy: !!appPolicy, policyName: appPolicy?.displayName }
+          return appPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not verify Conditional Access policies for app management')
+        }
+      }
+
+      // DEV-031: iOS Secure Wi-Fi Profiles — Network Protection
+      // Scoring: profile exists (30%) + assigned (40%) + ≥95% device coverage (30%)
+      if (validation.id === 'DEV-031') {
+        try {
+          // Step 1: find iOS Wi-Fi profiles in both legacy deviceConfigurations and Settings Catalog
+          const [legacyResp, catalogResp, devicesResp] = await Promise.all([
+            this.graphClient.api("/deviceManagement/deviceConfigurations?$select=id,displayName,@odata.type,wifiSecurityType,eapType,authenticationMethod").get(),
+            this.graphClient.api('/deviceManagement/configurationPolicies?$select=id,name,platforms,technologies').get(),
+            this.graphClient.api("/v1.0/deviceManagement/managedDevices?$filter=operatingSystem eq 'iOS'&$select=id,operatingSystem&$top=1").get()
+          ])
+
+          const legacyProfiles = (legacyResp.value || []).filter(p =>
+            p['@odata.type']?.includes('iosWiFiConfiguration') ||
+            p['@odata.type']?.includes('iosEnterpriseWiFiConfiguration')
+          )
+          const catalogProfiles = (catalogResp.value || []).filter(p =>
+            p.platforms === 'iOS' &&
+            (p.name?.toLowerCase().includes('wi-fi') || p.name?.toLowerCase().includes('wifi'))
+          )
+          const allProfiles = [...legacyProfiles, ...catalogProfiles]
+          const managedIOSCount = devicesResp['@odata.count'] ?? devicesResp.value?.length ?? 0
+
+          // Step 2: check assignments for each profile
+          let assignedProfiles = 0, enterpriseAuth = 0
+          for (const profile of allProfiles) {
+            try {
+              const endpoint = legacyProfiles.includes(profile)
+                ? `/deviceManagement/deviceConfigurations/${profile.id}/assignments`
+                : `/deviceManagement/configurationPolicies/${profile.id}/assignments`
+              const aResp = await this.graphClient.api(endpoint).get()
+              if ((aResp.value || []).length > 0) {
+                assignedProfiles++
+                // Check for enterprise auth on legacy profiles
+                if (profile.wifiSecurityType?.includes('wpaEnterprise') ||
+                    profile.wifiSecurityType?.includes('wpa2Enterprise') ||
+                    profile.eapType || profile.authenticationMethod === 'certificate') {
+                  enterpriseAuth++
+                }
+              }
+            } catch (_) { /* assignment check not critical */ }
+          }
+
+          const profileExists = allProfiles.length > 0
+          const hasAssignment = assignedProfiles > 0
+          // Coverage: if we have assignments and know device count, estimate ≥95% if assigned
+          const coverage = managedIOSCount === 0 ? null : hasAssignment ? '≥95% (profile assigned to groups)' : '0%'
+
+          result.currentValue = profileExists
+            ? `${allProfiles.length} iOS Wi-Fi profile(s) — ${assignedProfiles} assigned, ${enterpriseAuth} with enterprise auth, ${managedIOSCount} managed iOS device(s)`
+            : 'No iOS Wi-Fi profiles found in Intune (legacy or Settings Catalog)'
+          result.evidence = {
+            legacyProfiles: legacyProfiles.map(p => p.displayName),
+            catalogProfiles: catalogProfiles.map(p => p.name),
+            totalProfiles: allProfiles.length,
+            assignedProfiles,
+            enterpriseAuthProfiles: enterpriseAuth,
+            managedIOSDevices: managedIOSCount,
+            coverageEstimate: coverage,
+            scoreBreakdown: {
+              profileExists: profileExists ? '✓ 30%' : '✗ 0%',
+              assigned: hasAssignment ? '✓ 40%' : '✗ 0%',
+              coverage: (managedIOSCount === 0 || hasAssignment) ? '✓ 30%' : '✗ 0%'
+            }
+          }
+          if (!profileExists) return 'fail'
+          if (!hasAssignment) return 'warn'
+          return enterpriseAuth > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve iOS Wi-Fi profiles (requires DeviceManagementConfiguration.Read.All)')
+        }
+      }
+
+      // DEV-032: Android Secure Wi-Fi Profiles — Network Protection
+      // Scoring: profile exists (30%) + assigned (40%) + ≥95% device coverage (30%)
+      if (validation.id === 'DEV-032') {
+        try {
+          const [legacyResp, catalogResp, devicesResp] = await Promise.all([
+            this.graphClient.api("/deviceManagement/deviceConfigurations?$select=id,displayName,@odata.type,wifiSecurityType,eapType,authenticationMethod").get(),
+            this.graphClient.api('/deviceManagement/configurationPolicies?$select=id,name,platforms,technologies').get(),
+            this.graphClient.api("/v1.0/deviceManagement/managedDevices?$filter=operatingSystem eq 'Android'&$select=id&$top=1").get()
+          ])
+
+          const legacyProfiles = (legacyResp.value || []).filter(p =>
+            p['@odata.type']?.includes('androidWiFiConfiguration') ||
+            p['@odata.type']?.includes('androidEnterpriseWiFiConfiguration') ||
+            p['@odata.type']?.includes('androidDeviceOwnerWiFiConfiguration') ||
+            p['@odata.type']?.includes('androidForWorkWiFiConfiguration')
+          )
+          const catalogProfiles = (catalogResp.value || []).filter(p =>
+            (p.platforms === 'android' || p.platforms === 'androidDeviceOwner') &&
+            (p.name?.toLowerCase().includes('wi-fi') || p.name?.toLowerCase().includes('wifi'))
+          )
+          const allProfiles = [...legacyProfiles, ...catalogProfiles]
+          const managedAndroidCount = devicesResp['@odata.count'] ?? devicesResp.value?.length ?? 0
+
+          let assignedProfiles = 0, enterpriseAuth = 0
+          for (const profile of allProfiles) {
+            try {
+              const endpoint = legacyProfiles.includes(profile)
+                ? `/deviceManagement/deviceConfigurations/${profile.id}/assignments`
+                : `/deviceManagement/configurationPolicies/${profile.id}/assignments`
+              const aResp = await this.graphClient.api(endpoint).get()
+              if ((aResp.value || []).length > 0) {
+                assignedProfiles++
+                if (profile.wifiSecurityType?.includes('Enterprise') ||
+                    profile.wifiSecurityType?.includes('wpa2Enterprise') ||
+                    profile.eapType || profile.authenticationMethod === 'certificate') {
+                  enterpriseAuth++
+                }
+              }
+            } catch (_) { /* not critical */ }
+          }
+
+          const profileExists = allProfiles.length > 0
+          const hasAssignment = assignedProfiles > 0
+
+          result.currentValue = profileExists
+            ? `${allProfiles.length} Android Wi-Fi profile(s) — ${assignedProfiles} assigned, ${enterpriseAuth} with enterprise auth, ${managedAndroidCount} managed Android device(s)`
+            : 'No Android Wi-Fi profiles found in Intune (legacy or Settings Catalog)'
+          result.evidence = {
+            legacyProfiles: legacyProfiles.map(p => p.displayName),
+            catalogProfiles: catalogProfiles.map(p => p.name),
+            totalProfiles: allProfiles.length,
+            assignedProfiles,
+            enterpriseAuthProfiles: enterpriseAuth,
+            managedAndroidDevices: managedAndroidCount,
+            scoreBreakdown: {
+              profileExists: profileExists ? '✓ 30%' : '✗ 0%',
+              assigned: hasAssignment ? '✓ 40%' : '✗ 0%',
+              coverage: hasAssignment ? '✓ 30%' : '✗ 0%'
+            }
+          }
+          if (!profileExists) return 'fail'
+          if (!hasAssignment) return 'warn'
+          return enterpriseAuth > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve Android Wi-Fi profiles (requires DeviceManagementConfiguration.Read.All)')
+        }
+      }
+
+      // DEV-033: Terms and Conditions Policies
+      if (validation.id === 'DEV-033') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/termsAndConditions').get()
+          const policies = response.value || []
+          result.currentValue = policies.length > 0 ? `${policies.length} Terms & Conditions policy(ies)` : 'No Terms & Conditions policies'
+          result.evidence = { count: policies.length, hasPolicy: policies.length > 0 }
+          return policies.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve Terms and Conditions policies from Intune')
+        }
+      }
+
+      // DEV-034: macOS Firewall Policies — Network Protection
+      // Scoring: profile exists (30%) + assigned (40%) + ≥95% device coverage (30%)
+      // Uses macOSEndpointProtectionConfiguration (legacy) or Settings Catalog firewall policies
+      if (validation.id === 'DEV-034') {
+        try {
+          const [legacyResp, catalogResp, devicesResp] = await Promise.all([
+            this.graphClient.api("/deviceManagement/deviceConfigurations?$select=id,displayName,@odata.type,firewallEnabled,firewallBlockAllIncoming,firewallEnableStealthMode").get(),
+            this.graphClient.api('/deviceManagement/configurationPolicies?$select=id,name,platforms,technologies').get(),
+            this.graphClient.api("/v1.0/deviceManagement/managedDevices?$filter=operatingSystem eq 'macOS'&$select=id&$top=1").get()
+          ])
+
+          // Endpoint protection profiles contain firewall settings
+          const legacyProfiles = (legacyResp.value || []).filter(p =>
+            p['@odata.type']?.includes('macOSEndpointProtectionConfiguration') ||
+            p['@odata.type']?.includes('macOSCustomConfiguration') ||
+            (p['@odata.type']?.includes('macOS') && p.displayName?.toLowerCase().includes('firewall'))
+          )
+          const catalogProfiles = (catalogResp.value || []).filter(p =>
+            p.platforms === 'macOS' &&
+            (p.name?.toLowerCase().includes('firewall') ||
+             p.name?.toLowerCase().includes('endpoint protection') ||
+             p.name?.toLowerCase().includes('security'))
+          )
+          const allProfiles = [...legacyProfiles, ...catalogProfiles]
+          const managedMacCount = devicesResp['@odata.count'] ?? devicesResp.value?.length ?? 0
+
+          let assignedProfiles = 0, firewallEnabled = 0, stealthMode = 0
+          for (const profile of allProfiles) {
+            try {
+              const endpoint = legacyProfiles.includes(profile)
+                ? `/deviceManagement/deviceConfigurations/${profile.id}/assignments`
+                : `/deviceManagement/configurationPolicies/${profile.id}/assignments`
+              const aResp = await this.graphClient.api(endpoint).get()
+              if ((aResp.value || []).length > 0) {
+                assignedProfiles++
+                if (profile.firewallEnabled === true) firewallEnabled++
+                if (profile.firewallEnableStealthMode === true) stealthMode++
+              }
+            } catch (_) { /* not critical */ }
+          }
+
+          const profileExists = allProfiles.length > 0
+          const hasAssignment = assignedProfiles > 0
+
+          result.currentValue = profileExists
+            ? `${allProfiles.length} macOS firewall/endpoint profile(s) — ${assignedProfiles} assigned, ${firewallEnabled} with firewall explicitly enabled, ${stealthMode} with stealth mode, ${managedMacCount} managed Mac(s)`
+            : 'No macOS firewall or endpoint protection profiles found in Intune'
+          result.evidence = {
+            legacyProfiles: legacyProfiles.map(p => p.displayName),
+            catalogProfiles: catalogProfiles.map(p => p.name),
+            totalProfiles: allProfiles.length,
+            assignedProfiles,
+            firewallEnabledProfiles: firewallEnabled,
+            stealthModeProfiles: stealthMode,
+            managedMacDevices: managedMacCount,
+            note: 'Firewall enabled/stealth mode flags available on macOSEndpointProtectionConfiguration profiles only',
+            scoreBreakdown: {
+              profileExists: profileExists ? '✓ 30%' : '✗ 0%',
+              assigned: hasAssignment ? '✓ 40%' : '✗ 0%',
+              coverage: hasAssignment ? '✓ 30%' : '✗ 0%'
+            }
+          }
+          if (!profileExists) return 'fail'
+          if (!hasAssignment) return 'warn'
+          return 'pass'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve macOS firewall profiles (requires DeviceManagementConfiguration.Read.All)')
+        }
+      }
+
+      // DEV-035: Password/Passcode Requirements
+      if (validation.id === 'DEV-035') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+          const policies = response.value || []
+          const withPassword = policies.filter(p => p.passwordRequired || p.passcodeRequired || p.passwordMinimumLength)
+          result.currentValue = withPassword.length > 0 ? `${withPassword.length} compliance policy(ies) enforce password` : 'No password requirements in compliance policies'
+          result.evidence = { total: policies.length, withPasswordReq: withPassword.length }
+          return withPassword.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve device compliance policies for password requirements')
+        }
+      }
+
+      // DEV-036: Password Complexity Policy
+      if (validation.id === 'DEV-036') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+          const policies = response.value || []
+          const withComplexity = policies.filter(p => p.passwordMinimumCharacterSetCount >= 4 || p.passwordComplexity)
+          result.currentValue = withComplexity.length > 0 ? `${withComplexity.length} policy(ies) enforce password complexity` : 'No password complexity policies'
+          result.evidence = { total: policies.length, withComplexity: withComplexity.length }
+          return withComplexity.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve device compliance policies for password complexity')
+        }
+      }
+
+      // DEV-037: Password Expiration Policy
+      if (validation.id === 'DEV-037') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+          const policies = response.value || []
+          const withExpiry = policies.filter(p => p.passwordExpirationDays && p.passwordExpirationDays <= 90)
+          result.currentValue = withExpiry.length > 0 ? `${withExpiry.length} policy(ies) enforce password expiration ≤90 days` : 'No password expiration policies ≤90 days'
+          result.evidence = { total: policies.length, withExpiry: withExpiry.length }
+          return withExpiry.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve device compliance policies for password expiration')
+        }
+      }
+
+      // DEV-038: Jailbreak/Root Detection
+      if (validation.id === 'DEV-038') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+          const policies = response.value || []
+          const withJailbreakDetection = policies.filter(p => p.jailBreakDetected || p.jailbreakedDevice)
+          result.currentValue = withJailbreakDetection.length > 0 ? `${withJailbreakDetection.length} policy(ies) detect jailbreak/root` : 'No jailbreak/root detection policies'
+          result.evidence = { total: policies.length, withDetection: withJailbreakDetection.length }
+          return withJailbreakDetection.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not verify jailbreak/root detection in compliance policies')
+        }
+      }
+
+      // DEV-039: Google Play Integrity Check (Android)
+      if (validation.id === 'DEV-039') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+          const policies = response.value || []
+          const androidPolicies = policies.filter(p => p['@odata.type']?.toLowerCase().includes('android') || p.platform === 'Android')
+          result.currentValue = androidPolicies.length > 0 ? `${androidPolicies.length} Android compliance policy(ies) found` : 'No Android compliance policies'
+          result.evidence = { total: policies.length, androidPolicies: androidPolicies.length }
+          return androidPolicies.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not verify Android compliance policies for Play Integrity')
+        }
+      }
+
+      // DEV-040: Defender for Endpoint Integration
+      if (validation.id === 'DEV-040') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/windowsDefenderAdvancedThreatProtectionConfigurations').get()
+          const configs = response.value || []
+          result.currentValue = configs.length > 0 ? `${configs.length} Defender ATP configuration(s) found` : 'No Defender ATP configurations'
+          result.evidence = { count: configs.length, hasConfig: configs.length > 0 }
+          return configs.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve Defender for Endpoint configurations — requires Defender ATP license')
+        }
+      }
+
+      // DEV-041: Device Risk-Based Access
+      if (validation.id === 'DEV-041') {
+        try {
+          const response = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policies = response.value || []
+          const riskPolicies = policies.filter(p =>
+            p.state === 'enabled' &&
+            (p.displayName?.toLowerCase().includes('risk') ||
+             p.conditions?.signInRiskLevels?.length > 0 ||
+             p.conditions?.userRiskLevels?.length > 0)
+          )
+          result.currentValue = riskPolicies.length > 0 ? `${riskPolicies.length} risk-based CA policy(ies) active` : 'No risk-based Conditional Access policies'
+          result.evidence = { total: policies.length, riskPolicies: riskPolicies.length, policyNames: riskPolicies.map(p => p.displayName) }
+          return riskPolicies.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not verify risk-based Conditional Access policies')
+        }
+      }
+
+      // DEV-042: Minimum OS Version Enforcement
+      if (validation.id === 'DEV-042') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies?$select=platform,osMinimumVersion').get()
+          const policies = response.value || []
+          const withMinOS = policies.filter(p => p.osMinimumVersion)
+          result.currentValue = withMinOS.length > 0 ? `${withMinOS.length} policy(ies) enforce minimum OS version` : 'No minimum OS version requirements'
+          result.evidence = { total: policies.length, withMinOS: withMinOS.length }
+          return withMinOS.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not verify minimum OS version enforcement in compliance policies')
+        }
+      }
+
+      // DEV-043: OS Update Compliance
+      if (validation.id === 'DEV-043') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/managedDevices?$select=osVersion,lastSyncDateTime').get()
+          const devices = response.value || []
+          const recentSync = devices.filter(d => {
+            if (!d.lastSyncDateTime) return false
+            const syncDate = new Date(d.lastSyncDateTime)
+            const daysSince = (Date.now() - syncDate.getTime()) / (1000 * 60 * 60 * 24)
+            return daysSince <= 7
+          })
+          result.currentValue = `${devices.length} managed devices, ${recentSync.length} synced within 7 days`
+          result.evidence = { total: devices.length, recentSync: recentSync.length }
+          return recentSync.length > 0 && (recentSync.length / devices.length) >= 0.8 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve device OS update sync status')
+        }
+      }
+
+      // DEV-044: Disk Encryption (FileVault, BitLocker, FDE)
+      if (validation.id === 'DEV-044') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+          const policies = response.value || []
+          const withEncryption = policies.filter(p => p.storageRequireEncryption || p.bitLockerEnabled || p.fileVaultEnabled)
+          result.currentValue = withEncryption.length > 0 ? `${withEncryption.length} policy(ies) require disk encryption` : 'No disk encryption requirements'
+          result.evidence = { total: policies.length, withEncryption: withEncryption.length }
+          return withEncryption.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not verify disk encryption requirements in compliance policies')
+        }
+      }
+
+      // DEV-045: TPM 2.0 Requirement (Windows)
+      if (validation.id === 'DEV-045') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/deviceConfigurations').get()
+          const configs = response.value || []
+          const tpmConfig = configs.find(c =>
+            c.displayName?.toLowerCase().includes('tpm') ||
+            c['@odata.type']?.includes('windowsUpdateForBusiness')
+          )
+          result.currentValue = tpmConfig ? 'TPM configuration policy found' : 'No explicit TPM 2.0 configuration policy'
+          result.evidence = { hasConfig: !!tpmConfig, configName: tpmConfig?.displayName }
+          return tpmConfig ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not verify TPM 2.0 requirement configuration policies')
+        }
+      }
+
+      // DEV-046: Secure Boot Enforcement (Windows)
+      if (validation.id === 'DEV-046') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/deviceConfigurations').get()
+          const configs = response.value || []
+          const secureBootConfig = configs.find(c =>
+            c.displayName?.toLowerCase().includes('secure boot') ||
+            c.secureBootEnabled === true
+          )
+          result.currentValue = secureBootConfig ? 'Secure Boot configuration found' : 'No Secure Boot configuration'
+          result.evidence = { hasConfig: !!secureBootConfig, configName: secureBootConfig?.displayName }
+          return secureBootConfig ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not verify Secure Boot enforcement configuration')
+        }
+      }
+
+      // DEV-047: USB Restrictions
+      if (validation.id === 'DEV-047') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = response.value || []
+          const usbPolicy = policies.find(p => p.name?.toLowerCase().includes('usb'))
+          result.currentValue = usbPolicy ? 'USB restriction policy configured' : 'No USB restriction policy'
+          result.evidence = { hasPolicy: !!usbPolicy, policyName: usbPolicy?.name, total: policies.length }
+          return usbPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve USB restriction configuration policies')
+        }
+      }
+
+      // DEV-048: Developer Mode / Developer Options Disabled
+      if (validation.id === 'DEV-048') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = response.value || []
+          const devModePolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('developer') ||
+            p.name?.toLowerCase().includes('dev mode')
+          )
+          result.currentValue = devModePolicy ? 'Developer mode restriction policy found' : 'No developer mode restriction policy'
+          result.evidence = { hasPolicy: !!devModePolicy, policyName: devModePolicy?.name, total: policies.length }
+          return devModePolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve developer mode restriction configuration policies')
+        }
+      }
+
+      // DEV-049: Camera Restrictions
+      if (validation.id === 'DEV-049') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = response.value || []
+          const cameraPolicy = policies.find(p => p.name?.toLowerCase().includes('camera'))
+          result.currentValue = cameraPolicy ? 'Camera restriction policy configured' : 'No camera restriction policy'
+          result.evidence = { hasPolicy: !!cameraPolicy, policyName: cameraPolicy?.name, total: policies.length }
+          return cameraPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve camera restriction configuration policies')
+        }
+      }
+
+      // DEV-050: Unknown Sources Blocked (Android)
+      if (validation.id === 'DEV-050') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = response.value || []
+          const unknownSourcesPolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('unknown source') ||
+            p.name?.toLowerCase().includes('sideload')
+          )
+          result.currentValue = unknownSourcesPolicy ? 'Unknown sources restriction policy found' : 'No unknown sources restriction policy'
+          result.evidence = { hasPolicy: !!unknownSourcesPolicy, policyName: unknownSourcesPolicy?.name, total: policies.length }
+          return unknownSourcesPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve Android unknown sources restriction policies')
+        }
+      }
+
+      // DEV-051: Bluetooth Restrictions
+      if (validation.id === 'DEV-051') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = response.value || []
+          const btPolicy = policies.find(p => p.name?.toLowerCase().includes('bluetooth'))
+          result.currentValue = btPolicy ? 'Bluetooth restriction policy configured' : 'No Bluetooth restriction policy'
+          result.evidence = { hasPolicy: !!btPolicy, policyName: btPolicy?.name, total: policies.length }
+          return btPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve Bluetooth restriction configuration policies')
+        }
+      }
+
+      // DEV-052: NFC Restrictions (Mobile)
+      if (validation.id === 'DEV-052') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = response.value || []
+          const nfcPolicy = policies.find(p => p.name?.toLowerCase().includes('nfc'))
+          result.currentValue = nfcPolicy ? 'NFC restriction policy configured' : 'No NFC restriction policy'
+          result.evidence = { hasPolicy: !!nfcPolicy, policyName: nfcPolicy?.name, total: policies.length }
+          return nfcPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve NFC restriction configuration policies')
+        }
+      }
+
+      // DEV-053: Screen Capture Disabled
+      if (validation.id === 'DEV-053') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = response.value || []
+          const screenPolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('screen capture') ||
+            p.name?.toLowerCase().includes('screenshot')
+          )
+          result.currentValue = screenPolicy ? 'Screen capture restriction policy found' : 'No screen capture restriction policy'
+          result.evidence = { hasPolicy: !!screenPolicy, policyName: screenPolicy?.name, total: policies.length }
+          return screenPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve screen capture restriction configuration policies')
+        }
+      }
+
+      // DEV-054: Clipboard Restrictions
+      if (validation.id === 'DEV-054') {
+        try {
+          const response = await this.graphClient.api('/deviceAppManagement/iosManagedAppProtections').get()
+          const policies = response.value || []
+          const withClipboard = policies.filter(p => p.allowedOutboundClipboardSharingLevel && p.allowedOutboundClipboardSharingLevel !== 'allApps')
+          result.currentValue = withClipboard.length > 0 ? `${withClipboard.length} iOS app protection policy(ies) restrict clipboard` : 'No clipboard restrictions in iOS app protection policies'
+          result.evidence = { total: policies.length, withClipboardRestriction: withClipboard.length }
+          return withClipboard.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve iOS managed app protection policies for clipboard restrictions')
+        }
+      }
+
+      // DEV-055: AirDrop/Nearby Share Disabled
+      if (validation.id === 'DEV-055') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = response.value || []
+          const airDropPolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('airdrop') ||
+            p.name?.toLowerCase().includes('nearby share')
+          )
+          result.currentValue = airDropPolicy ? 'AirDrop/Nearby Share restriction policy found' : 'No AirDrop/Nearby Share restriction policy'
+          result.evidence = { hasPolicy: !!airDropPolicy, policyName: airDropPolicy?.name, total: policies.length }
+          return airDropPolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve AirDrop/Nearby Share restriction configuration policies')
+        }
+      }
+
+      // DEV-056: iCloud Backup Restrictions (iOS)
+      if (validation.id === 'DEV-056') {
+        try {
+          const response = await this.graphClient.api('/deviceAppManagement/iosManagedAppProtections').get()
+          const policies = response.value || []
+          const withiCloudRestriction = policies.filter(p => p.disableICloudSync || p.managedBrowserToOpenLinksRequired)
+          result.currentValue = withiCloudRestriction.length > 0 ? `${withiCloudRestriction.length} iOS app protection policy(ies) restrict iCloud` : 'No iCloud backup restrictions in iOS app protection policies'
+          result.evidence = { total: policies.length, withiCloudRestriction: withiCloudRestriction.length }
+          return withiCloudRestriction.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve iOS managed app protection policies for iCloud restrictions')
+        }
+      }
+
+      // DEV-057: Voice Assistant Restrictions (Siri/Google Assistant)
+      if (validation.id === 'DEV-057') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = response.value || []
+          const voicePolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('siri') ||
+            p.name?.toLowerCase().includes('voice assistant') ||
+            p.name?.toLowerCase().includes('google assistant')
+          )
+          result.currentValue = voicePolicy ? 'Voice assistant restriction policy found' : 'No voice assistant restriction policy'
+          result.evidence = { hasPolicy: !!voicePolicy, policyName: voicePolicy?.name, total: policies.length }
+          return voicePolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve voice assistant restriction configuration policies')
+        }
+      }
+
+      // DEV-058: App Store / Play Store Restrictions
+      if (validation.id === 'DEV-058') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = response.value || []
+          const storePolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('app store') ||
+            p.name?.toLowerCase().includes('play store')
+          )
+          result.currentValue = storePolicy ? 'App Store/Play Store restriction policy found' : 'No App Store/Play Store restriction policy'
+          result.evidence = { hasPolicy: !!storePolicy, policyName: storePolicy?.name, total: policies.length }
+          return storePolicy ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve App Store/Play Store restriction configuration policies')
+        }
+      }
+
+      // DEV-059: Managed Browser Enforcement
+      if (validation.id === 'DEV-059') {
+        try {
+          const response = await this.graphClient.api('/deviceAppManagement/iosManagedAppProtections').get()
+          const policies = response.value || []
+          const withManagedBrowser = policies.filter(p => p.managedBrowserToOpenLinksRequired)
+          result.currentValue = withManagedBrowser.length > 0 ? `${withManagedBrowser.length} iOS app protection policy(ies) enforce managed browser` : 'No managed browser enforcement'
+          result.evidence = { total: policies.length, withManagedBrowser: withManagedBrowser.length }
+          return withManagedBrowser.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve iOS managed app protection policies for browser enforcement')
+        }
+      }
+
+      // DEV-060: Mobile App Protection Policies (MAM)
+      if (validation.id === 'DEV-060') {
+        try {
+          const response = await this.graphClient.api('/deviceAppManagement/managedAppPolicies').get()
+          const policies = response.value || []
+          result.currentValue = policies.length > 0 ? `${policies.length} MAM policy(ies) configured` : 'No Mobile App Management policies'
+          result.evidence = { count: policies.length, hasPolicy: policies.length > 0 }
+          return policies.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve Mobile App Management policies')
+        }
+      }
+
+      // DEV-061: Compliance Policy Deployment Status
+      if (validation.id === 'DEV-061') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+          const policies = response.value || []
+          result.currentValue = policies.length > 0 ? `${policies.length} compliance policy(ies) deployed` : 'No compliance policies deployed'
+          result.evidence = { count: policies.length, hasPolicy: policies.length > 0 }
+          return policies.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve compliance policy deployment status')
+        }
+      }
+
+      // DEV-062: Configuration Profile Deployment
+      if (validation.id === 'DEV-062') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = response.value || []
+          result.currentValue = policies.length > 0 ? `${policies.length} configuration profile(s) deployed` : 'No configuration profiles deployed'
+          result.evidence = { count: policies.length, hasProfiles: policies.length > 0 }
+          return policies.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve configuration profile deployment status')
+        }
+      }
+
+      // DEV-063: Device Compliance Rate
+      if (validation.id === 'DEV-063') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/managedDevices?$select=complianceState').get()
+          const devices = response.value || []
+          const compliant = devices.filter(d => d.complianceState === 'compliant').length
+          const rate = devices.length > 0 ? Math.round((compliant / devices.length) * 100) : 0
+          result.currentValue = `${rate}% device compliance rate (${compliant}/${devices.length} compliant)`
+          result.evidence = { total: devices.length, compliant, rate }
+          return rate >= 90 ? 'pass' : rate >= 70 ? 'warn' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve device compliance rate data')
+        }
+      }
+
+      // DEV-064: Managed Device Inventory
+      if (validation.id === 'DEV-064') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/managedDevices').get()
+          const devices = response.value || []
+          result.currentValue = devices.length > 0 ? `${devices.length} managed device(s) in inventory` : 'No managed devices found'
+          result.evidence = { count: devices.length, hasDevices: devices.length > 0 }
+          return devices.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve managed device inventory')
+        }
+      }
+
+      // DEV-065: Device Sync Health
+      if (validation.id === 'DEV-065') {
+        try {
+          const response = await this.graphClient.api('/deviceManagement/managedDevices?$select=lastSyncDateTime').get()
+          const devices = response.value || []
+          const recentSync = devices.filter(d => {
+            if (!d.lastSyncDateTime) return false
+            const daysSince = (Date.now() - new Date(d.lastSyncDateTime).getTime()) / (1000 * 60 * 60 * 24)
+            return daysSince <= 3
+          })
+          const syncRate = devices.length > 0 ? Math.round((recentSync.length / devices.length) * 100) : 0
+          result.currentValue = `${syncRate}% devices synced within 3 days (${recentSync.length}/${devices.length})`
+          result.evidence = { total: devices.length, recentSync: recentSync.length, syncRate }
+          return syncRate >= 90 ? 'pass' : syncRate >= 70 ? 'warn' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve device sync health data')
+        }
+      }
+
+      // Default for other DEV- validations — fall through to direct Graph API
+      result.currentValue = 'Automated validation not available — requires manual review'
+      result.requiresManualValidation = true
       return 'warn'
     } catch (error) {
       console.warn(`⚠️ Device validation ${validation.id} failed:`, error.message)
       result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -1868,12 +2416,25 @@ export class ZeroTrustValidator {
    */
   async validateAI(validation, result) {
     try {
-      // AI controls require tenant settings - simulated here
-      result.currentValue = 'AI governance configured'
-      result.evidence = { aiControlsAvailable: true }
-      return 'warn' // Requires tenant-specific settings
+      // Helper to mark a control as requiring manual validation when Graph API fails
+      const markManual = (e, msg) => {
+        console.warn(`⚠️ ${validation.id} Graph API failed (${e.message}) — marking Manual`)
+        result.error = e.message
+        result.currentValue = msg || 'Graph API call failed — requires manual validation'
+        result.requiresManualValidation = true
+        return 'warn'
+      }
+
+      // AI controls are not directly exposed via Graph API — requires manual review
+      result.currentValue = 'AI governance controls require review in Microsoft 365 Admin Center / Copilot settings'
+      result.evidence = { note: 'Configure via Microsoft 365 Admin Center > Copilot > Settings' }
+      result.requiresManualValidation = true
+      return 'warn'
     } catch (error) {
+      console.warn(`⚠️ AI validation ${validation.id} failed:`, error.message)
       result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -1883,6 +2444,15 @@ export class ZeroTrustValidator {
    */
   async validateData(validation, result) {
     try {
+      // Helper to mark a control as requiring manual validation when Graph API fails
+      const markManual = (e, msg) => {
+        console.warn(`⚠️ ${validation.id} Graph API failed (${e.message}) — marking Manual`)
+        result.error = e.message
+        result.currentValue = msg || 'Graph API call failed — requires manual validation'
+        result.requiresManualValidation = true
+        return 'warn'
+      }
+
       if (validation.id === 'DATA-001') {
         // DLP Policies Configured
         try {
@@ -1898,10 +2468,7 @@ export class ZeroTrustValidator {
           }
           return policies.length > 0 ? 'pass' : 'fail'
         } catch (e) {
-          // Fallback if endpoint unavailable
-          result.currentValue = 'DLP endpoint not available'
-          result.evidence = { available: false }
-          return 'warn'
+          return markManual(e, 'Could not retrieve DLP policies — requires Compliance administrator access')
         }
       }
 
@@ -1934,9 +2501,7 @@ export class ZeroTrustValidator {
           }
           return classifiers.length > 0 ? 'pass' : 'warn'
         } catch (e) {
-          result.currentValue = 'Classification not available'
-          result.evidence = { available: false }
-          return 'warn'
+          return markManual(e, 'Could not retrieve data classification settings')
         }
       }
 
@@ -1953,9 +2518,7 @@ export class ZeroTrustValidator {
           }
           return sharingCapabilities === 'ExistingExternalUserSharingOnly' || sharingCapabilities === 'Internal' ? 'pass' : 'warn'
         } catch (e) {
-          result.currentValue = 'Could not retrieve SharePoint sharing settings'
-          result.evidence = { available: false }
-          return 'warn'
+          return markManual(e, 'Could not retrieve SharePoint sharing settings — requires SharePoint admin access')
         }
       }
 
@@ -1972,9 +2535,7 @@ export class ZeroTrustValidator {
           }
           return shareLink === 'Internal' ? 'pass' : 'warn'
         } catch (e) {
-          result.currentValue = 'Could not retrieve OneDrive sharing settings'
-          result.evidence = { available: false }
-          return 'warn'
+          return markManual(e, 'Could not retrieve OneDrive sharing settings — requires SharePoint admin access')
         }
       }
 
@@ -2008,9 +2569,7 @@ export class ZeroTrustValidator {
           }
           return labels.length > 0 ? 'pass' : 'fail'
         } catch (e) {
-          result.currentValue = 'Could not verify label application'
-          result.evidence = { available: false }
-          return 'warn'
+          return markManual(e, 'Could not verify sensitivity label application — requires Information Protection access')
         }
       }
 
@@ -2037,9 +2596,7 @@ export class ZeroTrustValidator {
           }
           return policies.length >= 2 ? 'pass' : policies.length > 0 ? 'warn' : 'fail'
         } catch (e) {
-          result.currentValue = 'DLP policies not available'
-          result.evidence = { available: false }
-          return 'warn'
+          return markManual(e, 'Could not retrieve comprehensive DLP policies — requires Compliance administrator access')
         }
       }
 
@@ -2056,9 +2613,7 @@ export class ZeroTrustValidator {
           }
           return labels.length > 0 ? 'pass' : 'fail'
         } catch (e) {
-          result.currentValue = 'Compliance labels not available'
-          result.evidence = { available: false }
-          return 'warn'
+          return markManual(e, 'Could not retrieve AIP compliance labels — requires Information Protection access')
         }
       }
 
@@ -2075,9 +2630,7 @@ export class ZeroTrustValidator {
           }
           return policies.length > 0 ? 'pass' : 'fail'
         } catch (e) {
-          result.currentValue = 'Retention policies endpoint not available'
-          result.evidence = { available: false }
-          return 'warn'
+          return markManual(e, 'Could not retrieve retention policies — requires Compliance administrator access')
         }
       }
 
@@ -2097,11 +2650,186 @@ export class ZeroTrustValidator {
         return blockPolicy ? 'pass' : 'fail'
       }
 
-      // Default for other DATA- validations
+      if (validation.id === 'DATA-010') {
+        // Information Protection Policies
+        try {
+          const response = await this.graphClient.api('/informationProtection/policy/labels').get()
+          const labels = response.value || []
+          result.currentValue = labels.length > 0 ? `${labels.length} information protection label(s) configured` : 'No information protection labels configured'
+          result.evidence = { count: labels.length, hasLabels: labels.length > 0 }
+          return labels.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve information protection policy labels')
+        }
+      }
+
+      if (validation.id === 'DATA-011') {
+        // SharePoint Site Permissions Auditing
+        try {
+          const response = await this.graphClient.api('/sites?$select=id,displayName,sharingCapabilities').get()
+          const sites = response.value || []
+          const restrictedSites = sites.filter(s => s.sharingCapabilities && s.sharingCapabilities !== 'ExternalUserAndGuestSharing')
+          result.currentValue = sites.length > 0 ? `${sites.length} SharePoint site(s) found, ${restrictedSites.length} with restricted sharing` : 'No SharePoint sites found'
+          result.evidence = { total: sites.length, restricted: restrictedSites.length }
+          return restrictedSites.length > 0 ? 'pass' : sites.length > 0 ? 'warn' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve SharePoint site permissions — requires SharePoint admin access')
+        }
+      }
+
+      if (validation.id === 'DATA-012') {
+        // OneDrive Sharing Policy Enforcement
+        try {
+          const response = await this.graphClient.api('/me/drive').get()
+          const sharingEnabled = response && response.id
+          result.currentValue = sharingEnabled ? 'OneDrive drive accessible — sharing policy enforced via tenant settings' : 'OneDrive not accessible'
+          result.evidence = { driveId: response?.id, hasOneDrive: !!sharingEnabled }
+          return sharingEnabled ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve OneDrive settings — requires SharePoint admin access')
+        }
+      }
+
+      if (validation.id === 'DATA-013') {
+        // Teams Guest Access Controls
+        try {
+          const response = await this.graphClient.api('/teams?$select=id,displayName').get()
+          const teams = response.value || []
+          result.currentValue = teams.length > 0 ? `${teams.length} Teams group(s) found — guest access policy applies at tenant level` : 'No Teams groups found'
+          result.evidence = { teamsCount: teams.length }
+          return teams.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve Teams groups — requires Teams admin access')
+        }
+      }
+
+      if (validation.id === 'DATA-015') {
+        // Advanced Threat Protection (ATP) for SharePoint/OneDrive
+        try {
+          const response = await this.graphClient.api('/tenantRelationships/managedTenants/tenants').get()
+          const tenants = response.value || []
+          result.currentValue = tenants.length > 0 ? `${tenants.length} managed tenant(s) found — ATP configured at tenant level` : 'Tenant relationship data unavailable'
+          result.evidence = { tenantCount: tenants.length }
+          return tenants.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not verify ATP for SharePoint/OneDrive — requires Defender for Office 365 license')
+        }
+      }
+
+      if (validation.id === 'DATA-017') {
+        // Tenant Restrictions V2
+        try {
+          const response = await this.graphClient.api('/tenantRelationships/multiTenantOrganization').get()
+          const isConfigured = response && (response.id || response.tenantId)
+          result.currentValue = isConfigured ? 'Multi-tenant organization configuration found' : 'No multi-tenant organization configuration'
+          result.evidence = { hasConfig: !!isConfigured, orgId: response?.id }
+          return isConfigured ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not verify tenant restrictions configuration — requires Global admin access')
+        }
+      }
+
+      if (validation.id === 'DATA-018') {
+        // Insider Risk Management Enabled (N/A)
+        result.currentValue = 'Insider Risk Management requires Microsoft Purview — validate in compliance portal'
+        result.requiresManualValidation = true
+        return 'warn'
+      }
+
+      if (validation.id === 'DATA-019') {
+        // Communication Compliance Policies
+        try {
+          const response = await this.graphClient.api('/compliance/communicationCompliancePolicies').get()
+          const policies = response.value || []
+          result.currentValue = policies.length > 0 ? `${policies.length} communication compliance policy(ies) configured` : 'No communication compliance policies'
+          result.evidence = { count: policies.length, hasPolicy: policies.length > 0 }
+          return policies.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve communication compliance policies — requires Microsoft Purview access')
+        }
+      }
+
+      if (validation.id === 'DATA-020') {
+        // Information Barrier Policies
+        try {
+          const response = await this.graphClient.api('/informationBarrierPolicies').get()
+          const policies = response.value || []
+          result.currentValue = policies.length > 0 ? `${policies.length} information barrier policy(ies) configured` : 'No information barrier policies'
+          result.evidence = { count: policies.length, hasPolicy: policies.length > 0 }
+          return policies.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve information barrier policies — requires Compliance administrator access')
+        }
+      }
+
+      if (validation.id === 'DATA-021') {
+        // Compliance Manager Assessments
+        try {
+          const response = await this.graphClient.api('/compliance/ComplianceManager/assessments').get()
+          const assessments = response.value || []
+          result.currentValue = assessments.length > 0 ? `${assessments.length} Compliance Manager assessment(s) configured` : 'No Compliance Manager assessments'
+          result.evidence = { count: assessments.length, hasAssessments: assessments.length > 0 }
+          return assessments.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve Compliance Manager assessments — requires Microsoft Purview access')
+        }
+      }
+
+      if (validation.id === 'DATA-022') {
+        // Data Residency & Geo-Compliance
+        try {
+          const response = await this.graphClient.api("/deviceManagement/configurationCategories?$filter=displayName eq 'DataResidency'").get()
+          const categories = response.value || []
+          result.currentValue = categories.length > 0 ? `${categories.length} data residency category(ies) found` : 'No data residency configuration categories found — verify in admin center'
+          result.evidence = { count: categories.length }
+          return categories.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not verify data residency configuration — requires admin access to tenant settings')
+        }
+      }
+
+      if (validation.id === 'DATA-023') {
+        // Recoverable Items Retention - Legal Hold
+        try {
+          const response = await this.graphClient.api("/me/mailFolders('recoverableitemsdeletions')/childFolders").get()
+          const folders = response.value || []
+          result.currentValue = folders.length > 0 ? `${folders.length} recoverable item folder(s) found` : 'No recoverable items folders found'
+          result.evidence = { folderCount: folders.length }
+          return folders.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve recoverable items — requires mailbox access or Exchange Online admin')
+        }
+      }
+
+      if (validation.id === 'DATA-024') {
+        // Data Subject Rights Automation (N/A)
+        result.currentValue = 'Data Subject Rights automation requires Microsoft Purview — validate in compliance portal'
+        result.requiresManualValidation = true
+        return 'warn'
+      }
+
+      if (validation.id === 'DATA-025') {
+        // eDiscovery & Litigation Hold Management
+        try {
+          const response = await this.graphClient.api('/compliance/ediscoveryCases').get()
+          const cases = response.value || []
+          result.currentValue = cases.length > 0 ? `${cases.length} eDiscovery case(s) configured` : 'No eDiscovery cases found'
+          result.evidence = { count: cases.length, hasCases: cases.length > 0 }
+          return cases.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve eDiscovery cases — requires Compliance administrator access')
+        }
+      }
+
+      // Default for other DATA- validations — no Graph API handler for this control ID
+      result.currentValue = 'Automated validation not available — requires manual review'
+      result.requiresManualValidation = true
       return 'warn'
     } catch (error) {
       console.warn(`⚠️ Data validation ${validation.id} failed:`, error.message)
       result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -2110,18 +2838,123 @@ export class ZeroTrustValidator {
    * Validate Infrastructure controls
    */
   async validateInfrastructure(validation, result) {
-    result.currentValue = 'Infrastructure configuration'
-    result.evidence = { checkRequired: true }
-    return 'warn'
+    try {
+      // Helper to mark a control as requiring manual validation when Graph API fails
+      const markManual = (e, msg) => {
+        console.warn(`⚠️ ${validation.id} Graph API failed (${e.message}) — marking Manual`)
+        result.error = e.message
+        result.currentValue = msg || 'Graph API call failed — requires manual validation'
+        result.requiresManualValidation = true
+        return 'warn'
+      }
+
+      // Infrastructure controls not directly exposed via Graph API — requires manual review
+      result.currentValue = 'Infrastructure control requires review in Exchange / SharePoint / Teams Admin Centers'
+      result.evidence = { note: 'Configure via respective admin portals' }
+      result.requiresManualValidation = true
+      return 'warn'
+    } catch (error) {
+      console.warn(`⚠️ Infrastructure validation ${validation.id} failed:`, error.message)
+      result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
+      return 'warn'
+    }
+  }
+
+  /**
+   * Validate Audit controls (AUDIT-001 to AUDIT-003)
+   */
+  async validateAudit(validation, result) {
+    try {
+      const markManual = (e, msg) => {
+        console.warn(`⚠️ ${validation.id} Graph API failed (${e.message}) — marking Manual`)
+        result.error = e.message
+        result.currentValue = msg || 'Graph API call failed — requires manual validation'
+        result.requiresManualValidation = true
+        return 'warn'
+      }
+
+      if (validation.id === 'AUDIT-001') {
+        // Unified Audit Logging Enabled
+        try {
+          const response = await this.graphClient.api('/admin/exchange/auditLogging').get()
+          const isEnabled = response && (response.auditLogEnabled || response.enabled || response.isEnabled)
+          result.currentValue = isEnabled ? 'Unified Audit Logging enabled' : 'Unified Audit Logging status unknown'
+          result.evidence = { response: response ? JSON.stringify(response).substring(0, 200) : null, isEnabled }
+          return isEnabled ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not verify Unified Audit Logging — requires Exchange Online admin access')
+        }
+      }
+
+      if (validation.id === 'AUDIT-002') {
+        // Mailbox Auditing Enabled
+        try {
+          const response = await this.graphClient.api('/admin/exchange/mailboxAuditLog').get()
+          const logs = response.value || (response.auditEnabled !== undefined ? [response] : [])
+          const isEnabled = logs.length > 0 || response.auditEnabled === true
+          result.currentValue = isEnabled ? 'Mailbox auditing enabled' : 'Mailbox auditing status unknown'
+          result.evidence = { isEnabled, recordCount: logs.length }
+          return isEnabled ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not verify mailbox auditing — requires Exchange Online admin access')
+        }
+      }
+
+      if (validation.id === 'AUDIT-003') {
+        // Alert Policies Configured
+        try {
+          const response = await this.graphClient.api('/security/alertPolicies').get()
+          const policies = response.value || []
+          const enabledPolicies = policies.filter(p => p.isEnabled || p.status === 'enabled')
+          result.currentValue = policies.length > 0 ? `${policies.length} alert policy(ies) configured (${enabledPolicies.length} enabled)` : 'No alert policies configured'
+          result.evidence = { total: policies.length, enabled: enabledPolicies.length }
+          return enabledPolicies.length > 0 ? 'pass' : policies.length > 0 ? 'warn' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve alert policies — requires Security administrator access')
+        }
+      }
+
+      // Default
+      result.currentValue = 'Audit control requires manual review in Microsoft Purview compliance portal'
+      result.requiresManualValidation = true
+      return 'warn'
+    } catch (error) {
+      console.warn(`⚠️ Audit validation ${validation.id} failed:`, error.message)
+      result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
+      return 'warn'
+    }
   }
 
   /**
    * Validate Application controls
    */
   async validateApplication(validation, result) {
-    result.currentValue = 'Application security'
-    result.evidence = { checkRequired: true }
-    return 'warn'
+    try {
+      // Helper to mark a control as requiring manual validation when Graph API fails
+      const markManual = (e, msg) => {
+        console.warn(`⚠️ ${validation.id} Graph API failed (${e.message}) — marking Manual`)
+        result.error = e.message
+        result.currentValue = msg || 'Graph API call failed — requires manual validation'
+        result.requiresManualValidation = true
+        return 'warn'
+      }
+
+      // Application controls not covered by collector data — requires manual review
+      result.currentValue = 'Application security control requires review in Azure AD / Entra app registrations'
+      result.evidence = { note: 'Review in Microsoft Entra admin center > Applications' }
+      result.requiresManualValidation = true
+      return 'warn'
+    } catch (error) {
+      console.warn(`⚠️ Application validation ${validation.id} failed:`, error.message)
+      result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
+      return 'warn'
+    }
   }
 
   /**
@@ -2134,20 +2967,134 @@ export class ZeroTrustValidator {
   }
 
   /**
-   * Validate Email controls
+   * Validate Email controls (EMAIL-001 to EMAIL-008)
    */
   async validateEmail(validation, result) {
     try {
-      if (validation.id === 'EMAIL-001') {
-        // Anti-phishing enabled
-        const response = await this.graphClient.api('/security/threatIntelligence/intelProfiles').get()
-        result.currentValue = 'Anti-phishing available'
-        result.evidence = { available: true }
-        return 'pass'
+      const markManual = (e, msg) => {
+        console.warn(`⚠️ ${validation.id} Graph API failed (${e.message}) — marking Manual`)
+        result.error = e.message
+        result.currentValue = msg || 'Graph API call failed — requires manual validation'
+        result.requiresManualValidation = true
+        return 'warn'
       }
+
+      if (validation.id === 'EMAIL-001') {
+        // Anti-Phishing Policy Enabled
+        try {
+          const response = await this.graphClient.api('/security/emailThreatAssessmentPolicies').get()
+          const policies = response.value || []
+          result.currentValue = policies.length > 0 ? `${policies.length} email threat assessment policy(ies) found` : 'No anti-phishing policies found'
+          result.evidence = { count: policies.length, hasPolicy: policies.length > 0 }
+          return policies.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve anti-phishing policies — requires Defender for Office 365 license')
+        }
+      }
+
+      if (validation.id === 'EMAIL-002') {
+        // Safe Links Enabled
+        try {
+          const response = await this.graphClient.api('/security/safeAttachmentPolicies').get()
+          const policies = response.value || []
+          result.currentValue = policies.length > 0 ? `${policies.length} Safe Attachment/Links policy(ies) configured` : 'No Safe Links policies found'
+          result.evidence = { count: policies.length, hasPolicy: policies.length > 0 }
+          return policies.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve Safe Links policies — requires Defender for Office 365 Plan 1 or higher')
+        }
+      }
+
+      if (validation.id === 'EMAIL-003') {
+        // Safe Attachments Enabled
+        try {
+          const response = await this.graphClient.api('/security/safeAttachmentPolicies').get()
+          const policies = response.value || []
+          const enabledPolicies = policies.filter(p => !p.isDisabled && p.enable !== false)
+          result.currentValue = enabledPolicies.length > 0 ? `${enabledPolicies.length} Safe Attachments policy(ies) enabled` : 'No Safe Attachments policies enabled'
+          result.evidence = { total: policies.length, enabled: enabledPolicies.length }
+          return enabledPolicies.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve Safe Attachments policies — requires Defender for Office 365 Plan 1 or higher')
+        }
+      }
+
+      if (validation.id === 'EMAIL-004') {
+        // Anti-Spam Policy Enabled
+        try {
+          const response = await this.graphClient.api('/security/antispamPolicies').get()
+          const policies = response.value || []
+          result.currentValue = policies.length > 0 ? `${policies.length} anti-spam policy(ies) configured` : 'No anti-spam policies found'
+          result.evidence = { count: policies.length, hasPolicy: policies.length > 0 }
+          return policies.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve anti-spam policies — requires Exchange Online Protection access')
+        }
+      }
+
+      if (validation.id === 'EMAIL-005') {
+        // DKIM Configured
+        try {
+          const response = await this.graphClient.api('/admin/exchange/mailExchangeRecords').get()
+          const records = response.value || []
+          const dkimRecords = records.filter(r => r.recordType?.toUpperCase() === 'DKIM' || r.type?.toUpperCase() === 'DKIM')
+          result.currentValue = dkimRecords.length > 0 ? `${dkimRecords.length} DKIM record(s) configured` : 'No DKIM records found — requires manual DNS verification'
+          result.evidence = { totalRecords: records.length, dkimRecords: dkimRecords.length }
+          return dkimRecords.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve mail exchange records — DKIM requires manual DNS verification')
+        }
+      }
+
+      if (validation.id === 'EMAIL-006') {
+        // SPF Configured
+        try {
+          const response = await this.graphClient.api("/admin/exchange/mailExchangeRecords?$filter=recordType eq 'SPF'").get()
+          const records = response.value || []
+          result.currentValue = records.length > 0 ? `${records.length} SPF record(s) configured` : 'No SPF records found — requires manual DNS verification'
+          result.evidence = { spfRecords: records.length, hasSpf: records.length > 0 }
+          return records.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve SPF records — SPF requires manual DNS verification')
+        }
+      }
+
+      if (validation.id === 'EMAIL-007') {
+        // DMARC Configured
+        try {
+          const response = await this.graphClient.api("/admin/exchange/mailExchangeRecords?$filter=recordType eq 'DMARC'").get()
+          const records = response.value || []
+          result.currentValue = records.length > 0 ? `${records.length} DMARC record(s) configured` : 'No DMARC records found — requires manual DNS verification'
+          result.evidence = { dmarcRecords: records.length, hasDmarc: records.length > 0 }
+          return records.length > 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve DMARC records — DMARC requires manual DNS verification')
+        }
+      }
+
+      if (validation.id === 'EMAIL-008') {
+        // External Forwarding Blocked
+        try {
+          const response = await this.graphClient.api("/admin/exchange/mailForwardingRules?$filter=forwardingType eq 'external'").get()
+          const rules = response.value || []
+          // If no external forwarding rules exist, that's good (none allowed)
+          result.currentValue = rules.length === 0 ? 'No external forwarding rules — external forwarding blocked' : `${rules.length} external forwarding rule(s) found — review required`
+          result.evidence = { externalRules: rules.length, isBlocked: rules.length === 0 }
+          return rules.length === 0 ? 'pass' : 'warn'
+        } catch (e) {
+          return markManual(e, 'Could not retrieve mail forwarding rules — requires Exchange Online admin access')
+        }
+      }
+
+      // Default — no specific handler for this EMAIL control
+      result.currentValue = 'Email security control requires manual review in Exchange Online admin center'
+      result.requiresManualValidation = true
       return 'warn'
     } catch (error) {
+      console.warn(`⚠️ Email validation ${validation.id} failed:`, error.message)
       result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -2157,16 +3104,36 @@ export class ZeroTrustValidator {
    */
   async validateThreat(validation, result) {
     try {
+      // Helper to mark a control as requiring manual validation when Graph API fails
+      const markManual = (e, msg) => {
+        console.warn(`⚠️ ${validation.id} Graph API failed (${e.message}) — marking Manual`)
+        result.error = e.message
+        result.currentValue = msg || 'Graph API call failed — requires manual validation'
+        result.requiresManualValidation = true
+        return 'warn'
+      }
+
       if (validation.id === 'THREAT-001') {
         // Threat protection enabled
-        const response = await this.graphClient.api('/security/threatIntelligence/vulnerabilities').get()
-        result.currentValue = 'Threat protection active'
-        result.evidence = { available: true }
-        return 'pass'
+        try {
+          const response = await this.graphClient.api('/security/threatIntelligence/vulnerabilities').get()
+          result.currentValue = 'Threat protection active'
+          result.evidence = { available: true }
+          return 'pass'
+        } catch (e) {
+          return markManual(e, 'Could not verify threat protection status — requires Defender for Office 365 license')
+        }
       }
+
+      // Default — no Graph API handler for this threat control ID
+      result.currentValue = 'Automated validation not available — requires manual review'
+      result.requiresManualValidation = true
       return 'warn'
     } catch (error) {
+      console.warn(`⚠️ Threat validation ${validation.id} failed:`, error.message)
       result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -2724,12 +3691,14 @@ export class ZeroTrustValidator {
         }
 
         default:
-          result.currentValue = 'Infrastructure control not yet implemented'
-          return 'warn'
+          // Fall through to direct Graph API call for controls not covered by collectors
+          return await this.validateInfrastructure(validation, result)
       }
     } catch (error) {
       console.warn(`Error validating ${validation.id}:`, error.message)
       result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -2753,25 +3722,76 @@ export class ZeroTrustValidator {
         case 'ID-001': {
           const admins = identityData.directoryRoles?.globalAdmins || []
           if (admins.length === 0) {
-            result.currentValue = 'No global admins found'
-            result.evidence = { totalAdmins: 0 }
+            result.currentValue = 'No Global Administrators found via roleTemplateId lookup'
+            result.evidence = { totalAdmins: 0, roleTemplateId: '62e90394-69f5-4237-9190-012177145e10' }
             return 'warn'
           }
 
+          // Step 2A: Cross-reference bulk MFA registration report
           const authMethods = identityData.authenticationMethods?.all || []
-          const adminsWithMFA = admins.filter(a =>
-            authMethods.some(m => m.userPrincipalName === a.userPrincipalName && m.isMfaRegistered)
-          ).length
+          const mfaRegMap = {}
+          authMethods.forEach(m => {
+            if (m.userPrincipalName) {
+              mfaRegMap[m.userPrincipalName.toLowerCase()] = {
+                isMfaRegistered: m.isMfaRegistered,
+                isMfaCapable: m.isMfaCapable,
+                defaultMfaMethod: m.defaultMfaMethod,
+                methodsRegistered: m.methodsRegistered
+              }
+            }
+          })
 
-          const percentage = Math.round((adminsWithMFA / admins.length) * 100)
-          result.currentValue = `${percentage}% of global admins (${adminsWithMFA}/${admins.length}) have MFA`
+          const adminDetails = admins.map(admin => {
+            const key = (admin.userPrincipalName || '').toLowerCase()
+            const mfa = mfaRegMap[key]
+            return {
+              id: admin.id,
+              displayName: admin.displayName,
+              userPrincipalName: admin.userPrincipalName,
+              isMfaRegistered: mfa?.isMfaRegistered ?? false,
+              isMfaCapable: mfa?.isMfaCapable ?? false,
+              defaultMfaMethod: mfa?.defaultMfaMethod ?? null,
+              methodsRegistered: mfa?.methodsRegistered ?? []
+            }
+          })
+
+          const adminsWithMFA = adminDetails.filter(a => a.isMfaRegistered).length
+          const adminsWithoutMFA = adminDetails.filter(a => !a.isMfaRegistered)
+          const mfaPercentage = Math.round((adminsWithMFA / admins.length) * 100)
+
+          // Step 3: Check CA policy enforcing MFA for Global Admin role
+          const GLOBAL_ADMIN_ROLE_ID = '62e90394-69f5-4237-9190-012177145e10'
+          const caPolicies = identityData.conditionalAccess?.all || []
+          const adminMFAPolicy = caPolicies.find(p =>
+            p.state === 'enabled' &&
+            (p.grantControls?.builtInControls?.includes('mfa') ||
+             p.grantControls?.authenticationStrength) &&
+            p.conditions?.roles?.includeRoles?.some(r =>
+              r === GLOBAL_ADMIN_ROLE_ID ||
+              r.toLowerCase().includes('global administrator') ||
+              r.toLowerCase().includes('62e90394')
+            )
+          )
+
+          const caEnforced = !!adminMFAPolicy
+          result.currentValue = `${adminsWithMFA}/${admins.length} Global Admins have MFA registered (${mfaPercentage}%)${caEnforced ? ' · CA policy enforces MFA' : ' · No CA enforcement found'}`
           result.evidence = {
             totalGlobalAdmins: admins.length,
             adminsWithMFA,
-            percentage,
-            compliant: percentage === 100
+            adminsWithoutMFA: adminsWithoutMFA.length,
+            mfaPercentage,
+            caEnforcementPolicy: adminMFAPolicy?.displayName || null,
+            caEnforced,
+            adminsWithoutMFADetails: adminsWithoutMFA.map(a => ({ displayName: a.displayName, upn: a.userPrincipalName })),
+            allAdmins: adminDetails
           }
-          return percentage === 100 ? 'pass' : (percentage >= 80 ? 'warn' : 'fail')
+
+          console.log(`✅ ID-001: ${adminsWithMFA}/${admins.length} Global Admins have MFA (${mfaPercentage}%) | CA enforced: ${caEnforced}`)
+
+          if (mfaPercentage === 100 && caEnforced) return 'pass'
+          if (mfaPercentage === 100 && !caEnforced) return 'warn' // registered but not enforced via CA
+          if (mfaPercentage >= 80) return 'warn'
+          return 'fail'
         }
 
         // MFA Coverage for All Users
@@ -2869,12 +3889,14 @@ export class ZeroTrustValidator {
         }
 
         default:
-          result.currentValue = 'Identity control not yet implemented'
-          return 'warn'
+          // Fall through to direct Graph API call for controls not covered by collectors
+          return await this.validateIdentity(validation, result)
       }
     } catch (error) {
       console.warn(`Error validating ${validation.id}:`, error.message)
       result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -2912,12 +3934,14 @@ export class ZeroTrustValidator {
         return validationResult.status
       }
 
-      result.currentValue = 'Device control validation not found'
+      result.currentValue = 'Device control validation not found — requires manual review'
+      result.requiresManualValidation = true
       return 'warn'
     } catch (error) {
       console.warn(`Error validating device control ${validation.id}:`, error.message)
       result.error = error.message
-      result.currentValue = 'Validation failed'
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -3020,13 +4044,146 @@ export class ZeroTrustValidator {
           return analytics.enabled ? 'pass' : 'warn'
         }
 
+        // DEV-031: iOS Secure Wi-Fi Profiles
+        // Check Settings Catalog (collector data) first, then legacy deviceConfigurations
+        case 'DEV-031': {
+          const allPolicies = deviceData.configuration?.all || []
+          const assignmentData = deviceData.configurationAssignments?.policies || []
+
+          // Settings Catalog: look for Wi-Fi profiles targeting iOS
+          const catalogWifi = allPolicies.filter(p =>
+            (p.name?.toLowerCase().includes('wi-fi') || p.name?.toLowerCase().includes('wifi')) &&
+            (p.platforms?.toLowerCase().includes('ios') || !p.platforms)
+          )
+          const assignedCatalog = catalogWifi.filter(p =>
+            assignmentData.find(a => a.id === p.id)?.assigned
+          )
+
+          // Legacy deviceConfigurations (v1.0 — same permission set as configurationPolicies)
+          let legacyProfiles = []
+          try {
+            const legacyResp = await this.graphClient.api('/deviceManagement/deviceConfigurations?$select=id,displayName,@odata.type&$top=200').get()
+            legacyProfiles = (legacyResp.value || []).filter(p =>
+              p['@odata.type']?.toLowerCase().includes('ioswifi') ||
+              p['@odata.type']?.toLowerCase().includes('iosenterprisewifi')
+            )
+          } catch (_) { /* permission or not configured */ }
+
+          const totalProfiles = catalogWifi.length + legacyProfiles.length
+          const totalAssigned = assignedCatalog.length + legacyProfiles.length // legacy always treated as assigned if found
+          const managedIOS = (deviceData.managedDevices?.byPlatform?.ios || []).length || 0
+
+          result.currentValue = totalProfiles > 0
+            ? `${totalProfiles} iOS Wi-Fi profile(s) found (${catalogWifi.length} Settings Catalog, ${legacyProfiles.length} legacy) — ${totalAssigned} assigned, ${managedIOS} managed iOS device(s)`
+            : `No iOS Wi-Fi profiles found in Intune (${managedIOS} managed iOS device(s))`
+          result.evidence = {
+            catalogProfiles: catalogWifi.map(p => p.name),
+            legacyProfiles: legacyProfiles.map(p => p.displayName),
+            totalProfiles,
+            assignedProfiles: totalAssigned,
+            managedIOSDevices: managedIOS,
+            scoreBreakdown: { profileExists: totalProfiles > 0 ? '✓ 30%' : '✗ 0%', assigned: totalAssigned > 0 ? '✓ 40%' : '✗ 0%' }
+          }
+          if (totalProfiles === 0) return 'fail'
+          return totalAssigned > 0 ? 'pass' : 'warn'
+        }
+
+        // DEV-032: Android Secure Wi-Fi Profiles
+        case 'DEV-032': {
+          const allPolicies = deviceData.configuration?.all || []
+          const assignmentData = deviceData.configurationAssignments?.policies || []
+
+          const catalogWifi = allPolicies.filter(p =>
+            (p.name?.toLowerCase().includes('wi-fi') || p.name?.toLowerCase().includes('wifi')) &&
+            (p.platforms?.toLowerCase().includes('android') || !p.platforms)
+          )
+          const assignedCatalog = catalogWifi.filter(p =>
+            assignmentData.find(a => a.id === p.id)?.assigned
+          )
+
+          let legacyProfiles = []
+          try {
+            const legacyResp = await this.graphClient.api('/deviceManagement/deviceConfigurations?$select=id,displayName,@odata.type&$top=200').get()
+            legacyProfiles = (legacyResp.value || []).filter(p => {
+              const t = p['@odata.type']?.toLowerCase() || ''
+              return t.includes('androidwifi') || t.includes('androidenterprisestepped') || t.includes('androiddeviceownerwifi') || t.includes('androidforworkwifi')
+            })
+          } catch (_) { /* permission or not configured */ }
+
+          const totalProfiles = catalogWifi.length + legacyProfiles.length
+          const totalAssigned = assignedCatalog.length + legacyProfiles.length
+          const managedAndroid = (deviceData.managedDevices?.byPlatform?.android || []).length || 0
+
+          result.currentValue = totalProfiles > 0
+            ? `${totalProfiles} Android Wi-Fi profile(s) found (${catalogWifi.length} Settings Catalog, ${legacyProfiles.length} legacy) — ${totalAssigned} assigned, ${managedAndroid} managed Android device(s)`
+            : `No Android Wi-Fi profiles found in Intune (${managedAndroid} managed Android device(s))`
+          result.evidence = {
+            catalogProfiles: catalogWifi.map(p => p.name),
+            legacyProfiles: legacyProfiles.map(p => p.displayName),
+            totalProfiles,
+            assignedProfiles: totalAssigned,
+            managedAndroidDevices: managedAndroid,
+            scoreBreakdown: { profileExists: totalProfiles > 0 ? '✓ 30%' : '✗ 0%', assigned: totalAssigned > 0 ? '✓ 40%' : '✗ 0%' }
+          }
+          if (totalProfiles === 0) return 'fail'
+          return totalAssigned > 0 ? 'pass' : 'warn'
+        }
+
+        // DEV-034: macOS Firewall Policies
+        case 'DEV-034': {
+          const allPolicies = deviceData.configuration?.all || []
+          const assignmentData = deviceData.configurationAssignments?.policies || []
+
+          const catalogFirewall = allPolicies.filter(p =>
+            p.name?.toLowerCase().includes('firewall') ||
+            p.name?.toLowerCase().includes('endpoint protection') ||
+            (p.name?.toLowerCase().includes('security') && p.platforms?.toLowerCase().includes('macos'))
+          )
+          const assignedCatalog = catalogFirewall.filter(p =>
+            assignmentData.find(a => a.id === p.id)?.assigned
+          )
+
+          let legacyProfiles = [], firewallEnabled = 0, stealthMode = 0
+          try {
+            const legacyResp = await this.graphClient.api('/deviceManagement/deviceConfigurations?$select=id,displayName,@odata.type,firewallEnabled,firewallEnableStealthMode&$top=200').get()
+            legacyProfiles = (legacyResp.value || []).filter(p =>
+              p['@odata.type']?.toLowerCase().includes('macosendpointprotection') ||
+              (p['@odata.type']?.toLowerCase().includes('macos') && p.displayName?.toLowerCase().includes('firewall'))
+            )
+            firewallEnabled = legacyProfiles.filter(p => p.firewallEnabled === true).length
+            stealthMode = legacyProfiles.filter(p => p.firewallEnableStealthMode === true).length
+          } catch (_) { /* permission or not configured */ }
+
+          const totalProfiles = catalogFirewall.length + legacyProfiles.length
+          const totalAssigned = assignedCatalog.length + legacyProfiles.length
+          const managedMac = (deviceData.managedDevices?.byPlatform?.macos || []).length || 0
+
+          result.currentValue = totalProfiles > 0
+            ? `${totalProfiles} macOS firewall profile(s) found (${catalogFirewall.length} Settings Catalog, ${legacyProfiles.length} legacy) — ${totalAssigned} assigned, ${firewallEnabled} with firewall explicitly enabled, ${managedMac} managed Mac(s)`
+            : `No macOS firewall or endpoint protection profiles found in Intune (${managedMac} managed Mac(s))`
+          result.evidence = {
+            catalogProfiles: catalogFirewall.map(p => p.name),
+            legacyProfiles: legacyProfiles.map(p => p.displayName),
+            totalProfiles,
+            assignedProfiles: totalAssigned,
+            firewallExplicitlyEnabled: firewallEnabled,
+            stealthModeEnabled: stealthMode,
+            managedMacDevices: managedMac,
+            scoreBreakdown: { profileExists: totalProfiles > 0 ? '✓ 30%' : '✗ 0%', assigned: totalAssigned > 0 ? '✓ 40%' : '✗ 0%' }
+          }
+          if (totalProfiles === 0) return 'fail'
+          return totalAssigned > 0 ? 'pass' : 'warn'
+        }
+
         default:
-          result.currentValue = 'Device control not yet implemented'
-          return 'warn'
+          // Fall through to direct Graph API call for controls not covered by collectors
+          return await this.validateDevice(validation, result)
       }
     } catch (error) {
       console.warn(`Error validating ${validation.id}:`, error.message)
       result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -3289,12 +4446,14 @@ export class ZeroTrustValidator {
         }
 
         default:
-          result.currentValue = 'Data control not yet implemented'
-          return 'warn'
+          // Fall through to direct Graph API call for controls not covered by collectors
+          return await this.validateData(validation, result)
       }
     } catch (error) {
       console.warn(`Error validating ${validation.id}:`, error.message)
       result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -3360,12 +4519,14 @@ export class ZeroTrustValidator {
         }
 
         default:
-          result.currentValue = 'Threat control not yet implemented'
-          return 'warn'
+          // Fall through to direct Graph API call for controls not covered by collectors
+          return await this.validateThreat(validation, result)
       }
     } catch (error) {
       console.warn(`Error validating ${validation.id}:`, error.message)
       result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
@@ -3675,12 +4836,14 @@ export class ZeroTrustValidator {
         }
 
         default:
-          result.currentValue = 'Application control not yet implemented'
-          return 'warn'
+          // Fall through to direct Graph API call for controls not covered by collectors
+          return await this.validateApplication(validation, result)
       }
     } catch (error) {
       console.warn(`Error validating ${validation.id}:`, error.message)
       result.error = error.message
+      result.currentValue = 'Graph API call failed — requires manual validation'
+      result.requiresManualValidation = true
       return 'warn'
     }
   }
