@@ -1835,18 +1835,6 @@ export class ZeroTrustValidator {
         }
       }
 
-      // DEV-027: Device Cleanup Rules - Tenant Hygiene
-      if (validation.id === 'DEV-027') {
-        try {
-          const response = await this.graphClient.api('/deviceManagement/deviceComplianceDeviceStatuses').get()
-          const statuses = response.value || []
-          result.currentValue = `${statuses.length} device compliance statuses found`
-          result.evidence = { count: statuses.length, hasData: statuses.length > 0 }
-          return statuses.length > 0 ? 'pass' : 'warn'
-        } catch (e) {
-          return markManual(e, 'Could not retrieve device compliance statuses — check Intune permissions')
-        }
-      }
 
       // DEV-028: Company Portal Branding — User Experience
       // Fully automatable: GET /deviceManagement/intuneBrandingProfiles (plural)
@@ -3030,52 +3018,6 @@ export class ZeroTrustValidator {
         }
       }
 
-      // DEV-067: Device Enrollment Notifications — MDM Enrollment
-      // Verify enrollment notification profile exists, assigned, and enabled
-      if (validation.id === 'DEV-067') {
-        try {
-          const envResp = await unifiedGraphClient.get('/beta/deviceManagement/deviceEnrollmentConfigurations')
-          const configs = envResp.value || []
-          const notifyConfigs = configs.filter(c =>
-            c['@odata.type']?.includes('EnrollmentNotification') ||
-            c.displayName?.toLowerCase().includes('notification') ||
-            c.displayName?.toLowerCase().includes('enrollment')
-          )
-
-          let assignedCount = 0
-          const configDetails = []
-          for (const config of notifyConfigs.slice(0, 5)) {
-            try {
-              const aResp = await this.graphClient.api(`/deviceManagement/deviceEnrollmentConfigurations/${config.id}/assignments`).get()
-              const assigned = (aResp.value || []).length > 0
-              if (assigned) {
-                assignedCount++
-                configDetails.push({ name: config.displayName, assignments: (aResp.value || []).length })
-              }
-            } catch (_) { /* optional */ }
-          }
-
-          const scoreExists = notifyConfigs.length > 0 ? 35 : 0
-          const scoreAssigned = assignedCount > 0 ? 25 : 0
-          const scoreEnabled = notifyConfigs.some(c => c.enabled !== false) ? 40 : 0
-          const totalScore = scoreExists + scoreAssigned + scoreEnabled
-
-          result.currentValue = notifyConfigs.length === 0
-            ? 'No enrollment notification configurations found'
-            : `${notifyConfigs.length} notification config(s) (${assignedCount} assigned) — score ${totalScore}%`
-          result.evidence = {
-            configsFound: notifyConfigs.length,
-            configsAssigned: assignedCount,
-            configDetails,
-            allConfigs: notifyConfigs.map(c => c.displayName),
-            scoreBreakdown: { profileExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, enabled: `${scoreEnabled}%`, total: `${totalScore}%` }
-          }
-          if (notifyConfigs.length === 0) return 'fail'
-          return totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail'
-        } catch (e) {
-          return markManual(e, 'Could not retrieve enrollment notification configurations')
-        }
-      }
 
       // DEV-068: Windows Local Account Restrictions — Access Control
       // Fully Automatable: Settings Catalog + Endpoint Security intents
