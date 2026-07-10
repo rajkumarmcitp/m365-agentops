@@ -6135,14 +6135,7 @@ export class ZeroTrustValidator {
    */
   async validateInfrastructureWithCollectors(validation, result, infrastructureData = {}) {
     try {
-      // Return early with warning if no data available
-      if (!infrastructureData || Object.keys(infrastructureData).length === 0) {
-        result.currentValue = 'Infrastructure data unavailable'
-        result.evidence = { dataAvailable: false }
-        return 'warn'
-      }
-
-      // Map automation levels for new Graph API controls before switch statement
+      // Map automation levels for new Graph API controls
       const automationLevelMap = {
         'INFRA-039': 'Automated',      // Teams Private Channels
         'INFRA-040': 'Automated',      // Teams Shared Channels
@@ -6154,9 +6147,18 @@ export class ZeroTrustValidator {
         'INFRA-060': 'Automated'       // OneDrive Oversharing
       }
 
+      // Route new Graph-only controls directly to validateInfrastructure, bypassing collectors
       if (automationLevelMap[validation.id]) {
         result.automationLevel = automationLevelMap[validation.id]
         result.requiresManualValidation = automationLevelMap[validation.id] === 'PartiallyAutomated'
+        return await this.validateInfrastructure(validation, result)
+      }
+
+      // Return early with warning if no data available for collector-based controls
+      if (!infrastructureData || Object.keys(infrastructureData).length === 0) {
+        result.currentValue = 'Infrastructure data unavailable'
+        result.evidence = { dataAvailable: false }
+        return 'warn'
       }
 
       switch (validation.id) {
@@ -8017,17 +8019,6 @@ export class ZeroTrustValidator {
           }
           return percentage === 100 ? 'pass' : (percentage >= 80 ? 'warn' : 'fail')
         }
-
-        // New Graph API Infrastructure controls — route to direct validator
-        case 'INFRA-039': // Teams Private Channels
-        case 'INFRA-040': // Teams Shared Channels
-        case 'INFRA-048': // Teams Guest Messaging
-        case 'INFRA-050': // Teams Sensitivity Labels
-        case 'INFRA-051': // OneDrive Sharing Restricted
-        case 'INFRA-053': // OneDrive Sharing Audited
-        case 'INFRA-055': // OneDrive Large Sharing Events
-        case 'INFRA-060': // OneDrive Oversharing
-          return await this.validateInfrastructure(validation, result)
 
         default:
           // Fall through to direct Graph API call for controls not covered by collectors
