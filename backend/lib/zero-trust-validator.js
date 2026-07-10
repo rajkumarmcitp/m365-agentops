@@ -6657,6 +6657,8 @@ export class ZeroTrustValidator {
         // Application Inventory
         case 'APP-001': {
           const apps = applicationData.enterpriseApplications || {}
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${apps.total || 0} enterprise applications registered`
           result.evidence = {
             total: apps.total,
@@ -6672,6 +6674,8 @@ export class ZeroTrustValidator {
           const withOwners = apps.withOwners || 0
           const total = apps.total || 1
           const percentage = Math.round((withOwners / total) * 100)
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${percentage}% of apps have owners (${withOwners}/${total})`
           result.evidence = {
             withOwners,
@@ -6686,6 +6690,8 @@ export class ZeroTrustValidator {
         case 'APP-005': {
           const perms = applicationData.permissionsAnalysis || {}
           const highRisk = perms.appsWithHighRiskPermissions || []
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${highRisk.length} apps with high-risk permissions`
           result.evidence = {
             appsWithHighRiskPerms: highRisk.length,
@@ -6701,6 +6707,8 @@ export class ZeroTrustValidator {
           const creds = applicationData.credentials || {}
           const expired = creds.credentialSummary?.appsWithExpiredSecrets || 0
           const longLived = creds.credentialSummary?.appsWithLongLivedSecrets || 0
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${expired} apps with expired secrets, ${longLived} with long-lived secrets`
           result.evidence = {
             expiredSecrets: expired,
@@ -6714,6 +6722,8 @@ export class ZeroTrustValidator {
         // Orphaned Applications
         case 'APP-024': {
           const orphaned = applicationData.applicationGovernance?.orphanedApplications || {}
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${orphaned.total || 0} orphaned applications (no owners)`
           result.evidence = {
             orphanedCount: orphaned.total,
@@ -6729,6 +6739,8 @@ export class ZeroTrustValidator {
           const unverified = publisher.unverifiedMultiTenantApps || 0
           const verified = publisher.verifiedApps || 0
           const rate = publisher.verificationRate || 0
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${rate}% publisher verification rate (${verified} verified, ${unverified} unverified)`
           result.evidence = {
             verifiedApps: verified,
@@ -6743,6 +6755,8 @@ export class ZeroTrustValidator {
         case 'APP-017': {
           const activity = applicationData.applicationActivity?.applicationUsage || {}
           const neverUsed = activity.neverUsedCount || 0
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${neverUsed} applications never used (90+ days)`
           result.evidence = {
             neverUsedCount: neverUsed,
@@ -6756,6 +6770,8 @@ export class ZeroTrustValidator {
         // Managed Identity Adoption
         case 'APP-021': {
           const workload = applicationData.workloadIdentity?.managedIdentityAdoption || {}
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = false
           result.currentValue = `${workload.totalManagedIdentities || 0} managed identities configured`
           result.evidence = {
             totalManagedIdentities: workload.totalManagedIdentities,
@@ -6770,6 +6786,8 @@ export class ZeroTrustValidator {
         case 'APP-020': {
           const consent = applicationData.consentAndGovernance?.consentPolicy || {}
           const userConsentEnabled = consent.userConsentEnabled
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = userConsentEnabled ? 'User consent enabled' : 'User consent disabled (admin-only)'
           result.evidence = {
             userConsentEnabled,
@@ -6782,6 +6800,8 @@ export class ZeroTrustValidator {
         // Disabled Applications Review
         case 'APP-023': {
           const disabled = applicationData.applicationGovernance?.disabledApplications || {}
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${disabled.total || 0} disabled applications`
           result.evidence = {
             disabledCount: disabled.total,
@@ -6807,6 +6827,8 @@ export class ZeroTrustValidator {
         case 'APP-010': {
           const creds = applicationData.credentials || {}
           const longLived = creds.credentialSummary?.appsWithLongLivedSecrets || 0
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${longLived} applications with secrets > 180 days old`
           result.evidence = {
             appsWithLongLivedSecrets: longLived,
@@ -6820,6 +6842,8 @@ export class ZeroTrustValidator {
         case 'APP-011': {
           const creds = applicationData.credentials || {}
           const expiringCerts = creds.credentialSummary?.appsWithExpiringCerts || 0
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${expiringCerts} applications with certificates expiring within 90 days`
           result.evidence = {
             appsWithExpiringCerts: expiringCerts,
@@ -6832,6 +6856,8 @@ export class ZeroTrustValidator {
         case 'APP-012': {
           const creds = applicationData.credentials || {}
           const multipleSecrets = creds.applications?.filter(a => a.credentials.secrets.active > 1).length || 0
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${multipleSecrets} applications with multiple active secrets`
           result.evidence = {
             appsWithMultipleSecrets: multipleSecrets,
@@ -6843,6 +6869,8 @@ export class ZeroTrustValidator {
         // Workload Identity Conditional Access
         case 'APP-013': {
           const workload = applicationData.workloadIdentity?.workloadIdentityPolicy || {}
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = false
           result.currentValue = workload.enabled ? 'Workload identity CA policy enabled' : 'Workload CA policy not configured'
           result.evidence = {
             policyEnabled: workload.enabled,
@@ -6856,6 +6884,8 @@ export class ZeroTrustValidator {
         case 'APP-015': {
           const workload = applicationData.workloadIdentity?.workloadSignInActivity || {}
           const riskySignIns = workload.riskySignIns || 0
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${riskySignIns} risky workload sign-ins detected`
           result.evidence = {
             totalSignIns: workload.totalSignIns,
@@ -6883,6 +6913,8 @@ export class ZeroTrustValidator {
         case 'APP-018': {
           const activity = applicationData.applicationActivity?.failureAnalysis || {}
           const failureCount = activity.totalFailedSignIns || 0
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${activity.appsWithFailures || 0} applications with sign-in failures (${failureCount} total)`
           result.evidence = {
             appsWithFailures: activity.appsWithFailures,
@@ -6896,6 +6928,8 @@ export class ZeroTrustValidator {
         case 'APP-019': {
           const activity = applicationData.applicationActivity?.newApplications || {}
           const recent = activity.last30Days || 0
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${recent} new applications created in last 30 days`
           result.evidence = {
             total: activity.total,
@@ -6910,6 +6944,8 @@ export class ZeroTrustValidator {
           const perms = applicationData.permissionsAnalysis || {}
           const highRisk = perms.appsWithHighRiskPermissions || []
           const graphPerms = highRisk.filter(a => a.permissions.some(p => p.resourceDisplayName?.includes('Microsoft Graph'))).length
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${graphPerms} applications with high-risk Graph permissions`
           result.evidence = {
             appsWithGraphPerms: graphPerms,
@@ -6925,6 +6961,8 @@ export class ZeroTrustValidator {
           const roleManagement = perms.appsWithHighRiskPermissions?.filter(a =>
             a.permissions.some(p => p.resourceDisplayName?.includes('RoleManagement'))
           ) || []
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${roleManagement.length} applications with role management permissions`
           result.evidence = {
             criticalApps: roleManagement.length,
@@ -6940,6 +6978,8 @@ export class ZeroTrustValidator {
           const withOwners = apps.withOwners || 0
           const total = apps.total || 1
           const percentage = total > 0 ? Math.round((withOwners / total) * 100) : 0
+          result.automationLevel = 'Automated'
+          result.requiresManualValidation = false
           result.currentValue = `${percentage}% of applications have owners (${withOwners}/${total})`
           result.evidence = {
             withOwners,
