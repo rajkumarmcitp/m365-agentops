@@ -6408,7 +6408,30 @@ export class ZeroTrustValidator {
    * Validate Data controls using cached data
    */
   async validateDataWithCollectors(validation, result, dataData) {
-    if (!dataData) return 'warn'
+    if (!dataData) {
+      result.automationLevel = 'Automated'
+      result.requiresManualValidation = false
+      return 'warn'
+    }
+
+    // Map automation levels for DATA controls
+    const automationMap = {
+      'DATA-002': 'Automated', 'DATA-004': 'Automated', 'DATA-005': 'Automated',
+      'DATA-007': 'Automated', 'DATA-010': 'Automated', 'DATA-011': 'Automated',
+      'DATA-012': 'Automated', 'DATA-013': 'Automated', 'DATA-016': 'Automated',
+      'DATA-019': 'Automated', 'DATA-023': 'Automated', 'DATA-025': 'Automated',
+      'DATA-001': 'PartiallyAutomated', 'DATA-006': 'PartiallyAutomated',
+      'DATA-009': 'PartiallyAutomated', 'DATA-015': 'PartiallyAutomated',
+      'DATA-017': 'PartiallyAutomated',
+      'DATA-003': 'ManualVerificationRequired', 'DATA-008': 'ManualVerificationRequired',
+      'DATA-014': 'ManualVerificationRequired', 'DATA-018': 'ManualVerificationRequired',
+      'DATA-020': 'ManualVerificationRequired', 'DATA-021': 'ManualVerificationRequired',
+      'DATA-022': 'ManualVerificationRequired', 'DATA-024': 'ManualVerificationRequired'
+    }
+
+    const automationLevel = automationMap[validation.id] || 'Automated'
+    result.automationLevel = automationLevel
+    result.requiresManualValidation = (automationLevel === 'ManualVerificationRequired')
 
     try {
       switch (validation.id) {
