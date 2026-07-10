@@ -3166,6 +3166,325 @@ export class ZeroTrustValidator {
         }
       }
 
+      // DEV-069: Intune MDM Enrollment Required — Partially Automatable
+      if (validation.id === 'DEV-069') {
+        try {
+          const [caResp, devResp] = await Promise.all([
+            this.graphClient.api('/identity/conditionalAccess/policies').get(),
+            this.graphClient.api('/deviceManagement/managedDevices?$select=id&$top=1').get().catch(() => ({ value: [] }))
+          ])
+
+          const caPolicy = (caResp.value || []).find(p =>
+            p.state === 'enabled' &&
+            (p.grantControls?.builtInControls?.includes('compliantDevice') ||
+             p.grantControls?.builtInControls?.includes('approvedApplication'))
+          )
+
+          const managedDevices = devResp.value?.length || 0
+          const scoreCAExists = caPolicy ? 35 : 0
+          const scoreDevices = managedDevices > 0 ? 30 : 0
+          const totalScore = scoreCAExists + scoreDevices
+
+          result.automationLevel = 'PartiallyAutomated'
+          result.currentValue = caPolicy
+            ? `CA policy enforcing device compliance — ${managedDevices} managed devices — score ${totalScore}%`
+            : 'No Conditional Access policy enforcing device compliance found'
+
+          result.evidence = {
+            caPolicy: caPolicy ? { displayName: caPolicy.displayName, state: caPolicy.state } : null,
+            managedDevices,
+            grantControls: caPolicy?.grantControls?.builtInControls,
+            manualVerificationNote: 'Graph cannot determine if ALL access paths enforce MDM enrollment',
+            scoreBreakdown: { caExists: `${scoreCAExists}%`, devices: `${scoreDevices}%`, total: `${totalScore}%` }
+          }
+
+          return caPolicy ? (totalScore >= 70 ? 'pass' : 'warn') : 'fail'
+        } catch (e) {
+          console.warn(`⚠️ DEV-069 error: ${e.message}`)
+          result.automationLevel = 'PartiallyAutomated'
+          result.currentValue = 'Could not verify MDM enrollment policy'
+          result.evidence = { error: e.message, manualReviewRequired: true }
+          return 'warn'
+        }
+      }
+
+      // DEV-070: Device Compliance Policy Enforced — Fully Automatable
+      if (validation.id === 'DEV-070') {
+        try {
+          const [polResp, devResp] = await Promise.all([
+            this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get(),
+            this.graphClient.api('/deviceManagement/managedDevices?$select=id,complianceState&$top=200').get().catch(() => ({ value: [] }))
+          ])
+
+          const policies = polResp.value || []
+          const devices = devResp.value || []
+          const compliantCount = devices.filter(d => d.complianceState === 'compliant').length
+          const totalDevices = devices.length
+          const compliancePct = totalDevices > 0 ? Math.round((compliantCount / totalDevices) * 100) : 0
+
+          let assignedCount = 0, policyDetails = []
+          for (const policy of policies.slice(0, 10)) {
+            try {
+              const aResp = await this.graphClient.api(`/deviceManagement/deviceCompliancePolicies/${policy.id}/assignments`).get()
+              if ((aResp.value || []).length > 0) {
+                assignedCount++
+                policyDetails.push({ name: policy.displayName, platform: policy.platform })
+              }
+            } catch (_) { }
+          }
+
+          const scoreExists = policies.length > 0 ? 35 : 0
+          const scoreAssigned = assignedCount > 0 ? 25 : 0
+          const scoreCoverage = compliancePct >= 95 ? 40 : compliancePct >= 70 ? 25 : 10
+          const totalScore = scoreExists + scoreAssigned + scoreCoverage
+
+          result.automationLevel = 'Automated'
+          result.currentValue = policies.length === 0
+            ? 'No compliance policies found'
+            : `${policies.length} policies — ${assignedCount} assigned — ${compliantCount}/${totalDevices} devices compliant (${compliancePct}%) — score ${totalScore}%`
+
+          result.evidence = {
+            totalPolicies: policies.length,
+            assignedPolicies: assignedCount,
+            managedDevices: totalDevices,
+            compliantDevices: compliantCount,
+            compliancePct,
+            policyDetails,
+            scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, coverage: `${scoreCoverage}%`, total: `${totalScore}%` }
+          }
+
+          return policies.length === 0 ? 'fail' : (totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail')
+        } catch (e) {
+          console.warn(`⚠️ DEV-070 error: ${e.message}`)
+          result.automationLevel = 'Automated'
+          result.currentValue = 'Could not retrieve compliance policies'
+          return 'warn'
+        }
+      }
+
+      // DEV-071: BitLocker Enabled — Fully Automatable
+      if (validation.id === 'DEV-071') {
+        try {
+          const [polResp, devResp] = await Promise.all([
+            this.graphClient.api('/beta/deviceManagement/configurationPolicies').get().catch(() => ({ value: [] })),
+            this.graphClient.api('/deviceManagement/managedDevices?$filter=operatingSystem eq \'Windows\'&$select=id&$top=1').get().catch(() => ({ value: [] }))
+          ])
+
+          const policies = (polResp.value || []).filter(p =>
+            p.name?.toLowerCase().includes('bitlocker') ||
+            p.name?.toLowerCase().includes('encryption') ||
+            p.name?.toLowerCase().includes('disk')
+          )
+
+          let assignedCount = 0, settingsVerified = 0
+          for (const policy of policies.slice(0, 5)) {
+            try {
+              const aResp = await this.graphClient.api(`/beta/deviceManagement/configurationPolicies/${policy.id}/assignments`).get()
+              if ((aResp.value || []).length > 0) {
+                assignedCount++
+                const sResp = await this.graphClient.api(`/beta/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
+                const hasEncryption = (sResp.value || []).some(s => {
+                  const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
+                  return defId.includes('bitlocker') || defId.includes('encryption')
+                })
+                if (hasEncryption) settingsVerified++
+              }
+            } catch (_) { }
+          }
+
+          const windowsDevices = devResp.value?.length || 0
+          const scoreExists = policies.length > 0 ? 35 : 0
+          const scoreAssigned = assignedCount > 0 ? 25 : 0
+          const scoreCoverage = windowsDevices > 0 ? (assignedCount > 0 ? 40 : 20) : 0
+          const totalScore = scoreExists + scoreAssigned + scoreCoverage
+
+          result.automationLevel = 'Automated'
+          result.currentValue = policies.length === 0
+            ? 'No BitLocker encryption policies found'
+            : `${policies.length} BitLocker policies — ${assignedCount} assigned — ${windowsDevices} Windows devices — score ${totalScore}%`
+
+          result.evidence = {
+            policiesFound: policies.length,
+            assignedCount,
+            settingsVerified,
+            windowsDevices,
+            scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, coverage: `${scoreCoverage}%`, total: `${totalScore}%` }
+          }
+
+          return policies.length === 0 ? 'fail' : (totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail')
+        } catch (e) {
+          console.warn(`⚠️ DEV-071 error: ${e.message}`)
+          result.automationLevel = 'Automated'
+          return 'warn'
+        }
+      }
+
+      // DEV-072: Windows Defender Enabled — Fully Automatable
+      if (validation.id === 'DEV-072') {
+        try {
+          const [intentResp, polResp, devResp] = await Promise.all([
+            this.graphClient.api('/beta/deviceManagement/intents').get().catch(() => ({ value: [] })),
+            this.graphClient.api('/beta/deviceManagement/configurationPolicies').get().catch(() => ({ value: [] })),
+            this.graphClient.api('/deviceManagement/managedDevices?$filter=operatingSystem eq \'Windows\'&$select=id&$top=1').get().catch(() => ({ value: [] }))
+          ])
+
+          const defenderIntents = (intentResp.value || []).filter(i =>
+            i.displayName?.toLowerCase().includes('defender') ||
+            i.displayName?.toLowerCase().includes('antivirus')
+          )
+
+          const defenderPolicies = (polResp.value || []).filter(p =>
+            p.name?.toLowerCase().includes('defender') ||
+            p.name?.toLowerCase().includes('antivirus') ||
+            p.name?.toLowerCase().includes('protection')
+          )
+
+          let assignedCount = 0, settingsVerified = 0
+          for (const policy of [...defenderIntents, ...defenderPolicies].slice(0, 5)) {
+            try {
+              const aResp = await this.graphClient.api(`/beta/deviceManagement/intents/${policy.id}/assignments`).get().catch(() =>
+                this.graphClient.api(`/beta/deviceManagement/configurationPolicies/${policy.id}/assignments`).get()
+              )
+              if ((aResp.value || []).length > 0) assignedCount++
+            } catch (_) { }
+          }
+
+          const windowsDevices = devResp.value?.length || 0
+          const totalPolicies = defenderIntents.length + defenderPolicies.length
+          const scoreExists = totalPolicies > 0 ? 35 : 0
+          const scoreAssigned = assignedCount > 0 ? 25 : 0
+          const scoreCoverage = windowsDevices > 0 ? (assignedCount > 0 ? 40 : 20) : 0
+          const totalScore = scoreExists + scoreAssigned + scoreCoverage
+
+          result.automationLevel = 'Automated'
+          result.currentValue = totalPolicies === 0
+            ? 'No Defender policies found'
+            : `${totalPolicies} Defender policies (${defenderIntents.length} intents + ${defenderPolicies.length} catalog) — ${assignedCount} assigned — score ${totalScore}%`
+
+          result.evidence = {
+            defenderIntents: defenderIntents.length,
+            defenderPolicies: defenderPolicies.length,
+            assignedCount,
+            windowsDevices,
+            scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, coverage: `${scoreCoverage}%`, total: `${totalScore}%` }
+          }
+
+          return totalPolicies === 0 ? 'fail' : (totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail')
+        } catch (e) {
+          console.warn(`⚠️ DEV-072 error: ${e.message}`)
+          result.automationLevel = 'Automated'
+          return 'warn'
+        }
+      }
+
+      // DEV-073: Mobile Device Management Enrollment — Fully Automatable
+      if (validation.id === 'DEV-073') {
+        try {
+          const [devResp, enrollResp] = await Promise.all([
+            this.graphClient.api('/deviceManagement/managedDevices?$select=id,operatingSystem,managementAgent&$top=500').get(),
+            this.graphClient.api('/beta/deviceManagement/deviceEnrollmentConfigurations').get().catch(() => ({ value: [] }))
+          ])
+
+          const devices = devResp.value || []
+          const enrollmentConfigs = enrollResp.value || []
+          const managedCount = devices.length
+
+          const byOS = {
+            windows: devices.filter(d => d.operatingSystem?.toLowerCase() === 'windows').length,
+            macos: devices.filter(d => d.operatingSystem?.toLowerCase() === 'macos').length,
+            ios: devices.filter(d => d.operatingSystem?.toLowerCase() === 'ios').length,
+            android: devices.filter(d => d.operatingSystem?.toLowerCase() === 'android').length
+          }
+
+          const enrollmentMethods = enrollmentConfigs.map(c => c['@odata.type']).filter(Boolean)
+          const enrollmentRate = managedCount > 0 ? Math.min(100, Math.round((managedCount / Math.max(managedCount, 100)) * 100)) : 0
+
+          const scoreManaged = managedCount > 0 ? 40 : 0
+          const scoreEnrollment = enrollmentConfigs.length > 0 ? 35 : 0
+          const scoreCoverage = enrollmentRate >= 80 ? 25 : enrollmentRate >= 50 ? 15 : 5
+          const totalScore = scoreManaged + scoreEnrollment + scoreCoverage
+
+          result.automationLevel = 'Automated'
+          result.currentValue = managedCount === 0
+            ? 'No managed devices found'
+            : `${managedCount} managed devices — ${enrollmentConfigs.length} enrollment configurations — score ${totalScore}%`
+
+          result.evidence = {
+            managedDevices: managedCount,
+            byOperatingSystem: byOS,
+            enrollmentConfigurations: enrollmentConfigs.length,
+            enrollmentMethods,
+            enrollmentRate,
+            scoreBreakdown: { managed: `${scoreManaged}%`, enrollment: `${scoreEnrollment}%`, coverage: `${scoreCoverage}%`, total: `${totalScore}%` }
+          }
+
+          return managedCount === 0 ? 'fail' : (totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail')
+        } catch (e) {
+          console.warn(`⚠️ DEV-073 error: ${e.message}`)
+          result.automationLevel = 'Automated'
+          return 'warn'
+        }
+      }
+
+      // DEV-067: Device Enrollment Notifications — Manual Verification Required
+      if (validation.id === 'DEV-067') {
+        result.automationLevel = 'ManualVerificationRequired'
+        result.currentValue = 'Graph API does not expose Enrollment Notification configuration'
+        result.evidence = {
+          note: 'Microsoft Graph does not provide access to enrollment notification settings',
+          manualSteps: [
+            'Navigate to Intune Admin Center',
+            'Go to Devices > Enroll Devices > Enrollment Notifications',
+            'Verify notification settings are configured and enabled'
+          ]
+        }
+        result.requiresManualValidation = true
+        return 'warn'
+      }
+
+      // DEV-027: Device Cleanup Rules — Partially Automatable
+      if (validation.id === 'DEV-027') {
+        try {
+          const devResp = await this.graphClient.api('/deviceManagement/managedDevices?$select=id,lastSyncDateTime&$top=500').get()
+          const devices = devResp.value || []
+
+          const staleDevices = devices.filter(d => {
+            if (!d.lastSyncDateTime) return true
+            const daysSince = (Date.now() - new Date(d.lastSyncDateTime).getTime()) / (1000 * 60 * 60 * 24)
+            return daysSince > 90
+          })
+
+          const stalePct = devices.length > 0 ? Math.round((staleDevices.length / devices.length) * 100) : 0
+          const scoreStaleDevices = stalePct < 5 ? 50 : stalePct < 10 ? 35 : stalePct < 20 ? 20 : 5
+          const scoreCleanupRule = 50 // Cannot be verified via Graph, requires manual check
+          const totalScore = scoreStaleDevices + scoreCleanupRule
+
+          result.automationLevel = 'PartiallyAutomated'
+          result.currentValue = devices.length === 0
+            ? 'No managed devices found'
+            : `${devices.length} managed devices — ${staleDevices.length} stale (${stalePct}%) — cleanup rule config requires manual verification — score ${totalScore}%`
+
+          result.evidence = {
+            totalDevices: devices.length,
+            staleDevices: staleDevices.length,
+            stalePct,
+            manualVerificationRequired: 'Cleanup rule configuration not exposed in Graph API',
+            manualSteps: [
+              'Navigate to Intune Admin Center',
+              'Go to Devices > Device Cleanup Rules',
+              'Verify cleanup is enabled and configured with appropriate retention days'
+            ],
+            scoreBreakdown: { staleDeviceMetric: `${scoreStaleDevices}%`, cleanupRuleConfig: `${scoreCleanupRule}% (manual)`, total: `${totalScore}%` }
+          }
+
+          return stalePct < 5 ? 'pass' : stalePct < 10 ? 'warn' : 'fail'
+        } catch (e) {
+          console.warn(`⚠️ DEV-027 error: ${e.message}`)
+          result.automationLevel = 'PartiallyAutomated'
+          return 'warn'
+        }
+      }
+
       // Default for other DEV- validations — fall through to direct Graph API
       result.currentValue = 'Automated validation not available — requires manual review'
       result.requiresManualValidation = true
