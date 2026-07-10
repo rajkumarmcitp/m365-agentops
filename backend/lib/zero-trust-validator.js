@@ -1630,15 +1630,47 @@ export class ZeroTrustValidator {
         }
       }
 
-      // DEV-026: Endpoint Analytics - Risk Identification
+      // DEV-026: Endpoint Analytics — Risk Identification
+      // Automation: Partial (license-dependent). Try the UX Analytics API;
+      // if the tenant lacks the license, report clearly instead of marking Manual.
       if (validation.id === 'DEV-026') {
         try {
-          const response = await this.graphClient.api('/analytics/deviceAnalytics').get()
-          result.currentValue = response ? 'Endpoint analytics configured' : 'Endpoint analytics not available'
-          result.evidence = { available: !!response }
-          return response ? 'pass' : 'warn'
+          // Primary: fetch device performance analytics records
+          // Must use full absolute URL — the Graph SDK prepends /v1.0 to relative paths
+          const resp = await unifiedGraphClient.get('https://graph.microsoft.com/beta/deviceManagement/userExperienceAnalyticsDevicePerformance')
+          const reportingCount = resp.value?.length ?? 0
+
+          // Get managed Windows device count for coverage calculation
+          let windowsCount = 0
+          try {
+            const devResp = await unifiedGraphClient.get('/deviceManagement/managedDevices?$select=id,operatingSystem')
+            windowsCount = (devResp.value || []).filter(d => d.operatingSystem === 'Windows').length
+          } catch (_) { /* optional */ }
+
+          const coveragePct = windowsCount > 0 ? Math.round((reportingCount / windowsCount) * 100) : null
+
+          result.currentValue = reportingCount === 0
+            ? `Endpoint Analytics enabled but no devices reporting (${windowsCount} managed Windows device(s))`
+            : `Endpoint Analytics active — ${reportingCount} device(s) reporting${coveragePct !== null ? `, ${coveragePct}% coverage` : ''}`
+          result.evidence = {
+            analyticsEnabled: true,
+            devicesReporting: reportingCount,
+            managedWindowsDevices: windowsCount,
+            coveragePct,
+            status: reportingCount === 0 ? 'Enabled — No data received' : coveragePct >= 90 ? 'Healthy' : 'Below threshold'
+          }
+
+          if (reportingCount === 0) return 'warn'
+          return coveragePct === null || coveragePct >= 90 ? 'pass' : 'warn'
         } catch (e) {
-          return markManual(e, 'Could not retrieve endpoint analytics — requires Endpoint Analytics license')
+          // 403 = license not available; 404 = feature not enabled — report as warn, not Manual
+          const isLicenseIssue = e.message?.includes('403') || e.message?.includes('license') || e.message?.includes('Forbidden')
+          result.currentValue = isLicenseIssue
+            ? 'Endpoint Analytics not available — requires Intune/Endpoint Analytics license'
+            : `Endpoint Analytics API error: ${e.message}`
+          result.evidence = { available: false, licenseRequired: isLicenseIssue, error: e.message }
+          result.requiresManualValidation = isLicenseIssue
+          return 'warn'
         }
       }
 
@@ -1999,16 +2031,62 @@ export class ZeroTrustValidator {
       }
 
       // DEV-040: Defender for Endpoint Integration
+      // Scoring: connector exists & enabled (35%) + platform coverage (25%) + device risk signals flowing (40%)
       if (validation.id === 'DEV-040') {
         try {
-          const response = await this.graphClient.api('/deviceManagement/windowsDefenderAdvancedThreatProtectionConfigurations').get()
-          const configs = response.value || []
-          result.currentValue = configs.length > 0 ? `${configs.length} Defender ATP configuration(s) found` : 'No Defender ATP configurations'
-          result.evidence = { count: configs.length, hasConfig: configs.length > 0 }
-          return configs.length > 0 ? 'pass' : 'fail'
-        } catch (e) {
-          return markManual(e, 'Could not retrieve Defender for Endpoint configurations — requires Defender ATP license')
-        }
+          // Step 1: check Mobile Threat Defense connectors for MDE
+          const connResp = await this.graphClient.api('/deviceManagement/mobileThreatDefenseConnectors').get()
+          const connectors = connResp.value || []
+          const mde = connectors.find(c =>
+            c.partnerName === 'MicrosoftDefenderATP' ||
+            c.partnerName?.toLowerCase().includes('defender') ||
+            c.partnerName?.toLowerCase().includes('atp')
+          )
+
+          // Step 2: check platform enablement on connector
+          const androidEnabled = mde?.androidEnabled === true || mde?.androidDeviceBlockedOnMissingPartnerData === false
+          const iosEnabled = mde?.iosEnabled === true || mde?.iosDeviceBlockedOnMissingPartnerData === false
+          const windowsEnabled = mde?.windowsEnabled === true
+
+          // Step 3: check devices for threat state data (signals flowing)
+          let devicesWithThreatState = 0, totalDevices = 0
+          try {
+            const devResp = await this.graphClient.api('/deviceManagement/managedDevices?$select=id,partnerReportedThreatState&$top=200').get()
+            const devices = devResp.value || []
+            totalDevices = devices.length
+            devicesWithThreatState = devices.filter(d =>
+              d.partnerReportedThreatState && d.partnerReportedThreatState !== 'unknown'
+            ).length
+          } catch (_) { /* optional */ }
+
+          const connectorExists = !!mde
+          const platformsEnabled = [androidEnabled, iosEnabled, windowsEnabled].filter(Boolean).length
+          const riskPct = totalDevices > 0 ? Math.round((devicesWithThreatState / totalDevices) * 100) : null
+
+          // Scoring
+          const scoreConnector = connectorExists ? 35 : 0
+          const scorePlatform = Math.round((platformsEnabled / 3) * 25)
+          const scoreRisk = riskPct === null ? 20 : riskPct >= 90 ? 40 : riskPct >= 50 ? 25 : 10
+          const totalScore = scoreConnector + scorePlatform + scoreRisk
+
+          result.currentValue = !connectorExists
+            ? 'Microsoft Defender for Endpoint connector not found in Intune'
+            : `MDE connector active — Android: ${androidEnabled ? '✓' : '✗'}, iOS: ${iosEnabled ? '✓' : '✗'}, Windows: ${windowsEnabled ? '✓' : '✗'}${riskPct !== null ? ` — ${riskPct}% of devices reporting threat state` : ''} — score ${totalScore}%`
+          result.evidence = {
+            connectorFound: connectorExists,
+            connectorName: mde?.partnerName,
+            androidEnabled, iosEnabled, windowsEnabled,
+            platformsEnabled,
+            devicesWithThreatState, totalDevices, riskCoveragePct: riskPct,
+            allConnectors: connectors.map(c => c.partnerName),
+            scoreBreakdown: { connector: `${scoreConnector}%`, platforms: `${scorePlatform}%`, riskSignals: `${scoreRisk}%`, total: `${totalScore}%` }
+          }
+
+          if (!connectorExists) return 'fail'
+          if (totalScore >= 80) return 'pass'
+          if (totalScore >= 50) return 'warn'
+          return 'fail'
+        } catch (e) { return markManual(e, 'Could not retrieve Defender for Endpoint connector status') }
       }
 
       // DEV-041: Device Risk-Based Access
@@ -2031,17 +2109,80 @@ export class ZeroTrustValidator {
       }
 
       // DEV-042: Minimum OS Version Enforcement
+      // Scoring: policy with OS version requirement (35%) + assigned (25%) + device coverage ≥95% (40%)
       if (validation.id === 'DEV-042') {
         try {
-          const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies?$select=platform,osMinimumVersion').get()
-          const policies = response.value || []
-          const withMinOS = policies.filter(p => p.osMinimumVersion)
-          result.currentValue = withMinOS.length > 0 ? `${withMinOS.length} policy(ies) enforce minimum OS version` : 'No minimum OS version requirements'
-          result.evidence = { total: policies.length, withMinOS: withMinOS.length }
-          return withMinOS.length > 0 ? 'pass' : 'warn'
-        } catch (e) {
-          return markManual(e, 'Could not verify minimum OS version enforcement in compliance policies')
-        }
+          // Fetch compliance policies (no @odata.type in $select — causes 400 errors)
+          const [policiesResp, devicesResp] = await Promise.all([
+            this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get(),
+            this.graphClient.api('/deviceManagement/managedDevices').get()
+          ])
+
+          const policies = policiesResp.value || []
+          const devices = devicesResp.value || []
+
+          // Identify policies that enforce a minimum OS version
+          const withMinOS = policies.filter(p =>
+            p.osMinimumVersion ||
+            p.minAndroidSecurityPatchLevel ||
+            (p.validOperatingSystemBuildRanges && p.validOperatingSystemBuildRanges.length > 0)
+          )
+
+          // Check assignments for policies with OS version requirements
+          let assignedCount = 0
+          const assignedPolicyDetails = []
+          for (const policy of withMinOS.slice(0, 5)) {
+            try {
+              const aResp = await this.graphClient.api(`/deviceManagement/deviceCompliancePolicies/${policy.id}/assignments`).get()
+              if ((aResp.value || []).length > 0) {
+                assignedCount++
+                assignedPolicyDetails.push({
+                  name: policy.displayName,
+                  minVersion: policy.osMinimumVersion || policy.minAndroidSecurityPatchLevel || 'configured'
+                })
+              }
+            } catch (_) { /* optional */ }
+          }
+
+          // Coverage from device compliance states
+          const compliantDevices = devices.filter(d => d.complianceState === 'compliant' || d.complianceState === 'Compliant').length
+          const coveragePct = devices.length > 0 ? Math.round((compliantDevices / devices.length) * 100) : null
+
+          // Per-platform breakdown
+          const byPlatform = {}
+          policies.forEach(p => {
+            const type = p['@odata.type'] || ''
+            const platform = type.includes('windows') ? 'windows' : type.includes('ios') ? 'ios' : type.includes('android') ? 'android' : type.includes('mac') ? 'macos' : 'other'
+            if (!byPlatform[platform]) byPlatform[platform] = { total: 0, withMinOS: 0 }
+            byPlatform[platform].total++
+            if (p.osMinimumVersion || p.minAndroidSecurityPatchLevel) byPlatform[platform].withMinOS++
+          })
+
+          // Scoring
+          const scorePolicy = withMinOS.length > 0 ? 35 : 0
+          const scoreAssigned = assignedCount > 0 ? 25 : 0
+          const scoreCoverage = coveragePct === null ? 20 : coveragePct >= 95 ? 40 : coveragePct >= 80 ? 25 : 10
+          const totalScore = scorePolicy + scoreAssigned + scoreCoverage
+
+          result.currentValue = withMinOS.length === 0
+            ? `No minimum OS version requirements in ${policies.length} compliance policy(ies)`
+            : `${withMinOS.length}/${policies.length} compliance policy(ies) enforce minimum OS version — ${assignedCount} assigned — ${coveragePct !== null ? coveragePct + '% device coverage' : 'coverage unknown'} — score ${totalScore}%`
+          result.evidence = {
+            totalPolicies: policies.length,
+            withOSVersionReq: withMinOS.length,
+            assignedPolicies: assignedCount,
+            assignedPolicyDetails,
+            deviceCount: devices.length,
+            compliantDevices, coveragePct,
+            byPlatform,
+            scoreBreakdown: { policyWithOSReq: `${scorePolicy}%`, assigned: `${scoreAssigned}%`, coverage: `${scoreCoverage}%`, total: `${totalScore}%` }
+          }
+
+          if (withMinOS.length === 0) return 'fail'
+          if (totalScore >= 80) return 'pass'
+          if (totalScore >= 50) return 'warn'
+          return 'fail'
+        } catch (e) { return markManual(e, 'Could not verify minimum OS version enforcement') }
       }
 
       // DEV-043: OS Update Compliance
@@ -2339,16 +2480,78 @@ export class ZeroTrustValidator {
       }
 
       // DEV-062: Configuration Profile Deployment
+      // Scoring: profiles exist (35%) + assigned (25%) + deployment success ≥90% (40%)
       if (validation.id === 'DEV-062') {
         try {
-          const response = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
-          const policies = response.value || []
-          result.currentValue = policies.length > 0 ? `${policies.length} configuration profile(s) deployed` : 'No configuration profiles deployed'
-          result.evidence = { count: policies.length, hasProfiles: policies.length > 0 }
-          return policies.length > 0 ? 'pass' : 'warn'
-        } catch (e) {
-          return markManual(e, 'Could not retrieve configuration profile deployment status')
-        }
+          // Fetch Settings Catalog policies (primary); try legacy separately
+          const catalogResp = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const catalogPolicies = catalogResp.value || []
+
+          let legacyPolicies = []
+          try {
+            const legacyResp = await this.graphClient.api('/deviceManagement/deviceConfigurations').get()
+            legacyPolicies = legacyResp.value || []
+          } catch (_) { /* legacy profiles may require different permissions */ }
+          const totalProfiles = catalogPolicies.length + legacyPolicies.length
+
+          if (totalProfiles === 0) {
+            result.currentValue = 'No configuration profiles found in Intune'
+            result.evidence = { totalProfiles: 0 }
+            return 'fail'
+          }
+
+          // Check deployment success by sampling up to 10 policies
+          let successCount = 0, failCount = 0, pendingCount = 0, totalStatuses = 0
+          const sampleSize = Math.min(catalogPolicies.length, 8)
+
+          for (const policy of catalogPolicies.slice(0, sampleSize)) {
+            try {
+              const statusResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/deviceStatuses?$top=50`).get()
+              const statuses = statusResp.value || []
+              totalStatuses += statuses.length
+              successCount += statuses.filter(s => s.status === 'succeeded' || s.status === 'success').length
+              failCount += statuses.filter(s => s.status === 'error' || s.status === 'failed' || s.status === 'conflict').length
+              pendingCount += statuses.filter(s => s.status === 'pending').length
+            } catch (_) { /* status not available for this policy */ }
+          }
+
+          // Also sample legacy profiles
+          for (const policy of legacyPolicies.slice(0, 5)) {
+            try {
+              const statusResp = await this.graphClient.api(`/deviceManagement/deviceConfigurations/${policy.id}/deviceStatuses?$top=50`).get()
+              const statuses = statusResp.value || []
+              totalStatuses += statuses.length
+              successCount += statuses.filter(s => s.status === 'succeeded' || s.status === 'success').length
+              failCount += statuses.filter(s => s.status === 'error' || s.status === 'failed').length
+            } catch (_) { /* optional */ }
+          }
+
+          const successPct = totalStatuses > 0 ? Math.round((successCount / totalStatuses) * 100) : null
+
+          // Scoring
+          const scoreExists = totalProfiles > 0 ? 35 : 0
+          const scoreAssigned = totalStatuses > 0 ? 25 : 0
+          const scoreSuccess = successPct === null ? 20 : successPct >= 90 ? 40 : successPct >= 70 ? 25 : 10
+          const totalScore = scoreExists + scoreAssigned + scoreSuccess
+
+          result.currentValue = totalStatuses === 0
+            ? `${totalProfiles} profile(s) found — no deployment status data available (profiles may not be assigned)`
+            : `${totalProfiles} profile(s) — ${successPct}% deployment success rate (${successCount} succeeded, ${failCount} failed, ${pendingCount} pending) — score ${totalScore}%`
+          result.evidence = {
+            catalogProfiles: catalogPolicies.length,
+            legacyProfiles: legacyPolicies.length,
+            totalProfiles,
+            sampledProfiles: sampleSize + Math.min(legacyPolicies.length, 5),
+            totalStatusRecords: totalStatuses,
+            successCount, failCount, pendingCount, successPct,
+            deploymentStatus: successPct === null ? 'No data' : successPct >= 90 ? 'Healthy' : successPct >= 70 ? 'Below threshold' : 'Critical',
+            scoreBreakdown: { profilesExist: `${scoreExists}%`, assigned: `${scoreAssigned}%`, successRate: `${scoreSuccess}%`, total: `${totalScore}%` }
+          }
+
+          if (totalScore >= 80) return 'pass'
+          if (totalScore >= 50) return 'warn'
+          return 'fail'
+        } catch (e) { return markManual(e, 'Could not retrieve configuration profile deployment status') }
       }
 
       // DEV-063: Device Compliance Rate
@@ -4137,7 +4340,8 @@ export class ZeroTrustValidator {
         case 'DEV-050':
         case 'DEV-051':
         case 'DEV-052':
-        case 'DEV-053': {
+        case 'DEV-053':
+        case 'DEV-058': {
           const VID = validation.id
 
           const CTRL_CFG = {
@@ -4203,6 +4407,15 @@ export class ZeroTrustValidator {
               legacyProps: ['screenCaptureBlocked'],
               platforms: ['android', 'ios'],
               restrictedValues: ['0', 'false', 'blocked', 'disabled', 'notallowed']
+            },
+            'DEV-058': {
+              label: 'App Store / Play Store restrictions',
+              nameKw: ['app store', 'play store', 'google play', 'enterprise app', 'managed google', 'device restriction', 'application'],
+              settingKw: ['unknownsource', 'allowappstore', 'googleplay', 'installunknown', 'enterpriseapp', 'marketplaceapp', 'sideload', 'storeapp'],
+              legacyTypes: ['android', 'ios'],
+              legacyProps: ['appsBlockNonMarketplaceApps', 'appsRequireStoreReview'],
+              platforms: ['android', 'ios'],
+              restrictedValues: ['0', 'false', 'blocked', 'disabled', 'notallowed', 'managedapps']
             }
           }
 
@@ -4277,6 +4490,66 @@ export class ZeroTrustValidator {
 
           if (totalFound === 0) return 'fail'
           if (totalScore >= 90) return 'pass'
+          if (totalScore >= 50) return 'warn'
+          return 'fail'
+        }
+
+        // DEV-062: Configuration Profile Deployment
+        // Uses pre-collected configurationPolicies + fetches deviceStatuses per policy
+        case 'DEV-062': {
+          const catalogPolicies = deviceData.configuration?.all || []
+          const assignmentData = deviceData.configurationAssignments?.policies || []
+
+          if (catalogPolicies.length === 0) {
+            result.currentValue = 'No configuration profiles found in Intune'
+            result.evidence = { totalProfiles: 0 }
+            return 'fail'
+          }
+
+          // Check assignments from collected data
+          const assignedPolicies = catalogPolicies.filter(p =>
+            assignmentData.find(a => a.id === p.id)?.assigned
+          )
+
+          // Fetch deployment status for up to 10 assigned policies
+          let successCount = 0, failCount = 0, pendingCount = 0, totalStatuses = 0
+          const samplePolicies = assignedPolicies.slice(0, 10)
+          for (const policy of samplePolicies) {
+            try {
+              const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/deviceStatuses`).get()
+              const statuses = sResp.value || []
+              totalStatuses += statuses.length
+              successCount += statuses.filter(s => s.status === 'succeeded' || s.status === 'success').length
+              failCount += statuses.filter(s => s.status === 'error' || s.status === 'failed' || s.status === 'conflict').length
+              pendingCount += statuses.filter(s => s.status === 'pending' || s.status === 'inProgress').length
+            } catch (_) { /* status not available for this policy */ }
+          }
+
+          const successPct = totalStatuses > 0 ? Math.round((successCount / totalStatuses) * 100) : null
+          const assignedPct = catalogPolicies.length > 0 ? Math.round((assignedPolicies.length / catalogPolicies.length) * 100) : 0
+
+          // Scoring: profiles exist (35%) + assigned (25%) + deployment success ≥90% (40%)
+          const scoreExists = catalogPolicies.length > 0 ? 35 : 0
+          const scoreAssigned = assignedPct >= 80 ? 25 : assignedPct >= 50 ? 15 : 0
+          const scoreSuccess = successPct === null ? (assignedPolicies.length > 0 ? 20 : 0) : successPct >= 90 ? 40 : successPct >= 70 ? 25 : 10
+          const totalScore = scoreExists + scoreAssigned + scoreSuccess
+
+          result.currentValue = totalStatuses === 0
+            ? `${catalogPolicies.length} profile(s) found — ${assignedPolicies.length} assigned — no deployment status records available`
+            : `${catalogPolicies.length} profile(s) — ${assignedPolicies.length} assigned (${assignedPct}%) — ${successPct}% deployment success (${successCount}↑ ${failCount}✗ ${pendingCount}⏳) — score ${totalScore}%`
+          result.evidence = {
+            totalProfiles: catalogPolicies.length,
+            assignedProfiles: assignedPolicies.length,
+            assignedPct,
+            sampledForStatus: samplePolicies.length,
+            totalStatusRecords: totalStatuses,
+            successCount, failCount, pendingCount, successPct,
+            deploymentStatus: successPct === null ? 'No status data' : successPct >= 90 ? 'Healthy' : successPct >= 70 ? 'Below threshold' : 'Critical',
+            scoreBreakdown: { profilesExist: `${scoreExists}%`, assigned: `${scoreAssigned}%`, successRate: `${scoreSuccess}%`, total: `${totalScore}%` }
+          }
+
+          if (catalogPolicies.length === 0) return 'fail'
+          if (totalScore >= 80) return 'pass'
           if (totalScore >= 50) return 'warn'
           return 'fail'
         }
