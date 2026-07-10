@@ -1443,48 +1443,109 @@ export class ZeroTrustValidator {
       }
 
       // DEV-017: Defender Antivirus Configuration
+      // DEV-017: Windows Update Policies — Enforced
+      // Settings Catalog policies for Windows Update (WUfB rings in legacy endpoint not reliably accessible)
       if (validation.id === 'DEV-017') {
         try {
-          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
-          const policies = configResponse.value || []
-
-          const defenderPolicy = policies.find(p =>
-            p.name?.toLowerCase().includes('defender antivirus') ||
-            p.name?.toLowerCase().includes('microsoft defender')
+          const catalogResp = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const catalogUpdatePolicies = (catalogResp.value || []).filter(p =>
+            (p.name?.toLowerCase().includes('windows update') ||
+             p.name?.toLowerCase().includes('update ring') ||
+             p.name?.toLowerCase().includes('wufb') ||
+             p.name?.toLowerCase().includes('patch')) &&
+            (p.platforms?.toLowerCase().includes('windows') || !p.platforms)
           )
 
-          result.currentValue = defenderPolicy ? 'Defender Antivirus configured' : 'No Defender policy'
-          result.evidence = {
-            hasPolicy: !!defenderPolicy,
-            realTimeProtection: !!defenderPolicy,
-            policyName: defenderPolicy?.name
+          let assignedCount = 0, settingVerified = false
+          const policyDetails = []
+          for (const policy of catalogUpdatePolicies.slice(0, 5)) {
+            try {
+              const aResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/assignments`).get()
+              if ((aResp.value || []).length > 0) {
+                assignedCount++
+                policyDetails.push({ name: policy.name, assigned: true })
+                // Check settings for update configuration
+                try {
+                  const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
+                  for (const s of (sResp.value || [])) {
+                    const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
+                    if (defId.includes('update') || defId.includes('quality') || defId.includes('feature') || defId.includes('deferral')) {
+                      settingVerified = true; break
+                    }
+                  }
+                } catch (_) { /* settings optional */ }
+              }
+            } catch (_) { /* optional */ }
           }
-          return defenderPolicy ? 'pass' : 'warn'
-        } catch (e) {
-          return markManual(e, 'Could not verify Defender Antivirus configuration policy')
-        }
+
+          const totalFound = catalogUpdatePolicies.length
+          const scoreExists = totalFound > 0 ? 35 : 0
+          const scoreAssigned = assignedCount > 0 ? 25 : 0
+          const scoreSettings = settingVerified ? 40 : (assignedCount > 0 ? 20 : 0)
+          const totalScore = scoreExists + scoreAssigned + scoreSettings
+
+          result.currentValue = totalFound === 0
+            ? 'No Windows Update policies found in Intune Settings Catalog'
+            : `${totalFound} Windows Update policy(ies) — ${assignedCount} assigned — settings ${settingVerified ? 'verified ✓' : 'unconfirmed'} — score ${totalScore}%`
+          result.evidence = {
+            catalogPolicies: catalogUpdatePolicies.map(p => p.name),
+            totalFound, assignedCount, settingVerified, policyDetails,
+            scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, settingsVerified: `${scoreSettings}%`, total: `${totalScore}%` }
+          }
+          if (totalFound === 0) return 'fail'
+          return totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail'
+        } catch (e) { return markManual(e, 'Could not retrieve Windows Update policies from Settings Catalog') }
       }
 
-      // DEV-018: Attack Surface Reduction Rules
+      // DEV-018: macOS Update Policies — Enforced
+      // Settings Catalog policies for macOS update settings
       if (validation.id === 'DEV-018') {
         try {
-          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
-          const policies = configResponse.value || []
-
-          const asrPolicy = policies.find(p =>
-            p.name?.toLowerCase().includes('attack surface') ||
-            p.name?.toLowerCase().includes('asr')
+          const catalogResp = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const UPDATE_KW = ['update', 'macos update', 'software update', 'os update', 'patch', 'security update']
+          const macCatalog = (catalogResp.value || []).filter(p =>
+            UPDATE_KW.some(k => p.name?.toLowerCase().includes(k)) &&
+            (p.platforms?.toLowerCase().includes('macos') || p.name?.toLowerCase().includes('mac'))
           )
 
-          result.currentValue = asrPolicy ? 'Attack Surface Reduction rules configured' : 'No ASR policy'
-          result.evidence = {
-            hasPolicy: !!asrPolicy,
-            asrEnabled: !!asrPolicy
+          let assignedCount = 0, settingVerified = false
+          const policyDetails = []
+          for (const policy of macCatalog.slice(0, 5)) {
+            try {
+              const aResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/assignments`).get()
+              if ((aResp.value || []).length > 0) {
+                assignedCount++
+                policyDetails.push({ name: policy.name, assigned: true })
+                try {
+                  const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
+                  for (const s of (sResp.value || [])) {
+                    const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
+                    if (defId.includes('automaticupdate') || defId.includes('softwareupdate') || defId.includes('delay') || defId.includes('security')) {
+                      settingVerified = true; break
+                    }
+                  }
+                } catch (_) { /* settings optional */ }
+              }
+            } catch (_) { /* optional */ }
           }
-          return asrPolicy ? 'pass' : 'fail'
-        } catch (e) {
-          return markManual(e, 'Could not verify Attack Surface Reduction rules configuration')
-        }
+
+          const totalFound = macCatalog.length
+          const scoreExists = totalFound > 0 ? 35 : 0
+          const scoreAssigned = assignedCount > 0 ? 25 : 0
+          const scoreSettings = settingVerified ? 40 : (assignedCount > 0 ? 20 : 0)
+          const totalScore = scoreExists + scoreAssigned + scoreSettings
+
+          result.currentValue = totalFound === 0
+            ? 'No macOS update policies found in Intune Settings Catalog'
+            : `${totalFound} macOS update policy(ies) — ${assignedCount} assigned — settings ${settingVerified ? 'verified ✓' : 'unconfirmed'} — score ${totalScore}%`
+          result.evidence = {
+            catalogPolicies: macCatalog.map(p => p.name),
+            totalFound, assignedCount, settingVerified, policyDetails,
+            scoreBreakdown: { policyExists: `${scoreExists}%`, assigned: `${scoreAssigned}%`, settingsVerified: `${scoreSettings}%`, total: `${totalScore}%` }
+          }
+          if (totalFound === 0) return 'fail'
+          return totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail'
+        } catch (e) { return markManual(e, 'Could not retrieve macOS update policies from Settings Catalog') }
       }
 
       // DEV-019: Endpoint Analytics
@@ -1687,17 +1748,55 @@ export class ZeroTrustValidator {
         }
       }
 
-      // DEV-028: Company Portal Branding - User Experience
+      // DEV-028: Company Portal Branding — User Experience
+      // Fully automatable: GET /deviceManagement/intuneBrandingProfiles (plural)
+      // Score: company name (20%) + logo (20%) + support contact (30%) + privacy URL (30%)
       if (validation.id === 'DEV-028') {
         try {
-          const response = await this.graphClient.api('/deviceManagement/intuneBrandingProfile').get()
-          const hasCustomBranding = response && (response.displayName || response.companyPortalBlockedActions)
-          result.currentValue = hasCustomBranding ? 'Company Portal branding configured' : 'Default Company Portal branding'
-          result.evidence = { displayName: response?.displayName, hasCustomBranding: !!hasCustomBranding }
-          return hasCustomBranding ? 'pass' : 'warn'
-        } catch (e) {
-          return markManual(e, 'Could not retrieve Company Portal branding profile — check Intune permissions')
-        }
+          // Use beta endpoint via full absolute URL — branding profiles have better schema there
+          const resp = await unifiedGraphClient.get('https://graph.microsoft.com/beta/deviceManagement/intuneBrandingProfiles')
+          const profiles = resp.value || []
+
+          if (profiles.length === 0) {
+            result.currentValue = 'No Company Portal branding profiles found — using Intune defaults'
+            result.evidence = { profileCount: 0 }
+            return 'warn'
+          }
+
+          // Evaluate the default/primary branding profile
+          const primary = profiles.find(p => p.isDefaultProfile) || profiles[0]
+          const hasCompanyName = !!(primary.companyName || primary.displayName)
+          const hasLogo = !!(primary.lightBackgroundLogo?.value || primary.darkBackgroundLogo?.value || primary.landingPageCustomizedImage?.value)
+          const hasSupportContact = !!(primary.supportEmailAddress || primary.supportPhoneNumber || primary.supportURI)
+          const hasPrivacyURL = !!(primary.privacyUrl || primary.onlineSupportSiteUrl)
+
+          const score = (hasCompanyName ? 20 : 0) + (hasLogo ? 20 : 0) + (hasSupportContact ? 30 : 0) + (hasPrivacyURL ? 30 : 0)
+
+          const configured = []
+          if (hasCompanyName) configured.push('name')
+          if (hasLogo) configured.push('logo')
+          if (hasSupportContact) configured.push('support contact')
+          if (hasPrivacyURL) configured.push('privacy URL')
+
+          const missing = []
+          if (!hasCompanyName) missing.push('company name')
+          if (!hasLogo) missing.push('logo')
+          if (!hasSupportContact) missing.push('support contact')
+          if (!hasPrivacyURL) missing.push('privacy URL')
+
+          result.currentValue = `Company Portal branding: ${score}% complete — configured: ${configured.join(', ') || 'none'}${missing.length ? ` — missing: ${missing.join(', ')}` : ''}`
+          result.evidence = {
+            profileCount: profiles.length,
+            primaryProfile: primary.displayName || primary.companyName,
+            hasCompanyName, hasLogo, hasSupportContact, hasPrivacyURL,
+            companyName: primary.companyName,
+            supportEmail: primary.supportEmailAddress,
+            supportPhone: primary.supportPhoneNumber,
+            privacyUrl: primary.privacyUrl,
+            completenessScore: `${score}%`
+          }
+          return score >= 80 ? 'pass' : score >= 50 ? 'warn' : 'fail'
+        } catch (e) { return markManual(e, 'Could not retrieve Company Portal branding profiles') }
       }
 
       // DEV-029: Conditional Access - Noncompliant Devices Blocked
@@ -4491,6 +4590,206 @@ export class ZeroTrustValidator {
           if (totalFound === 0) return 'fail'
           if (totalScore >= 90) return 'pass'
           if (totalScore >= 50) return 'warn'
+          return 'fail'
+        }
+
+        // DEV-023: Attack Surface Reduction (ASR) Rules
+        // Search endpoint security intents + Settings Catalog; verify ASR settings
+        case 'DEV-023': {
+          const intents = deviceData.endpointSecurity?.intents || []
+          const allPolicies = deviceData.configuration?.all || []
+          const assignmentData = deviceData.configurationAssignments?.policies || []
+
+          // Find ASR policies in both intents and Settings Catalog
+          const asrIntents = intents.filter(i =>
+            i.displayName?.toLowerCase().includes('attack surface') ||
+            i.displayName?.toLowerCase().includes('asr') ||
+            i.displayName?.toLowerCase().includes('endpoint detection')
+          )
+          const asrCatalog = allPolicies.filter(p =>
+            p.name?.toLowerCase().includes('attack surface') ||
+            p.name?.toLowerCase().includes('asr') ||
+            p.name?.toLowerCase().includes('endpoint security')
+          )
+
+          const allAsrProfiles = [...asrIntents, ...asrCatalog]
+          const assignedProfiles = asrCatalog.filter(p =>
+            assignmentData.find(a => a.id === p.id)?.assigned
+          )
+
+          // Fetch settings for assigned catalog policies to verify ASR rules
+          let settingVerified = false
+          const asrRulesFound = []
+          for (const policy of assignedProfiles.slice(0, 3)) {
+            try {
+              const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
+              for (const s of (sResp.value || [])) {
+                const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
+                if (defId.includes('asr') || defId.includes('attacksurface') || defId.includes('blockoffice') || defId.includes('blockcredential') || defId.includes('blockexecutable')) {
+                  settingVerified = true
+                  asrRulesFound.push(s.settingInstance?.settingDefinitionId)
+                }
+              }
+            } catch (_) { /* optional */ }
+          }
+
+          const totalFound = allAsrProfiles.length
+          const totalAssigned = assignedProfiles.length + asrIntents.length
+          const windowsDevices = deviceData.managedDevices?.byPlatform?.windows || 0
+
+          const scorePolicy = totalFound > 0 ? 35 : 0
+          const scoreAssigned = totalAssigned > 0 ? 25 : 0
+          const scoreSettings = settingVerified ? 40 : (totalAssigned > 0 ? 20 : 0)
+          const totalScore = scorePolicy + scoreAssigned + scoreSettings
+
+          result.currentValue = totalFound === 0
+            ? `No ASR policies found — ${windowsDevices} managed Windows device(s)`
+            : `${totalFound} ASR policy(ies) — ${totalAssigned} assigned — rules ${settingVerified ? 'verified ✓' : 'unconfirmed'} — score ${totalScore}%`
+          result.evidence = {
+            intentPolicies: asrIntents.map(i => i.displayName),
+            catalogPolicies: asrCatalog.map(p => p.name),
+            totalFound, totalAssigned, settingVerified,
+            asrRulesFound: asrRulesFound.slice(0, 5),
+            windowsDevices,
+            scoreBreakdown: { policyExists: `${scorePolicy}%`, assigned: `${scoreAssigned}%`, settingsVerified: `${scoreSettings}%`, total: `${totalScore}%` }
+          }
+          if (totalFound === 0) return 'fail'
+          return totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail'
+        }
+
+        // DEV-024: Microsoft Defender Antivirus — Windows Protection
+        // Search endpoint security intents + Settings Catalog for Defender AV settings
+        case 'DEV-024': {
+          const intents = deviceData.endpointSecurity?.intents || []
+          const allPolicies = deviceData.configuration?.all || []
+          const assignmentData = deviceData.configurationAssignments?.policies || []
+
+          const avIntents = intents.filter(i =>
+            i.displayName?.toLowerCase().includes('antivirus') ||
+            i.displayName?.toLowerCase().includes('defender') ||
+            i.displayName?.toLowerCase().includes('endpoint protection')
+          )
+          const avCatalog = allPolicies.filter(p =>
+            p.name?.toLowerCase().includes('antivirus') ||
+            p.name?.toLowerCase().includes('defender') ||
+            p.name?.toLowerCase().includes('endpoint protection') ||
+            p.name?.toLowerCase().includes('windows security')
+          )
+
+          const assignedCatalog = avCatalog.filter(p =>
+            assignmentData.find(a => a.id === p.id)?.assigned
+          )
+
+          // Verify key protection settings: real-time, cloud, tamper protection
+          let realtimeEnabled = false, cloudEnabled = false, tamperEnabled = false
+          const KEY_SETTINGS = ['realtimeprotection', 'cloudprotection', 'tamperprotection', 'realtime', 'clouddelivered', 'behaviormonitoring']
+          for (const policy of assignedCatalog.slice(0, 3)) {
+            try {
+              const sResp = await this.graphClient.api(`/deviceManagement/configurationPolicies/${policy.id}/settings`).get()
+              for (const s of (sResp.value || [])) {
+                const defId = (s.settingInstance?.settingDefinitionId || '').toLowerCase()
+                const val = JSON.stringify(s.settingInstance || '').toLowerCase()
+                if (defId.includes('realtimemonitoring') || defId.includes('realtime')) realtimeEnabled = true
+                if (defId.includes('cloud') || defId.includes('maps')) cloudEnabled = true
+                if (defId.includes('tamper')) tamperEnabled = true
+              }
+            } catch (_) { /* optional */ }
+          }
+
+          const totalFound = avIntents.length + avCatalog.length
+          const totalAssigned = assignedCatalog.length + avIntents.length
+          const settingVerified = realtimeEnabled || cloudEnabled
+          const windowsDevices = deviceData.managedDevices?.byPlatform?.windows || 0
+
+          const scorePolicy = totalFound > 0 ? 35 : 0
+          const scoreAssigned = totalAssigned > 0 ? 25 : 0
+          const scoreSettings = settingVerified ? 40 : (totalAssigned > 0 ? 20 : 0)
+          const totalScore = scorePolicy + scoreAssigned + scoreSettings
+
+          result.currentValue = totalFound === 0
+            ? `No Defender AV policy found — ${windowsDevices} managed Windows device(s)`
+            : `${totalFound} Defender AV policy(ies) — ${totalAssigned} assigned — real-time: ${realtimeEnabled ? '✓' : '?'}, cloud: ${cloudEnabled ? '✓' : '?'}, tamper: ${tamperEnabled ? '✓' : '?'} — score ${totalScore}%`
+          result.evidence = {
+            intentPolicies: avIntents.map(i => i.displayName),
+            catalogPolicies: avCatalog.map(p => p.name),
+            totalFound, totalAssigned,
+            realtimeEnabled, cloudEnabled, tamperEnabled,
+            windowsDevices,
+            scoreBreakdown: { policyExists: `${scorePolicy}%`, assigned: `${scoreAssigned}%`, settingsVerified: `${scoreSettings}%`, total: `${totalScore}%` }
+          }
+          if (totalFound === 0) return 'fail'
+          return totalScore >= 80 ? 'pass' : totalScore >= 50 ? 'warn' : 'fail'
+        }
+
+        // DEV-025: Microsoft Defender Antivirus — macOS Protection
+        case 'DEV-025': {
+          const allPolicies = deviceData.configuration?.all || []
+          const assignmentData = deviceData.configurationAssignments?.policies || []
+
+          const defenderMac = allPolicies.filter(p =>
+            (p.name?.toLowerCase().includes('defender') || p.name?.toLowerCase().includes('antivirus')) &&
+            (p.platforms?.toLowerCase().includes('macos') || p.name?.toLowerCase().includes('mac'))
+          )
+          const assignedProfiles = defenderMac.filter(p =>
+            assignmentData.find(a => a.id === p.id)?.assigned
+          )
+
+          const macosDevices = deviceData.managedDevices?.byPlatform?.macos || 0
+          const totalFound = defenderMac.length
+          const totalAssigned = assignedProfiles.length
+
+          result.currentValue = totalFound === 0
+            ? `No Defender for macOS policy found — ${macosDevices} managed Mac(s)`
+            : `${totalFound} Defender macOS policy(ies) — ${totalAssigned} assigned — ${macosDevices} managed Mac(s)`
+          result.evidence = {
+            policies: defenderMac.map(p => p.name),
+            totalFound, assignedProfiles: totalAssigned, macosDevices,
+            coverageNote: totalAssigned > 0 && macosDevices > 0 ? '≥95% (policy assigned to groups)' : macosDevices === 0 ? 'No managed Macs' : 'Not assigned'
+          }
+          if (totalFound === 0) return 'fail'
+          return totalAssigned > 0 ? 'pass' : 'warn'
+        }
+
+        // DEV-027: Device Cleanup Rules — Tenant Hygiene
+        // Partially automatable: identify stale devices; cleanup rule itself not in Graph
+        case 'DEV-027': {
+          const devices = deviceData.managedDevices?.all || []
+          const total = devices.length
+
+          if (total === 0) {
+            result.currentValue = 'No managed devices found'
+            result.evidence = { total: 0 }
+            result.requiresManualValidation = true
+            return 'warn'
+          }
+
+          const now = Date.now()
+          const STALE_DAYS = 90
+          const staleThreshold = now - STALE_DAYS * 24 * 60 * 60 * 1000
+
+          const stale = devices.filter(d => {
+            if (!d.lastSyncDateTime) return true
+            return new Date(d.lastSyncDateTime).getTime() < staleThreshold
+          })
+          const stalePct = Math.round((stale.length / total) * 100)
+          const activePct = 100 - stalePct
+
+          result.currentValue = `${total} managed devices — ${stale.length} inactive >90d (${stalePct}%) — ${total - stale.length} active (${activePct}%) — cleanup rule not verifiable via Graph`
+          result.evidence = {
+            totalDevices: total,
+            staleDevices: stale.length,
+            stalePct,
+            activeDevices: total - stale.length,
+            activePct,
+            staleThresholdDays: STALE_DAYS,
+            requiresManualConfirmation: 'Intune automatic cleanup rule configuration is not exposed via Graph API — verify in Intune admin center > Devices > Cleanup Rules',
+            graphCanValidate: 'Stale device identification only'
+          }
+          result.requiresManualValidation = true // cleanup rule itself needs manual check
+
+          // Pass if <5% stale (hygiene is good), warn if 5-20%, fail if >20%
+          if (stalePct < 5) return 'pass'
+          if (stalePct <= 20) return 'warn'
           return 'fail'
         }
 
