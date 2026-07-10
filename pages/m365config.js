@@ -76,6 +76,89 @@ function scoreClass(score) {
   return 'danger'
 }
 
+/**
+ * Fetch real zero-trust validation data from backend
+ */
+async function fetchRealValidationData() {
+  try {
+    const response = await api.get('/zero-trust/validations')
+    if (response?.data?.validations) {
+      return response.data.validations
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not fetch real validations:', error.message)
+  }
+  return []
+}
+
+/**
+ * Map zero-trust controls to CIS Benchmark topics
+ */
+function mapValidationsToCIS(validations) {
+  const cisMappings = {
+    't1': { // Microsoft 365 Admin Center
+      keywords: ['ID-001', 'ID-002', 'ID-003', 'ID-006', 'ID-011', 'ID-031', 'ID-032'],
+      subsections: ['Users', 'Teams & Groups', 'Settings']
+    },
+    't2': { // Email Security
+      keywords: ['EMAIL-001', 'INFRA-009', 'INFRA-061', 'INFRA-062', 'INFRA-064', 'INFRA-066'],
+      subsections: ['Email Protection', 'Threat Protection']
+    },
+    't3': { // Microsoft Purview
+      keywords: ['DATA-001', 'DATA-002', 'DATA-009', 'DATA-015', 'DATA-023'],
+      subsections: ['Audit', 'Data Loss Prevention', 'Information Protection']
+    },
+    't4': { // Microsoft Intune
+      keywords: ['DEV-001', 'DEV-002', 'DEV-024', 'DEV-040'],
+      subsections: ['Device Compliance', 'Endpoint Protection']
+    },
+    't5': { // Microsoft Entra Admin Center
+      keywords: ['ID-005', 'ID-025', 'ID-026', 'ID-040', 'ID-041', 'ID-042'],
+      subsections: ['Users', 'Groups', 'Devices', 'Enterprise Apps']
+    },
+    't6': { // SharePoint & OneDrive
+      keywords: ['INFRA-021', 'INFRA-022', 'INFRA-023', 'DATA-004', 'DATA-005'],
+      subsections: ['Sharing Controls', 'Data Protection']
+    },
+    't7': { // Microsoft Teams
+      keywords: ['INFRA-028', 'INFRA-029', 'INFRA-030', 'INFRA-039', 'INFRA-040'],
+      subsections: ['Guest Access', 'Channel Management', 'Security']
+    },
+    't8': { // Threat & Attack Simulation
+      keywords: ['THREAT-001', 'THREAT-005', 'THREAT-006', 'THREAT-011', 'THREAT-016'],
+      subsections: ['Detection & Response', 'Endpoint Protection']
+    },
+    't9': { // AI & Copilot
+      keywords: ['AI-001', 'AI-002', 'AI-007', 'AI-018', 'AI-022'],
+      subsections: ['Copilot Governance', 'Data Protection']
+    }
+  }
+
+  const mapping = {}
+  for (const [topicId, config] of Object.entries(cisMappings)) {
+    const matchedControls = validations.filter(v =>
+      config.keywords.some(kw => v.id?.startsWith(kw.split('-')[0]))
+    )
+
+    const stats = {
+      total: matchedControls.length,
+      pass: matchedControls.filter(v => v.status === 'pass').length,
+      fail: matchedControls.filter(v => v.status === 'fail').length,
+      warn: matchedControls.filter(v => v.status === 'warn').length,
+      manual: matchedControls.filter(v => v.automationLevel === 'Manual').length,
+      score: matchedControls.length > 0 ? Math.round((matchedControls.filter(v => v.status === 'pass').length / matchedControls.length) * 100) : 0
+    }
+
+    mapping[topicId] = {
+      controls: matchedControls,
+      stats: stats,
+      subsections: config.subsections
+    }
+  }
+
+  return mapping
+}
+
 export async function initM365Config() {
   const el = document.getElementById('page-m365config')
   if (!el) return
@@ -96,7 +179,7 @@ export async function initM365Config() {
     if (isDemoAccount()) {
       renderDemoMain(el)
     } else {
-      await renderProductionMain(el)
+      await renderProductionMainWithRealData(el)
     }
   }
 }
@@ -646,6 +729,181 @@ async function renderProductionMain(el) {
     })
   } catch (error) {
     console.error('❌ Error loading CIS controls:', error)
+    renderErrorState(el, error.message)
+  }
+}
+
+async function renderProductionMainWithRealData(el) {
+  try {
+    console.log('📊 Loading real M365 validation data from backend...')
+
+    el.innerHTML = `
+      <div class="page-header">
+        <div>
+          <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
+          <div class="page-subtitle">Real-time Zero Trust Validation · Security Posture Assessment</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="cfg-validation-btn"><i class="ti ti-checklist"></i> Validation Report</button>
+          <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Refresh Now</button>
+          <button class="btn btn-primary" id="cfg-agent-btn"><i class="ti ti-robot"></i> Config Agent</button>
+        </div>
+      </div>
+      <div style="padding:40px;text-align:center"><span class="spinner dark"></span> Loading real validation data...</div>
+    `
+
+    // Fetch real validation data
+    const validations = await fetchRealValidationData()
+
+    if (!validations || validations.length === 0) {
+      renderBlankProductionState(el)
+      return
+    }
+
+    // Map to CIS topics
+    const cisMapped = mapValidationsToCIS(validations)
+
+    // Calculate overall stats
+    const allStats = {
+      total: validations.length,
+      pass: validations.filter(v => v.status === 'pass').length,
+      fail: validations.filter(v => v.status === 'fail').length,
+      warn: validations.filter(v => v.status === 'warn').length,
+      manual: validations.filter(v => v.automationLevel === 'Manual').length,
+      automated: validations.filter(v => v.automationLevel === 'Automated').length
+    }
+
+    allStats.score = allStats.total > 0 ? Math.round((allStats.pass / allStats.total) * 100) : 0
+    const cls = scoreClass(allStats.score)
+
+    el.innerHTML = `
+      <div class="page-header">
+        <div>
+          <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
+          <div class="page-subtitle">Real-time Zero Trust Validation · ${allStats.total} security controls</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="cfg-validation-btn"><i class="ti ti-checklist"></i> Validation Report</button>
+          <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Refresh Now</button>
+          <button class="btn btn-primary" id="cfg-agent-btn"><i class="ti ti-robot"></i> Config Agent</button>
+        </div>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-tile">
+          <div class="kpi-value ${cls}">${allStats.score}%</div>
+          <div class="kpi-label">Compliance Score</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-value success">${allStats.pass}</div>
+          <div class="kpi-label">Passed Controls</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-value danger">${allStats.fail}</div>
+          <div class="kpi-label">Failed Controls</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-value warning">${allStats.warn}</div>
+          <div class="kpi-label">Warnings</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-value success">${allStats.automated}</div>
+          <div class="kpi-label">Automated</div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header">
+          <span class="card-title">Overall Security Posture</span>
+          <span class="badge ${cls}">${allStats.score}% compliant</span>
+        </div>
+        <div class="seg-bar" style="height:12px;border-radius:6px">
+          <div class="seg pass" style="width:${allStats.total > 0 ? (allStats.pass/allStats.total*100).toFixed(1) : 0}%"></div>
+          <div class="seg warn" style="width:${allStats.total > 0 ? (allStats.warn/allStats.total*100).toFixed(1) : 0}%"></div>
+          <div class="seg fail" style="width:${allStats.total > 0 ? (allStats.fail/allStats.total*100).toFixed(1) : 0}%"></div>
+        </div>
+        <div style="display:flex;gap:20px;margin-top:8px">
+          <span style="font-size:10px;color:var(--clr-success-text)">● ${allStats.pass} Passed</span>
+          <span style="font-size:10px;color:var(--clr-warning-text)">● ${allStats.warn} Warnings</span>
+          <span style="font-size:10px;color:var(--clr-danger-text)">● ${allStats.fail} Failed</span>
+          <span style="font-size:10px;color:var(--clr-purple-text)">● ${allStats.automated} Automated</span>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
+        <span class="status-dot active pulse"></span>
+        <span><strong style="color:var(--color-text-secondary)">Real Data</strong> · Showing actual tenant security validation results from Graph API</span>
+      </div>
+
+      <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary);text-transform:uppercase;letter-spacing:0.5px">Security Control Categories</div>
+      <div class="cfg-topic-grid" id="cfg-topic-grid"></div>
+    `
+
+    // Render topic cards with real data
+    const grid = el.querySelector('#cfg-topic-grid')
+    const cisTopic = CFG_TOPICS[0] // Use first topic as template for styling
+    const topicNames = ['Microsoft 365 Admin', 'Email Security', 'Data Protection', 'Device Management', 'Identity & Access', 'SharePoint & OneDrive', 'Microsoft Teams', 'Threat Detection', 'AI & Copilot']
+
+    Object.entries(cisMapped).forEach(([topicId, data], idx) => {
+      const card = document.createElement('div')
+      card.className = 'cfg-topic-card'
+      const tc = TOPIC_COLOURS[topicId] || { bg: '#f0f0f0', color: '#555' }
+      const tCls = scoreClass(data.stats.score)
+      const topicName = topicNames[idx] || topicId
+
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border-secondary)">
+          <div style="background:${tc.bg};color:${tc.color};width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ti-checkmark-circle" style="font-size:20px"></i>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);line-height:1.3">${topicName}</div>
+            <div style="font-size:11px;color:var(--color-text-tertiary)">${data.stats.total} controls</div>
+          </div>
+          <div style="font-size:16px;font-weight:700;color:${tc.color}">${data.stats.score}%</div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-bottom:12px">
+          ${data.stats.fail > 0 ? `<span style="padding:4px 8px;background:var(--clr-danger-bg);color:var(--clr-danger-text);border-radius:4px;font-size:11px;font-weight:600">${data.stats.fail} Failed</span>` : ''}
+          ${data.stats.warn > 0 ? `<span style="padding:4px 8px;background:var(--clr-warning-bg);color:var(--clr-warning-text);border-radius:4px;font-size:11px;font-weight:600">${data.stats.warn} Warnings</span>` : ''}
+          ${data.stats.pass > 0 ? `<span style="padding:4px 8px;background:var(--clr-success-bg);color:var(--clr-success-text);border-radius:4px;font-size:11px;font-weight:600">${data.stats.pass} Passed</span>` : ''}
+        </div>
+
+        <div style="background:var(--color-background-secondary);height:6px;border-radius:3px;overflow:hidden">
+          <div style="background:${tc.color};height:100%;width:${data.stats.score}%;transition:width 0.3s ease"></div>
+        </div>
+      `
+
+      card.addEventListener('click', () => {
+        showToast(`${topicName}: ${data.stats.pass}/${data.stats.total} controls passing`, 'info')
+      })
+
+      grid.appendChild(card)
+    })
+
+    // Add event listeners
+    el.querySelector('#cfg-validation-btn')?.addEventListener('click', () => {
+      cfgView = 'validation'
+      renderValidationView(el)
+    })
+
+    el.querySelector('#cfg-scan-now')?.addEventListener('click', async () => {
+      const btn = el.querySelector('#cfg-scan-now')
+      btn.innerHTML = `<span class="spinner dark"></span> Refreshing...`
+      btn.disabled = true
+      setTimeout(async () => {
+        btn.innerHTML = `<i class="ti ti-refresh"></i> Refresh Now`
+        btn.disabled = false
+        await renderProductionMainWithRealData(el)
+        showToast('Validation data refreshed', 'success')
+      }, 2000)
+    })
+
+    el.querySelector('#cfg-agent-btn')?.addEventListener('click', () => {
+      showToast('Configuration Agent will help remediate failed controls', 'info')
+    })
+  } catch (error) {
+    console.error('❌ Error loading real validation data:', error)
     renderErrorState(el, error.message)
   }
 }
