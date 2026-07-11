@@ -67,7 +67,10 @@ export class IdentityCollectors {
       // Log policies for debugging
       console.log('📋 CA Policies from beta API:')
       policies.forEach((p, i) => {
-        console.log(`  [${i}] ${p.displayName} | state=${p.state} | roles=${JSON.stringify(p.conditions?.includeRoles || [])} | MFA=${p.grantControls?.builtInControls?.includes('mfa')}`)
+        if (p.displayName?.includes('CA003')) {
+          console.log(`🔍 FULL CA003 POLICY:`, JSON.stringify(p, null, 2))
+        }
+        console.log(`  [${i}] ${p.displayName} | state=${p.state} | roles=${JSON.stringify(p.conditions?.includeRoles || [])} | users=${JSON.stringify(p.conditions?.users?.includeUsers || [])} | MFA=${p.grantControls?.builtInControls?.includes('mfa')}`)
       })
 
       const data = {
