@@ -390,14 +390,11 @@ export class ZeroTrustValidator {
         let caEnforced = false
         let caPolicyName = null
         try {
+          console.error(`[ID-001] Attempting to fetch CA policies from /beta/identity/conditionalAccess/policies`)
           const caResp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = caResp.value || []
-          console.log(`🔍 ID-001 CA Policy Debug: Found ${policies.length} total CA policies`)
-
-          // Log all policies for analysis
-          policies.forEach((p, i) => {
-            console.log(`  [${i}] ${p.displayName} | state=${p.state} | includeRoles=${JSON.stringify(p.conditions?.includeRoles || [])} | grantControls=${JSON.stringify(p.grantControls)}`)
-          })
+          console.error(`[ID-001] Found ${policies.length} total CA policies`)
+          console.error(`[ID-001] Full API response:`, JSON.stringify(caResp, null, 2))
 
           const adminMFAPolicy = policies.find(p => {
             const isEnabled = p.state === 'enabled'
@@ -405,18 +402,15 @@ export class ZeroTrustValidator {
             const rolesArray = p.conditions?.includeRoles || []
             const hasAdminRole = rolesArray.some(r => r === GLOBAL_ADMIN_TEMPLATE_ID || (typeof r === 'string' && r.toLowerCase().includes('62e90394')))
 
-            if (isEnabled && hasMFA && hasAdminRole) {
-              console.log(`✅ ID-001: Matched policy: ${p.displayName}`)
-            }
+            console.error(`[ID-001] Policy: ${p.displayName} | enabled=${isEnabled} | hasMFA=${hasMFA} | hasAdminRole=${hasAdminRole}`)
 
             return isEnabled && hasMFA && hasAdminRole
           })
 
           caEnforced = !!adminMFAPolicy
           caPolicyName = adminMFAPolicy?.displayName || null
-          console.log(`🔍 ID-001: Final result - caEnforced=${caEnforced}, policy=${caPolicyName}`)
         } catch (e) {
-          console.warn(`⚠️ ID-001 CA policy check failed:`, e.message)
+          console.error(`[ID-001] CA policy check threw error:`, e.message, e.stack)
         }
 
         const mfaPercentage = adminsList.length > 0 ? Math.round((adminsWithMFA / adminsList.length) * 100) : 0
