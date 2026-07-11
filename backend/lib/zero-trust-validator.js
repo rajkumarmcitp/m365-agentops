@@ -300,6 +300,29 @@ export class ZeroTrustValidator {
   }
 
   /**
+   * Fetch CA policies from beta API
+   * Direct HTTP call since graphClient doesn't handle beta endpoints properly
+   */
+  async getCAPolicesFromBetaAPI() {
+    try {
+      const token = await unifiedGraphClient.credential.getToken(['https://graph.microsoft.com/.default'])
+      const response = await fetch('https://graph.microsoft.com/beta/identity/conditionalAccess/policies', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token.token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      if (!response.ok) throw new Error(`Graph API error: ${response.status}`)
+      const data = await response.json()
+      return data.value || []
+    } catch (error) {
+      console.warn('⚠️ Failed to fetch CA policies from beta API:', error.message)
+      return []
+    }
+  }
+
+  /**
    * Validate Identity controls (ID-001 to ID-040+)
    */
   async validateIdentity(validation, result) {
@@ -7329,6 +7352,114 @@ export class ZeroTrustValidator {
             restricted: authPolicy.isGuestInviteRestricted
           }
           return authPolicy.isGuestInviteRestricted ? 'pass' : 'warn'
+        }
+
+        // Legacy Authentication Blocked
+        case 'ID-003': {
+          const blockLegacy = identityData.conditionalAccess?.byType?.blockLegacy
+          result.currentValue = blockLegacy ? 'Legacy auth blocked' : 'Legacy auth not blocked'
+          result.evidence = { policyEnabled: !!blockLegacy }
+          return blockLegacy ? 'pass' : 'fail'
+        }
+
+        // Require Compliant Devices via CA
+        case 'ID-007': {
+          const compliantDevice = identityData.conditionalAccess?.byType?.compliantDevice
+          result.currentValue = compliantDevice ? 'Compliant device CA policy enabled' : 'Not configured'
+          result.evidence = { policyExists: !!compliantDevice }
+          return compliantDevice ? 'pass' : 'fail'
+        }
+
+        // Risk-Based Access via Identity Protection
+        case 'ID-008': {
+          const userRisk = identityData.conditionalAccess?.byType?.userRisk
+          result.currentValue = userRisk ? 'User risk-based CA policy enabled' : 'Not configured'
+          result.evidence = { policyExists: !!userRisk }
+          return userRisk ? 'pass' : 'warn'
+        }
+
+        // Sign-in Risk Detection Enabled
+        case 'ID-009': {
+          const signInRisk = identityData.conditionalAccess?.byType?.signInRisk
+          result.currentValue = signInRisk ? 'Sign-in risk CA policy enabled' : 'Not configured'
+          result.evidence = { policyExists: !!signInRisk }
+          return signInRisk ? 'pass' : 'warn'
+        }
+
+        // Inactive Applications
+        case 'ID-014': {
+          result.currentValue = 'Requires manual review of application lifecycle'
+          result.evidence = { status: 'manual' }
+          return 'warn'
+        }
+
+        // Application Credentials
+        case 'ID-015': {
+          result.currentValue = 'Requires manual credential audit'
+          result.evidence = { status: 'manual' }
+          return 'warn'
+        }
+
+        // Microsoft Service Applications
+        case 'ID-017': {
+          result.currentValue = 'Requires manual service principal audit'
+          result.evidence = { status: 'manual' }
+          return 'warn'
+        }
+
+        // Conditional Access - Admin MFA Strength Policy
+        case 'ID-024': {
+          const adminMFA = identityData.conditionalAccess?.byType?.adminMFA
+          result.currentValue = adminMFA ? 'Phishing-resistant admin MFA enforced' : 'Not configured'
+          result.evidence = { policyExists: !!adminMFA }
+          return adminMFA ? 'pass' : 'warn'
+        }
+
+        // Token Protection
+        case 'ID-026': {
+          const tokenProtection = identityData.conditionalAccess?.byType?.tokenProtection
+          result.currentValue = tokenProtection ? 'Token protection enabled' : 'Not configured'
+          result.evidence = { enabled: !!tokenProtection }
+          return tokenProtection ? 'pass' : 'warn'
+        }
+
+        // Universal MFA
+        case 'ID-027': {
+          const mfaRequired = identityData.conditionalAccess?.byType?.mfaRequired
+          result.currentValue = mfaRequired ? 'Universal MFA CA policy enabled' : 'Not configured'
+          result.evidence = { policyExists: !!mfaRequired }
+          return mfaRequired ? 'pass' : 'fail'
+        }
+
+        // Microsoft Authenticator - Sign-in Context Display
+        case 'ID-029': {
+          result.currentValue = 'Requires manual verification of Authenticator settings'
+          result.evidence = { status: 'manual' }
+          return 'warn'
+        }
+
+        // Block Legacy Authentication
+        case 'ID-039': {
+          const blockLegacy = identityData.conditionalAccess?.byType?.blockLegacy
+          result.currentValue = blockLegacy ? 'Legacy auth blocked via CA' : 'Not configured'
+          result.evidence = { policyEnabled: !!blockLegacy }
+          return blockLegacy ? 'pass' : 'fail'
+        }
+
+        // Identity Protection - High-Risk User Restrictions
+        case 'ID-040': {
+          const userRisk = identityData.conditionalAccess?.byType?.userRisk
+          result.currentValue = userRisk ? 'High-risk user restrictions enabled' : 'Not configured'
+          result.evidence = { policyExists: !!userRisk }
+          return userRisk ? 'pass' : 'warn'
+        }
+
+        // Risky Sign-in - Blocking Policy
+        case 'ID-042': {
+          const signInRisk = identityData.conditionalAccess?.byType?.signInRisk
+          result.currentValue = signInRisk ? 'High-risk sign-in blocking enabled' : 'Not configured'
+          result.evidence = { policyExists: !!signInRisk }
+          return signInRisk ? 'pass' : 'warn'
         }
 
         default:
