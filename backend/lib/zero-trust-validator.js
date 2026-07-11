@@ -1208,9 +1208,10 @@ export class ZeroTrustValidator {
             `/directoryRoles/roleTemplateId=${GLOBAL_ADMIN_TEMPLATE_ID}/members?$select=id,displayName`
           ).get()
           const count = resp.value?.length || 0
-          result.currentValue = `${count} Global Administrator${count !== 1 ? 's' : ''}`
-          result.evidence = { adminCount: count, isMinimized: count <= 4, admins: resp.value?.map(a => a.displayName) }
-          return count <= 2 ? 'pass' : count <= 4 ? 'warn' : 'fail'
+          result.currentValue = `${count} Global Administrator${count !== 1 ? 's' : ''} (Microsoft recommendation: 3-5 with 2 as break-glass)`
+          result.evidence = { adminCount: count, isMinimized: count <= 5, admins: resp.value?.map(a => a.displayName), recommendedCount: 3, maxCount: 5, breakGlassCount: 2 }
+          // Microsoft recommendation: 3-5 admins optimal (1 operational + 2 break-glass minimum, up to 5 with additional backups)
+          return count <= 3 ? 'pass' : count <= 5 ? 'warn' : 'fail'
         } catch (e) { return markManual(e, 'Could not query Global Administrator role members') }
       }
 
