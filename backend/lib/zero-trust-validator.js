@@ -391,6 +391,10 @@ export class ZeroTrustValidator {
         let caPolicyName = null
         try {
           const caResp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
+          // Log CA policy count for debugging
+          if ((caResp.value || []).length > 0) {
+            console.log(`ℹ️ ID-001: Found ${caResp.value.length} CA policies`)
+          }
           const adminMFAPolicy = (caResp.value || []).find(p =>
             p.state === 'enabled' &&
             (p.grantControls?.builtInControls?.includes('mfa') ||
