@@ -884,13 +884,30 @@ export class ZeroTrustValidator {
       }
 
       // ── ID-021: Cross-Tenant Access Policy ───────────────────────────────────
+      // ── ID-021: ADAL Deprecation - Legacy Library Migration ─────────────────────
       if (validation.id === 'ID-021') {
         try {
-          const resp = await this.graphClient.api('/policies/crossTenantAccessPolicy').get()
-          result.currentValue = resp ? 'Cross-tenant access policy configured' : 'No cross-tenant access policy'
-          result.evidence = { hasPolicy: !!resp, displayName: resp?.displayName }
-          return resp ? 'pass' : 'warn'
-        } catch (e) { return markManual(e, 'Could not query cross-tenant access policy') }
+          // Check for ADAL usage in sign-in logs
+          const signInLogsResp = await this.graphClient.api(
+            `/auditLogs/signIns?$filter=createdDateTime ge ${new Date(Date.now() - 30*24*60*60*1000).toISOString()}&$select=clientAppUsed,appDisplayName&$top=1000`
+          ).get()
+
+          const signIns = signInLogsResp.value || []
+          const adalSignIns = signIns.filter(s =>
+            s.clientAppUsed?.toLowerCase().includes('adal') ||
+            s.appDisplayName?.toLowerCase().includes('adal')
+          )
+
+          result.currentValue = adalSignIns.length > 0
+            ? `${adalSignIns.length} ADAL sign-in(s) found in last 30 days - applications must migrate to MSAL`
+            : 'No ADAL usage detected in last 30 days'
+          result.evidence = {
+            adalSignInsCount: adalSignIns.length,
+            periodDays: 30,
+            status: adalSignIns.length === 0 ? 'compliant' : 'requires-migration'
+          }
+          return adalSignIns.length === 0 ? 'pass' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query sign-in logs for ADAL usage') }
       }
 
       // ── ID-022: Phishing-Resistant MFA - Privileged Users ─────────────────────
@@ -1041,7 +1058,34 @@ export class ZeroTrustValidator {
       }
 
       // ── ID-025 / ID-038: Legacy Authentication Activity in Sign-in Logs ──────
-      if (validation.id === 'ID-025' || validation.id === 'ID-038') {
+      // ── ID-025: All Users - Phishing-Resistant MFA Enforcement ──────────────────
+      if (validation.id === 'ID-025') {
+        try {
+          // Check if CA policy enforces phishing-resistant MFA for ALL users
+          const caResp = await this.getCAPolicesFromBetaAPI()
+          const phishingResistantPolicy = caResp.find(p =>
+            p.state === 'enabled' &&
+            (p.grantControls?.authenticationStrength?.displayName?.toLowerCase().includes('phishing') ||
+             p.grantControls?.authenticationStrength?.displayName?.toLowerCase().includes('fido') ||
+             p.grantControls?.authenticationStrength?.displayName?.toLowerCase().includes('passkey')) &&
+            (p.conditions?.users?.includeUsers || []).includes('All')
+          )
+
+          result.currentValue = phishingResistantPolicy
+            ? `Phishing-resistant MFA enforced for all users: ${phishingResistantPolicy.displayName}`
+            : 'No CA policy enforcing phishing-resistant MFA for all users'
+          result.evidence = {
+            policyExists: !!phishingResistantPolicy,
+            policyName: phishingResistantPolicy?.displayName,
+            targetedUsers: 'All',
+            authenticationStrength: phishingResistantPolicy?.grantControls?.authenticationStrength?.displayName
+          }
+          return phishingResistantPolicy ? 'pass' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query CA policies for phishing-resistant MFA') }
+      }
+
+      // ── ID-038: Legacy Authentication - Zero Activity ──────────────────────────
+      if (validation.id === 'ID-038') {
         try {
           const resp = await this.graphClient.api(
             `/auditLogs/signIns?$filter=clientAppUsed eq 'SMTP' or clientAppUsed eq 'IMAP4' or clientAppUsed eq 'POP3' or clientAppUsed eq 'Exchange ActiveSync'&$top=50`
@@ -7402,13 +7446,18 @@ export class ZeroTrustValidator {
         }
 
         // Token Protection
+        // Application Management Policies - Enforce Standards
         case 'ID-018': {
-          const tokenPolicy = identityData.conditionalAccess?.byType?.tokenProtection
-          result.currentValue = tokenPolicy ? 'Token protection enabled' : 'Token protection not configured'
+          result.currentValue = 'Application management policies require manual verification in Entra admin center (app credential policies, secret validity, certificate enforcement)'
           result.evidence = {
-            enabled: !!tokenPolicy
+            status: 'manual',
+            requiredChecks: [
+              'Maximum secret validity period configured (6 months max)',
+              'Certificate-based auth enforced for new apps',
+              'Secret rotation policy enabled'
+            ]
           }
-          return tokenPolicy ? 'pass' : 'warn'
+          return 'warn'
         }
 
         // Global Admin Minimization
