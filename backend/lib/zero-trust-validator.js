@@ -467,6 +467,7 @@ export class ZeroTrustValidator {
         result.error = e.message
         result.currentValue = msg || 'Graph API call failed — requires manual validation'
         result.requiresManualValidation = true
+        result.automationLevel = 'Manual'
         return 'warn'
       }
 
@@ -1280,6 +1281,9 @@ export class ZeroTrustValidator {
    */
   async validateDevice(validation, result) {
     try {
+      // Set default automation level for Device controls (override for Manual/PartiallyAutomated)
+      result.automationLevel = 'Automated'
+
       // Helper to mark a control as requiring manual validation when Graph API fails
       const markManual = (e, msg) => {
         console.warn(`⚠️ ${validation.id} Graph API failed (${e.message}) — marking Manual`)
@@ -7292,6 +7296,9 @@ export class ZeroTrustValidator {
     if (!identityData) return 'warn'
 
     try {
+      // Set default automation level for Identity controls (override only if PartiallyAutomated or Manual)
+      result.automationLevel = 'Automated'
+
       switch (validation.id) {
         // MFA for Global Admins
         case 'ID-001': {
@@ -7646,17 +7653,20 @@ export class ZeroTrustValidator {
           value: validationResult.value,
           category: validationResult.category || 'Device Security'
         }
+        result.automationLevel = 'Automated'
         return validationResult.status
       }
 
       result.currentValue = 'Device control validation not found — requires manual review'
       result.requiresManualValidation = true
+      result.automationLevel = 'Manual'
       return 'warn'
     } catch (error) {
       console.warn(`Error validating device control ${validation.id}:`, error.message)
       result.error = error.message
       result.currentValue = 'Graph API call failed — requires manual validation'
       result.requiresManualValidation = true
+      result.automationLevel = 'Manual'
       return 'warn'
     }
   }
@@ -7665,6 +7675,9 @@ export class ZeroTrustValidator {
     if (!deviceData) return 'warn'
 
     try {
+      // Set default automation level for Device controls (override only if PartiallyAutomated or Manual)
+      result.automationLevel = 'Automated'
+
       // Use comprehensive DeviceValidations for new 34 controls
       if (validation.id.startsWith('dev-')) {
         return await this.validateDeviceControlComprehensive(validation, result, deviceData)
