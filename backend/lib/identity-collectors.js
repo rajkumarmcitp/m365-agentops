@@ -68,9 +68,11 @@ export class IdentityCollectors {
       console.log('📋 CA Policies from beta API:')
       policies.forEach((p, i) => {
         if (p.displayName?.includes('CA003')) {
-          console.log(`🔍 FULL CA003 POLICY:`, JSON.stringify(p, null, 2))
+          console.log(`✅ MATCH: CA003 Policy has includeRoles = ${JSON.stringify(p.conditions?.users?.includeRoles || [])}`)
         }
-        console.log(`  [${i}] ${p.displayName} | state=${p.state} | roles=${JSON.stringify(p.conditions?.includeRoles || [])} | users=${JSON.stringify(p.conditions?.users?.includeUsers || [])} | MFA=${p.grantControls?.builtInControls?.includes('mfa')}`)
+        const roleIds = p.conditions?.users?.includeRoles || []
+        const userIds = p.conditions?.users?.includeUsers || []
+        console.log(`  [${i}] ${p.displayName} | state=${p.state} | roles=${JSON.stringify(roleIds)} | users=${JSON.stringify(userIds)} | MFA=${p.grantControls?.builtInControls?.includes('mfa')}`)
       })
 
       const data = {
@@ -85,7 +87,7 @@ export class IdentityCollectors {
           ),
           adminMFA: policies.find(p =>
             p.state === 'enabled' &&
-            (p.conditions?.includeRoles || []).some(r =>
+            (p.conditions?.users?.includeRoles || []).some(r =>
               typeof r === 'string' && (r.includes('Global') || r.includes('Privileged'))
             ) &&
             p.grantControls?.authenticationStrength?.displayName?.includes('Phishing Resistant')

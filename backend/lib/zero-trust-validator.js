@@ -7210,7 +7210,7 @@ export class ZeroTrustValidator {
             p.state === 'enabled' &&
             (p.grantControls?.builtInControls?.includes('mfa') ||
              p.grantControls?.authenticationStrength) &&
-            (p.conditions?.includeRoles || []).some(r =>
+            (p.conditions?.users?.includeRoles || []).some(r =>
               r === GLOBAL_ADMIN_ROLE_ID ||
               (typeof r === 'string' && (r.toLowerCase().includes('global administrator') || r.toLowerCase().includes('62e90394')))
             )
