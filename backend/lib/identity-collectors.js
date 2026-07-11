@@ -64,16 +64,6 @@ export class IdentityCollectors {
       // The unifiedGraphClient adds v1.0 by default, so we'll use a direct HTTP call to beta API
       const policies = await this.getCAPolicesFromBetaAPI()
 
-      // Log policies for debugging
-      console.log('📋 CA Policies from beta API:')
-      policies.forEach((p, i) => {
-        if (p.displayName?.includes('CA003')) {
-          console.log(`✅ MATCH: CA003 Policy has includeRoles = ${JSON.stringify(p.conditions?.users?.includeRoles || [])}`)
-        }
-        const roleIds = p.conditions?.users?.includeRoles || []
-        const userIds = p.conditions?.users?.includeUsers || []
-        console.log(`  [${i}] ${p.displayName} | state=${p.state} | roles=${JSON.stringify(roleIds)} | users=${JSON.stringify(userIds)} | MFA=${p.grantControls?.builtInControls?.includes('mfa')}`)
-      })
 
       const data = {
         all: policies,
@@ -319,8 +309,6 @@ export class IdentityCollectors {
    */
   async getCAPolicesFromBetaAPI() {
     try {
-      console.log('📝 Attempting direct HTTP call to beta CA policies endpoint')
-
       // Get access token from the credential
       const token = await unifiedGraphClient.credential.getToken(['https://graph.microsoft.com/.default'])
 
@@ -333,19 +321,14 @@ export class IdentityCollectors {
         }
       })
 
-      console.log(`📝 CA policies endpoint response status: ${response.status}`)
-
       if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Graph API error: ${response.status} ${response.statusText} - ${errorText}`)
+        throw new Error(`Graph API error: ${response.status} ${response.statusText}`)
       }
 
       const data = await response.json()
-      const policies = data.value || []
-      console.log(`📝 Fetched ${policies.length} CA policies from beta API`)
-      return policies
+      return data.value || []
     } catch (error) {
-      console.error('❌ Failed to fetch CA policies from beta API:', error.message)
+      console.warn('⚠️ Failed to fetch CA policies from beta API:', error.message)
       return []
     }
   }
