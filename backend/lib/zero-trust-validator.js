@@ -1286,6 +1286,7 @@ export class ZeroTrustValidator {
         result.error = e.message
         result.currentValue = msg || 'Graph API call failed — requires manual validation'
         result.requiresManualValidation = true
+        result.automationLevel = 'Manual'
         return 'warn'
       }
 
@@ -3517,7 +3518,7 @@ export class ZeroTrustValidator {
 
       // DEV-067: Device Enrollment Notifications — Manual Verification Required
       if (validation.id === 'DEV-067') {
-        result.automationLevel = 'ManualVerificationRequired'
+        result.automationLevel = 'Manual'
         result.currentValue = 'Graph API does not expose Enrollment Notification configuration'
         result.evidence = {
           note: 'Microsoft Graph does not provide access to enrollment notification settings',
