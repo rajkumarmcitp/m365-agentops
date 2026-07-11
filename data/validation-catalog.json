@@ -1042,7 +1042,7 @@
     },
     {
       "id": "ID-014",
-      "name": "Inactive Applications - Privileged Role Assignments",
+      "name": "Inactive Applications - Privileged Role Assignments (Manual)",
       "pillar": "Identity Security",
       "category": "Workload Identity",
       "severity": "Critical",
@@ -1058,7 +1058,7 @@
     },
     {
       "id": "ID-015",
-      "name": "Application Credentials - No Shared Secrets",
+      "name": "Application Credentials - No Shared Secrets (Manual)",
       "pillar": "Identity Security",
       "category": "Workload Identity",
       "severity": "Critical",
@@ -1090,7 +1090,7 @@
     },
     {
       "id": "ID-017",
-      "name": "Microsoft Service Applications - No Configured Credentials",
+      "name": "Microsoft Service Applications - No Configured Credentials (Manual)",
       "pillar": "Identity Security",
       "category": "Workload Identity",
       "severity": "Critical",
@@ -1106,7 +1106,7 @@
     },
     {
       "id": "ID-018",
-      "name": "Application Management Policies - Enforce Standards",
+      "name": "Application Management Policies - Enforce Standards (Manual)",
       "pillar": "Identity Security",
       "category": "Workload Identity",
       "severity": "High",
