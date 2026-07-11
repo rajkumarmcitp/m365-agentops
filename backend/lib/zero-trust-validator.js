@@ -7697,10 +7697,32 @@ export class ZeroTrustValidator {
           return total > 0 ? 'pass' : 'warn'
         }
 
-        // iOS Compliance Policy
+        // Windows Compliance Policy
         case 'DEV-002': {
+          const windowsCompliance = deviceData.compliance?.byPlatform?.windows || []
+          result.currentValue = `${windowsCompliance.length} Windows compliance policies`
+          result.evidence = {
+            policyCount: windowsCompliance.length,
+            compliant: windowsCompliance.length > 0
+          }
+          return windowsCompliance.length > 0 ? 'pass' : 'warn'
+        }
+
+        // macOS Compliance Policy
+        case 'DEV-003': {
+          const macosCompliance = deviceData.compliance?.byPlatform?.macos || []
+          result.currentValue = `${macosCompliance.length} macOS compliance policies`
+          result.evidence = {
+            policyCount: macosCompliance.length,
+            compliant: macosCompliance.length > 0
+          }
+          return macosCompliance.length > 0 ? 'pass' : 'warn'
+        }
+
+        // iOS/iPadOS Compliance Policy
+        case 'DEV-004': {
           const iosCompliance = deviceData.compliance?.byPlatform?.ios || []
-          result.currentValue = `${iosCompliance.length} iOS compliance policies`
+          result.currentValue = `${iosCompliance.length} iOS/iPadOS compliance policies`
           result.evidence = {
             policyCount: iosCompliance.length,
             compliant: iosCompliance.length > 0
@@ -7708,14 +7730,16 @@ export class ZeroTrustValidator {
           return iosCompliance.length > 0 ? 'pass' : 'warn'
         }
 
-        // Android Compliance Policy
-        case 'DEV-003': {
+        // Android Compliance Policy - Managed Devices
+        case 'DEV-005': {
           const androidCompliance = deviceData.compliance?.byPlatform?.android || []
           result.currentValue = `${androidCompliance.length} Android compliance policies`
           result.evidence = {
             policyCount: androidCompliance.length,
             compliant: androidCompliance.length > 0
           }
+          result.automationLevel = 'Manual'
+          result.requiresManualValidation = true
           return androidCompliance.length > 0 ? 'pass' : 'warn'
         }
 
@@ -7730,15 +7754,15 @@ export class ZeroTrustValidator {
           return encryption ? 'pass' : 'fail'
         }
 
-        // Defender Antivirus
+        // Android Personal Compliance Policies
         case 'DEV-007': {
-          const defender = deviceData.compliance?.defender || deviceData.configuration?.defenderAV
-          result.currentValue = defender ? 'Defender AV policy configured' : 'Defender AV not configured'
+          const androidPersonalCompliance = deviceData.compliance?.byPlatform?.androidPersonal || deviceData.compliance?.byPlatform?.android || []
+          result.currentValue = `${androidPersonalCompliance.length} Android personal compliance policies`
           result.evidence = {
-            configured: !!defender,
-            policyId: defender?.id
+            policyCount: androidPersonalCompliance.length,
+            compliant: androidPersonalCompliance.length > 0
           }
-          return defender ? 'pass' : 'fail'
+          return androidPersonalCompliance.length > 0 ? 'pass' : 'warn'
         }
 
         // Windows Hello for Business
