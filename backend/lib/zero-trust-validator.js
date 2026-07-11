@@ -391,21 +391,30 @@ export class ZeroTrustValidator {
         let caPolicyName = null
         try {
           const caResp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
-          // Log CA policy count for debugging
-          if ((caResp.value || []).length > 0) {
-            console.log(`ℹ️ ID-001: Found ${caResp.value.length} CA policies`)
-          }
-          const adminMFAPolicy = (caResp.value || []).find(p =>
-            p.state === 'enabled' &&
-            (p.grantControls?.builtInControls?.includes('mfa') ||
-             p.grantControls?.authenticationStrength) &&
-            (p.conditions?.includeRoles || []).some(r =>
-              r === GLOBAL_ADMIN_TEMPLATE_ID ||
-              r.toLowerCase().includes('62e90394')
-            )
-          )
+          const policies = caResp.value || []
+          console.log(`🔍 ID-001 CA Policy Debug: Found ${policies.length} total CA policies`)
+
+          // Log all policies for analysis
+          policies.forEach((p, i) => {
+            console.log(`  [${i}] ${p.displayName} | state=${p.state} | includeRoles=${JSON.stringify(p.conditions?.includeRoles || [])} | grantControls=${JSON.stringify(p.grantControls)}`)
+          })
+
+          const adminMFAPolicy = policies.find(p => {
+            const isEnabled = p.state === 'enabled'
+            const hasMFA = p.grantControls?.builtInControls?.includes('mfa') || !!p.grantControls?.authenticationStrength
+            const rolesArray = p.conditions?.includeRoles || []
+            const hasAdminRole = rolesArray.some(r => r === GLOBAL_ADMIN_TEMPLATE_ID || (typeof r === 'string' && r.toLowerCase().includes('62e90394')))
+
+            if (isEnabled && hasMFA && hasAdminRole) {
+              console.log(`✅ ID-001: Matched policy: ${p.displayName}`)
+            }
+
+            return isEnabled && hasMFA && hasAdminRole
+          })
+
           caEnforced = !!adminMFAPolicy
           caPolicyName = adminMFAPolicy?.displayName || null
+          console.log(`🔍 ID-001: Final result - caEnforced=${caEnforced}, policy=${caPolicyName}`)
         } catch (e) {
           console.warn(`⚠️ ID-001 CA policy check failed:`, e.message)
         }
