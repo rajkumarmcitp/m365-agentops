@@ -911,18 +911,47 @@ export class ZeroTrustValidator {
         } catch (e) { return markManual(e, 'Could not query Tenant Creator role members') }
       }
 
-      // ── ID-023: Guest User Role Restrictions ─────────────────────────────────
+      // ── ID-023: Phishing-Resistant Methods - Admin Registration ──────────────────
       if (validation.id === 'ID-023') {
         try {
-          const resp = await this.graphClient.api('/policies/authorizationPolicy').get()
-          const roleId = resp.guestUserRoleId
-          // Well-known guest role IDs: 10dae51f = Guest User, 2af84b1e = Restricted Guest, a0b1b346 = Guest
-          const restrictedGuestRoleId = '2af84b1e-5c6e-4c4c-a2bd-f1fe5caf5a15'
-          const isRestricted = roleId === restrictedGuestRoleId
-          result.currentValue = roleId ? `Guest role ID: ${roleId}` : 'Default guest access (unrestricted)'
-          result.evidence = { guestUserRoleId: roleId, isRestricted, hasRestrictions: !!roleId }
-          return isRestricted ? 'pass' : roleId ? 'warn' : 'warn'
-        } catch (e) { return markManual(e, 'Could not query guest user role restrictions') }
+          const PRIV_ROLE_IDS = [
+            '62e90394-69f5-4237-9190-012177145e10', // Global Administrator
+            'e8611ab8-c189-46e8-94e1-60213ab1f814', // Privileged Role Administrator
+            'b1be1c3e-b65d-4f19-8427-f6fa0d97feb9', // Conditional Access Administrator
+            '194ae4cb-b126-40b2-bd5b-6091b380977d', // Security Administrator
+            '7be44c8a-adaf-4e2a-84d6-ab2649e08a13', // Privileged Authentication Administrator
+            '9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3', // Authentication Administrator
+          ]
+
+          // Get global admins
+          const adminsResp = await this.graphClient.api(
+            '/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members?$select=id,userPrincipalName'
+          ).get()
+          const adminIds = (adminsResp.value || []).map(a => a.id)
+
+          if (adminIds.length === 0) {
+            result.currentValue = 'No administrators found'
+            result.evidence = { totalAdmins: 0, withPhishingResistant: 0 }
+            return 'warn'
+          }
+
+          // Get auth method registration details
+          const authResp = await this.graphClient.api('/reports/authenticationMethods/userRegistrationDetails').get()
+          const adminAuthMethods = (authResp.value || []).filter(a => adminIds.includes(a.id))
+
+          const withPhishingResistant = adminAuthMethods.filter(a => a.isFidoRegistered || a.isPasskeyRegistered).length
+          const percentage = Math.round((withPhishingResistant / adminAuthMethods.length) * 100)
+
+          result.currentValue = `${withPhishingResistant}/${adminAuthMethods.length} admins (${percentage}%) have phishing-resistant methods (FIDO2/Passkey) registered`
+          result.evidence = {
+            totalAdmins: adminAuthMethods.length,
+            withPhishingResistant,
+            percentage,
+            methods: { fido: adminAuthMethods.filter(a => a.isFidoRegistered).length, passkey: adminAuthMethods.filter(a => a.isPasskeyRegistered).length }
+          }
+
+          return percentage >= 100 ? 'pass' : percentage >= 80 ? 'warn' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query admin phishing-resistant authentication methods') }
       }
 
       // ── ID-024: Conditional Access — Admin MFA Strength Policy ───────────────
