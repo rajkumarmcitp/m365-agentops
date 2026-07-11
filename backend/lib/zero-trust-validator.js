@@ -7351,26 +7351,44 @@ export class ZeroTrustValidator {
           return percentage >= 30 ? 'pass' : (percentage >= 10 ? 'warn' : 'fail')
         }
 
-        // Conditional Access - MFA Required
+        // Conditional Access Policies Enabled (verify at least 3 critical policies)
         case 'ID-005': {
-          const caPolicy = identityData.conditionalAccess?.byType?.mfaRequired
-          result.currentValue = caPolicy ? 'MFA Conditional Access policy enabled' : 'No MFA CA policy found'
+          const ca = identityData.conditionalAccess?.byType || {}
+          const criticalPolicies = [
+            { name: 'MFA for All Users', exists: !!ca.mfaRequired },
+            { name: 'Compliant Devices', exists: !!ca.compliantDevice },
+            { name: 'Risky Sign-ins', exists: !!ca.signInRisk },
+            { name: 'Privileged Roles', exists: !!ca.adminMFA || !!ca.phishingResistant }
+          ]
+
+          const enabledCount = criticalPolicies.filter(p => p.exists).length
+          const enabledNames = criticalPolicies.filter(p => p.exists).map(p => p.name)
+
+          result.currentValue = `${enabledCount}/4 critical CA policies enabled: ${enabledNames.join(', ') || 'None'}`
           result.evidence = {
-            policyExists: !!caPolicy,
-            policyId: caPolicy?.id
+            totalCriticalPolicies: 4,
+            enabledPolicies: enabledCount,
+            policies: criticalPolicies
           }
-          return caPolicy ? 'pass' : 'fail'
+
+          return enabledCount >= 3 ? 'pass' : (enabledCount >= 2 ? 'warn' : 'fail')
         }
 
-        // Admin Conditional Access - Phishing Resistant MFA
+        // Require MFA for All Users via CA
         case 'ID-006': {
-          const caPolicy = identityData.conditionalAccess?.byType?.adminMFA
-          result.currentValue = caPolicy ? 'Admin phishing-resistant CA policy enabled' : 'Admin CA policy not properly configured'
+          const mfaPolicy = identityData.conditionalAccess?.byType?.mfaRequired
+          result.currentValue = mfaPolicy
+            ? `MFA required for all users via CA policy: ${mfaPolicy.displayName || 'Unnamed'}`
+            : 'No CA policy requiring MFA for all users'
           result.evidence = {
-            policyExists: !!caPolicy,
-            requiresPhishingResistant: !!caPolicy
+            policyExists: !!mfaPolicy,
+            policyName: mfaPolicy?.displayName,
+            targetedUsers: 'All',
+            targetedApps: 'All',
+            grantControl: 'MFA'
           }
-          return caPolicy ? 'pass' : 'fail'
+
+          return mfaPolicy ? 'pass' : 'fail'
         }
 
         // Block Legacy Authentication
