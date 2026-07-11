@@ -390,20 +390,37 @@ export class ZeroTrustValidator {
         let caEnforced = false
         let caPolicyName = null
         try {
-          const caResp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
-          const adminMFAPolicy = (caResp.value || []).find(p =>
-            p.state === 'enabled' &&
-            (p.grantControls?.builtInControls?.includes('mfa') ||
-             p.grantControls?.authenticationStrength) &&
-            (p.conditions?.includeRoles || []).some(r =>
+          console.log(`🔍 ID-001: Fetching CA policies from /identity/conditionalAccess/policies`)
+          const caResp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
+          console.log(`🔍 ID-001: CA API response: ${JSON.stringify(caResp?.value?.length || 0)} policies found`)
+
+          if (caResp?.value?.length > 0) {
+            console.log(`🔍 ID-001 Debug: Found ${caResp.value.length} CA policies`)
+            caResp.value.forEach((p, idx) => {
+              console.log(`  Policy ${idx}: ${p.displayName || 'unnamed'} | state=${p.state} | includeRoles=${JSON.stringify(p.conditions?.includeRoles || [])} | grantControls=${JSON.stringify(p.grantControls || {})}`)
+            })
+          } else {
+            console.log(`🔍 ID-001: No CA policies found in response`)
+          }
+
+          const adminMFAPolicy = (caResp.value || []).find(p => {
+            const isEnabled = p.state === 'enabled'
+            const hasMFA = p.grantControls?.builtInControls?.includes('mfa') || p.grantControls?.authenticationStrength
+            const hasAdminRole = (p.conditions?.includeRoles || []).some(r =>
               r === GLOBAL_ADMIN_TEMPLATE_ID ||
               r.toLowerCase().includes('62e90394')
             )
-          )
+            if (!isEnabled) console.log(`  Policy ${p.displayName}: state=${p.state} (not enabled)`)
+            if (!hasMFA) console.log(`  Policy ${p.displayName}: No MFA grant control found`)
+            if (!hasAdminRole) console.log(`  Policy ${p.displayName}: No Global Admin role in conditions`)
+            return isEnabled && hasMFA && hasAdminRole
+          })
           caEnforced = !!adminMFAPolicy
           caPolicyName = adminMFAPolicy?.displayName || null
+          console.log(`🔍 ID-001: Final result: caEnforced=${caEnforced}, caPolicyName=${caPolicyName}`)
         } catch (e) {
           console.warn(`⚠️ ID-001 CA policy check failed:`, e.message)
+          console.warn(`Stack:`, e.stack)
         }
 
         const mfaPercentage = adminsList.length > 0 ? Math.round((adminsWithMFA / adminsList.length) * 100) : 0
@@ -459,7 +476,7 @@ export class ZeroTrustValidator {
       // ── ID-003: Legacy Authentication Blocked via CA ─────────────────────────
       if (validation.id === 'ID-003') {
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = resp.value || []
           const blockPolicy = policies.find(p =>
             p.state === 'enabled' &&
@@ -500,7 +517,7 @@ export class ZeroTrustValidator {
       // ── ID-005: Conditional Access Policies Present ──────────────────────────
       if (validation.id === 'ID-005') {
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const enabled = (resp.value || []).filter(p => p.state === 'enabled')
           result.currentValue = `${enabled.length} enabled CA policies`
           result.evidence = { enabledCount: enabled.length, total: resp.value?.length || 0 }
@@ -511,7 +528,7 @@ export class ZeroTrustValidator {
       // ── ID-006: MFA Required for All Users (CA) ──────────────────────────────
       if (validation.id === 'ID-006') {
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (resp.value || []).filter(p => p.state === 'enabled')
           const mfaPolicy = policies.find(p =>
             (p.grantControls?.builtInControls?.includes('mfa') || p.grantControls?.authenticationStrength) &&
@@ -526,7 +543,7 @@ export class ZeroTrustValidator {
       // ── ID-007: Require Compliant Devices via CA ─────────────────────────────
       if (validation.id === 'ID-007') {
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (resp.value || []).filter(p => p.state === 'enabled')
           const devicePolicy = policies.find(p =>
             p.grantControls?.builtInControls?.includes('compliantDevice') ||
@@ -543,7 +560,7 @@ export class ZeroTrustValidator {
       // try /identityProtection/riskyUsers for additional evidence.
       if (validation.id === 'ID-008') {
         try {
-          const caResp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const caResp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (caResp.value || []).filter(p => p.state === 'enabled')
           const userRiskCA = policies.find(p =>
             p.conditions?.userRiskLevels?.some(l => l === 'high' || l === 'medium') &&
@@ -579,7 +596,7 @@ export class ZeroTrustValidator {
       // /identityProtection/riskDetections for corroborating evidence.
       if (validation.id === 'ID-009') {
         try {
-          const caResp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const caResp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (caResp.value || []).filter(p => p.state === 'enabled')
           const signInRiskCA = policies.find(p =>
             p.conditions?.signInRiskLevels?.some(l => l === 'high' || l === 'medium') &&
@@ -678,7 +695,7 @@ export class ZeroTrustValidator {
       // ── ID-013: MFA Enforced for All Users (CA — All users scope) ────────────
       if (validation.id === 'ID-013') {
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (resp.value || []).filter(p => p.state === 'enabled')
           const mfaAll = policies.find(p =>
             (p.grantControls?.builtInControls?.includes('mfa') || p.grantControls?.authenticationStrength) &&
@@ -693,7 +710,7 @@ export class ZeroTrustValidator {
       // ── ID-014: Admin MFA Strength Policy (Phishing-Resistant) ──────────────
       if (validation.id === 'ID-014') {
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (resp.value || []).filter(p => p.state === 'enabled')
           const adminMFAPolicy = policies.find(p =>
             p.grantControls?.authenticationStrength?.displayName?.toLowerCase().includes('phishing resistant') &&
@@ -713,7 +730,7 @@ export class ZeroTrustValidator {
       // ── ID-015: Phishing-Resistant MFA Policy ────────────────────────────────
       if (validation.id === 'ID-015') {
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (resp.value || []).filter(p => p.state === 'enabled')
           const policy = policies.find(p =>
             p.grantControls?.authenticationStrength?.displayName?.toLowerCase().includes('phishing resistant')
@@ -771,7 +788,7 @@ export class ZeroTrustValidator {
       // ── ID-017: User Risk Policy ──────────────────────────────────────────────
       if (validation.id === 'ID-017') {
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (resp.value || []).filter(p => p.state === 'enabled')
           const riskPolicy = policies.find(p =>
             p.conditions?.userRiskLevels?.some(l => l === 'high' || l === 'medium') &&
@@ -786,7 +803,7 @@ export class ZeroTrustValidator {
       // ── ID-018: Sign-in Risk Policy ───────────────────────────────────────────
       if (validation.id === 'ID-018') {
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (resp.value || []).filter(p => p.state === 'enabled')
           const riskPolicy = policies.find(p =>
             p.conditions?.signInRiskLevels?.some(l => l === 'high' || l === 'medium') &&
@@ -908,7 +925,7 @@ export class ZeroTrustValidator {
           '9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3', // Authentication Administrator
         ]
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (resp.value || []).filter(p => p.state === 'enabled')
 
           const adminMFAPolicy = policies.find(p => {
@@ -964,7 +981,7 @@ export class ZeroTrustValidator {
       // ── ID-026 / ID-039: Block Legacy Authentication via CA ──────────────────
       if (validation.id === 'ID-026' || validation.id === 'ID-039') {
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (resp.value || []).filter(p => p.state === 'enabled')
           const blockPolicy = policies.find(p =>
             p.conditions?.clientAppTypes?.some(t => t === 'exchangeActiveSync' || t === 'other') &&
@@ -979,7 +996,7 @@ export class ZeroTrustValidator {
       // ── ID-027 / ID-040: High-Risk User Restriction Policy ───────────────────
       if (validation.id === 'ID-027' || validation.id === 'ID-040') {
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (resp.value || []).filter(p => p.state === 'enabled')
           const riskPolicy = policies.find(p =>
             p.conditions?.userRiskLevels?.includes('high') &&
@@ -1035,7 +1052,7 @@ export class ZeroTrustValidator {
       // ── ID-029 / ID-042: Risky Sign-in Blocking Policy ───────────────────────
       if (validation.id === 'ID-029' || validation.id === 'ID-042') {
         try {
-          const resp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const resp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (resp.value || []).filter(p => p.state === 'enabled')
           const riskPolicy = policies.find(p =>
             p.conditions?.signInRiskLevels?.includes('high') &&
@@ -1052,7 +1069,7 @@ export class ZeroTrustValidator {
         try {
           const [authPolicyResp, caResp] = await Promise.all([
             this.graphClient.api('/policies/authorizationPolicy').get(),
-            this.graphClient.api('/identity/conditionalAccess/policies').get()
+            this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           ])
           const hasModernCA = (caResp.value || []).some(p =>
             p.state === 'enabled' &&
@@ -1334,7 +1351,7 @@ export class ZeroTrustValidator {
       // DEV-012: Require Compliant Devices via CA
       if (validation.id === 'DEV-012') {
         try {
-          const caResponse = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const caResponse = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = caResponse.value || []
 
           const compliantDevicePolicy = policies.find(p =>
@@ -1890,7 +1907,7 @@ export class ZeroTrustValidator {
       // DEV-029: Conditional Access - Noncompliant Devices Blocked
       if (validation.id === 'DEV-029') {
         try {
-          const response = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const response = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = response.value || []
           const blockPolicy = policies.find(p =>
             p.state === 'enabled' &&
@@ -1909,7 +1926,7 @@ export class ZeroTrustValidator {
       // DEV-030: Conditional Access - Unmanaged Apps Blocked
       if (validation.id === 'DEV-030') {
         try {
-          const response = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const response = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = response.value || []
           const appPolicy = policies.find(p =>
             p.state === 'enabled' &&
@@ -2310,7 +2327,7 @@ export class ZeroTrustValidator {
       // DEV-041: Device Risk-Based Access
       if (validation.id === 'DEV-041') {
         try {
-          const response = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const response = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = response.value || []
           const riskPolicies = policies.filter(p =>
             p.state === 'enabled' &&
@@ -3112,7 +3129,7 @@ export class ZeroTrustValidator {
       if (validation.id === 'DEV-069') {
         try {
           const [caResp, devResp] = await Promise.all([
-            this.graphClient.api('/identity/conditionalAccess/policies').get(),
+            this.graphClient.api('/beta/identity/conditionalAccess/policies').get(),
             this.graphClient.api('/deviceManagement/managedDevices?$select=id&$top=1').get().catch(() => ({ value: [] }))
           ])
 
@@ -4102,7 +4119,7 @@ export class ZeroTrustValidator {
       if (validation.id === 'DATA-016') {
         // Conditional Access - Unmanaged Device Data Blocking — Fully Automatable
         try {
-          const response = await this.graphClient.api('/v1.0/identity/conditionalAccess/policies').get()
+          const response = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const blockPolicy = (response.value || []).find(p =>
             p.state === 'enabled' && (
               p.displayName?.toLowerCase().includes('unmanaged') ||
@@ -4362,7 +4379,7 @@ export class ZeroTrustValidator {
       // INFRA-001: Legacy Authentication Blocked — Fully Automatable
       if (validation.id === 'INFRA-001') {
         try {
-          const response = await this.graphClient.api('/v1.0/identity/conditionalAccess/policies').get()
+          const response = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (response.value || []).filter(p => p.state === 'enabled')
 
           const legacyBlockPolicy = policies.find(p => {
@@ -4405,7 +4422,7 @@ export class ZeroTrustValidator {
       // INFRA-002: Modern Authentication Enabled — Fully Automatable
       if (validation.id === 'INFRA-002') {
         try {
-          const response = await this.graphClient.api('/v1.0/identity/conditionalAccess/policies').get()
+          const response = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (response.value || []).filter(p => p.state === 'enabled')
 
           const basicAuthBlockPolicy = policies.find(p => {
@@ -4856,7 +4873,7 @@ export class ZeroTrustValidator {
       // INFRA-018: Conditional Access – Data Blocking — Fully Automatable
       if (validation.id === 'INFRA-018') {
         try {
-          const response = await this.graphClient.api('/v1.0/identity/conditionalAccess/policies').get()
+          const response = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (response.value || []).filter(p => p.state === 'enabled')
 
           const dataBlockPolicy = policies.find(p => {
@@ -5685,7 +5702,7 @@ export class ZeroTrustValidator {
       // APP-014: Workload Identity Conditional Access — Partially Automatable
       if (validation.id === 'APP-014') {
         try {
-          const policiesResp = await this.graphClient.api('/identity/conditionalAccess/policies').get()
+          const policiesResp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
           const policies = (policiesResp.value || []).filter(p => p.state === 'enabled')
 
           const workloadIdentityPolicies = policies.filter(p => {
@@ -6819,7 +6836,7 @@ export class ZeroTrustValidator {
 
     console.log('📝 Would create CA policy:', JSON.stringify(policy, null, 2))
 
-    // In production: await this.graphClient.api('/identity/conditionalAccess/policies').post(policy)
+    // In production: await this.graphClient.api('/beta/identity/conditionalAccess/policies').post(policy)
 
     return { policyId: 'ca-legacy-block', status: 'created' }
   }
