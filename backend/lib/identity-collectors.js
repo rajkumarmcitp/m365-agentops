@@ -60,7 +60,7 @@ export class IdentityCollectors {
     if (this.cache.conditionalAccess) return this.cache.conditionalAccess
 
     try {
-      const response = await unifiedGraphClient.get('/identity/conditionalAccess/policies')
+      const response = await unifiedGraphClient.get('/beta/identity/conditionalAccess/policies')
       const policies = response.value || []
 
       const data = {
@@ -75,8 +75,8 @@ export class IdentityCollectors {
           ),
           adminMFA: policies.find(p =>
             p.state === 'enabled' &&
-            p.conditions?.roles?.includeRoles?.some(r =>
-              r.includes('Global') || r.includes('Privileged')
+            (p.conditions?.includeRoles || []).some(r =>
+              typeof r === 'string' && (r.includes('Global') || r.includes('Privileged'))
             ) &&
             p.grantControls?.authenticationStrength?.displayName?.includes('Phishing Resistant')
           ),
