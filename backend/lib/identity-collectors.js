@@ -64,6 +64,12 @@ export class IdentityCollectors {
       // The unifiedGraphClient adds v1.0 by default, so we'll use a direct HTTP call to beta API
       const policies = await this.getCAPolicesFromBetaAPI()
 
+      // Log policies for debugging
+      console.log('📋 CA Policies from beta API:')
+      policies.forEach((p, i) => {
+        console.log(`  [${i}] ${p.displayName} | state=${p.state} | roles=${JSON.stringify(p.conditions?.includeRoles || [])} | MFA=${p.grantControls?.builtInControls?.includes('mfa')}`)
+      })
+
       const data = {
         all: policies,
         enabled: policies.filter(p => p.state === 'enabled'),
