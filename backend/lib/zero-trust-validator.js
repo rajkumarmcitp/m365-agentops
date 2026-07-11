@@ -390,37 +390,20 @@ export class ZeroTrustValidator {
         let caEnforced = false
         let caPolicyName = null
         try {
-          console.log(`🔍 ID-001: Fetching CA policies from /identity/conditionalAccess/policies`)
           const caResp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
-          console.log(`🔍 ID-001: CA API response: ${JSON.stringify(caResp?.value?.length || 0)} policies found`)
-
-          if (caResp?.value?.length > 0) {
-            console.log(`🔍 ID-001 Debug: Found ${caResp.value.length} CA policies`)
-            caResp.value.forEach((p, idx) => {
-              console.log(`  Policy ${idx}: ${p.displayName || 'unnamed'} | state=${p.state} | includeRoles=${JSON.stringify(p.conditions?.includeRoles || [])} | grantControls=${JSON.stringify(p.grantControls || {})}`)
-            })
-          } else {
-            console.log(`🔍 ID-001: No CA policies found in response`)
-          }
-
-          const adminMFAPolicy = (caResp.value || []).find(p => {
-            const isEnabled = p.state === 'enabled'
-            const hasMFA = p.grantControls?.builtInControls?.includes('mfa') || p.grantControls?.authenticationStrength
-            const hasAdminRole = (p.conditions?.includeRoles || []).some(r =>
+          const adminMFAPolicy = (caResp.value || []).find(p =>
+            p.state === 'enabled' &&
+            (p.grantControls?.builtInControls?.includes('mfa') ||
+             p.grantControls?.authenticationStrength) &&
+            (p.conditions?.includeRoles || []).some(r =>
               r === GLOBAL_ADMIN_TEMPLATE_ID ||
               r.toLowerCase().includes('62e90394')
             )
-            if (!isEnabled) console.log(`  Policy ${p.displayName}: state=${p.state} (not enabled)`)
-            if (!hasMFA) console.log(`  Policy ${p.displayName}: No MFA grant control found`)
-            if (!hasAdminRole) console.log(`  Policy ${p.displayName}: No Global Admin role in conditions`)
-            return isEnabled && hasMFA && hasAdminRole
-          })
+          )
           caEnforced = !!adminMFAPolicy
           caPolicyName = adminMFAPolicy?.displayName || null
-          console.log(`🔍 ID-001: Final result: caEnforced=${caEnforced}, caPolicyName=${caPolicyName}`)
         } catch (e) {
           console.warn(`⚠️ ID-001 CA policy check failed:`, e.message)
-          console.warn(`Stack:`, e.stack)
         }
 
         const mfaPercentage = adminsList.length > 0 ? Math.round((adminsWithMFA / adminsList.length) * 100) : 0
