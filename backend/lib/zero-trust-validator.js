@@ -893,8 +893,41 @@ export class ZeroTrustValidator {
         } catch (e) { return markManual(e, 'Could not query cross-tenant access policy') }
       }
 
-      // ── ID-022 / ID-031: Tenant Creator Role Minimized ───────────────────────
-      if (validation.id === 'ID-022' || validation.id === 'ID-031') {
+      // ── ID-022: Phishing-Resistant MFA - Privileged Users ─────────────────────
+      if (validation.id === 'ID-022') {
+        try {
+          // Check if Conditional Access enforces phishing-resistant MFA for privileged roles
+          const PRIV_ROLE_IDS = [
+            '62e90394-69f5-4237-9190-012177145e10', // Global Administrator
+            'e8611ab8-c189-46e8-94e1-60213ab1f814', // Privileged Role Administrator
+            'b1be1c3e-b65d-4f19-8427-f6fa0d97feb9', // Conditional Access Administrator
+            '194ae4cb-b126-40b2-bd5b-6091b380977d', // Security Administrator
+          ]
+
+          const caResp = await this.getCAPolicesFromBetaAPI()
+          const phishingResistantPolicy = caResp.find(p =>
+            p.state === 'enabled' &&
+            (p.grantControls?.authenticationStrength?.displayName?.toLowerCase().includes('phishing') ||
+             p.grantControls?.authenticationStrength?.displayName?.toLowerCase().includes('fido') ||
+             p.grantControls?.authenticationStrength?.displayName?.toLowerCase().includes('passkey')) &&
+            (p.conditions?.users?.includeRoles || []).some(r => PRIV_ROLE_IDS.includes(r))
+          )
+
+          result.currentValue = phishingResistantPolicy
+            ? `Phishing-resistant MFA enforced via CA policy: ${phishingResistantPolicy.displayName}`
+            : 'No CA policy enforcing phishing-resistant MFA for privileged users'
+          result.evidence = {
+            policyExists: !!phishingResistantPolicy,
+            policyName: phishingResistantPolicy?.displayName || null,
+            targetedRoles: 'Global Admins, Role Admins'
+          }
+
+          return phishingResistantPolicy ? 'pass' : 'fail'
+        } catch (e) { return markManual(e, 'Could not query CA policies for phishing-resistant MFA enforcement') }
+      }
+
+      // ── ID-031: Tenant Creator Role Minimized ───────────────────────────────
+      if (validation.id === 'ID-031') {
         try {
           const rolesResp = await this.graphClient.api('/directoryRoles').get()
           const creatorRole = (rolesResp.value || []).find(r => r.displayName === 'Tenant Creator')
