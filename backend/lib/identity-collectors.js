@@ -60,8 +60,9 @@ export class IdentityCollectors {
     if (this.cache.conditionalAccess) return this.cache.conditionalAccess
 
     try {
-      const response = await unifiedGraphClient.get('/beta/identity/conditionalAccess/policies')
-      const policies = response.value || []
+      // CA policies only available in beta API
+      // The unifiedGraphClient adds v1.0 by default, so we'll use a direct HTTP call to beta API
+      const policies = await this.getCAPolicesFromBetaAPI()
 
       const data = {
         all: policies,
@@ -298,6 +299,37 @@ export class IdentityCollectors {
       cached: Object.keys(this.cache),
       count: Object.keys(this.cache).length,
       timestamp: new Date().toISOString()
+    }
+  }
+
+  /**
+   * Fetch CA policies from beta API using direct HTTP request
+   * The unifiedGraphClient uses v1.0 by default, but CA policies require beta API
+   */
+  async getCAPolicesFromBetaAPI() {
+    try {
+      // Import the graph client to access the underlying client with beta support
+      const { graphConfigService } = await import('../services/graph-config-service.js')
+      const config = graphConfigService.getConfigRaw()
+
+      // Make direct HTTP request to beta API
+      const token = await unifiedGraphClient.credential.getToken(['https://graph.microsoft.com/.default'])
+      const response = await fetch('https://graph.microsoft.com/beta/identity/conditionalAccess/policies', {
+        headers: {
+          Authorization: `Bearer ${token.token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Graph API error: ${response.status} ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      return data.value || []
+    } catch (error) {
+      console.error('❌ Failed to fetch CA policies from beta API:', error.message)
+      return []
     }
   }
 }
