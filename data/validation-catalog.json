@@ -1282,7 +1282,7 @@
     },
     {
       "id": "ID-029",
-      "name": "Microsoft Authenticator - Sign-in Context Display",
+      "name": "Microsoft Authenticator - Sign-in Context Display (Manual)",
       "pillar": "Identity Security",
       "category": "Authentication",
       "severity": "Medium",
