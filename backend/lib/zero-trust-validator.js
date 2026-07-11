@@ -7458,6 +7458,8 @@ export class ZeroTrustValidator {
               'Secret rotation policy enabled'
             ]
           }
+          result.requiresManualValidation = true
+          result.automationLevel = 'Manual'
           return 'warn'
         }
 
@@ -7520,6 +7522,8 @@ export class ZeroTrustValidator {
         case 'ID-014': {
           result.currentValue = 'Requires manual review of application lifecycle'
           result.evidence = { status: 'manual' }
+          result.requiresManualValidation = true
+          result.automationLevel = 'Manual'
           return 'warn'
         }
 
@@ -7527,6 +7531,8 @@ export class ZeroTrustValidator {
         case 'ID-015': {
           result.currentValue = 'Requires manual credential audit'
           result.evidence = { status: 'manual' }
+          result.requiresManualValidation = true
+          result.automationLevel = 'Manual'
           return 'warn'
         }
 
@@ -7534,6 +7540,8 @@ export class ZeroTrustValidator {
         case 'ID-017': {
           result.currentValue = 'Requires manual service principal audit'
           result.evidence = { status: 'manual' }
+          result.requiresManualValidation = true
+          result.automationLevel = 'Manual'
           return 'warn'
         }
 
@@ -7565,6 +7573,8 @@ export class ZeroTrustValidator {
         case 'ID-029': {
           result.currentValue = 'Requires manual verification of Authenticator settings'
           result.evidence = { status: 'manual' }
+          result.requiresManualValidation = true
+          result.automationLevel = 'Manual'
           return 'warn'
         }
 
