@@ -5810,58 +5810,26 @@ export class ZeroTrustValidator {
       }
 
       // APP-014: Workload Identity Conditional Access — Partially Automatable
+      // APP-014: Managed Identity Adoption — Manual validation required
       if (validation.id === 'APP-014') {
-        try {
-          const policiesResp = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
-          const policies = (policiesResp.value || []).filter(p => p.state === 'enabled')
-
-          const workloadIdentityPolicies = policies.filter(p => {
-            const targets = p.conditions?.servicePrincipals?.includeServicePrincipals || []
-            return targets.length > 0 && targets.some(t => t !== 'All')
-          })
-
-          result.automationLevel = 'PartiallyAutomated'
-          result.requiresManualValidation = false
-          result.currentValue = workloadIdentityPolicies.length === 0
-            ? 'No workload identity Conditional Access policies found'
-            : `${workloadIdentityPolicies.length} workload identity CA policies configured`
-
-          result.evidence = {
-            workloadCAPolicies: workloadIdentityPolicies.length,
-            totalEnabledPolicies: policies.length,
-            manualVerificationNote: 'Graph cannot validate every workload identity enforcement scenario'
-          }
-
-          return workloadIdentityPolicies.length > 0 ? 'pass' : 'warn'
-        } catch (e) { return markManual(e, 'Could not retrieve Conditional Access policies') }
+        result.automationLevel = 'Manual'
+        result.requiresManualValidation = true
+        result.currentValue = 'Managed Identity Adoption requires manual review in Azure Portal'
+        result.evidence = {
+          status: 'manual',
+          reason: 'Azure Managed Identities must be verified through Azure Portal or PowerShell',
+          manualSteps: [
+            'Navigate to Azure Portal > Managed Identities',
+            'Review all system-assigned and user-assigned managed identities',
+            'Verify workload identities are configured for applications',
+            'Check RBAC assignments for managed identities'
+          ]
+        }
+        return 'warn'
       }
 
-      // APP-015: Managed Identity Adoption — Partially Automatable
+      // APP-015: Service Principal Sign-in Monitoring
       if (validation.id === 'APP-015') {
-        try {
-          const spsResp = await this.graphClient.api('/servicePrincipals?$select=id,displayName,servicePrincipalType').get()
-          const servicePrincipals = spsResp.value || []
-
-          const managedIdentities = servicePrincipals.filter(sp =>
-            sp.servicePrincipalType === 'ManagedIdentity' || sp.tags?.includes('azure-managed-identity')
-          ).length
-
-          result.automationLevel = 'PartiallyAutomated'
-          result.requiresManualValidation = false
-          result.currentValue = `${managedIdentities} managed identities detected via Graph (Graph + Azure ARM recommended for complete inventory)`
-
-          result.evidence = {
-            managedIdentitiesDetected: managedIdentities,
-            totalServicePrincipals: servicePrincipals.length,
-            manualVerificationNote: 'For complete managed identity adoption metrics, combine Microsoft Graph with Azure ARM APIs'
-          }
-
-          return managedIdentities > 0 ? 'pass' : 'warn'
-        } catch (e) { return markManual(e, 'Could not retrieve managed identity data') }
-      }
-
-      // APP-016: Service Principal Sign-in Monitoring — Fully Automatable
-      if (validation.id === 'APP-016') {
         try {
           const signinsResp = await this.graphClient.api('/auditLogs/signIns?$filter=signInEventTypes/any(t: t eq servicePrincipal)&$top=500').get()
           const signins = signinsResp.value || []
@@ -5882,6 +5850,31 @@ export class ZeroTrustValidator {
 
           return failedSignins === 0 && suspiciousSignins === 0 ? 'pass' : 'warn'
         } catch (e) { return markManual(e, 'Could not retrieve service principal sign-ins') }
+      }
+
+      // APP-016: Verified Publisher Status
+      if (validation.id === 'APP-016') {
+        try {
+          const appsResp = await this.graphClient.api('/applications?$select=id,displayName,verifiedPublisher').get()
+          const applications = appsResp.value || []
+
+          const verifiedPublishers = applications.filter(a => a.verifiedPublisher?.verifiedPublisherId).length
+          const unverifiedApps = applications.filter(a => !a.verifiedPublisher?.verifiedPublisherId).length
+
+          result.automationLevel = 'PartiallyAutomated'
+          result.requiresManualValidation = false
+          result.currentValue = `${verifiedPublishers}/${applications.length} applications have verified publishers (${unverifiedApps} unverified)`
+
+          result.evidence = {
+            totalApplications: applications.length,
+            verifiedPublishers,
+            unverifiedApplications: unverifiedApps,
+            verificationRate: applications.length > 0 ? Math.round((verifiedPublishers / applications.length) * 100) : 0,
+            unverifiedAppsList: applications.filter(a => !a.verifiedPublisher?.verifiedPublisherId).slice(0, 5).map(a => a.displayName)
+          }
+
+          return verifiedPublishers > applications.length * 0.8 ? 'pass' : (verifiedPublishers > 0 ? 'warn' : 'fail')
+        } catch (e) { return markManual(e, 'Could not verify publisher verification status') }
       }
 
       // APP-017: Never Used Applications — Fully Automatable
@@ -6000,16 +5993,19 @@ export class ZeroTrustValidator {
 
       // APP-021: Admin Consent Requests Reviewed — Partially Automatable
       if (validation.id === 'APP-021') {
-        result.automationLevel = 'PartiallyAutomated'
-        result.requiresManualValidation = false
-        result.currentValue = 'Graph API cannot expose complete Admin Consent Requests queue'
+        result.automationLevel = 'Manual'
+        result.requiresManualValidation = true
+        result.currentValue = 'Admin Consent Requests require manual review — Graph API cannot expose pending requests'
         result.evidence = {
-          note: 'Graph exposes some authorization policy settings but pending requests require manual review',
+          status: 'manual',
+          note: 'Graph does not expose pending admin consent requests',
           manualSteps: [
             'Navigate to Entra Admin Center',
             'Go to Identity > Applications > Enterprise Applications',
             'Review Admin Consent Requests',
-            'Verify pending requests, request age, assigned reviewers, and approval history'
+            'Verify pending requests are reviewed and approved',
+            'Confirm reviewers are configured and notifications are sent',
+            'Track approval history and request age'
           ]
         }
         return 'warn'
