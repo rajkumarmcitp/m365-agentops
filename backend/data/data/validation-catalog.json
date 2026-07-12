@@ -971,7 +971,8 @@
       "remediation": "Enable Audit Log Search in Security & Compliance center",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 90
+      "impactScore": 90,
+      "automationLevel": "Automated"
     },
     {
       "id": "AUDIT-002",
@@ -987,7 +988,8 @@
       "remediation": "Enable mailbox auditing for all users via transport rules",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "Automated"
     },
     {
       "id": "AUDIT-003",
@@ -1003,7 +1005,8 @@
       "remediation": "Enable alerts for: MFA disabled, User added to admin roles, Forwarding rules",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 65
+      "impactScore": 65,
+      "automationLevel": "Automated"
     },
     {
       "id": "THREAT-001",
