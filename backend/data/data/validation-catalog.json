@@ -1570,7 +1570,7 @@
     },
     {
       "id": "DEV-005",
-      "name": "Android Compliance Policies - Managed Devices",
+      "name": "Android Compliance Policies - Managed Devices (Manual)",
       "pillar": "Device Security",
       "category": "Device Compliance",
       "severity": "Critical",
@@ -1682,7 +1682,7 @@
     },
     {
       "id": "DEV-012",
-      "name": "Windows Hello for Business - Authentication",
+      "name": "Windows Hello for Business - Authentication (Manual)",
       "pillar": "Device Security",
       "category": "Authentication",
       "severity": "Critical",
@@ -1730,7 +1730,7 @@
     },
     {
       "id": "DEV-015",
-      "name": "Windows Local Account Restrictions - Enforced",
+      "name": "Windows Local Account Restrictions - Enforced (Manual)",
       "pillar": "Device Security",
       "category": "Access Control",
       "severity": "High",
@@ -3074,7 +3074,7 @@
     },
     {
       "id": "INFRA-008",
-      "name": "Exchange Transport Rules",
+      "name": "Exchange Transport Rules (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "Exchange Online",
       "severity": "High",
@@ -3090,7 +3090,7 @@
     },
     {
       "id": "INFRA-009",
-      "name": "Anti-Phishing Policies",
+      "name": "Anti-Phishing Policies (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "Exchange Online",
       "severity": "Critical",
@@ -3234,7 +3234,7 @@
     },
     {
       "id": "INFRA-018",
-      "name": "Mail Flow Connectors",
+      "name": "Mail Flow Connectors (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "Exchange Online",
       "severity": "Medium",
@@ -3410,7 +3410,7 @@
     },
     {
       "id": "INFRA-029",
-      "name": "SharePoint External Users",
+      "name": "SharePoint External Users (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "SharePoint Online",
       "severity": "High",
@@ -3490,7 +3490,7 @@
     },
     {
       "id": "INFRA-034",
-      "name": "SharePoint Idle Sites",
+      "name": "SharePoint Idle Sites (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "SharePoint Online",
       "severity": "Low",

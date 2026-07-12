@@ -3554,7 +3554,7 @@
     },
     {
       "id": "INFRA-008",
-      "name": "Exchange Transport Rules",
+      "name": "Exchange Transport Rules (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "Exchange Online",
       "severity": "High",
@@ -3570,7 +3570,7 @@
     },
     {
       "id": "INFRA-009",
-      "name": "Anti-Phishing Policies",
+      "name": "Anti-Phishing Policies (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "Exchange Online",
       "severity": "Critical",
@@ -3682,7 +3682,7 @@
     },
     {
       "id": "INFRA-018",
-      "name": "Mail Flow Connectors",
+      "name": "Mail Flow Connectors (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "Exchange Online",
       "severity": "Medium",
@@ -3842,7 +3842,7 @@
     },
     {
       "id": "INFRA-029",
-      "name": "SharePoint External Users",
+      "name": "SharePoint External Users (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "SharePoint Online",
       "severity": "High",
@@ -3922,7 +3922,7 @@
     },
     {
       "id": "INFRA-034",
-      "name": "SharePoint Idle Sites",
+      "name": "SharePoint Idle Sites (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "SharePoint Online",
       "severity": "Low",
