@@ -7739,36 +7739,6 @@ export class ZeroTrustValidator {
         }
 
         // Windows Hello for Business
-        case 'DEV-013': {
-          const whfb = deviceData.configuration?.windowsHello
-          result.currentValue = whfb ? 'Windows Hello for Business configured' : 'Windows Hello not configured'
-          result.evidence = {
-            configured: !!whfb,
-            policyId: whfb?.id
-          }
-          return whfb ? 'pass' : 'warn'
-        }
-
-        // Firewall Configuration
-        case 'DEV-014': {
-          const firewall = deviceData.configuration?.firewall
-          result.currentValue = firewall ? 'Firewall policy configured' : 'Firewall not configured'
-          result.evidence = {
-            configured: !!firewall
-          }
-          return firewall ? 'pass' : 'fail'
-        }
-
-        // Endpoint Analytics
-        case 'DEV-019': {
-          const analytics = deviceData.administration?.analytics || {}
-          result.currentValue = analytics.enabled ? 'Endpoint Analytics enabled' : 'Endpoint Analytics disabled'
-          result.evidence = {
-            enabled: !!analytics.enabled
-          }
-          return analytics.enabled ? 'pass' : 'warn'
-        }
-
         // DEV-031: iOS Secure Wi-Fi Profiles
         // Check Settings Catalog (collector data) first, then legacy deviceConfigurations
         case 'DEV-031': {
