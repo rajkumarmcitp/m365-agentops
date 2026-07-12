@@ -7039,13 +7039,6 @@ export class ZeroTrustValidator {
           return ca ? 'pass' : 'fail'
         }
 
-        // Exchange: Modern Authentication Enabled
-        case 'INFRA-002': {
-          result.currentValue = 'Modern authentication enabled'
-          result.evidence = { modernAuthEnabled: true }
-          return 'pass'
-        }
-
         // Exchange: Mailbox Auditing Enabled
         case 'INFRA-003': {
           const audit = infrastructureData?.usersAndMailboxes?.mailboxAuditingStatus || {}
