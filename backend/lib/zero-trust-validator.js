@@ -1419,147 +1419,131 @@ export class ZeroTrustValidator {
       }
 
       if (validation.id === 'DEV-008') {
-        // iOS/iPadOS Compliance Policies
-        const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
-        const iosPolicies = response.value?.filter(p => p.platform === 'iOS') || []
-
-        result.currentValue = `${iosPolicies.length} iOS policies`
-        result.evidence = {
-          policyCount: iosPolicies.length,
-          hasPolicy: iosPolicies.length > 0
-        }
-        return iosPolicies.length > 0 ? 'pass' : 'fail'
-      }
-
-      if (validation.id === 'DEV-009') {
-        // Android Compliance Policies
-        const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
-        const androidPolicies = response.value?.filter(p => p.platform === 'android') || []
-
-        result.currentValue = `${androidPolicies.length} Android policies`
-        result.evidence = {
-          policyCount: androidPolicies.length,
-          hasPolicy: androidPolicies.length > 0
-        }
-        return androidPolicies.length > 0 ? 'pass' : 'fail'
-      }
-
-      // Mobile Application Management
-      if (validation.id === 'DEV-010') {
-        // iOS App Protection Policies
+        // iOS App Protection Policies - Data Protection
         try {
           const response = await this.graphClient.api('/deviceAppManagement/iosManagedAppProtections').get()
           const policies = response.value?.length || 0
 
-          result.currentValue = `${policies} iOS MAM policies`
+          result.currentValue = `${policies} iOS app protection policy(ies)`
           result.evidence = { policyCount: policies, hasPolicy: policies > 0 }
-          return policies > 0 ? 'pass' : 'warn'
+          return policies > 0 ? 'pass' : 'fail'
         } catch (e) {
-          return markManual(e, 'Could not verify iOS MAM policies — requires Intune license')
+          return markManual(e, 'Could not verify iOS app protection policies')
         }
       }
 
-      if (validation.id === 'DEV-011') {
-        // Android App Protection Policies
+      if (validation.id === 'DEV-009') {
+        // Android App Protection Policies - Data Protection
         try {
           const response = await this.graphClient.api('/deviceAppManagement/androidManagedAppProtections').get()
           const policies = response.value?.length || 0
 
-          result.currentValue = `${policies} Android MAM policies`
+          result.currentValue = `${policies} Android app protection policy(ies)`
           result.evidence = { policyCount: policies, hasPolicy: policies > 0 }
-          return policies > 0 ? 'pass' : 'warn'
+          return policies > 0 ? 'pass' : 'fail'
         } catch (e) {
-          return markManual(e, 'Could not verify Android MAM policies — requires Intune license')
+          return markManual(e, 'Could not verify Android app protection policies')
         }
       }
 
-      // DEV-012: Require Compliant Devices via CA
+      if (validation.id === 'DEV-010') {
+        // Windows BitLocker Encryption - Enforced
+        const encryption = deviceData?.compliance?.encryption || deviceData?.configuration?.bitlocker
+        result.currentValue = encryption ? 'BitLocker encryption policy configured' : 'No BitLocker encryption policies found'
+        result.evidence = {
+          configured: !!encryption,
+          policyId: encryption?.id
+        }
+        return encryption ? 'pass' : 'fail'
+      }
+
+      if (validation.id === 'DEV-011') {
+        // macOS FileVault Encryption - Enforced
+        const encryption = deviceData?.compliance?.encryption || deviceData?.configuration?.filevault
+        result.currentValue = encryption ? 'FileVault encryption policy configured' : 'No FileVault encryption policies found'
+        result.evidence = {
+          configured: !!encryption,
+          policyId: encryption?.id
+        }
+        return encryption ? 'pass' : 'fail'
+      }
+
       if (validation.id === 'DEV-012') {
-        try {
-          const caResponse = await this.graphClient.api('/beta/identity/conditionalAccess/policies').get()
-          const policies = caResponse.value || []
-
-          const compliantDevicePolicy = policies.find(p =>
-            p.state === 'enabled' &&
-            p.grantControls?.builtInControls?.includes('compliantDevice')
-          )
-
-          result.currentValue = compliantDevicePolicy ? 'Compliant device CA policy enforced' : 'No compliant device policy'
-          result.evidence = {
-            hasPolicy: !!compliantDevicePolicy,
-            policyName: compliantDevicePolicy?.displayName,
-            requiresCompliance: !!compliantDevicePolicy
-          }
-          return compliantDevicePolicy ? 'pass' : 'fail'
-        } catch (e) {
-          return markManual(e, 'Could not verify compliant device CA policy')
+        // Windows Hello for Business - Authentication (Manual)
+        result.automationLevel = 'Manual'
+        result.requiresManualValidation = true
+        result.currentValue = 'Windows Hello for Business configuration requires manual verification'
+        result.evidence = {
+          status: 'manual',
+          manualSteps: [
+            'Navigate to Intune > Devices > Configure Devices > Windows Hello for Business',
+            'Verify Windows Hello for Business is enabled',
+            'Check PIN complexity requirements and number of sign-in attempts allowed'
+          ]
         }
+        return 'warn'
       }
 
-      // DEV-013: Windows Security Baselines
       if (validation.id === 'DEV-013') {
+        // Windows LAPS - Local Admin Credential Protection
         try {
-          const intentsResponse = await this.graphClient.api('/deviceManagement/intents').get()
-          const policies = intentsResponse.value || []
+          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = configResponse.value || []
 
-          const securityBaselines = policies.filter(p =>
-            p.displayName?.toLowerCase().includes('baseline') ||
-            p.templateId?.includes('securityBaseline')
+          const lapsPolicy = policies.find(p =>
+            p.name?.toLowerCase().includes('laps') ||
+            p.description?.toLowerCase().includes('local admin')
           )
 
-          result.currentValue = `${securityBaselines.length} security baselines configured`
+          result.currentValue = lapsPolicy ? 'Windows LAPS policy configured' : 'No Windows LAPS policy configured'
           result.evidence = {
-            baselineCount: securityBaselines.length,
-            hasBaselines: securityBaselines.length > 0,
-            baselines: securityBaselines.map(b => ({ name: b.displayName }))
+            hasPolicy: !!lapsPolicy,
+            policyName: lapsPolicy?.name
           }
-          return securityBaselines.length > 0 ? 'pass' : 'warn'
+          return lapsPolicy ? 'pass' : 'fail'
         } catch (e) {
-          return markManual(e, 'Could not verify Windows Security Baselines — requires Intune')
+          return markManual(e, 'Could not verify Windows LAPS policy configuration')
         }
       }
 
-      // DEV-014: Windows Hello for Business
       if (validation.id === 'DEV-014') {
+        // macOS LAPS - Local Admin Credential Protection
         try {
           const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
           const policies = configResponse.value || []
 
-          const windowsHelloPolicy = policies.find(p =>
-            p.name?.toLowerCase().includes('windows hello') ||
-            p.description?.toLowerCase().includes('hello')
+          const macosLapsPolicy = policies.find(p =>
+            (p.name?.toLowerCase().includes('laps') ||
+             p.description?.toLowerCase().includes('local admin')) &&
+            p.platforms?.toLowerCase().includes('macos')
           )
 
-          result.currentValue = windowsHelloPolicy ? 'Windows Hello configured' : 'Windows Hello not configured'
+          result.currentValue = macosLapsPolicy ? 'macOS LAPS policy configured' : 'No macOS LAPS policy configured'
           result.evidence = {
-            hasPolicy: !!windowsHelloPolicy,
-            policyName: windowsHelloPolicy?.name
+            hasPolicy: !!macosLapsPolicy,
+            policyName: macosLapsPolicy?.name
           }
-          return windowsHelloPolicy ? 'pass' : 'warn'
+          return macosLapsPolicy ? 'pass' : 'fail'
         } catch (e) {
-          return markManual(e, 'Could not verify Windows Hello for Business policy')
+          return markManual(e, 'Could not verify macOS LAPS policy configuration')
         }
       }
 
-      // DEV-015: Windows Firewall Policy
       if (validation.id === 'DEV-015') {
-        try {
-          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
-          const policies = configResponse.value || []
-
-          const firewallPolicy = policies.find(p =>
-            p.name?.toLowerCase().includes('firewall')
-          )
-
-          result.currentValue = firewallPolicy ? 'Windows Firewall policy configured' : 'No firewall policy'
-          result.evidence = {
-            hasPolicy: !!firewallPolicy,
-            policyName: firewallPolicy?.name
-          }
-          return firewallPolicy ? 'pass' : 'fail'
-        } catch (e) {
-          return markManual(e, 'Could not verify Windows Firewall policy configuration')
+        // Windows Local Account Restrictions - Enforced (Manual)
+        result.automationLevel = 'Manual'
+        result.requiresManualValidation = true
+        result.currentValue = 'Windows Local Account Restrictions require manual verification'
+        result.evidence = {
+          status: 'manual',
+          manualSteps: [
+            'Review Windows local account policies in Intune',
+            'Verify guest account is disabled',
+            'Check that standard user accounts cannot install software or change settings',
+            'Confirm administrator approval is required for privileged operations'
+          ]
         }
+        return 'warn'
       }
 
       // DEV-016: macOS Platform SSO — Authentication
@@ -1792,41 +1776,30 @@ export class ZeroTrustValidator {
 
       // DEV-019: Endpoint Analytics
       if (validation.id === 'DEV-019') {
+        // iOS/iPadOS Update Policies - Enforced
         try {
-          const analyticsResponse = await this.graphClient.api('/deviceManagement/userExperienceAnalyticsSettings').get()
+          const configResponse = await this.graphClient.api('/deviceManagement/configurationPolicies').get()
+          const policies = configResponse.value || []
 
-          result.currentValue = analyticsResponse ? 'Endpoint Analytics enabled' : 'Endpoint Analytics disabled'
+          const iosUpdatePolicies = policies.filter(p =>
+            p.platforms?.toLowerCase().includes('ios') &&
+            (p.name?.toLowerCase().includes('update') ||
+             p.description?.toLowerCase().includes('update'))
+          )
+
+          result.currentValue = iosUpdatePolicies.length > 0 ? `${iosUpdatePolicies.length} iOS/iPadOS update policy(ies) configured` : 'No iOS/iPadOS update policies found'
           result.evidence = {
-            enabled: !!analyticsResponse,
-            dataCollection: analyticsResponse?.dataCollectionEnabled
+            policyCount: iosUpdatePolicies.length,
+            hasPolicy: iosUpdatePolicies.length > 0
           }
-          return analyticsResponse ? 'pass' : 'warn'
+          return iosUpdatePolicies.length > 0 ? 'pass' : 'fail'
         } catch (e) {
-          return markManual(e, 'Could not verify Endpoint Analytics settings')
+          return markManual(e, 'Could not verify iOS/iPadOS update policies')
         }
       }
 
-      // DEV-020: Terms and Conditions
       if (validation.id === 'DEV-020') {
-        try {
-          const tcResponse = await this.graphClient.api('/deviceManagement/termsAndConditions').get()
-          const policies = tcResponse.value || []
-
-          const publishedPolicies = policies.filter(p => p.published === true)
-
-          result.currentValue = `${publishedPolicies.length} T&C policies published`
-          result.evidence = {
-            policyCount: publishedPolicies.length,
-            hasPolicy: publishedPolicies.length > 0
-          }
-          return publishedPolicies.length > 0 ? 'pass' : 'warn'
-        } catch (e) {
-          return markManual(e, 'Could not verify Terms and Conditions policies')
-        }
-      }
-
-      // DEV-021: Scope Tags Configuration
-      if (validation.id === 'DEV-021') {
+        // Intune Scope Tags - Delegated Administration
         try {
           const scopeResponse = await this.graphClient.api('/deviceManagement/roleScopeTags').get()
           const tags = scopeResponse.value || []
@@ -1834,7 +1807,7 @@ export class ZeroTrustValidator {
           // Default tag + custom tags
           const customTags = tags.filter(t => t.displayName !== 'Default')
 
-          result.currentValue = `${tags.length} scope tags configured`
+          result.currentValue = `${tags.length} scope tag(s) configured (${customTags.length} custom)`
           result.evidence = {
             totalTags: tags.length,
             customTags: customTags.length,
@@ -1842,30 +1815,30 @@ export class ZeroTrustValidator {
           }
           return customTags.length > 0 ? 'pass' : 'warn'
         } catch (e) {
-          return markManual(e, 'Could not verify Scope Tags configuration')
+          return markManual(e, 'Could not verify Intune Scope Tags configuration')
         }
       }
 
-      // DEV-022: Android Enterprise (Work Profile) Compliance
       if (validation.id === 'DEV-022') {
+        // Windows Security Baselines - Applied
         try {
-          const complianceResponse = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
-          const policies = complianceResponse.value || []
+          const intentsResponse = await this.graphClient.api('/deviceManagement/intents').get()
+          const policies = intentsResponse.value || []
 
-          const androidWorkProfile = policies.find(p =>
-            p.platform === 'android' &&
-            (p.displayName?.toLowerCase().includes('work profile') ||
-             p.displayName?.toLowerCase().includes('enterprise'))
+          const securityBaselines = policies.filter(p =>
+            p.displayName?.toLowerCase().includes('baseline') ||
+            p.templateId?.includes('securityBaseline')
           )
 
-          result.currentValue = androidWorkProfile ? 'Android Enterprise compliance policy exists' : 'No Android Enterprise policy'
+          result.currentValue = securityBaselines.length > 0 ? `${securityBaselines.length} security baseline(s) applied` : 'No Windows security baselines applied'
           result.evidence = {
-            hasPolicy: !!androidWorkProfile,
-            policyName: androidWorkProfile?.displayName
+            baselineCount: securityBaselines.length,
+            hasBaselines: securityBaselines.length > 0,
+            baselines: securityBaselines.map(b => ({ name: b.displayName }))
           }
-          return androidWorkProfile ? 'pass' : 'fail'
+          return securityBaselines.length > 0 ? 'pass' : 'warn'
         } catch (e) {
-          return markManual(e, 'Could not verify Android Enterprise Work Profile compliance policy')
+          return markManual(e, 'Could not verify Windows Security Baselines')
         }
       }
 
@@ -7686,15 +7659,13 @@ export class ZeroTrustValidator {
       switch (validation.id) {
         // Device Enrollment Configuration
         case 'DEV-001': {
-          const enrollment = deviceData.enrollment || {}
-          const total = enrollment.total || 0
-          result.currentValue = `${total} enrollment configurations`
+          const firewall = deviceData.configuration?.firewall
+          result.currentValue = firewall ? 'Windows Firewall policy configured' : 'No Windows Firewall policies found'
           result.evidence = {
-            total,
-            byPlatform: enrollment.byPlatform,
-            compliant: total > 0
+            configured: !!firewall,
+            policyId: firewall?.id
           }
-          return total > 0 ? 'pass' : 'warn'
+          return firewall ? 'pass' : 'fail'
         }
 
         // Windows Compliance Policy
@@ -7743,15 +7714,17 @@ export class ZeroTrustValidator {
           return androidCompliance.length > 0 ? 'pass' : 'warn'
         }
 
-        // BitLocker Encryption
+        // Windows Automatic Device Enrollment - Enforced
         case 'DEV-006': {
-          const encryption = deviceData.compliance?.encryption || deviceData.configuration?.bitlocker
-          result.currentValue = encryption ? 'BitLocker policy configured' : 'BitLocker not configured'
+          const enrollment = deviceData.enrollment || {}
+          const total = enrollment.total || 0
+          result.currentValue = total > 0 ? `${total} enrollment configuration(s)` : 'No enrollment configurations found'
           result.evidence = {
-            configured: !!encryption,
-            policyId: encryption?.id
+            total,
+            byPlatform: enrollment.byPlatform,
+            compliant: total > 0
           }
-          return encryption ? 'pass' : 'fail'
+          return total > 0 ? 'pass' : 'fail'
         }
 
         // Android Personal Compliance Policies
