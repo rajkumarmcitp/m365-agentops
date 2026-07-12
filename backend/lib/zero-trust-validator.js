@@ -1448,24 +1448,36 @@ export class ZeroTrustValidator {
 
       if (validation.id === 'DEV-010') {
         // Windows BitLocker Encryption - Enforced
-        const encryption = deviceData?.compliance?.encryption || deviceData?.configuration?.bitlocker
-        result.currentValue = encryption ? 'BitLocker encryption policy configured' : 'No BitLocker encryption policies found'
-        result.evidence = {
-          configured: !!encryption,
-          policyId: encryption?.id
+        try {
+          const complianceResp = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+          const policies = complianceResp.value || []
+          const bitlockerPolicies = policies.filter(p => p.bitLockerEnabled === true)
+          result.currentValue = bitlockerPolicies.length > 0 ? `${bitlockerPolicies.length} BitLocker encryption policy(ies) configured` : 'No BitLocker encryption policies found'
+          result.evidence = {
+            policyCount: bitlockerPolicies.length,
+            hasPolicy: bitlockerPolicies.length > 0
+          }
+          return bitlockerPolicies.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not verify Windows BitLocker encryption policies')
         }
-        return encryption ? 'pass' : 'fail'
       }
 
       if (validation.id === 'DEV-011') {
         // macOS FileVault Encryption - Enforced
-        const encryption = deviceData?.compliance?.encryption || deviceData?.configuration?.filevault
-        result.currentValue = encryption ? 'FileVault encryption policy configured' : 'No FileVault encryption policies found'
-        result.evidence = {
-          configured: !!encryption,
-          policyId: encryption?.id
+        try {
+          const complianceResp = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').get()
+          const policies = complianceResp.value || []
+          const fileVaultPolicies = policies.filter(p => p.fileVaultEnabled === true)
+          result.currentValue = fileVaultPolicies.length > 0 ? `${fileVaultPolicies.length} FileVault encryption policy(ies) configured` : 'No FileVault encryption policies found'
+          result.evidence = {
+            policyCount: fileVaultPolicies.length,
+            hasPolicy: fileVaultPolicies.length > 0
+          }
+          return fileVaultPolicies.length > 0 ? 'pass' : 'fail'
+        } catch (e) {
+          return markManual(e, 'Could not verify macOS FileVault encryption policies')
         }
-        return encryption ? 'pass' : 'fail'
       }
 
       if (validation.id === 'DEV-012') {
