@@ -8777,37 +8777,6 @@ export class ZeroTrustValidator {
           return highRisk.length === 0 ? 'pass' : 'warn'
         }
 
-        // Client Secrets Management
-        case 'APP-010': {
-          const creds = applicationData.credentials || {}
-          const expired = creds.credentialSummary?.appsWithExpiredSecrets || 0
-          const longLived = creds.credentialSummary?.appsWithLongLivedSecrets || 0
-          result.automationLevel = 'Automated'
-          result.requiresManualValidation = false
-          result.currentValue = `${expired} apps with expired secrets, ${longLived} with long-lived secrets`
-          result.evidence = {
-            expiredSecrets: expired,
-            longLivedSecrets: longLived,
-            criticalRisk: expired > 0,
-            riskSummary: creds.byRiskLevel
-          }
-          return expired === 0 && longLived === 0 ? 'pass' : (expired === 0 ? 'warn' : 'fail')
-        }
-
-        // Orphaned Applications
-        case 'APP-024': {
-          const orphaned = applicationData.applicationGovernance?.orphanedApplications || {}
-          result.automationLevel = 'Automated'
-          result.requiresManualValidation = false
-          result.currentValue = `${orphaned.total || 0} orphaned applications (no owners)`
-          result.evidence = {
-            orphanedCount: orphaned.total,
-            criticalRisk: orphaned.total > 0,
-            apps: orphaned.apps?.slice(0, 5)
-          }
-          return orphaned.total === 0 ? 'pass' : 'fail'
-        }
-
         // Verified Publisher
         case 'APP-016': {
           const publisher = applicationData.consentAndGovernance?.publisherVerification || {}
@@ -8824,22 +8793,6 @@ export class ZeroTrustValidator {
             compliant: rate >= 90
           }
           return rate >= 90 ? 'pass' : (rate >= 70 ? 'warn' : 'fail')
-        }
-
-        // Never-Used Applications
-        case 'APP-017': {
-          const activity = applicationData.applicationActivity?.applicationUsage || {}
-          const neverUsed = activity.neverUsedCount || 0
-          result.automationLevel = 'Automated'
-          result.requiresManualValidation = false
-          result.currentValue = `${neverUsed} applications never used (90+ days)`
-          result.evidence = {
-            neverUsedCount: neverUsed,
-            trackedApps: activity.trackedApps,
-            activeApps: activity.activeApps,
-            apps: activity.neverUsedApps?.slice(0, 10)
-          }
-          return neverUsed === 0 ? 'pass' : 'warn'
         }
 
         // Managed Identity Adoption
