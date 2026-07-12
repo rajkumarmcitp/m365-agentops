@@ -750,7 +750,8 @@
       "remediation": "Enable anti-phishing with user/domain impersonation detection",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 90
+      "impactScore": 90,
+      "automationLevel": "Automated"
     },
     {
       "id": "EMAIL-002",
@@ -766,7 +767,8 @@
       "remediation": "Enable Safe Links for all users. Set click tracking to On.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 85
+      "impactScore": 85,
+      "automationLevel": "Automated"
     },
     {
       "id": "EMAIL-003",
@@ -782,7 +784,8 @@
       "remediation": "Enable Safe Attachments. Set action to 'Block'.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 85
+      "impactScore": 85,
+      "automationLevel": "Automated"
     },
     {
       "id": "EMAIL-004",
@@ -798,11 +801,12 @@
       "remediation": "Configure standard anti-spam with bulk mail filtering",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 60
+      "impactScore": 60,
+      "automationLevel": "Automated"
     },
     {
       "id": "EMAIL-005",
-      "name": "DKIM Configured",
+      "name": "DKIM Configured (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "Exchange Online",
       "severity": "High",
@@ -814,11 +818,12 @@
       "remediation": "Enable DKIM for all accepted domains in Exchange",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "EMAIL-006",
-      "name": "SPF Configured",
+      "name": "SPF Configured (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "Exchange Online",
       "severity": "High",
@@ -830,11 +835,12 @@
       "remediation": "Publish SPF record: v=spf1 include:spf.protection.outlook.com ~all",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "EMAIL-007",
-      "name": "DMARC Configured",
+      "name": "DMARC Configured (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "Exchange Online",
       "severity": "High",
@@ -846,11 +852,12 @@
       "remediation": "Publish DMARC: _dmarc.domain.com TXT 'v=DMARC1; p=reject; rua=...'",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 75
+      "impactScore": 75,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "EMAIL-008",
-      "name": "External Forwarding Blocked",
+      "name": "External Forwarding Blocked (Manual)",
       "pillar": "Infrastructure & Workload Security",
       "category": "Exchange Online",
       "severity": "High",
@@ -862,7 +869,8 @@
       "remediation": "Create transport rule blocking external forwarding",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 65
+      "impactScore": 65,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "AI-001",
