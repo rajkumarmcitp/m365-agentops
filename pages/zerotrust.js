@@ -939,7 +939,12 @@ function attachZTEventListeners(el) {
 
   // Export button
   el.querySelector('.btn-primary')?.addEventListener('click', () => {
-    showToast('Zero Trust compliance report exported as PDF.', 'success')
+    if (realValidations && realValidations.validations && realValidations.validations.length > 0) {
+      exportValidationsToCSV(realValidations.validations, lastRunTime)
+      showToast('Zero Trust compliance report exported as CSV.', 'success')
+    } else {
+      showToast('No validation data to export.', 'warning')
+    }
   })
 
   // Validation detail rows
@@ -1178,6 +1183,49 @@ function showManualValidationModal(controlId, controlName, expectedValue) {
   modal.addEventListener('click', e => {
     if (e.target === modal) modal.remove()
   })
+}
+
+function exportValidationsToCSV(validations, lastRunTime) {
+  // CSV headers
+  const headers = ['ID', 'Name', 'Status', 'Category', 'Pillar', 'Severity', 'Priority', 'Current Value', 'Description', 'Remediation', 'Validated At']
+
+  // Build CSV rows
+  const rows = validations.map(v => [
+    v.id || '',
+    (v.name || '').replace(/"/g, '""'), // Escape quotes
+    (v.status || '').toUpperCase(),
+    v.category || '',
+    v.pillar || '',
+    v.severity || '',
+    v.priority || '',
+    (v.currentValue || '').replace(/"/g, '""'),
+    (v.description || '').replace(/"/g, '""'),
+    (v.remediation || '').replace(/"/g, '""'),
+    v.validatedAt || lastRunTime || new Date().toISOString()
+  ])
+
+  // Convert to CSV format
+  const csvContent = [
+    // Headers
+    headers.map(h => `"${h}"`).join(','),
+    // Data rows
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+  ].join('\n')
+
+  // Create blob and download
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+  link.setAttribute('href', url)
+  link.setAttribute('download', `zero-trust-compliance-${timestamp}.csv`)
+  link.style.visibility = 'hidden'
+
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
 async function handleManualValidation(event, controlId) {
