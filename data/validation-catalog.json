@@ -1004,6 +1004,7 @@
       "expectedValue": "Defender onboarded and active",
       "evidence": "Device count and threat status",
       "remediation": "Ensure Defender for Endpoint licenses and onboarding",
+      "automationLevel": "Automated",
       "autoRemediationAvailable": false,
       "priority": 5,
       "impactScore": 85
@@ -1020,6 +1021,7 @@
       "expectedValue": "ZAP enabled for phishing and malware",
       "evidence": "ZAP status",
       "remediation": "Enable ZAP in anti-phishing and anti-malware policies",
+      "automationLevel": "Automated",
       "autoRemediationAvailable": true,
       "priority": 4,
       "impactScore": 70
@@ -4610,7 +4612,7 @@
     },
     {
       "id": "THREAT-012",
-      "name": "Credential Guard Enabled",
+      "name": "Credential Guard Enabled (Manual)",
       "pillar": "Network & Threat Protection",
       "category": "Endpoint Protection",
       "severity": "High",
@@ -4642,7 +4644,7 @@
     },
     {
       "id": "THREAT-014",
-      "name": "Incident Response Plan Documented",
+      "name": "Incident Response Plan Documented (Manual)",
       "pillar": "Network & Threat Protection",
       "category": "Incident Response",
       "severity": "High",
@@ -4658,7 +4660,7 @@
     },
     {
       "id": "THREAT-015",
-      "name": "Threat Hunting Program Active",
+      "name": "Threat Hunting Program Active (Manual)",
       "pillar": "Network & Threat Protection",
       "category": "Threat Detection",
       "severity": "Medium",
@@ -4706,7 +4708,7 @@
     },
     {
       "id": "THREAT-018",
-      "name": "Recovery Testing Program",
+      "name": "Recovery Testing Program (Manual)",
       "pillar": "Network & Threat Protection",
       "category": "Incident Response",
       "severity": "High",
@@ -4722,7 +4724,7 @@
     },
     {
       "id": "THREAT-019",
-      "name": "Security Information & Event Management (SIEM)",
+      "name": "Security Information & Event Management (SIEM) (Manual)",
       "pillar": "Network & Threat Protection",
       "category": "Threat Detection",
       "severity": "High",
@@ -4738,7 +4740,7 @@
     },
     {
       "id": "THREAT-020",
-      "name": "Threat Data Sharing & Collaboration",
+      "name": "Threat Data Sharing & Collaboration (Manual)",
       "pillar": "Network & Threat Protection",
       "category": "Threat Intelligence",
       "severity": "Medium",

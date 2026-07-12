@@ -1004,6 +1004,7 @@
       "expectedValue": "Defender onboarded and active",
       "evidence": "Device count and threat status",
       "remediation": "Ensure Defender for Endpoint licenses and onboarding",
+      "automationLevel": "Automated",
       "autoRemediationAvailable": false,
       "priority": 5,
       "impactScore": 85
@@ -1020,6 +1021,7 @@
       "expectedValue": "ZAP enabled for phishing and malware",
       "evidence": "ZAP status",
       "remediation": "Enable ZAP in anti-phishing and anti-malware policies",
+      "automationLevel": "Automated",
       "autoRemediationAvailable": true,
       "priority": 4,
       "impactScore": 70

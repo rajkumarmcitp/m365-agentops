@@ -8599,6 +8599,8 @@ export class ZeroTrustValidator {
   async validateThreatWithCollectors(validation, result, threatData) {
     // Map automation levels for new Graph API threat controls
     const automationLevelMap = {
+      'THREAT-001': 'Automated',           // Microsoft Defender Enabled
+      'THREAT-002': 'Automated',           // Zero-Hour Auto Purge (ZAP) Enabled
       'THREAT-003': 'PartiallyAutomated',  // Threat Analytics Review
       'THREAT-004': 'PartiallyAutomated',  // Threat Intelligence Integration
       'THREAT-005': 'Automated',           // Automated Incident Response
@@ -8654,33 +8656,7 @@ export class ZeroTrustValidator {
           return (safeAttach.enabled || 0) > 0 ? 'pass' : 'fail'
         }
 
-        // Identity Protection - Risk Detection
-        case 'THREAT-010': {
-          const riskDetection = threatData.identityProtection?.riskDetections || {}
-          result.currentValue = `${riskDetection.total || 0} risk detections identified`
-          result.evidence = {
-            totalDetections: riskDetection.total,
-            byRiskLevel: riskDetection.byRiskLevel,
-            compliant: true
-          }
-          return 'pass'
-        }
 
-        // Secure Score
-        case 'THREAT-015': {
-          const posture = threatData.securityPosture || {}
-          const score = posture.currentScore || 0
-          const maxScore = posture.maxScore || 600
-          const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0
-          result.currentValue = `Secure Score: ${score}/${maxScore} (${percentage}%)`
-          result.evidence = {
-            currentScore: score,
-            maxScore,
-            percentage,
-            scoreHistory: posture.scoreHistory?.slice(0, 10)
-          }
-          return percentage >= 80 ? 'pass' : (percentage >= 60 ? 'warn' : 'fail')
-        }
 
         default:
           // Fall through to direct Graph API call for controls not covered by collectors
