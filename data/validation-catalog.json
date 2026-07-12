@@ -14,7 +14,8 @@
       "remediation": "Enable per-user MFA or require MFA via Conditional Access policy",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 100
+      "impactScore": 100,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-002",
@@ -30,7 +31,8 @@
       "remediation": "Enable Conditional Access policy requiring MFA for all users. Phase enforcement over 4 weeks.",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 95
+      "impactScore": 95,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-003",
@@ -46,7 +48,8 @@
       "remediation": "Create CA policy blocking client types: ExchangeActiveSync, Others (legacy)",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 90
+      "impactScore": 90,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-004",
@@ -62,7 +65,8 @@
       "remediation": "Deploy Authenticator app + FIDO2 keys. Target high-privilege users first.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-005",
@@ -78,7 +82,8 @@
       "remediation": "Enable policies for: MFA, Compliant Devices, Risky Sign-ins, Privileged Roles",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 85
+      "impactScore": 85,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-006",
@@ -94,7 +99,8 @@
       "remediation": "Create CA policy: All users, All apps, Require MFA grant",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 95
+      "impactScore": 95,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-007",
@@ -110,7 +116,8 @@
       "remediation": "Create CA policy for Office 365, Sharepoint, Teams requiring compliant device",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-008",
@@ -126,7 +133,8 @@
       "remediation": "Enable User Risk policy at Medium/High with block action",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 75
+      "impactScore": 75,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-009",
@@ -142,7 +150,8 @@
       "remediation": "Enable Sign-in Risk policy blocking high-risk sign-ins or requiring MFA",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 80
+      "impactScore": 80,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-010",
@@ -158,7 +167,8 @@
       "remediation": "Enable PIM in Entra ID. Convert permanent assignments to PIM (activation required).",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 90
+      "impactScore": 90,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-011",
@@ -174,7 +184,8 @@
       "remediation": "Reduce to max 2 permanent Global Admins. Use PIM for temporary elevation.",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 85
+      "impactScore": 85,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-012",
@@ -190,7 +201,8 @@
       "remediation": "Create 2 dedicated Global Admin accounts. Store credentials offline securely.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "Automated"
     },
     {
       "id": "DEV-069",
@@ -1056,7 +1068,8 @@
       "remediation": "Review inactive applications in Entra ID. Remove high-risk Microsoft Graph permissions from unused apps. Delete service principals without legitimate use cases.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 95
+      "impactScore": 95,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-014",
@@ -1072,7 +1085,8 @@
       "remediation": "Audit service principals with privileged role assignments. Remove privileged role assignments from inactive apps. Delete unused privileged service principals.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 90
+      "impactScore": 90,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-015",
@@ -1088,7 +1102,8 @@
       "remediation": "Migrate to managed identities for Azure resources. Use certificate-based authentication. Implement workload identity federation. Deploy Conditional Access policies for workload identities.",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 100
+      "impactScore": 100,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-016",
@@ -1104,7 +1119,8 @@
       "remediation": "Implement certificate lifecycle management. Define certificate-based application configuration. Configure trusted certificate authorities. Create least-privileged role for credential rotation.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 90
+      "impactScore": 90,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-017",
@@ -1120,7 +1136,8 @@
       "remediation": "Investigate legitimacy of credentials on Microsoft service apps. Remove unnecessary credentials. Monitor for unauthorized credential additions. Alert on new credential additions.",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 85
+      "impactScore": 85,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-018",
@@ -1136,11 +1153,12 @@
       "remediation": "Configure app management policies. Enforce maximum secret validity period (e.g., 6 months). Require certificate-based auth for new apps. Implement automated secret rotation.",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 75
+      "impactScore": 75,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-019",
-      "name": "User Consent Settings - Restricted",
+      "name": "User Consent Settings - Restricted (Manual)",
       "pillar": "Identity Security",
       "category": "Workload Identity",
       "severity": "High",
@@ -1152,11 +1170,12 @@
       "remediation": "Set user consent to 'Do not allow user consent' or 'Allow user consent for low-risk apps only'. Require admin consent for high-risk permissions. Monitor consent grant activities.",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "ID-020",
-      "name": "Multitenant Application Instance Lock",
+      "name": "Multitenant Application Instance Lock (Manual)",
       "pillar": "Identity Security",
       "category": "Workload Identity",
       "severity": "High",
@@ -1168,11 +1187,12 @@
       "remediation": "Configure app instance lock for multitenant apps. Prevent unauthorized tenant switching via manifest configuration.",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 65
+      "impactScore": 65,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "ID-021",
-      "name": "ADAL Deprecation - Legacy Library Migration",
+      "name": "ADAL Deprecation - Legacy Library Migration (Manual)",
       "pillar": "Identity Security",
       "category": "Workload Identity",
       "severity": "High",
@@ -1184,7 +1204,8 @@
       "remediation": "Migrate ADAL applications to MSAL (Microsoft Authentication Library). Update app dependencies to latest authentication libraries. Reference ADAL Migration Guide.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 60
+      "impactScore": 60,
+      "automationLevel": "Manual"
     },
     {
       "id": "ID-022",
@@ -1200,7 +1221,8 @@
       "remediation": "Deploy phishing-resistant passwordless authentication. Require passkeys or security keys for privileged accounts. Deploy Conditional Access policy for privileged roles.",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 100
+      "impactScore": 100,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-023",
@@ -1216,7 +1238,8 @@
       "remediation": "Enforce registration of passkeys or FIDO2 security keys. Create dedicated security groups for privileged accounts. Monitor authentication method registration. Send reminders to complete registration.",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 95
+      "impactScore": 95,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-024",
@@ -1232,7 +1255,8 @@
       "remediation": "Create CA policy: Protect administrators. Target privileged roles. Grant: Require authentication strength (Phishing-Resistant MFA). Exclude break-glass emergency access accounts.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 90
+      "impactScore": 90,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-025",
@@ -1248,7 +1272,8 @@
       "remediation": "Deploy CA policy for all users requiring MFA strength. Gradually roll out passkey/FIDO2 registration. Phase enforcement over 4-8 weeks starting with high-risk groups.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 95
+      "impactScore": 95,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-026",
@@ -1264,7 +1289,8 @@
       "remediation": "Enable token protection for web sessions. Implement device-bound tokens for sensitive operations. Monitor for token replay attacks.",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 75
+      "impactScore": 75,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-027",
@@ -1280,7 +1306,8 @@
       "remediation": "Deploy MFA via Conditional Access policies. Use Microsoft Authenticator app or phishing-resistant methods. Configure fallback MFA methods. Enable enforcement gradually by user groups.",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 98
+      "impactScore": 98,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-028",
@@ -1296,7 +1323,8 @@
       "remediation": "Enable user self-service registration. Create campaigns encouraging MFA setup. Monitor registration compliance. Send reminder notifications to non-compliant users.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 80
+      "impactScore": 80,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-029",
@@ -1312,11 +1340,12 @@
       "remediation": "Enable number matching in Microsoft Authenticator. Configure approval request context display. Deploy to all users.",
       "autoRemediationAvailable": true,
       "priority": 3,
-      "impactScore": 50
+      "impactScore": 50,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "ID-030",
-      "name": "Legacy MFA/SSPR - Migrate to Modern Policies",
+      "name": "Legacy MFA/SSPR - Migrate to Modern Policies (Manual)",
       "pillar": "Identity Security",
       "category": "Authentication",
       "severity": "High",
@@ -1328,7 +1357,8 @@
       "remediation": "Disable per-user MFA settings. Disable legacy MFA requirements. Create equivalent Conditional Access policies. Migrate users systematically by group.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "ID-031",
@@ -1344,7 +1374,8 @@
       "remediation": "Remove default tenant creation rights from users. Assign Tenant Creator role to specific admins only. Audit new tenant creation events.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-032",
@@ -1360,7 +1391,8 @@
       "remediation": "Reduce Global Admin count to absolute minimum. Use least-privileged roles for daily tasks. Create custom roles for specific functions. Review admin sign-in frequency regularly.",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 90
+      "impactScore": 90,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-033",
@@ -1376,11 +1408,12 @@
       "remediation": "Monitor tenant creation audit logs. Alert on new tenant creation. Document business justification for new tenants. Set Conditional Access policies on tenant admin access.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 65
+      "impactScore": 65,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-034",
-      "name": "Cross-Tenant Access - Outbound Settings",
+      "name": "Cross-Tenant Access - Outbound Settings (Manual)",
       "pillar": "Identity Security",
       "category": "Access Control",
       "severity": "High",
@@ -1392,7 +1425,8 @@
       "remediation": "Configure cross-tenant access settings. Block all external tenants by default. Whitelist approved partner tenants with specific conditions.",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 65
+      "impactScore": 65,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "ID-035",
@@ -1408,7 +1442,8 @@
       "remediation": "Disable 'Guests can invite guests' setting in external collaboration settings. Restrict guest invitation to admins/sponsors only.",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 60
+      "impactScore": 60,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-036",
@@ -1424,11 +1459,12 @@
       "remediation": "Set guest user access restriction to 'Guest user access is restricted to properties and memberships of their own directory objects'. Monitor guest access to sensitive resources.",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 65
+      "impactScore": 65,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-037",
-      "name": "Tenant Restrictions v2 - External Access Control",
+      "name": "Tenant Restrictions v2 - External Access Control (Manual)",
       "pillar": "Identity Security",
       "category": "Access Control",
       "severity": "High",
@@ -1440,7 +1476,8 @@
       "remediation": "Deploy tenant restrictions v2 policies. Control access to external cloud apps. Monitor restricted access attempts. Deploy to identity, network, and infrastructure tiers.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "ID-038",
@@ -1456,7 +1493,8 @@
       "remediation": "Review legacy authentication audit logs. Migrate users to modern authentication. Deploy Conditional Access policy to block legacy authentication.",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 95
+      "impactScore": 95,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-039",
@@ -1472,11 +1510,12 @@
       "remediation": "Deploy CA policy to block legacy authentication. Target all users. Exclude service accounts using legacy protocols with documented justification. Monitor for blocked attempts.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 95
+      "impactScore": 95,
+      "automationLevel": "Automated"
     },
     {
       "id": "ID-040",
-      "name": "Identity Protection - High-Risk User Restrictions",
+      "name": "Identity Protection - High-Risk User Restrictions (Manual)",
       "pillar": "Identity Security",
       "category": "Risk Management",
       "severity": "Critical",
@@ -1488,11 +1527,12 @@
       "remediation": "Enable Azure AD Identity Protection. Create CA policy restricting high-risk users. Require password change or MFA for flagged users. Investigate flagged accounts.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 85
+      "impactScore": 85,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "ID-041",
-      "name": "Identity Protection - Risk Notifications",
+      "name": "Identity Protection - Risk Notifications (Manual)",
       "pillar": "Identity Security",
       "category": "Risk Management",
       "severity": "High",
@@ -1504,11 +1544,12 @@
       "remediation": "Enable Identity Protection alerts. Configure notification recipients (security team). Monitor risky sign-in reports. Investigate and remediate flagged activities.",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "ID-042",
-      "name": "Risky Sign-in - Blocking Policy",
+      "name": "Risky Sign-in - Blocking Policy (Manual)",
       "pillar": "Identity Security",
       "category": "Risk Management",
       "severity": "Critical",
@@ -1520,7 +1561,8 @@
       "remediation": "Create CA policy requiring MFA for risky sign-ins. Monitor for false positives. Adjust risk detection settings as needed. Reference risk detection documentation.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 85
+      "impactScore": 85,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "DEV-001",
