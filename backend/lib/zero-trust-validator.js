@@ -3862,7 +3862,7 @@ export class ZeroTrustValidator {
 
           result.automationLevel = 'Automated'
           result.requiresManualValidation = false
-          result.currentValue = 'OneDrive indexed for AI — oversharingdetection required'
+          result.currentValue = 'OneDrive indexed for AI — oversharing detection required'
           result.evidence = {
             driveAccessible: !!driveResp,
             manualReviewRequired: true

@@ -3561,3 +3561,11 @@ Security Agent: Using realistic demo data (Graph API unavailable)
 📋 Already in SharePoint: 123
    Existing IDs: MC1419802, MC1419801, MC1419800
 ✓ Sync complete: Added 0 new | Skipped 86 (duplicates) | Total processed at 2026-07-12T04:33:37.312Z
+🔗 Starting correlation analysis...
+📊 Analyzing 0 alerts
+ℹ️ Not enough alerts for correlation
+📦 Returning cached Zero Trust results (297 validations)
+📈 Fetching Zero Trust trends...
+🚀 [approval] Agent executing...
+✅ [approval] Agent completed in 1ms
+   Alerts: 0

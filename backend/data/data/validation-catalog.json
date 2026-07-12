@@ -866,7 +866,7 @@
     },
     {
       "id": "AI-001",
-      "name": "Copilot User MFA Enforcement",
+      "name": "Copilot User MFA Enforcement (Manual)",
       "pillar": "AI Security & Governance",
       "category": "Microsoft 365 Copilot Readiness",
       "severity": "Critical",
@@ -878,7 +878,8 @@
       "remediation": "Require MFA via CA policy for users with Copilot license",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 90
+      "impactScore": 90,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "AI-002",
@@ -894,7 +895,8 @@
       "remediation": "Audit and restrict sharing. Apply sensitivity labels.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 75
+      "impactScore": 75,
+      "automationLevel": "Automated"
     },
     {
       "id": "AI-003",
@@ -910,11 +912,12 @@
       "remediation": "Disable anonymous sharing in OneDrive. Use specific user access.",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "Automated"
     },
     {
       "id": "AI-004",
-      "name": "AI Agent Graph Permissions Minimal",
+      "name": "AI Agent Graph Permissions Minimal (Manual)",
       "pillar": "AI Security & Governance",
       "category": "AI Agent Security",
       "severity": "High",
@@ -926,7 +929,8 @@
       "remediation": "Review and remove unnecessary permissions. Use delegated when possible.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "AI-005",
@@ -942,7 +946,8 @@
       "remediation": "Rotate secrets monthly. Use Key Vault for storage.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 60
+      "impactScore": 60,
+      "automationLevel": "Automated"
     },
     {
       "id": "AUDIT-001",
@@ -2052,7 +2057,7 @@
     },
     {
       "id": "AI-006",
-      "name": "Copilot License Assignment & Governance",
+      "name": "Copilot License Assignment & Governance (Manual)",
       "pillar": "AI Security & Governance",
       "category": "Copilot Governance",
       "severity": "High",
@@ -2064,7 +2069,8 @@
       "remediation": "Review and restrict Copilot license assignments to authorized users. Remove licenses from contractors/external users. Enable license assignment governance via group-based licensing.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 75
+      "impactScore": 75,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "AI-007",
@@ -2080,11 +2086,12 @@
       "remediation": "Enable Copilot Data Privacy Mode in Microsoft 365 to prevent data retention. Configure via Microsoft 365 admin center > Settings > Org settings > Copilot.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 90
+      "impactScore": 90,
+      "automationLevel": "Automated"
     },
     {
       "id": "AI-008",
-      "name": "Copilot Tenant Isolation Enforced",
+      "name": "Copilot Tenant Isolation Enforced (Manual)",
       "pillar": "AI Security & Governance",
       "category": "Copilot Governance",
       "severity": "Critical",
@@ -2096,7 +2103,8 @@
       "remediation": "Ensure Copilot is configured for single-tenant deployment. Disable multi-tenant federation for Copilot. Verify no cross-tenant access policies allow Copilot data sharing.",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 95
+      "impactScore": 95,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "AI-009",
@@ -2112,11 +2120,12 @@
       "remediation": "Enable Copilot activity logging and configure audit retention to 365+ days. Monitor feedback submissions for sensitive data leaks. Configure alerts for suspicious Copilot usage patterns.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "Automated"
     },
     {
       "id": "AI-010",
-      "name": "Copilot Ground Truth Data Protection",
+      "name": "Copilot Ground Truth Data Protection (Manual)",
       "pillar": "AI Security & Governance",
       "category": "Data Protection",
       "severity": "Critical",
@@ -2128,7 +2137,8 @@
       "remediation": "Configure DLP policies to exclude Copilot ground truth from sensitive data (PII, secrets, confidential docs). Use content sensitivity labels to prevent Copilot indexing. Apply retention labels blocking Copilot access.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 95
+      "impactScore": 95,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "AI-011",
@@ -2144,7 +2154,8 @@
       "remediation": "Audit SharePoint sites with external sharing enabled. Apply sensitivity labels preventing Copilot indexing. Reduce sharing scope to specific users/groups. Monitor site sharing changes via audit logs.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 80
+      "impactScore": 80,
+      "automationLevel": "Automated"
     },
     {
       "id": "AI-012",
@@ -2160,11 +2171,12 @@
       "remediation": "Audit OneDrive sharing links with 'Anyone' access. Apply sensitivity labels preventing Copilot indexing. Convert overshared links to specific user/group sharing. Configure DLP to block external sharing of sensitive data.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 75
+      "impactScore": 75,
+      "automationLevel": "Automated"
     },
     {
       "id": "AI-013",
-      "name": "AI Plugin Security - Permission Minimization",
+      "name": "AI Plugin Security - Permission Minimization (Manual)",
       "pillar": "AI Security & Governance",
       "category": "AI Agent Security",
       "severity": "Critical",
@@ -2176,11 +2188,12 @@
       "remediation": "Review each AI plugin's Graph API permissions. Remove unused scopes. Use application roles instead of admin consent. Implement permission approval workflows for new plugins. Monitor plugin usage via audit logs.",
       "autoRemediationAvailable": false,
       "priority": 5,
-      "impactScore": 90
+      "impactScore": 90,
+      "automationLevel": "Manual"
     },
     {
       "id": "AI-014",
-      "name": "AI Agent Secrets Management - Rotation",
+      "name": "AI Agent Secrets Management - Rotation (Manual)",
       "pillar": "AI Security & Governance",
       "category": "AI Agent Security",
       "severity": "Critical",
@@ -2192,7 +2205,8 @@
       "remediation": "Implement automated secret rotation for AI agents (max 90 days). Use Azure Key Vault for secret storage. Enable certificate-based auth instead of secrets. Configure rotation alerts at 60-day mark.",
       "autoRemediationAvailable": true,
       "priority": 5,
-      "impactScore": 85
+      "impactScore": 85,
+      "automationLevel": "Manual"
     },
     {
       "id": "AI-015",
@@ -2208,11 +2222,12 @@
       "remediation": "Enable service principal sign-in audit logs. Configure 365+ day retention for audit data. Create alerts for anomalous agent activity (bulk data access, permission changes). Review logs monthly.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 75
+      "impactScore": 75,
+      "automationLevel": "Automated"
     },
     {
       "id": "AI-016",
-      "name": "AI Model Input Validation & Sanitization",
+      "name": "AI Model Input Validation & Sanitization (Manual)",
       "pillar": "AI Security & Governance",
       "category": "AI Agent Security",
       "severity": "High",
@@ -2224,11 +2239,12 @@
       "remediation": "Implement input length limits for AI model queries. Add prompt injection detection (look for command markers). Validate input data types and formats. Use content moderation APIs. Test with adversarial prompts.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "Manual"
     },
     {
       "id": "AI-017",
-      "name": "AI Output Filtering & Content Moderation",
+      "name": "AI Output Filtering & Content Moderation (Manual)",
       "pillar": "AI Security & Governance",
       "category": "Monitoring & Compliance",
       "severity": "High",
@@ -2240,7 +2256,8 @@
       "remediation": "Enable Azure Content Moderator for output filtering. Create content policies excluding sensitive topics (financial advice, medical diagnosis, legal guidance). Implement human review for flagged outputs. Use feedback loop to improve filters.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 65
+      "impactScore": 65,
+      "automationLevel": "Manual"
     },
     {
       "id": "AI-018",
@@ -2256,7 +2273,8 @@
       "remediation": "Create CA policy requiring Intune device compliance for AI agent service principals. Block legacy auth for agents. Require certificate-based auth. Monitor policy enforcement via sign-in logs.",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "Automated"
     },
     {
       "id": "AI-019",
@@ -2272,11 +2290,12 @@
       "remediation": "Set retention policy on AI training data folders to 180 days max. Exclude sensitive data from training datasets. Use labels to mark data for retention limits. Audit data purge operations.",
       "autoRemediationAvailable": false,
       "priority": 3,
-      "impactScore": 55
+      "impactScore": 55,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "AI-020",
-      "name": "AI Bias & Fairness Monitoring",
+      "name": "AI Bias & Fairness Monitoring (Manual)",
       "pillar": "AI Security & Governance",
       "category": "Monitoring & Compliance",
       "severity": "Medium",
@@ -2288,11 +2307,12 @@
       "remediation": "Implement fairness monitoring for AI outputs across demographics. Log outputs by user segment to detect bias patterns. Create alerts for skewed results by region/department. Conduct quarterly fairness audits.",
       "autoRemediationAvailable": false,
       "priority": 3,
-      "impactScore": 50
+      "impactScore": 50,
+      "automationLevel": "Manual"
     },
     {
       "id": "AI-021",
-      "name": "AI Model Version Control & Governance",
+      "name": "AI Model Version Control & Governance (Manual)",
       "pillar": "AI Security & Governance",
       "category": "Monitoring & Compliance",
       "severity": "Medium",
@@ -2304,11 +2324,12 @@
       "remediation": "Implement model versioning in Azure ML or similar platform. Track which model version deployed to production. Enable rollback to previous versions if issues detected. Document model changes and validations.",
       "autoRemediationAvailable": false,
       "priority": 3,
-      "impactScore": 60
+      "impactScore": 60,
+      "automationLevel": "Manual"
     },
     {
       "id": "AI-022",
-      "name": "DLP Policy for AI-Generated Content",
+      "name": "DLP Policy for AI-Generated Content (Manual)",
       "pillar": "AI Security & Governance",
       "category": "Data Protection",
       "severity": "High",
@@ -2320,11 +2341,12 @@
       "remediation": "Create DLP rule monitoring Copilot outputs for sensitive patterns (credit cards, SSNs, API keys). Block sharing of high-confidence detections. Alert on medium-confidence matches for review. Test with sample data.",
       "autoRemediationAvailable": true,
       "priority": 4,
-      "impactScore": 80
+      "impactScore": 80,
+      "automationLevel": "PartiallyAutomated"
     },
     {
       "id": "AI-023",
-      "name": "AI Model Explainability & Transparency",
+      "name": "AI Model Explainability & Transparency (Manual)",
       "pillar": "AI Security & Governance",
       "category": "Monitoring & Compliance",
       "severity": "Medium",
@@ -2336,11 +2358,12 @@
       "remediation": "Implement SHAP or LIME explainability frameworks for AI models. Document model decision logic and feature importance. Provide users with explanation of why specific recommendations were made. Enable audit trail for model inferences.",
       "autoRemediationAvailable": false,
       "priority": 3,
-      "impactScore": 55
+      "impactScore": 55,
+      "automationLevel": "Manual"
     },
     {
       "id": "AI-024",
-      "name": "Responsible AI Governance Board",
+      "name": "Responsible AI Governance Board (Manual)",
       "pillar": "AI Security & Governance",
       "category": "Governance",
       "severity": "Medium",
@@ -2352,11 +2375,12 @@
       "remediation": "Establish cross-functional AI governance board (security, legal, ethics, business). Define AI risk assessment framework. Implement review process for new AI initiatives. Conduct quarterly risk assessments. Document policies and decisions.",
       "autoRemediationAvailable": false,
       "priority": 3,
-      "impactScore": 65
+      "impactScore": 65,
+      "automationLevel": "Manual"
     },
     {
       "id": "AI-025",
-      "name": "AI Compliance Attestation & Reporting",
+      "name": "AI Compliance Attestation & Reporting (Manual)",
       "pillar": "AI Security & Governance",
       "category": "Governance",
       "severity": "High",
@@ -2368,11 +2392,12 @@
       "remediation": "Establish monthly AI security audits covering data usage, permissions, incidents. Generate quarterly compliance reports for executive leadership. Perform annual third-party AI risk assessments. Document remediation of findings.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "Manual"
     },
     {
       "id": "AI-026",
-      "name": "Adversarial Testing & Red Teaming",
+      "name": "Adversarial Testing & Red Teaming (Manual)",
       "pillar": "AI Security & Governance",
       "category": "AI Agent Security",
       "severity": "High",
@@ -2384,11 +2409,12 @@
       "remediation": "Conduct quarterly red team exercises attempting prompt injection, jailbreaks, poisoning attacks. Document vulnerabilities found and remediate before production. Use adversarial samples in testing. Measure model robustness metrics.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 75
+      "impactScore": 75,
+      "automationLevel": "Manual"
     },
     {
       "id": "AI-027",
-      "name": "AI Privacy Impact Assessment (PIA)",
+      "name": "AI Privacy Impact Assessment (PIA) (Manual)",
       "pillar": "AI Security & Governance",
       "category": "Data Protection",
       "severity": "High",
@@ -2400,7 +2426,8 @@
       "remediation": "Conduct PIA for each AI model before deployment. Document data sources, usage, retention, and sharing. Identify privacy risks and mitigation strategies. Get legal/compliance approval. Update PIAs annually or when model changes.",
       "autoRemediationAvailable": false,
       "priority": 4,
-      "impactScore": 70
+      "impactScore": 70,
+      "automationLevel": "Manual"
     },
     {
       "id": "DATA-006",
