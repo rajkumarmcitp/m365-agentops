@@ -384,6 +384,50 @@ export async function validateAllCISControls() {
     cacheTimestamp = Date.now()
     console.log(`✓ CIS Validator: Validation complete (${result.stats.totalControls} controls, ${result.stats.passRate}% pass rate, ${validationSummary.fallbackCount} fallbacks)`)
 
+    // Save results to SharePoint if configured
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const resultsListId = process.env.SHAREPOINT_CIS_RESULTS_LIST_ID
+
+    if (siteId && resultsListId && graphClient) {
+      try {
+        console.log(`💾 Saving CIS results to SharePoint...`)
+        let savedCount = 0
+        for (const topic of result.topics) {
+          if (topic.controls && Array.isArray(topic.controls)) {
+            for (const control of topic.controls) {
+              const itemData = {
+                fields: {
+                  ControlID: control.id,
+                  Status: control.status,
+                  FindingDetails: control.note || control.description || null,
+                  CurrentValue: control.count !== undefined ? `${control.count}` : (control.value || null),
+                  ExpectedValue: control.expected || null,
+                  ValidatedAt: new Date().toISOString(),
+                  ValidationMethod: control.requiresManualValidation ? 'Manual' : 'GraphAPI',
+                  RemediationSteps: control.remediation || null
+                }
+              }
+
+              try {
+                const existing = await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items?$filter=fields/ControlID eq '${control.id}'`).get()
+                if (existing.value && existing.value.length > 0) {
+                  await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items/${existing.value[0].id}`).patch(itemData)
+                } else {
+                  await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items`).post(itemData)
+                }
+                savedCount++
+              } catch (itemError) {
+                console.warn(`⚠️ Could not save result for ${control.id}: ${itemError.message}`)
+              }
+            }
+          }
+        }
+        console.log(`✅ Saved ${savedCount} CIS results to SharePoint`)
+      } catch (spError) {
+        console.warn(`⚠️ Could not save CIS results to SharePoint: ${spError.message}`)
+      }
+    }
+
     return result
   } catch (error) {
     console.error('❌ CIS Validator error:', error.message)
@@ -653,6 +697,7 @@ async function validateSafeLinksOffice() {
 
     return {
       status: 'warn',
+      requiresManualValidation: true,
       organizationName: org?.value?.[0]?.displayName,
       note: 'Safe Links for Office Applications must be verified in Security & Compliance Center > Threat management > Safe Links',
       remediation: 'Enable Safe Links for Office applications and set to "Block users from clicking to original URL"',
@@ -809,6 +854,7 @@ async function validateAntiPhishing() {
 
     return {
       status: 'warn',
+      requiresManualValidation: true,
       note: 'Anti-phishing policy verification requires Security & Compliance access',
       remediation: 'Verify anti-phishing policies in Security & Compliance Center > Threat management > Anti-phishing',
       graphApiCommands: graphApiCommands,
@@ -895,6 +941,7 @@ async function validateDKIM() {
 
     return {
       status: 'warn',
+      requiresManualValidation: true,
       totalDomains: domains.value?.length || 0,
       note: 'DKIM requires Exchange Online access. Verify all domains have DKIM signing enabled.',
       remediation: 'Enable DKIM: Set-DkimSigningConfig -Identity yourdomain.onmicrosoft.com -Enabled $true',
@@ -936,6 +983,7 @@ async function validateDMARC() {
 
     return {
       status: 'warn',
+      requiresManualValidation: true,
       totalDomains: domains.value?.length || 0,
       verifiedDomains: domains.value?.filter(d => d.isVerified)?.length || 0,
       note: 'DMARC records require DNS configuration. Recommended policy: "v=DMARC1; p=quarantine; rua=mailto:admin@yourdomain.com"',
@@ -960,10 +1008,10 @@ async function validateDMARC() {
 async function validateMailForwarding() {
   try {
     // This would require Exchange Online PowerShell
-    return { status: 'pass', note: 'Manual verification required via PowerShell' }
+    return { status: 'warn', requiresManualValidation: true, note: 'Manual verification required via PowerShell: Get-TransportRule | Where-Object {$_.RedirectMessageTo -ne $null}' }
   } catch (error) {
     console.warn(`⚠️ Mail Forwarding validation failed: ${error.message}`)
-    return { status: 'warn', error: error.message }
+    return { status: 'warn', requiresManualValidation: true, error: error.message }
   }
 }
 
@@ -1351,7 +1399,8 @@ async function validateGroupCreation() {
     const settings = await graphClient.api('/directorySettingTemplates').get()
 
     return {
-      status: 'warn', // Usually needs manual check
+      status: 'warn',
+      requiresManualValidation: true,
       note: 'Verify in Azure AD > Groups > General settings',
       graphApiCommands: graphApiCommands,
       graphExplorerCommands: graphExplorerCommands
@@ -1426,6 +1475,7 @@ async function validateDefenderForCloudApps() {
   try {
     return {
       status: 'warn',
+      requiresManualValidation: true,
       note: 'Requires manual verification in Cloud App Security portal',
       graphApiCommands: graphApiCommands,
       graphExplorerCommands: graphExplorerCommands
@@ -1461,7 +1511,8 @@ async function validateAlertPolicies() {
 
   try {
     return {
-      status: 'pass',
+      status: 'warn',
+      requiresManualValidation: true,
       note: 'Alert policies can be configured in Security & Compliance Center',
       graphApiCommands: graphApiCommands,
       graphExplorerCommands: graphExplorerCommands
@@ -1482,10 +1533,10 @@ async function validateAlertPolicies() {
  */
 async function validateReportMessage() {
   try {
-    return { status: 'pass', note: 'Report Message add-in deployable via Outlook' }
+    return { status: 'warn', requiresManualValidation: true, note: 'Report Message add-in deployable via Outlook - verify in Exchange Admin Center' }
   } catch (error) {
     console.warn(`⚠️ Report Message validation failed: ${error.message}`)
-    return { status: 'warn', error: error.message }
+    return { status: 'warn', requiresManualValidation: true, error: error.message }
   }
 }
 

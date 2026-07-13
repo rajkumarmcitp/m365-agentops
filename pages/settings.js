@@ -1351,7 +1351,7 @@ SHAREPOINT_ZEROTRUST_HISTORY_LIST_ID=${result.historyListId}`
 
   async function loadSchedulerStatus() {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/scheduler/status`)
+      const response = await fetch(`${api}/scheduler/status`)
       const data = await response.json()
 
       const lastRunEl = el.querySelector('#settings-last-run-time')
@@ -1381,7 +1381,7 @@ SHAREPOINT_ZEROTRUST_HISTORY_LIST_ID=${result.historyListId}`
       runNowBtn.disabled = true
       runNowBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Running...'
       try {
-        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/scheduler/run-now`, { method: 'POST' })
+        await fetch(`${api}/scheduler/run-now`, { method: 'POST' })
         showToast('Validations triggered! Status will update shortly...', 'success')
         setTimeout(loadSchedulerStatus, 2000)
       } catch (err) {

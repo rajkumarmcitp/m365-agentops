@@ -1121,7 +1121,8 @@ async function generateAIAnalysis(el, data) {
 
     // Call the analysis endpoint via POST (allows larger payloads)
     // Use backend App Service URL directly (Static Web App Free SKU doesn't support backend linking)
-    const backendUrl = window.location.hostname === 'localhost'
+    const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    const backendUrl = isDev
       ? 'http://localhost:3000/api/user-investigation/analysis'
       : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net/api/user-investigation/analysis'
 

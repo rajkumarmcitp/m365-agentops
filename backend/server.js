@@ -326,32 +326,6 @@ function generateDemoAlerts(db) {
 // ============================================================
 // Middleware
 // ============================================================
-// CORS configuration - allow localhost and production origins
-app.use((req, res, next) => {
-  const origin = req.headers.origin || ''
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174',
-    'https://proud-river-0f55f1e10.7.azurestaticapps.net'
-  ]
-
-  if (allowedOrigins.includes(origin) || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-    res.header('Access-Control-Allow-Origin', origin)
-    res.header('Access-Control-Allow-Credentials', 'true')
-  }
-
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS, PUT, DELETE')
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Id, X-User-Role')
-  res.header('Access-Control-Max-Age', '3600')
-
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200)
-  }
-  next()
-})
-
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ limit: '50mb', extended: true }))
 
@@ -1769,18 +1743,69 @@ app.get('/api/config/cis-results/last', async (req, res) => {
       })
     })
 
-    if (cisResponse && cisResponse.controls && cisResponse.controls.length > 0) {
-      const passed = cisResponse.controls.filter(c => c.status === 'pass').length
-      const compliance = Math.round((passed / cisResponse.controls.length) * 100)
+    if (cisResponse && cisResponse.topics && cisResponse.topics.length > 0) {
+      // Flatten topics to count controls
+      let totalControls = 0, passCount = 0
+      for (const topic of cisResponse.topics) {
+        if (topic.controls && Array.isArray(topic.controls)) {
+          for (const control of topic.controls) {
+            totalControls++
+            if (control.status === 'pass') passCount++
+          }
+        }
+      }
+      const compliance = totalControls > 0 ? Math.round((passCount / totalControls) * 100) : 0
+
+      // Save results to SharePoint if configured
+      const siteId = process.env.SHAREPOINT_SITE_ID
+      const resultsListId = process.env.SHAREPOINT_CIS_RESULTS_LIST_ID
+
+      if (siteId && resultsListId && graphClient) {
+        try {
+          console.log(`💾 Saving ${totalControls} CIS results to SharePoint...`)
+          for (const topic of cisResponse.topics) {
+            if (topic.controls && Array.isArray(topic.controls)) {
+              for (const control of topic.controls) {
+                const itemData = {
+                  fields: {
+                    ControlID: control.id,
+                    Status: control.status,
+                    FindingDetails: control.note || control.description || null,
+                    CurrentValue: control.count !== undefined ? `${control.count}` : (control.value || null),
+                    ExpectedValue: control.expected || null,
+                    ValidatedAt: new Date().toISOString(),
+                    ValidationMethod: control.requiresManualValidation ? 'Manual' : 'GraphAPI',
+                    RemediationSteps: control.remediation || null
+                  }
+                }
+
+                try {
+                  const existing = await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items?$filter=fields/ControlID eq '${control.id}'`).get()
+                  if (existing.value && existing.value.length > 0) {
+                    await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items/${existing.value[0].id}`).patch(itemData)
+                  } else {
+                    await graphClient.api(`/sites/${siteId}/lists/${resultsListId}/items`).post(itemData)
+                  }
+                } catch (itemError) {
+                  console.warn(`⚠️ Could not save result for ${control.id}: ${itemError.message}`)
+                }
+              }
+            }
+          }
+          console.log(`✅ CIS results saved to SharePoint`)
+        } catch (spError) {
+          console.warn(`⚠️ Could not save CIS results to SharePoint: ${spError.message}`)
+        }
+      }
 
       return res.json({
         success: true,
         hasResults: true,
         lastRunTime: cisResponse.timestamp,
-        controls: cisResponse.controls,
+        topics: cisResponse.topics,
         compliance: compliance,
-        totalControls: cisResponse.controls.length,
-        passed: passed
+        totalControls: totalControls,
+        passed: passCount
       })
     }
 
@@ -1825,6 +1850,411 @@ app.get('/api/config/cis-controls/debug', async (req, res) => {
       success: false,
       error: error.message
     })
+  }
+})
+
+// ============================================================
+// CIS SharePoint Storage Integration
+// ============================================================
+
+/**
+ * POST /api/config/cis-initialize-sharepoint
+ * Create CIS lists on SharePoint with required columns
+ */
+app.post('/api/config/cis-initialize-sharepoint', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    let { siteUrl } = req.body
+    let site = siteUrl?.trim() || 'root'
+
+    // Normalize and parse URL (same as Zero Trust version)
+    if (site !== 'root') {
+      console.log(`📍 Original input: ${site}`)
+      if (site.startsWith('http')) {
+        try {
+          const url = new URL(site)
+          const pathname = url.pathname
+          const match = pathname.match(/\/sites\/([^/]+)/i)
+          if (match) {
+            site = `/sites/${match[1]}`
+          } else {
+            const segments = pathname.split('/').filter(p => p)
+            site = segments.length > 0 ? `/sites/${segments[segments.length - 1]}` : 'root'
+          }
+        } catch (e) {
+          console.error(`URL parsing error: ${e.message}`)
+          return res.status(400).json({
+            success: false,
+            error: `Invalid URL format: ${e.message}`,
+            hint: 'Please use one of these formats: "root", "M365-AgentOps-Prod", "/sites/M365-AgentOps-Prod"'
+          })
+        }
+      } else {
+        site = site.replace(/\/{2,}/g, '/').trim()
+        if (!site.startsWith('/sites/')) {
+          site = `/sites/${site}`
+        }
+      }
+    }
+
+    site = site.replace(/\/{2,}/g, '/')
+    console.log(`🔍 Normalized SharePoint site: ${site}`)
+
+    // Get the site
+    let siteId
+    try {
+      let apiPath
+      if (site === 'root') {
+        apiPath = '/sites/root'
+      } else if (site.startsWith('/sites/')) {
+        apiPath = `/sites/nasstech.sharepoint.com:${site}`
+      } else {
+        apiPath = `/sites/nasstech.sharepoint.com:/sites/${site}`
+      }
+      console.log(`📡 API call: ${apiPath}`)
+      const siteData = await graphClient.api(apiPath).get()
+      siteId = siteData.id
+    } catch (error) {
+      console.error(`❌ Could not access SharePoint site (${site}):`, error.message)
+      return res.status(400).json({
+        success: false,
+        error: `Could not access SharePoint site (${site}): ${error.message}`
+      })
+    }
+
+    console.log(`🚀 Initializing CIS lists on site: ${site} (${siteId})`)
+
+    const listConfigs = [
+      { name: 'CIS-Validations', displayName: 'CIS Validations', type: 'validations' },
+      { name: 'CIS-Results', displayName: 'CIS Results', type: 'results' },
+      { name: 'CIS-History', displayName: 'CIS History', type: 'history' }
+    ]
+
+    const createdLists = {}
+    const columnResults = {}
+
+    for (const listConfig of listConfigs) {
+      try {
+        let siteApiPath, listsApiPath
+        if (site === 'root') {
+          siteApiPath = `/sites/root`
+          listsApiPath = `/sites/root/lists`
+        } else if (site.startsWith('/sites/')) {
+          siteApiPath = `/sites/nasstech.sharepoint.com:${site}`
+          listsApiPath = `/sites/nasstech.sharepoint.com:${site}/lists`
+        } else {
+          siteApiPath = `/sites/nasstech.sharepoint.com:/sites/${site}`
+          listsApiPath = `/sites/nasstech.sharepoint.com:/sites/${site}/lists`
+        }
+
+        // Create list
+        const listData = {
+          displayName: listConfig.displayName,
+          list: { template: 'genericList' }
+        }
+
+        console.log(`📝 Creating list: ${listConfig.displayName}`)
+        const newList = await graphClient.api(listsApiPath).post(listData)
+        const listId = newList.id
+
+        createdLists[listConfig.name] = listId
+        console.log(`✅ Created list: ${listConfig.displayName} (${listId})`)
+
+        // Add columns based on type
+        const columnsApiPath = `${listsApiPath}('${listId}')/columns`
+        let columns = []
+
+        if (listConfig.type === 'validations') {
+          columns = [
+            { displayName: 'ControlID', name: 'ControlID', text: { allowMultipleLines: false } },
+            { displayName: 'ControlName', name: 'ControlName', text: { allowMultipleLines: false } },
+            { displayName: 'Topic', name: 'Topic', text: { allowMultipleLines: false } },
+            { displayName: 'Description', name: 'Description', text: { allowMultipleLines: true } },
+            { displayName: 'ValidationStatus', name: 'ValidationStatus', choice: { choices: ['pass', 'fail', 'warn', 'pending'], allowMultipleSelection: false } }
+          ]
+        } else if (listConfig.type === 'results') {
+          columns = [
+            { displayName: 'ControlID', name: 'ControlID', text: { allowMultipleLines: false } },
+            { displayName: 'Status', name: 'Status', choice: { choices: ['pass', 'fail', 'warn', 'manual'], allowMultipleSelection: false } },
+            { displayName: 'FindingDetails', name: 'FindingDetails', text: { allowMultipleLines: true } },
+            { displayName: 'CurrentValue', name: 'CurrentValue', text: { allowMultipleLines: false } },
+            { displayName: 'ExpectedValue', name: 'ExpectedValue', text: { allowMultipleLines: false } },
+            { displayName: 'ValidationMethod', name: 'ValidationMethod', text: { allowMultipleLines: false } },
+            { displayName: 'ValidatedAt', name: 'ValidatedAt', dateTime: { format: 'dateTime' } },
+            { displayName: 'RemediationSteps', name: 'RemediationSteps', text: { allowMultipleLines: true } }
+          ]
+        } else if (listConfig.type === 'history') {
+          columns = [
+            { displayName: 'ControlID', name: 'ControlID', text: { allowMultipleLines: false } },
+            { displayName: 'PreviousStatus', name: 'PreviousStatus', choice: { choices: ['pass', 'fail', 'warn', 'manual'], allowMultipleSelection: false } },
+            { displayName: 'NewStatus', name: 'NewStatus', choice: { choices: ['pass', 'fail', 'warn', 'manual'], allowMultipleSelection: false } },
+            { displayName: 'ChangedAt', name: 'ChangedAt', dateTime: { format: 'dateTime' } },
+            { displayName: 'ChangedBy', name: 'ChangedBy', text: { allowMultipleLines: false } },
+            { displayName: 'Reason', name: 'Reason', text: { allowMultipleLines: true } }
+          ]
+        }
+
+        // Add columns
+        for (const col of columns) {
+          try {
+            await graphClient.api(columnsApiPath).post(col)
+            console.log(`  ✓ Added column: ${col.displayName}`)
+            if (!columnResults[listConfig.name]) columnResults[listConfig.name] = []
+            columnResults[listConfig.name].push(col.displayName)
+          } catch (colError) {
+            console.warn(`  ⚠️ Column ${col.displayName} may already exist or failed: ${colError.message}`)
+          }
+        }
+      } catch (listError) {
+        console.error(`❌ Error creating list ${listConfig.displayName}:`, listError.message)
+        return res.status(500).json({
+          success: false,
+          error: `Failed to create list ${listConfig.displayName}: ${listError.message}`
+        })
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'CIS lists and columns created successfully',
+      siteId: siteId,
+      siteUrl: site,
+      validationsListId: createdLists['CIS-Validations'],
+      resultsListId: createdLists['CIS-Results'],
+      historyListId: createdLists['CIS-History'],
+      columns: columnResults,
+      envConfig: `SHAREPOINT_SITE_ID=${siteId}\nSHAREPOINT_CIS_VALIDATIONS_LIST_ID=${createdLists['CIS-Validations']}\nSHAREPOINT_CIS_RESULTS_LIST_ID=${createdLists['CIS-Results']}\nSHAREPOINT_CIS_HISTORY_LIST_ID=${createdLists['CIS-History']}`
+    })
+  } catch (error) {
+    console.error('Error initializing CIS lists:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/config/cis-results
+ * Save CIS validation results to SharePoint
+ */
+app.post('/api/config/cis-results', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const { controlId, status, findingDetails, currentValue, expectedValue, validationMethod, remediationSteps } = req.body
+
+    if (!controlId || !status) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: controlId, status'
+      })
+    }
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_CIS_RESULTS_LIST_ID
+
+    if (!siteId || !listId) {
+      return res.status(400).json({
+        success: false,
+        error: 'CIS SharePoint not configured'
+      })
+    }
+
+    console.log(`📝 Saving CIS result for ${controlId}: ${status}`)
+
+    try {
+      const itemData = {
+        fields: {
+          ControlID: controlId,
+          Status: status,
+          FindingDetails: findingDetails || null,
+          CurrentValue: currentValue || null,
+          ExpectedValue: expectedValue || null,
+          ValidatedAt: new Date().toISOString(),
+          ValidationMethod: validationMethod || 'GraphAPI',
+          RemediationSteps: remediationSteps || null
+        }
+      }
+
+      // Check if result already exists
+      const existing = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$filter=fields/ControlID eq '${controlId}'`).get()
+
+      if (existing.value && existing.value.length > 0) {
+        // Update existing
+        const itemId = existing.value[0].id
+        await graphClient.api(`/sites/${siteId}/lists/${listId}/items/${itemId}`).patch(itemData)
+        console.log(`✓ Updated result for ${controlId}`)
+        res.json({
+          success: true,
+          message: `Result updated for ${controlId}`,
+          controlId: controlId,
+          status: status
+        })
+      } else {
+        // Create new
+        const newItem = await graphClient.api(`/sites/${siteId}/lists/${listId}/items`).post(itemData)
+        console.log(`✓ Created new result for ${controlId}`)
+        res.json({
+          success: true,
+          message: `Result created for ${controlId}`,
+          controlId: controlId,
+          status: status,
+          itemId: newItem.id
+        })
+      }
+    } catch (error) {
+      console.error('❌ Error saving result:', error.message)
+      res.status(500).json({
+        success: false,
+        error: `Failed to save result: ${error.message}`
+      })
+    }
+  } catch (error) {
+    console.error('Error in POST /api/config/cis-results:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/config/cis-results
+ * Retrieve all CIS validation results from SharePoint
+ */
+app.get('/api/config/cis-results', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_CIS_RESULTS_LIST_ID
+
+    if (!siteId || !listId) {
+      return res.status(400).json({
+        success: false,
+        error: 'CIS SharePoint not configured'
+      })
+    }
+
+    console.log(`📋 Retrieving CIS results from SharePoint...`)
+
+    try {
+      const results = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$expand=fields&$orderby=fields/ValidatedAt desc`).get()
+
+      const items = (results.value || []).map(item => ({
+        id: item.id,
+        controlId: item.fields.ControlID,
+        status: item.fields.Status,
+        findingDetails: item.fields.FindingDetails,
+        currentValue: item.fields.CurrentValue,
+        expectedValue: item.fields.ExpectedValue,
+        validationMethod: item.fields.ValidationMethod,
+        validatedAt: item.fields.ValidatedAt,
+        remediationSteps: item.fields.RemediationSteps
+      }))
+
+      console.log(`✅ Retrieved ${items.length} CIS results`)
+      res.json({
+        success: true,
+        results: items,
+        totalCount: items.length
+      })
+    } catch (error) {
+      console.error('❌ Error retrieving results:', error.message)
+      res.status(500).json({
+        success: false,
+        error: `Failed to retrieve results: ${error.message}`
+      })
+    }
+  } catch (error) {
+    console.error('Error in GET /api/config/cis-results:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/config/cis-sharepoint-status
+ * Check CIS SharePoint configuration status
+ */
+app.get('/api/config/cis-sharepoint-status', async (req, res) => {
+  try {
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const validationsListId = process.env.SHAREPOINT_CIS_VALIDATIONS_LIST_ID
+    const resultsListId = process.env.SHAREPOINT_CIS_RESULTS_LIST_ID
+    const historyListId = process.env.SHAREPOINT_CIS_HISTORY_LIST_ID
+
+    const configured = !!(siteId && resultsListId && validationsListId && historyListId)
+
+    res.json({
+      success: true,
+      configured: configured,
+      configuration: {
+        siteId: siteId ? '✓ Configured' : '✗ Missing',
+        validationsListId: validationsListId ? '✓ Configured' : '✗ Missing',
+        resultsListId: resultsListId ? '✓ Configured' : '✗ Missing',
+        historyListId: historyListId ? '✓ Configured' : '✗ Missing'
+      },
+      message: configured ? 'CIS SharePoint storage is fully configured' : 'CIS SharePoint storage is not configured - run POST /api/config/cis-initialize-sharepoint to set up'
+    })
+  } catch (error) {
+    console.error('Error checking CIS SharePoint status:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/config/cis-results/history
+ * Retrieve CIS assessment history from SharePoint
+ */
+app.get('/api/config/cis-results/history', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_CIS_HISTORY_LIST_ID
+
+    if (!siteId || !listId) {
+      return res.status(400).json({
+        success: false,
+        error: 'CIS SharePoint not configured'
+      })
+    }
+
+    console.log(`📋 Retrieving CIS history from SharePoint...`)
+
+    try {
+      const history = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$expand=fields&$orderby=fields/ChangedAt desc`).get()
+
+      const items = (history.value || []).map(item => ({
+        id: item.id,
+        controlId: item.fields.ControlID,
+        previousStatus: item.fields.PreviousStatus,
+        newStatus: item.fields.NewStatus,
+        changedAt: item.fields.ChangedAt,
+        changedBy: item.fields.ChangedBy,
+        reason: item.fields.Reason
+      }))
+
+      console.log(`✅ Retrieved ${items.length} history entries`)
+      res.json({
+        success: true,
+        history: items,
+        totalCount: items.length
+      })
+    } catch (error) {
+      console.error('❌ Error retrieving history:', error.message)
+      res.status(500).json({
+        success: false,
+        error: `Failed to retrieve history: ${error.message}`
+      })
+    }
+  } catch (error) {
+    console.error('Error in GET /api/config/cis-results/history:', error.message)
+    res.status(500).json({ success: false, error: error.message })
   }
 })
 

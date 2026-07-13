@@ -11,6 +11,11 @@ import {
   exportServiceHealthMessages
 } from '../lib/service-health-manager.js'
 
+const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const API_BASE = import.meta.env.VITE_API_URL || (isDev
+  ? 'http://localhost:3000'
+  : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net')
+
 let allMessages = []
 let filteredMessages = []
 let filters = {
@@ -425,7 +430,7 @@ function attachSaveHandler(card, msg) {
         }
 
         const response = await fetch(
-          `http://localhost:3001/api/servicehealth/messages/${msg.id}?siteId=${encodeURIComponent(siteId)}&listId=${encodeURIComponent(listId)}`,
+          `${API_BASE}/api/servicehealth/messages/${msg.id}?siteId=${encodeURIComponent(siteId)}&listId=${encodeURIComponent(listId)}`,
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },

@@ -1,13 +1,15 @@
 import { state, saveState } from '../app.js'
 import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
-import { getCISControls, api } from '../lib/api-client.js'
+import { getCISControls, api, callAPI } from '../lib/api-client.js'
 import { CFG_TOPICS } from '../data/cis-controls.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
 import { getValidationSummary, validateAllTopics, getFailedControls, getWarningControls, getRiskScore } from '../lib/config-validator.js'
 
 let cfgView = 'main'
 let activeTopic = null
+let cisResults = null
+let lastRunTime = null
 
 const TOPIC_COLOURS = {
   t1: { bg: '#E6F1FB', color: '#0C447C' },
@@ -77,18 +79,25 @@ function scoreClass(score) {
 }
 
 /**
- * Fetch real zero-trust validation data from backend
+ * Fetch real CIS validation data from backend
  */
 async function fetchRealValidationData() {
   try {
-    const response = await api.get('/zero-trust/validations')
-    if (response?.data?.validations) {
-      return response.data.validations
+    const response = await callAPI('/config/cis-results/last')
+    if (response?.success) {
+      if (response?.topics && response.topics.length > 0) {
+        // Return the full CIS result structure with topics
+        return response
+      } else if (response?.hasResults === false) {
+        // Validation is pending
+        console.log('⏳ CIS validation pending...')
+        return { pending: true, message: response.message }
+      }
     }
   } catch (error) {
-    console.warn('⚠️ Could not fetch real validations:', error.message)
+    console.warn('⚠️ Could not fetch real CIS validations:', error.message)
   }
-  return []
+  return null
 }
 
 /**
@@ -179,7 +188,14 @@ export async function initM365Config() {
     if (isDemoAccount()) {
       renderDemoMain(el)
     } else {
-      await renderProductionMainWithRealData(el)
+      // Re-use cached data if already loaded this session
+      if (cisResults && lastRunTime) {
+        renderProductionMainWithCachedData(el, cisResults, lastRunTime)
+      } else {
+        // Show skeleton first, then load data asynchronously (like Zero Trust)
+        renderProductionSkeleton(el)
+        setTimeout(() => renderProductionMainWithRealData(el), 300)
+      }
     }
   }
 }
@@ -385,9 +401,9 @@ async function renderProductionTopic(el, topic) {
           ${subsection.controls.map(control => `
             <tr style="border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;transition:background 0.2s" class="control-row" data-control-id="${control.id}">
               <td style="padding:10px 12px;font-size:10px;font-family:monospace">${control.id}</td>
-              <td style="padding:10px 12px;font-size:11px">${control.title || control.name || '—'}</td>
-              <td style="padding:10px 12px;font-size:10px"><span class="badge ${control.type === 'manual' ? 'purple' : 'info'}">${control.type === 'manual' ? 'Manual' : 'Auto'}</span></td>
-              <td style="padding:10px 12px;font-size:10px">${statusBadge(getEffectiveStatus(control))}</td>
+              <td style="padding:10px 12px;font-size:11px">${control.title || control.name || control.displayName || '—'}</td>
+              <td style="padding:10px 12px;font-size:10px"><span class="badge ${control.requiresManualValidation ? 'purple' : 'info'}">${control.requiresManualValidation ? 'Manual' : 'Auto'}</span></td>
+              <td style="padding:10px 12px;font-size:10px">${statusBadge(control.status || 'warn')}</td>
               <td style="padding:10px 12px;font-size:10px;text-align:center"><i class="ti ti-chevron-right" style="font-size:16px;color:var(--color-text-tertiary)"></i></td>
             </tr>
           `).join('')}
@@ -496,9 +512,9 @@ function renderDemoTopic(el, topic) {
           ${subsection.controls.map(control => `
             <tr style="border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;transition:background 0.2s" class="control-row" data-control-id="${control.id}">
               <td style="padding:10px 12px;font-size:10px;font-family:monospace">${control.id}</td>
-              <td style="padding:10px 12px;font-size:11px">${control.title || control.name || '—'}</td>
-              <td style="padding:10px 12px;font-size:10px"><span class="badge ${control.type === 'manual' ? 'purple' : 'info'}">${control.type === 'manual' ? 'Manual' : 'Auto'}</span></td>
-              <td style="padding:10px 12px;font-size:10px">${statusBadge(getEffectiveStatus(control))}</td>
+              <td style="padding:10px 12px;font-size:11px">${control.title || control.name || control.displayName || '—'}</td>
+              <td style="padding:10px 12px;font-size:10px"><span class="badge ${control.requiresManualValidation ? 'purple' : 'info'}">${control.requiresManualValidation ? 'Manual' : 'Auto'}</span></td>
+              <td style="padding:10px 12px;font-size:10px">${statusBadge(control.status || 'warn')}</td>
               <td style="padding:10px 12px;font-size:10px;text-align:center"><i class="ti ti-chevron-right" style="font-size:16px;color:var(--color-text-tertiary)"></i></td>
             </tr>
           `).join('')}
@@ -733,6 +749,188 @@ async function renderProductionMain(el) {
   }
 }
 
+function renderProductionSkeleton(el) {
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-settings-2"></i> CIS Benchmark Controls</div>
+        <div class="page-subtitle">Loading validation data...</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn" disabled><i class="ti ti-refresh"></i> Re-run</button>
+      </div>
+    </div>
+    <div style="padding:40px;text-align:center">
+      <span class="spinner dark"></span> Loading CIS validation results...
+    </div>
+  `
+}
+
+async function renderProductionMainWithCachedData(el, results, lastRun) {
+  // Render using cached data (same as renderProductionMainWithRealData but with cached data)
+  try {
+    const topics = results.topics
+
+    // Calculate overall stats from all controls across topics
+    let totalControls = 0, passCount = 0, failCount = 0, warnCount = 0, manualCount = 0
+    for (const topic of topics) {
+      if (topic.controls && Array.isArray(topic.controls)) {
+        for (const control of topic.controls) {
+          totalControls++
+          if (control.status === 'pass') passCount++
+          else if (control.status === 'fail') failCount++
+          else if (control.status === 'warn') warnCount++
+          if (control.requiresManualValidation) manualCount++
+        }
+      }
+    }
+
+    const allStats = {
+      total: totalControls,
+      pass: passCount,
+      fail: failCount,
+      warn: warnCount,
+      manual: manualCount
+    }
+
+    allStats.score = allStats.total > 0 ? Math.round((allStats.pass / allStats.total) * 100) : 0
+    const cls = scoreClass(allStats.score)
+
+    el.innerHTML = `
+      <div class="page-header">
+        <div>
+          <div class="page-title"><i class="ti ti-settings-2"></i> CIS Benchmark Controls</div>
+          <div class="page-subtitle">${allStats.total} security controls · Last run: ${lastRun ? new Date(lastRun).toLocaleString() : 'Never'}</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="cfg-validation-btn"><i class="ti ti-checklist"></i> Validation Report</button>
+          <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Re-run</button>
+          <button class="btn btn-primary" id="cfg-agent-btn"><i class="ti ti-robot"></i> Config Agent</button>
+        </div>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-tile">
+          <div class="kpi-value ${cls}">${allStats.score}%</div>
+          <div class="kpi-label">Compliance Score</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-value ${allStats.pass > 0 ? 'success' : 'neutral'}">${allStats.pass}</div>
+          <div class="kpi-label">Passed Controls</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-value ${allStats.warn > 0 ? 'warning' : 'neutral'}">${allStats.warn}</div>
+          <div class="kpi-label">Warnings</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-value ${allStats.fail > 0 ? 'danger' : 'neutral'}">${allStats.fail}</div>
+          <div class="kpi-label">Failed Controls</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
+        <span class="status-dot active pulse"></span>
+        <span><strong style="color:var(--color-text-secondary)">Real Data</strong> · Actual Graph API validation results (${allStats.manual} require manual verification)</span>
+      </div>
+
+      <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary);text-transform:uppercase;letter-spacing:0.5px">Security Control Categories</div>
+      <div class="cfg-topic-grid" id="cfg-topic-grid"></div>
+    `
+
+    // Render topics grid
+    const grid = el.querySelector('#cfg-topic-grid')
+    const TOPIC_COLOURS_MAP = {
+      't1': { bg: '#dbeafe', color: '#1e40af' },
+      't2': { bg: '#ddd6fe', color: '#6d28d9' },
+      't3': { bg: '#dcfce7', color: '#15803d' },
+      't4': { bg: '#fed7aa', color: '#92400e' },
+      't5': { bg: '#f5d4e6', color: '#9f1239' },
+      't6': { bg: '#ccfbf1', color: '#0d6e6e' },
+      't7': { bg: '#e0e7ff', color: '#3730a3' },
+      't8': { bg: '#fef3c7', color: '#b45309' },
+      't9': { bg: '#fce7f3', color: '#831843' }
+    }
+
+    topics.forEach((topic, idx) => {
+      const card = document.createElement('div')
+      card.className = 'cfg-topic-card'
+
+      // Calculate stats for this topic
+      let topicPass = 0, topicFail = 0, topicWarn = 0, topicTotal = 0
+      if (topic.controls) {
+        topic.controls.forEach(c => {
+          topicTotal++
+          if (c.status === 'pass') topicPass++
+          else if (c.status === 'fail') topicFail++
+          else if (c.status === 'warn') topicWarn++
+        })
+      }
+      const topicScore = topicTotal > 0 ? Math.round((topicPass / topicTotal) * 100) : 0
+
+      const tc = TOPIC_COLOURS_MAP[topic.topicId] || TOPIC_COLOURS_MAP['t1']
+      const topicName = topic.name || `Topic ${idx + 1}`
+
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border-secondary)">
+          <div style="background:${tc.bg};color:${tc.color};width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ti-checkmark-circle" style="font-size:20px"></i>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);line-height:1.3">${topicName}</div>
+            <div style="font-size:11px;color:var(--color-text-tertiary)">${topicTotal} controls</div>
+          </div>
+          <div style="font-size:16px;font-weight:700;color:${tc.color}">${topicScore}%</div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-bottom:12px">
+          ${topicFail > 0 ? `<span style="padding:4px 8px;background:var(--clr-danger-bg);color:var(--clr-danger-text);border-radius:4px;font-size:11px;font-weight:600">${topicFail} Failed</span>` : ''}
+          ${topicWarn > 0 ? `<span style="padding:4px 8px;background:var(--clr-warning-bg);color:var(--clr-warning-text);border-radius:4px;font-size:11px;font-weight:600">${topicWarn} Warnings</span>` : ''}
+          ${topicPass > 0 ? `<span style="padding:4px 8px;background:var(--clr-success-bg);color:var(--clr-success-text);border-radius:4px;font-size:11px;font-weight:600">${topicPass} Passed</span>` : ''}
+        </div>
+
+        <div style="background:var(--color-background-secondary);height:6px;border-radius:3px;overflow:hidden">
+          <div style="background:${tc.color};height:100%;width:${topicScore}%;transition:width 0.3s ease"></div>
+        </div>
+      `
+
+      card.addEventListener('click', () => {
+        showToast(`${topicName}: ${topicPass}/${topicTotal} controls passing`, 'info')
+      })
+
+      grid.appendChild(card)
+    })
+
+    // Add event listeners
+    el.querySelector('#cfg-scan-now')?.addEventListener('click', async () => {
+      const btn = el.querySelector('#cfg-scan-now')
+      btn.innerHTML = `<span class="spinner dark"></span> Re-running...`
+      btn.disabled = true
+      try {
+        await callAPI('/config/cis-controls/refresh', 'POST')
+        showToast('CIS validation started. Refreshing data...', 'success')
+        // Wait for validation to complete, then reload
+        setTimeout(async () => {
+          btn.innerHTML = `<i class="ti ti-refresh"></i> Re-run`
+          btn.disabled = false
+          await renderProductionMainWithRealData(el)
+          showToast('CIS validation complete - data refreshed', 'success')
+        }, 5000)
+      } catch (error) {
+        showToast('Failed to start validation: ' + error.message, 'error')
+        btn.innerHTML = `<i class="ti ti-refresh"></i> Re-run`
+        btn.disabled = false
+      }
+    })
+
+    el.querySelector('#cfg-agent-btn')?.addEventListener('click', () => {
+      showToast('Configuration Agent will help remediate failed controls', 'info')
+    })
+  } catch (error) {
+    console.error('❌ Error rendering cached data:', error)
+    await renderProductionMainWithRealData(el)
+  }
+}
+
 async function renderProductionMainWithRealData(el) {
   try {
     console.log('📊 Loading real M365 validation data from backend...')
@@ -753,24 +951,51 @@ async function renderProductionMainWithRealData(el) {
     `
 
     // Fetch real validation data
-    const validations = await fetchRealValidationData()
+    const results = await fetchRealValidationData()
 
-    if (!validations || validations.length === 0) {
+    if (!results) {
       renderBlankProductionState(el)
       return
     }
 
-    // Map to CIS topics
-    const cisMapped = mapValidationsToCIS(validations)
+    // Handle pending validation
+    if (results.pending) {
+      renderPendingValidation(el, results.message)
+      return
+    }
 
-    // Calculate overall stats
+    if (!results.topics || results.topics.length === 0) {
+      renderBlankProductionState(el)
+      return
+    }
+
+    // Store in memory for quick access
+    cisResults = results
+    lastRunTime = results.lastRunTime
+
+    // Use CIS results directly (already structured by topics)
+    const topics = results.topics
+
+    // Calculate overall stats from all controls across topics
+    let totalControls = 0, passCount = 0, failCount = 0, warnCount = 0, manualCount = 0
+    for (const topic of topics) {
+      if (topic.controls && Array.isArray(topic.controls)) {
+        for (const control of topic.controls) {
+          totalControls++
+          if (control.status === 'pass') passCount++
+          else if (control.status === 'fail') failCount++
+          else if (control.status === 'warn') warnCount++
+          if (control.requiresManualValidation) manualCount++
+        }
+      }
+    }
+
     const allStats = {
-      total: validations.length,
-      pass: validations.filter(v => v.status === 'pass').length,
-      fail: validations.filter(v => v.status === 'fail').length,
-      warn: validations.filter(v => v.status === 'warn').length,
-      manual: validations.filter(v => v.automationLevel === 'Manual').length,
-      automated: validations.filter(v => v.automationLevel === 'Automated').length
+      total: totalControls,
+      pass: passCount,
+      fail: failCount,
+      warn: warnCount,
+      manual: manualCount
     }
 
     allStats.score = allStats.total > 0 ? Math.round((allStats.pass / allStats.total) * 100) : 0
@@ -779,12 +1004,12 @@ async function renderProductionMainWithRealData(el) {
     el.innerHTML = `
       <div class="page-header">
         <div>
-          <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
-          <div class="page-subtitle">Real-time Zero Trust Validation · ${allStats.total} security controls</div>
+          <div class="page-title"><i class="ti ti-settings-2"></i> CIS Benchmark Controls</div>
+          <div class="page-subtitle">${allStats.total} security controls · Last run: ${lastRunTime ? new Date(lastRunTime).toLocaleString() : 'Never'}</div>
         </div>
         <div class="page-actions">
           <button class="btn" id="cfg-validation-btn"><i class="ti ti-checklist"></i> Validation Report</button>
-          <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Refresh Now</button>
+          <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Re-run</button>
           <button class="btn btn-primary" id="cfg-agent-btn"><i class="ti ti-robot"></i> Config Agent</button>
         </div>
       </div>
@@ -832,7 +1057,7 @@ async function renderProductionMainWithRealData(el) {
 
       <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">
         <span class="status-dot active pulse"></span>
-        <span><strong style="color:var(--color-text-secondary)">Real Data</strong> · Showing actual tenant security validation results from Graph API</span>
+        <span><strong style="color:var(--color-text-secondary)">Real Data</strong> · Actual Graph API validation results (${allStats.manual} require manual verification)</span>
       </div>
 
       <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary);text-transform:uppercase;letter-spacing:0.5px">Security Control Categories</div>
@@ -841,15 +1066,36 @@ async function renderProductionMainWithRealData(el) {
 
     // Render topic cards with real data
     const grid = el.querySelector('#cfg-topic-grid')
-    const cisTopic = CFG_TOPICS[0] // Use first topic as template for styling
-    const topicNames = ['Microsoft 365 Admin', 'Email Security', 'Data Protection', 'Device Management', 'Identity & Access', 'SharePoint & OneDrive', 'Microsoft Teams', 'Threat Detection', 'AI & Copilot']
+    const TOPIC_COLOURS_MAP = {
+      't1': { bg: '#dbeafe', color: '#1e40af' },
+      't2': { bg: '#ddd6fe', color: '#6d28d9' },
+      't3': { bg: '#dcfce7', color: '#15803d' },
+      't4': { bg: '#fed7aa', color: '#92400e' },
+      't5': { bg: '#f5d4e6', color: '#9f1239' },
+      't6': { bg: '#ccfbf1', color: '#0d6e6e' },
+      't7': { bg: '#e0e7ff', color: '#3730a3' },
+      't8': { bg: '#fef3c7', color: '#b45309' },
+      't9': { bg: '#fce7f3', color: '#831843' }
+    }
 
-    Object.entries(cisMapped).forEach(([topicId, data], idx) => {
+    topics.forEach((topic, idx) => {
       const card = document.createElement('div')
       card.className = 'cfg-topic-card'
-      const tc = TOPIC_COLOURS[topicId] || { bg: '#f0f0f0', color: '#555' }
-      const tCls = scoreClass(data.stats.score)
-      const topicName = topicNames[idx] || topicId
+
+      // Calculate stats for this topic
+      let topicPass = 0, topicFail = 0, topicWarn = 0, topicTotal = 0
+      if (topic.controls) {
+        topic.controls.forEach(c => {
+          topicTotal++
+          if (c.status === 'pass') topicPass++
+          else if (c.status === 'fail') topicFail++
+          else if (c.status === 'warn') topicWarn++
+        })
+      }
+      const topicScore = topicTotal > 0 ? Math.round((topicPass / topicTotal) * 100) : 0
+
+      const tc = TOPIC_COLOURS_MAP[topic.topicId] || TOPIC_COLOURS_MAP['t1']
+      const topicName = topic.name || `Topic ${idx + 1}`
 
       card.innerHTML = `
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border-secondary)">
@@ -858,24 +1104,24 @@ async function renderProductionMainWithRealData(el) {
           </div>
           <div style="flex:1;min-width:0">
             <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);line-height:1.3">${topicName}</div>
-            <div style="font-size:11px;color:var(--color-text-tertiary)">${data.stats.total} controls</div>
+            <div style="font-size:11px;color:var(--color-text-tertiary)">${topicTotal} controls</div>
           </div>
-          <div style="font-size:16px;font-weight:700;color:${tc.color}">${data.stats.score}%</div>
+          <div style="font-size:16px;font-weight:700;color:${tc.color}">${topicScore}%</div>
         </div>
 
         <div style="display:flex;gap:12px;margin-bottom:12px">
-          ${data.stats.fail > 0 ? `<span style="padding:4px 8px;background:var(--clr-danger-bg);color:var(--clr-danger-text);border-radius:4px;font-size:11px;font-weight:600">${data.stats.fail} Failed</span>` : ''}
-          ${data.stats.warn > 0 ? `<span style="padding:4px 8px;background:var(--clr-warning-bg);color:var(--clr-warning-text);border-radius:4px;font-size:11px;font-weight:600">${data.stats.warn} Warnings</span>` : ''}
-          ${data.stats.pass > 0 ? `<span style="padding:4px 8px;background:var(--clr-success-bg);color:var(--clr-success-text);border-radius:4px;font-size:11px;font-weight:600">${data.stats.pass} Passed</span>` : ''}
+          ${topicFail > 0 ? `<span style="padding:4px 8px;background:var(--clr-danger-bg);color:var(--clr-danger-text);border-radius:4px;font-size:11px;font-weight:600">${topicFail} Failed</span>` : ''}
+          ${topicWarn > 0 ? `<span style="padding:4px 8px;background:var(--clr-warning-bg);color:var(--clr-warning-text);border-radius:4px;font-size:11px;font-weight:600">${topicWarn} Warnings</span>` : ''}
+          ${topicPass > 0 ? `<span style="padding:4px 8px;background:var(--clr-success-bg);color:var(--clr-success-text);border-radius:4px;font-size:11px;font-weight:600">${topicPass} Passed</span>` : ''}
         </div>
 
         <div style="background:var(--color-background-secondary);height:6px;border-radius:3px;overflow:hidden">
-          <div style="background:${tc.color};height:100%;width:${data.stats.score}%;transition:width 0.3s ease"></div>
+          <div style="background:${tc.color};height:100%;width:${topicScore}%;transition:width 0.3s ease"></div>
         </div>
       `
 
       card.addEventListener('click', () => {
-        showToast(`${topicName}: ${data.stats.pass}/${data.stats.total} controls passing`, 'info')
+        showToast(`${topicName}: ${topicPass}/${topicTotal} controls passing`, 'info')
       })
 
       grid.appendChild(card)
@@ -889,14 +1135,23 @@ async function renderProductionMainWithRealData(el) {
 
     el.querySelector('#cfg-scan-now')?.addEventListener('click', async () => {
       const btn = el.querySelector('#cfg-scan-now')
-      btn.innerHTML = `<span class="spinner dark"></span> Refreshing...`
+      btn.innerHTML = `<span class="spinner dark"></span> Re-running...`
       btn.disabled = true
-      setTimeout(async () => {
-        btn.innerHTML = `<i class="ti ti-refresh"></i> Refresh Now`
+      try {
+        await callAPI('/config/cis-controls/refresh', 'POST')
+        showToast('CIS validation started. Refreshing data...', 'success')
+        // Wait for validation to complete, then reload
+        setTimeout(async () => {
+          btn.innerHTML = `<i class="ti ti-refresh"></i> Re-run`
+          btn.disabled = false
+          await renderProductionMainWithRealData(el)
+          showToast('CIS validation complete - data refreshed', 'success')
+        }, 5000)
+      } catch (error) {
+        showToast('Failed to start validation: ' + error.message, 'error')
+        btn.innerHTML = `<i class="ti ti-refresh"></i> Re-run`
         btn.disabled = false
-        await renderProductionMainWithRealData(el)
-        showToast('Validation data refreshed', 'success')
-      }, 2000)
+      }
     })
 
     el.querySelector('#cfg-agent-btn')?.addEventListener('click', () => {
@@ -955,21 +1210,61 @@ function renderBlankProductionState(el) {
       <i class="ti ti-settings-off" style="font-size:48px;color:var(--color-text-tertiary);margin-bottom:12px"></i>
       <div style="font-size:13px;font-weight:600;margin-bottom:4px">No Configuration Data Available</div>
       <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:16px">
-        The API returned no data. Backend may be initializing...
+        Click "Run scan" to start the CIS Benchmark validation. This will take 2-5 minutes to complete.
       </div>
-      <button class="btn btn-primary" id="cfg-scan-now"><i class="ti ti-refresh"></i> Try Again</button>
+      <button class="btn btn-primary" id="cfg-scan-now"><i class="ti ti-refresh"></i> Run Scan</button>
     </div>
   `
 
   el.querySelector('#cfg-scan-now').addEventListener('click', async () => {
     const btn = el.querySelector('#cfg-scan-now')
-    btn.innerHTML = `<span class="spinner dark"></span> Scanning...`
+    btn.innerHTML = `<span class="spinner dark"></span> Starting validation...`
+    btn.disabled = true
+    try {
+      await callAPI('/config/cis-controls/refresh', 'POST')
+      showToast('CIS validation started. This will take 2-5 minutes.', 'success')
+      setTimeout(async () => {
+        await renderProductionMain(el)
+      }, 3000)
+    } catch (error) {
+      showToast('Failed to start validation: ' + error.message, 'error')
+      btn.innerHTML = `<i class="ti ti-refresh"></i> Run Scan`
+      btn.disabled = false
+    }
+  })
+}
+
+function renderPendingValidation(el, message) {
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
+        <div class="page-subtitle">CIS Benchmark Compliance Assessment</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn" id="cfg-scan-check"><i class="ti ti-refresh"></i> Check Status</button>
+      </div>
+    </div>
+
+    <div class="blank-state">
+      <div class="spinner dark" style="font-size:48px;margin-bottom:12px"></div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Validation in Progress</div>
+      <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:16px">
+        ${message || 'CIS validation is currently running. This typically takes 2-5 minutes to complete.'}
+      </div>
+      <button class="btn btn-primary" id="cfg-scan-check"><i class="ti ti-refresh"></i> Check Status</button>
+    </div>
+  `
+
+  el.querySelector('#cfg-scan-check').addEventListener('click', async () => {
+    const btn = el.querySelector('#cfg-scan-check')
+    btn.innerHTML = `<span class="spinner dark"></span> Checking...`
     btn.disabled = true
     setTimeout(async () => {
-      btn.innerHTML = `<i class="ti ti-refresh"></i> Try Again`
+      btn.innerHTML = `<i class="ti ti-refresh"></i> Check Status`
       btn.disabled = false
       await renderProductionMain(el)
-    }, 2000)
+    }, 3000)
   })
 }
 
@@ -1479,9 +1774,9 @@ function showControlDetails(parentEl, control, topic) {
               </div>
 
               <div style="margin-bottom:12px">
-                <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">Current Value</div>
+                <div style="font-size:10px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">Validation Finding</div>
                 <div style="font-size:11px;color:var(--color-text-primary);padding:8px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #0066cc">
-                  ${control.value || 'No data available'}
+                  ${control.count !== undefined ? `Found: ${control.count}${control.expected ? ` (Expected: ${control.expected})` : ''}` : (control.value || (control.status === 'pass' ? '✓ Configured correctly' : 'Not properly configured'))}
                 </div>
               </div>
 
@@ -1740,45 +2035,32 @@ function getStatusIcon(status) {
 }
 
 function getValidationExplanation(control) {
+  // Use actual validation data if available
+  if (control.note) {
+    return control.note
+  }
+
+  // Show actual validation findings if available
+  if (control.count !== undefined && control.expected) {
+    return `Found: ${control.count} (Expected: ${control.expected})`
+  }
+
+  if (control.value) {
+    return `Actual value: ${control.value}`
+  }
+
+  // Show remediation if available
+  if (control.remediation) {
+    return control.remediation
+  }
+
   const status = getEffectiveStatus(control)
-
-  // Parse control ID to get category
-  const [topic, section, num] = control.id.split('.')
-
-  // Generic explanations based on status and control type
-  const explanations = {
-    '1.1.1': {
-      pass: 'Detected 2-4 Global Administrators as required by CIS benchmark',
-      fail: 'No Global Administrators found - access management is compromised',
-      warn: 'More than 4 Global Administrators detected - reduces security posture'
-    },
-    '1.1.2': {
-      pass: 'Third-party app consent is properly restricted',
-      fail: 'Third-party app consent is allowed - users can grant access to risky apps',
-      warn: 'Third-party apps from verified publishers allowed - consider full restriction'
-    },
-    '1.1.3': {
-      pass: 'Default users cannot create new tenants',
-      fail: 'Default users can create tenants - significant risk',
-      warn: 'Default user tenant creation permissions need review'
-    },
-    '1.1.4': {
-      pass: 'Security Defaults and Conditional Access properly configured',
-      fail: 'Conflicting security configuration detected',
-      warn: 'Review interaction between Security Defaults and Conditional Access policies'
-    }
-  }
-
-  // Return control-specific explanation if available
-  if (explanations[control.id]) {
-    return explanations[control.id][status] || control.description
-  }
 
   // Fallback explanations based on status
   const fallbacks = {
     pass: 'Control validation passed. Configuration meets CIS benchmark requirements.',
     fail: 'Control validation failed. Configuration does not meet CIS benchmark requirements. Review and remediate.',
-    warn: 'Control validation shows warning. Configuration partially meets requirements. Review recommended settings.'
+    warn: 'Control validation shows warning. Configuration partially meets requirements. Manual verification required.'
   }
 
   return fallbacks[status] || 'Control validation complete'

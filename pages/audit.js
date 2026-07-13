@@ -1,6 +1,9 @@
 import { customSkeleton } from '../lib/skeleton-custom.js'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const API_BASE = import.meta.env.VITE_API_URL || (isDev
+  ? 'http://localhost:3000'
+  : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net')
 
 export function initAudit() {
   const el = document.getElementById('page-audit')

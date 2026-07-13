@@ -1,5 +1,5 @@
 import { go, state } from '../app.js'
-import { getDevices, getUsers, getSecurityScore, getPrivilegedAccounts, callAPI, getMessageCenterMessages, getServiceHealth } from '../lib/api-client.js'
+import { getDevices, getUsers, getSecurityScore, getPrivilegedAccounts, callAPI, getMessageCenterMessages, getServiceHealth, api } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { MC_MESSAGES, SVC_HEALTH, SVC_META } from '../data/msgcenter-data.js'
 import { showToast } from '../components/toast.js'
@@ -173,7 +173,7 @@ function setupDashboardEventListeners(el) {
       btn.disabled = true
       btn.textContent = '⏳ Running...'
       try {
-        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/zero-trust/validations`)
+        await fetch(`${api}/zero-trust/validations`)
         showToast('Assessment completed! Refreshing...', 'success')
         setTimeout(() => location.reload(), 1500)
       } catch (err) {
@@ -200,8 +200,7 @@ function setupDashboardEventListeners(el) {
 async function loadDashboardData(el) {
   try {
     console.log('📡 Fetching dashboard data from real APIs...')
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
-    console.log('📡 Using API URL:', apiUrl)
+    console.log('📡 Using API URL:', api)
 
     // Fetch all data in parallel
     const [devicesResult, usersResult, scoreResult, setupResult, requestsResult, licensesResult, zeroTrustResult, cisResult, privAcctsResult] = await Promise.all([
@@ -411,6 +410,8 @@ function updateCriticalAlerts(el, requestsData = {}) {
 
 function updateSystemHealth(el, scoreResult = {}, licensesResult = {}, zeroTrustResult = {}, cisResult = {}) {
   // ✅ UPDATE ZERO TRUST - Display REAL data from SharePoint
+  const zt_comp = el.querySelector('#dash-zt-compliance')
+  const zt_info = el.querySelector('#dash-zt-info')
   const zt_status = el.querySelector('#dash-zt-status')
   const zt_pillars = el.querySelector('#dash-zt-pillars')
   const zt_btn = el.querySelector('#dash-to-zt')
@@ -424,12 +425,16 @@ function updateSystemHealth(el, scoreResult = {}, licensesResult = {}, zeroTrust
     const summary = zeroTrustResult.summary || {}
     const lastRun = lastRunTime ? new Date(lastRunTime).toLocaleString() : 'Unknown'
 
+    if (zt_comp) zt_comp.textContent = `${compliance}`
+    if (zt_info) zt_info.textContent = `Pillars: 5 • Controls: ${totalValidations}`
     if (zt_status) zt_status.textContent = `${compliance}% Compliant`
     if (zt_pillars) zt_pillars.textContent = `Pillars: 5 • Controls: ${totalValidations}`
     if (zt_btn) zt_btn.textContent = '🔄 Re-run Assessment'
 
     console.log(`📊 Zero Trust - ${compliance}% compliant (${summary.pass || 0}/${totalValidations} controls) - Last run: ${lastRun}`)
   } else {
+    if (zt_comp) zt_comp.textContent = '—'
+    if (zt_info) zt_info.textContent = 'Compliance assessment'
     if (zt_status) zt_status.textContent = 'Pending Assessment'
     if (zt_pillars) zt_pillars.textContent = 'Pillars: 5 • Controls: 0'
     if (zt_btn) zt_btn.textContent = 'Request Assessment'
@@ -833,7 +838,7 @@ function setupDemoDashboardEventListeners(el) {
       const origText = btn.textContent
       btn.textContent = '⏳ Running...'
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/zero-trust/validations`)
+        const response = await fetch(`${api}/zero-trust/validations`)
         const data = await response.json()
         showToast('Assessment completed! Refreshing...', 'success')
         setTimeout(() => location.reload(), 1500)

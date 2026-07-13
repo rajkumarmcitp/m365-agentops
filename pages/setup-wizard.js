@@ -1,7 +1,10 @@
 import { state } from '../app.js'
 import { showToast } from '../components/toast.js'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const API_URL = import.meta.env.VITE_API_URL || (isDev
+  ? 'http://localhost:3000'
+  : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net')
 
 const wizardState = {
   currentStep: 1,
@@ -201,7 +204,7 @@ window.checkPowerShellModules = async function() {
   try {
     container.innerHTML = '<div style="text-align:center;padding:20px"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-block"></i><p>Checking modules...</p></div>'
 
-    const response = await fetch((API_URL || 'http://localhost:3000') + '/api/setup/powershell/check', {
+    const response = await fetch(`${API_URL}/api/setup/powershell/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     })
@@ -249,7 +252,7 @@ window.installPowerShellModules = async function() {
   container.innerHTML = '<div style="text-align:center;padding:20px"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-block"></i><p>Installing modules... (this may take 5-10 minutes)</p></div>'
 
   try {
-    const response = await fetch((API_URL || 'http://localhost:3000') + '/api/setup/powershell/install', {
+    const response = await fetch(`${API_URL}/api/setup/powershell/install`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     })
