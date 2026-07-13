@@ -207,9 +207,9 @@ async function loadDashboardData(el) {
       getDevices().catch(e => { console.warn('⚠️ Devices fetch failed:', e.message); return { count: 0, data: [] } }),
       getUsers().catch(e => { console.warn('⚠️ Users fetch failed:', e.message); return { count: 0, data: [] } }),
       getSecurityScore().catch(e => { console.warn('⚠️ Score fetch failed:', e.message); return { data: {} } }),
-      fetch(`${apiUrl}/api/setup/config`).then(r => r.json()).catch(e => { console.warn('⚠️ Setup config fetch failed:', e.message); return { success: false } }),
-      fetch(`${apiUrl}/api/requests`).then(r => r.json()).catch(e => { console.warn('⚠️ Requests fetch failed:', e.message); return { requests: [] } }),
-      fetch(`${apiUrl}/api/licenses`).then(r => {
+      fetch(`${api}/setup/config`).then(r => r.json()).catch(e => { console.warn('⚠️ Setup config fetch failed:', e.message); return { success: false } }),
+      fetch(`${api}/requests`).then(r => r.json()).catch(e => { console.warn('⚠️ Requests fetch failed:', e.message); return { requests: [] } }),
+      fetch(`${api}/licenses`).then(r => {
         console.log('📊 License API response status:', r.status)
         if (!r.ok) {
           console.error('❌ License API returned status:', r.status, r.statusText)
@@ -225,8 +225,8 @@ async function loadDashboardData(el) {
         console.error('❌ Licenses fetch error:', e)
         return { success: false, summary: { utilizationPct: 0, total: 0, consumed: 0 }, count: 0 }
       }),
-      fetch(`${apiUrl}/api/zero-trust/last-results`).then(r => r.json()).catch(e => { console.warn('⚠️ Zero Trust last results fetch failed:', e.message); return { success: false, hasResults: false } }),
-      fetch(`${apiUrl}/api/config/cis-results/last`).then(r => r.json()).catch(e => { console.warn('⚠️ CIS results fetch failed:', e.message); return { success: false, hasResults: false } }),
+      fetch(`${api}/zero-trust/last-results`).then(r => r.json()).catch(e => { console.warn('⚠️ Zero Trust last results fetch failed:', e.message); return { success: false, hasResults: false } }),
+      fetch(`${api}/config/cis-results/last`).then(r => r.json()).catch(e => { console.warn('⚠️ CIS results fetch failed:', e.message); return { success: false, hasResults: false } }),
       getPrivilegedAccounts().catch(e => { console.warn('⚠️ Privileged accounts fetch failed:', e.message); return { count: 0, data: [] } })
     ])
 
