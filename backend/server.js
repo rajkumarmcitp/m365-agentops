@@ -143,6 +143,7 @@ import {
 } from './agents-config.js'
 
 import { randomUUID } from 'crypto'
+import { loadConfig, saveConfig, initializeAllLists, getListId, setListId } from './sharepoint-config.js'
 
 // Reload credentials after dotenv.config() has loaded environment variables
 graphConfigService.reloadCredentials()
@@ -16838,63 +16839,9 @@ async function initializeSharePointListsOnStartup() {
   }
 
   try {
-    console.log('🔍 Checking SharePoint lists...')
-
-    // Check and create CIS lists
-    const cisLists = ['CIS-Validations', 'CIS-Results', 'CIS-History']
-    for (const listName of cisLists) {
-      try {
-        const lists = await graphClient.api(`/sites/${siteId}/lists?$filter=displayName eq '${listName}'`).get()
-        if (lists.value && lists.value.length > 0) {
-          const listId = lists.value[0].id
-          const envVar = `SHAREPOINT_CIS_${listName.replace('-', '_').toUpperCase()}_LIST_ID`
-          process.env[envVar] = listId
-          console.log(`✓ Found ${listName}: ${listId}`)
-        } else {
-          console.log(`⚠️ List not found: ${listName} - will be created on first use`)
-        }
-      } catch (error) {
-        console.warn(`⚠️ Could not check ${listName}:`, error.message)
-      }
-    }
-
-    // Check and create Zero Trust lists
-    const ztLists = ['Zero Trust Validations', 'Zero Trust Results', 'Zero Trust History']
-    for (const listName of ztLists) {
-      try {
-        const lists = await graphClient.api(`/sites/${siteId}/lists?$filter=displayName eq '${listName}'`).get()
-        if (lists.value && lists.value.length > 0) {
-          const listId = lists.value[0].id
-          const envVar = `SHAREPOINT_ZEROTRUST_${listName.replace(' ', '_').toUpperCase()}_LIST_ID`
-          process.env[envVar] = listId
-          console.log(`✓ Found ${listName}: ${listId}`)
-        } else {
-          console.log(`⚠️ List not found: ${listName} - will be created on first use`)
-        }
-      } catch (error) {
-        console.warn(`⚠️ Could not check ${listName}:`, error.message)
-      }
-    }
-
-    // Check and create Self-Service lists
-    const selfServiceLists = ['SelfServiceRequests', 'SelfServiceAudit']
-    for (const listName of selfServiceLists) {
-      try {
-        const lists = await graphClient.api(`/sites/${siteId}/lists?$filter=displayName eq '${listName}'`).get()
-        if (lists.value && lists.value.length > 0) {
-          const listId = lists.value[0].id
-          const envVar = `SHAREPOINT_${listName.toUpperCase()}_LIST_ID`
-          process.env[envVar] = listId
-          console.log(`✓ Found ${listName}: ${listId}`)
-        } else {
-          console.log(`⚠️ List not found: ${listName} - will be created on first use`)
-        }
-      } catch (error) {
-        console.warn(`⚠️ Could not check ${listName}:`, error.message)
-      }
-    }
-
-    console.log('✅ SharePoint list check completed')
+    console.log('🔍 Initializing SharePoint lists...')
+    await initializeAllLists(graphClient, siteId)
+    console.log('✅ SharePoint list initialization completed')
   } catch (error) {
     console.error('❌ SharePoint initialization error:', error.message)
   }
