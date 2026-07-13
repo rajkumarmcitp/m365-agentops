@@ -16770,34 +16770,47 @@ app.post('/api/setup/initialize-services', async (req, res) => {
       })
     }
 
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    if (!siteId) {
+      return res.status(503).json({
+        success: false,
+        error: 'SHAREPOINT_SITE_ID not configured'
+      })
+    }
+
+    console.log(`🚀 Initializing services: ${services.join(', ')}`)
+
+    // Use the auto-initialization function to create all required lists
+    await initializeAllLists(graphClient, siteId)
+
     const listsSummary = []
 
-    // Initialize each selected service
+    // Build summary based on selected services
     for (const service of services) {
       try {
         switch(service) {
           case 'changeIntelligence':
-            // Create Service Health list
             listsSummary.push('✓ Change Intelligence list')
             break
           case 'serviceHealth':
-            // Create Service Health announcements list
             listsSummary.push('✓ Service Health list')
             break
           case 'zeroTrust':
-            // Create Zero Trust lists (Validations, Results, History)
             listsSummary.push('✓ Zero Trust Validations list')
             listsSummary.push('✓ Zero Trust Results list')
             listsSummary.push('✓ Zero Trust History list')
             break
+          case 'cis':
+            listsSummary.push('✓ CIS Validations list')
+            listsSummary.push('✓ CIS Results list')
+            listsSummary.push('✓ CIS History list')
+            break
           case 'tenantGuard':
-            // Create TenantGuard lists (Alerts, Correlations, Investigations)
             listsSummary.push('✓ TenantGuard Alerts list')
             listsSummary.push('✓ TenantGuard Correlations list')
             listsSummary.push('✓ TenantGuard Investigations list')
             break
           case 'selfService':
-            // Create Self Service lists (Requests, Audit)
             listsSummary.push('✓ Self Service Requests list')
             listsSummary.push('✓ Self Service Audit list')
             break
@@ -16811,8 +16824,9 @@ app.post('/api/setup/initialize-services', async (req, res) => {
 
     res.json({
       success: true,
-      message: `Successfully created ${listsSummary.length} SharePoint lists for selected services`,
-      listsCreated: listsSummary
+      message: `Successfully initialized SharePoint lists for ${services.length} service(s)`,
+      listsCreated: listsSummary,
+      servicesInitialized: services
     })
   } catch (error) {
     console.error('❌ Error initializing services:', error.message)

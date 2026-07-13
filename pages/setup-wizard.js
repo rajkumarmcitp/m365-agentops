@@ -1069,6 +1069,14 @@ function renderServiceConfigStep() {
             </label>
 
             <label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--color-border-primary);border-radius:6px;cursor:pointer">
+              <input type="checkbox" class="service-checkbox" data-service="cis" style="cursor:pointer;width:18px;height:18px">
+              <div>
+                <div style="font-weight:500;font-size:13px">CIS Controls</div>
+                <div style="font-size:11px;color:var(--color-text-tertiary)">CIS benchmark compliance validations</div>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--color-border-primary);border-radius:6px;cursor:pointer">
               <input type="checkbox" class="service-checkbox" data-service="tenantGuard" style="cursor:pointer;width:18px;height:18px">
               <div>
                 <div style="font-weight:500;font-size:13px">TenantGuard Enhanced</div>
