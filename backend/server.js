@@ -16726,6 +16726,66 @@ app.post('/api/setup/initialize-services', async (req, res) => {
 })
 
 // ============================================================
+// Auto-Initialize SharePoint Lists on Startup
+// ============================================================
+async function initializeSharePointListsOnStartup() {
+  if (!graphClient) {
+    console.warn('⚠️ GraphClient not initialized - skipping SharePoint auto-initialization')
+    return
+  }
+
+  const siteId = process.env.SHAREPOINT_SITE_ID
+  if (!siteId) {
+    console.warn('⚠️ SHAREPOINT_SITE_ID not configured - skipping auto-initialization')
+    return
+  }
+
+  try {
+    console.log('🔍 Checking SharePoint lists...')
+
+    // Check and create CIS lists
+    const cisLists = ['CIS-Validations', 'CIS-Results', 'CIS-History']
+    for (const listName of cisLists) {
+      try {
+        const lists = await graphClient.api(`/sites/${siteId}/lists?$filter=displayName eq '${listName}'`).get()
+        if (lists.value && lists.value.length > 0) {
+          const listId = lists.value[0].id
+          const envVar = `SHAREPOINT_CIS_${listName.replace('-', '_').toUpperCase()}_LIST_ID`
+          process.env[envVar] = listId
+          console.log(`✓ Found ${listName}: ${listId}`)
+        } else {
+          console.log(`⚠️ List not found: ${listName} - will be created on first use`)
+        }
+      } catch (error) {
+        console.warn(`⚠️ Could not check ${listName}:`, error.message)
+      }
+    }
+
+    // Check and create Zero Trust lists
+    const ztLists = ['Zero Trust Validations', 'Zero Trust Results', 'Zero Trust History']
+    for (const listName of ztLists) {
+      try {
+        const lists = await graphClient.api(`/sites/${siteId}/lists?$filter=displayName eq '${listName}'`).get()
+        if (lists.value && lists.value.length > 0) {
+          const listId = lists.value[0].id
+          const envVar = `SHAREPOINT_ZEROTRUST_${listName.replace(' ', '_').toUpperCase()}_LIST_ID`
+          process.env[envVar] = listId
+          console.log(`✓ Found ${listName}: ${listId}`)
+        } else {
+          console.log(`⚠️ List not found: ${listName} - will be created on first use`)
+        }
+      } catch (error) {
+        console.warn(`⚠️ Could not check ${listName}:`, error.message)
+      }
+    }
+
+    console.log('✅ SharePoint list check completed')
+  } catch (error) {
+    console.error('❌ SharePoint initialization error:', error.message)
+  }
+}
+
+// ============================================================
 // Start Server
 // ============================================================
 const server = app.listen(PORT, () => {
@@ -16743,6 +16803,11 @@ const server = app.listen(PORT, () => {
   console.log(`  Admins: ${ROLE_GROUPS.admin || '❌ NOT CONFIGURED'}`)
   console.log(`  Managers: ${ROLE_GROUPS.manager || '❌ NOT CONFIGURED'}`)
   console.log('')
+
+  // Initialize SharePoint lists in background after server starts
+  initializeSharePointListsOnStartup().catch(err => {
+    console.error('❌ SharePoint auto-initialization failed:', err.message)
+  })
 
   // Initialize TenantGuard in background after server starts
   initializeTenantGuard().catch(err => {
