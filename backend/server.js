@@ -2035,6 +2035,103 @@ app.post('/api/config/cis-initialize-sharepoint', async (req, res) => {
 })
 
 /**
+ * POST /api/config/self-service-initialize-sharepoint
+ * Create Self-Service lists on SharePoint
+ */
+app.post('/api/config/self-service-initialize-sharepoint', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(500).json({ success: false, error: 'Graph Client not initialized' })
+    }
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    if (!siteId) {
+      return res.status(500).json({ success: false, error: 'SHAREPOINT_SITE_ID not configured' })
+    }
+
+    console.log('🚀 Initializing Self-Service lists on SharePoint...')
+
+    const listConfigs = [
+      { name: 'SelfServiceRequests', displayName: 'Self Service Requests' },
+      { name: 'SelfServiceAudit', displayName: 'Self Service Audit' }
+    ]
+
+    const createdLists = {}
+
+    for (const listConfig of listConfigs) {
+      try {
+        // Check if list already exists
+        const existingLists = await graphClient.api(`/sites/${siteId}/lists?$filter=displayName eq '${listConfig.displayName}'`).get()
+        if (existingLists.value && existingLists.value.length > 0) {
+          const listId = existingLists.value[0].id
+          createdLists[listConfig.name] = listId
+          console.log(`✓ List already exists: ${listConfig.displayName} (${listId})`)
+          continue
+        }
+
+        // Create list
+        const listData = {
+          displayName: listConfig.displayName,
+          list: { template: 'genericList' }
+        }
+
+        console.log(`📝 Creating list: ${listConfig.displayName}`)
+        const newList = await graphClient.api(`/sites/${siteId}/lists`).post(listData)
+        createdLists[listConfig.name] = newList.id
+        console.log(`✓ Created list: ${listConfig.displayName} (${newList.id})`)
+
+        // Add required columns for SelfServiceRequests
+        if (listConfig.name === 'SelfServiceRequests') {
+          const columns = [
+            { name: 'RequestID', type: 'text', required: true },
+            { name: 'RequestType', type: 'text' },
+            { name: 'Status', type: 'choice', choices: ['Pending', 'Approved', 'Rejected', 'Completed'] },
+            { name: 'Requestor', type: 'text' },
+            { name: 'Description', type: 'text' },
+            { name: 'CreatedDate', type: 'datetime' },
+            { name: 'UpdatedDate', type: 'datetime' }
+          ]
+
+          for (const column of columns) {
+            try {
+              await graphClient.api(`/sites/${siteId}/lists/${newList.id}/columns`).post({
+                name: column.name,
+                text: { allowMultipleLines: false }
+              })
+            } catch (colError) {
+              console.warn(`⚠️ Could not create column ${column.name}:`, colError.message)
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Failed to create list ${listConfig.displayName}:`, error.message)
+        return res.status(500).json({
+          success: false,
+          error: `Failed to create list ${listConfig.displayName}: ${error.message}`
+        })
+      }
+    }
+
+    // Store list IDs in environment variables
+    process.env.SHAREPOINT_SELFSERVICEREQUESTS_LIST_ID = createdLists.SelfServiceRequests
+    process.env.SHAREPOINT_SELFSERVICEAUDIT_LIST_ID = createdLists.SelfServiceAudit
+
+    res.json({
+      success: true,
+      message: 'Self-Service lists initialized successfully',
+      lists: createdLists,
+      envConfig: `SHAREPOINT_SELFSERVICEREQUESTS_LIST_ID=${createdLists.SelfServiceRequests}\nSHAREPOINT_SELFSERVICEAUDIT_LIST_ID=${createdLists.SelfServiceAudit}`
+    })
+  } catch (error) {
+    console.error('❌ Error initializing Self-Service lists:', error.message)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
  * POST /api/config/cis-results
  * Save CIS validation results to SharePoint
  */
