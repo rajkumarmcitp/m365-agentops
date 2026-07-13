@@ -22,14 +22,20 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install backend dependencies
+      - name: Create backend .env
         run: |
-          cd backend
-          npm ci --only=production
+          cat > backend/.env << 'EOF'
+          AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}
+          SHAREPOINT_SITE_ID=${{ secrets.SHAREPOINT_SITE_ID }}
+          NODE_ENV=production
+          EOF
 
-      - name: Deploy to Azure App Service
+      - name: Deploy using Kudu Zip Deploy
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'm365ops-api-gtbgezb9c7bgata7'
           publish-profile: ${{ secrets.AZURE_APP_SERVICE_PUBLISH_PROFILE }}
-          package: .
+          package: '.'
+          slot-name: 'production'
