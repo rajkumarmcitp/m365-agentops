@@ -16779,6 +16779,24 @@ async function initializeSharePointListsOnStartup() {
       }
     }
 
+    // Check and create Self-Service lists
+    const selfServiceLists = ['SelfServiceRequests', 'SelfServiceAudit']
+    for (const listName of selfServiceLists) {
+      try {
+        const lists = await graphClient.api(`/sites/${siteId}/lists?$filter=displayName eq '${listName}'`).get()
+        if (lists.value && lists.value.length > 0) {
+          const listId = lists.value[0].id
+          const envVar = `SHAREPOINT_${listName.toUpperCase()}_LIST_ID`
+          process.env[envVar] = listId
+          console.log(`✓ Found ${listName}: ${listId}`)
+        } else {
+          console.log(`⚠️ List not found: ${listName} - will be created on first use`)
+        }
+      } catch (error) {
+        console.warn(`⚠️ Could not check ${listName}:`, error.message)
+      }
+    }
+
     console.log('✅ SharePoint list check completed')
   } catch (error) {
     console.error('❌ SharePoint initialization error:', error.message)
