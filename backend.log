@@ -21148,3 +21148,128 @@ Fetching users...
 📡 Fetching Service Health from Graph API...
 ✓ Service Health: 100 issues found
 ✓ Secure score: 101.71/273
+📡 Bearer token detected in request
+📋 Determining role for user: a9430520-42e0-4be6-9e0e-8d711b062ea5
+✓ Bearer token validated for authenticated request
+✓ User is member of 13 groups: 759a2e72-72b8-4416-8833-ff157d53a206, cfd90836-667e-4f80-b325-064439da062f, 36e1ecd7-f54c-4d34-b41f-0991efe0dd40, 6426d00c-62fa-433c-896c-87c94fe1dd94, b8e07f4a-fa8a-4935-b5a2-3a2ba890536a, 091aee9d-21c8-4177-ac5c-7f3b3c88ceac, 444a74d6-5b3c-4684-8f10-ed726e9d557a, 99f66318-45df-4ba3-b1b0-96a1c0614296, 16f9b80f-f6e7-4f66-9ba5-80d121284df0, 74df478e-a359-448a-9340-7d6a2f14ebd8, 65eca76c-bcb4-464b-b408-e7dfa75355d2, 4b87f912-2811-474b-8a01-692036be503b, 4fe74ac1-bf65-4290-9833-8f90fd0c4caf
+✓ User is SUPER ADMIN
+✓ Role determination complete: super
+[Service Health] Fetching messages (skip=0, top=100) from SharePoint list 1cf87003-50ce-4881-8783-21a6572fb117...
+[Service Health] Graph API error (undefined): $skip is not supported on this API. Only URLs returned by the API can be used to page.
+📡 Fetching Message Center messages from Graph API...
+Fetching managed devices...
+Fetching users...
+📊 Fetching secure score from Graph API...
+✓ Found 15 users
+✓ Found 0 devices
+✓ Message Center: 100 messages found
+📡 Fetching Service Health from Graph API...
+✓ Service Health: 100 issues found
+✓ Secure score: 101.71/273
+🚀 [approval] Agent executing...
+✅ [approval] Agent completed in 3ms
+   Alerts: 0
+📡 Bearer token detected in request
+📋 Determining role for user: a9430520-42e0-4be6-9e0e-8d711b062ea5
+✓ Bearer token validated for authenticated request
+✓ User is member of 13 groups: 759a2e72-72b8-4416-8833-ff157d53a206, cfd90836-667e-4f80-b325-064439da062f, 36e1ecd7-f54c-4d34-b41f-0991efe0dd40, 6426d00c-62fa-433c-896c-87c94fe1dd94, b8e07f4a-fa8a-4935-b5a2-3a2ba890536a, 091aee9d-21c8-4177-ac5c-7f3b3c88ceac, 444a74d6-5b3c-4684-8f10-ed726e9d557a, 99f66318-45df-4ba3-b1b0-96a1c0614296, 16f9b80f-f6e7-4f66-9ba5-80d121284df0, 74df478e-a359-448a-9340-7d6a2f14ebd8, 65eca76c-bcb4-464b-b408-e7dfa75355d2, 4b87f912-2811-474b-8a01-692036be503b, 4fe74ac1-bf65-4290-9833-8f90fd0c4caf
+✓ User is SUPER ADMIN
+✓ Role determination complete: super
+🔗 Starting correlation analysis...
+📊 Analyzing 0 alerts
+ℹ️ Not enough alerts for correlation
+📡 Bearer token detected in request
+📋 Determining role for user: a9430520-42e0-4be6-9e0e-8d711b062ea5
+✓ Bearer token validated for authenticated request
+✓ User is member of 13 groups: 759a2e72-72b8-4416-8833-ff157d53a206, cfd90836-667e-4f80-b325-064439da062f, 36e1ecd7-f54c-4d34-b41f-0991efe0dd40, 6426d00c-62fa-433c-896c-87c94fe1dd94, b8e07f4a-fa8a-4935-b5a2-3a2ba890536a, 091aee9d-21c8-4177-ac5c-7f3b3c88ceac, 444a74d6-5b3c-4684-8f10-ed726e9d557a, 99f66318-45df-4ba3-b1b0-96a1c0614296, 16f9b80f-f6e7-4f66-9ba5-80d121284df0, 74df478e-a359-448a-9340-7d6a2f14ebd8, 65eca76c-bcb4-464b-b408-e7dfa75355d2, 4b87f912-2811-474b-8a01-692036be503b, 4fe74ac1-bf65-4290-9833-8f90fd0c4caf
+✓ User is SUPER ADMIN
+✓ Role determination complete: super
+[Service Health] Fetching messages (skip=0, top=100) from SharePoint list 1cf87003-50ce-4881-8783-21a6572fb117...
+[Service Health] Graph API error (undefined): $skip is not supported on this API. Only URLs returned by the API can be used to page.
+📡 Fetching Message Center messages from Graph API...
+Fetching managed devices...
+Fetching users...
+📊 Fetching secure score from Graph API...
+✓ Found 0 devices
+✓ Found 15 users
+✓ Message Center: 100 messages found
+📡 Fetching Service Health from Graph API...
+✓ Service Health: 100 issues found
+⚠️ Graph API secure score failed, returning simulated data: terminated
+   ℹ️  Requires permissions: SecurityActions.Read.All, Microsoft Defender license
+📡 Bearer token detected in request
+📋 Determining role for user: a9430520-42e0-4be6-9e0e-8d711b062ea5
+✓ Bearer token validated for authenticated request
+✓ User is member of 13 groups: 759a2e72-72b8-4416-8833-ff157d53a206, cfd90836-667e-4f80-b325-064439da062f, 36e1ecd7-f54c-4d34-b41f-0991efe0dd40, 6426d00c-62fa-433c-896c-87c94fe1dd94, b8e07f4a-fa8a-4935-b5a2-3a2ba890536a, 091aee9d-21c8-4177-ac5c-7f3b3c88ceac, 444a74d6-5b3c-4684-8f10-ed726e9d557a, 99f66318-45df-4ba3-b1b0-96a1c0614296, 16f9b80f-f6e7-4f66-9ba5-80d121284df0, 74df478e-a359-448a-9340-7d6a2f14ebd8, 65eca76c-bcb4-464b-b408-e7dfa75355d2, 4b87f912-2811-474b-8a01-692036be503b, 4fe74ac1-bf65-4290-9833-8f90fd0c4caf
+✓ User is SUPER ADMIN
+✓ Role determination complete: super
+🚀 [approval] Agent executing...
+✅ [approval] Agent completed in 3ms
+   Alerts: 0
+🚀 [execution] Agent executing...
+✅ [execution] Agent completed in 1ms
+   Alerts: 0
+🔗 Starting correlation analysis...
+📊 Analyzing 0 alerts
+ℹ️ Not enough alerts for correlation
+⏰ Running scheduled sync (hourly, 7-day window)...
+
+🔄 ═══════════════════════════════════════════════════════
+📅 Starting announcement sync at 2026-07-13T10:08:02.433Z
+🔄 ═══════════════════════════════════════════════════════
+📅 Filtered to 86 announcements from last 7 days
+   📌 Using cached Change Announcements: e2c2e08f-774f-4c36-b319-55617e511305
+   📋 Using list ID: e2c2e08f-774f-4c36-b319-55617e511305
+📥 Fetching existing announcements from SharePoint (max 1000)...
+📋 Found 123 existing items in SharePoint list
+   First item Title: MC1419802|Microsoft Teams: New layout for sharing content in Teams events|Microsoft Teams|normal
+📊 Announcements to sync: 86
+📋 Already in SharePoint: 123
+   Existing IDs: MC1419802, MC1419801, MC1419800
+✓ Sync complete: Added 0 new | Skipped 86 (duplicates) | Total processed at 2026-07-13T10:08:04.741Z
+🚀 [approval] Agent executing...
+✅ [approval] Agent completed in 3ms
+   Alerts: 0
+🔗 Starting correlation analysis...
+📊 Analyzing 0 alerts
+ℹ️ Not enough alerts for correlation
+📡 Bearer token detected in request
+📋 Determining role for user: a9430520-42e0-4be6-9e0e-8d711b062ea5
+✓ Bearer token validated for authenticated request
+✓ User is member of 13 groups: 759a2e72-72b8-4416-8833-ff157d53a206, cfd90836-667e-4f80-b325-064439da062f, 36e1ecd7-f54c-4d34-b41f-0991efe0dd40, 6426d00c-62fa-433c-896c-87c94fe1dd94, b8e07f4a-fa8a-4935-b5a2-3a2ba890536a, 091aee9d-21c8-4177-ac5c-7f3b3c88ceac, 444a74d6-5b3c-4684-8f10-ed726e9d557a, 99f66318-45df-4ba3-b1b0-96a1c0614296, 16f9b80f-f6e7-4f66-9ba5-80d121284df0, 74df478e-a359-448a-9340-7d6a2f14ebd8, 65eca76c-bcb4-464b-b408-e7dfa75355d2, 4b87f912-2811-474b-8a01-692036be503b, 4fe74ac1-bf65-4290-9833-8f90fd0c4caf
+✓ User is SUPER ADMIN
+✓ Role determination complete: super
+📡 Bearer token detected in request
+📋 Determining role for user: a9430520-42e0-4be6-9e0e-8d711b062ea5
+✓ Bearer token validated for authenticated request
+✓ User is member of 13 groups: 759a2e72-72b8-4416-8833-ff157d53a206, cfd90836-667e-4f80-b325-064439da062f, 36e1ecd7-f54c-4d34-b41f-0991efe0dd40, 6426d00c-62fa-433c-896c-87c94fe1dd94, b8e07f4a-fa8a-4935-b5a2-3a2ba890536a, 091aee9d-21c8-4177-ac5c-7f3b3c88ceac, 444a74d6-5b3c-4684-8f10-ed726e9d557a, 99f66318-45df-4ba3-b1b0-96a1c0614296, 16f9b80f-f6e7-4f66-9ba5-80d121284df0, 74df478e-a359-448a-9340-7d6a2f14ebd8, 65eca76c-bcb4-464b-b408-e7dfa75355d2, 4b87f912-2811-474b-8a01-692036be503b, 4fe74ac1-bf65-4290-9833-8f90fd0c4caf
+✓ User is SUPER ADMIN
+✓ Role determination complete: super
+📡 Bearer token detected in request
+📋 Determining role for user: a9430520-42e0-4be6-9e0e-8d711b062ea5
+✓ Bearer token validated for authenticated request
+✓ User is member of 13 groups: 759a2e72-72b8-4416-8833-ff157d53a206, cfd90836-667e-4f80-b325-064439da062f, 36e1ecd7-f54c-4d34-b41f-0991efe0dd40, 6426d00c-62fa-433c-896c-87c94fe1dd94, b8e07f4a-fa8a-4935-b5a2-3a2ba890536a, 091aee9d-21c8-4177-ac5c-7f3b3c88ceac, 444a74d6-5b3c-4684-8f10-ed726e9d557a, 99f66318-45df-4ba3-b1b0-96a1c0614296, 16f9b80f-f6e7-4f66-9ba5-80d121284df0, 74df478e-a359-448a-9340-7d6a2f14ebd8, 65eca76c-bcb4-464b-b408-e7dfa75355d2, 4b87f912-2811-474b-8a01-692036be503b, 4fe74ac1-bf65-4290-9833-8f90fd0c4caf
+✓ User is SUPER ADMIN
+✓ Role determination complete: super
+🚀 [approval] Agent executing...
+✅ [approval] Agent completed in 1ms
+   Alerts: 0
+🚀 [execution] Agent executing...
+✅ [execution] Agent completed in 0ms
+   Alerts: 0
+🚀 [security] Agent executing...
+🔄 Refreshing Graph API token...
+✅ Token refreshed
+🚀 [audit] Agent executing...
+✅ [audit] Agent completed in 0ms
+   Alerts: 0
+⚠️ Request failed: Your tenant is not licensed for this feature.. Retrying in 1000ms... (Attempt 1/3)
+⚠️ Request failed: Your tenant is not licensed for this feature.. Retrying in 2000ms... (Attempt 2/3)
+⚠️ Request failed: Your tenant is not licensed for this feature.. Retrying in 4000ms... (Attempt 3/3)
+❌ Request failed after retries: https://graph.microsoft.com/v1.0/identityProtection/riskyUsers?$top=50 Your tenant is not licensed for this feature.
+Security Agent: Using realistic demo data (Graph API unavailable)
+✅ [security] Agent completed in 10818ms
+   Alerts: 1
+🔗 Starting correlation analysis...
+📊 Analyzing 0 alerts
+ℹ️ Not enough alerts for correlation
