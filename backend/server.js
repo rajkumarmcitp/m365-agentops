@@ -396,6 +396,9 @@ if (isValidCredentials) {
       graphClient = Client.initWithMiddleware({ authProvider })
       console.log('✓ Azure credentials configured - using real Graph API')
 
+      // Initialize Backup System with Graph client
+      ensureBackupRoutesRegistered()
+
       // Initialize SharePoint client with Graph client
       initSharePointClient(graphClient)
 
@@ -17266,9 +17269,16 @@ async function initializeBackupSystem() {
     console.log('  ✅ Exchange Online Collector registered')
 
     // Setup backup routes
+    console.log('📦 Setting up backup routes...')
     const backupRouter = setupBackupRoutes(app, backupAgent, backupStorage)
-    app.use('/api/backup/m365', backupRouter)
-    console.log('  ✅ Backup API routes configured')
+    console.log(`📦 backupRouter type: ${typeof backupRouter}, hasStack: ${backupRouter?.stack ? 'yes' : 'no'}`)
+    if (!backupRouter) {
+      console.error('❌ setupBackupRoutes returned null/undefined!')
+    } else {
+      app.use('/api/backup/m365', backupRouter)
+      console.log('  ✅ Backup API routes configured')
+      console.log(`📦 Routes registered: ${backupRouter.stack ? backupRouter.stack.length : 0} handlers`)
+    }
 
     console.log('✅ M365 Backup System initialized successfully')
     console.log('   📊 API endpoints available at /api/backup/m365/*')
@@ -17339,10 +17349,8 @@ const server = app.listen(PORT, () => {
   console.log(`  Managers: ${ROLE_GROUPS.manager || '❌ NOT CONFIGURED'}`)
   console.log('')
 
-  // Initialize backup system in background after server starts
-  initializeBackupSystem().catch(err => {
-    console.error('❌ Backup system initialization failed:', err.message)
-  })
+  // Backup system is already initialized before 404 handler
+  // (moved earlier to prevent 404 handler from intercepting routes)
 
   // Initialize SharePoint lists in background after server starts
   initializeSharePointListsOnStartup().catch(err => {
@@ -19873,6 +19881,65 @@ app.post('/api/compliance/audit-logs/export', (req, res) => {
     res.status(500).json({ success: false, error: error.message })
   }
 })
+
+// Initialize backup routes as soon as graphClient is ready
+// This must be before the 404 handler!
+function ensureBackupRoutesRegistered() {
+  if (backupAgent && backupStorage) {
+    return // Already registered
+  }
+
+  if (!graphClient) {
+    return // Wait for graphClient
+  }
+
+  try {
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    if (!siteId) return
+
+    // Initialize storage
+    backupStorage = new BackupStorageManager(graphClient, siteId, {
+      backupListId: process.env.SHAREPOINT_BACKUP_LIST_ID,
+      backupMetadataListId: process.env.SHAREPOINT_BACKUP_METADATA_LIST_ID,
+      backupResourcesListId: process.env.SHAREPOINT_BACKUP_RESOURCES_LIST_ID,
+      backupChangesListId: process.env.SHAREPOINT_BACKUP_CHANGES_LIST_ID,
+      backupDataLibraryId: process.env.SHAREPOINT_BACKUP_DATA_LIBRARY_ID,
+      backupDSCLibraryId: process.env.SHAREPOINT_BACKUP_DSC_LIBRARY_ID
+    })
+
+    // Initialize agent
+    backupAgent = new BackupAgent(graphClient, {
+      siteId: siteId,
+      storage: {
+        backupListId: process.env.SHAREPOINT_BACKUP_LIST_ID,
+        backupMetadataListId: process.env.SHAREPOINT_BACKUP_METADATA_LIST_ID,
+        backupResourcesListId: process.env.SHAREPOINT_BACKUP_RESOURCES_LIST_ID,
+        backupChangesListId: process.env.SHAREPOINT_BACKUP_CHANGES_LIST_ID,
+        backupDataLibraryId: process.env.SHAREPOINT_BACKUP_DATA_LIBRARY_ID,
+        backupDSCLibraryId: process.env.SHAREPOINT_BACKUP_DSC_LIBRARY_ID
+      }
+    })
+
+    // Register collectors
+    const exchangeCollector = new ExchangeCollector(graphClient)
+    backupAgent.registerCollector('ExchangeOnline', exchangeCollector)
+
+    // Setup routes
+    const backupRouter = setupBackupRoutes(app, backupAgent, backupStorage)
+    console.log(`📦 DEBUG: backupRouter type = ${typeof backupRouter}`)
+    console.log(`📦 DEBUG: backupRouter.stack length = ${backupRouter?.stack?.length || 'N/A'}`)
+    console.log(`📦 DEBUG: backupRouter instanceof Function = ${backupRouter instanceof Function}`)
+
+    app.use('/api/backup/m365', backupRouter)
+    console.log('✅ M365 Backup System routes registered')
+    console.log(`📦 DEBUG: app._router.stack.length = ${app._router?.stack?.length || 'N/A'}`)
+  } catch (error) {
+    console.error('❌ Failed to register backup routes:', error.message)
+  }
+}
+
+// Register backup routes when needed
+ensureBackupRoutesRegistered()
 
 // ============================================================
 // 404 Handler - MUST be last
