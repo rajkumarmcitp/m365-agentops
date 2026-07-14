@@ -144,3 +144,44 @@ SHAREPOINT_ZT_COMPLIANCE_LIST_ID=c23036a5-1af0-4c23-b0c4-3b57f24450ee
 ✅ Audit logs will now be saved to SharePoint automatically
 🔄 Starting backup: TenantSettings
 ⚠️ Backup list not configured
+🚀 [audit] Agent executing...
+✅ [audit] Agent completed in 1ms
+   Alerts: 0
+🚀 [execution] Agent executing...
+✅ [execution] Agent completed in 0ms
+   Alerts: 0
+🚀 [approval] Agent executing...
+✅ [approval] Agent completed in 1ms
+   Alerts: 0
+🚀 [security] Agent executing...
+⚠️ Request failed: Your tenant is not licensed for this feature.. Retrying in 1000ms... (Attempt 1/3)
+⚠️ Request failed: Your tenant is not licensed for this feature.. Retrying in 2000ms... (Attempt 2/3)
+⚠️ Request failed: Your tenant is not licensed for this feature.. Retrying in 4000ms... (Attempt 3/3)
+❌ Request failed after retries: https://graph.microsoft.com/v1.0/identityProtection/riskyUsers?$top=50 Your tenant is not licensed for this feature.
+Security Agent: Using realistic demo data (Graph API unavailable)
+✅ [security] Agent completed in 8208ms
+   Alerts: 1
+🔄 Starting backup: ExchangeOnline
+⚠️ Backup list not configured
+🔄 Starting backup: ExchangeOnline
+⚠️ Backup list not configured
+🔄 Starting backup: Teams
+⚠️ Backup list not configured
+🔄 Starting backup: SharePoint
+⚠️ Backup list not configured
+🔄 Starting backup: Compliance
+⚠️ Backup list not configured
+🔄 Starting backup: OneDrive
+⚠️ Backup list not configured
+🔄 Starting backup: Groups
+⚠️ Backup list not configured
+🔄 Starting backup: Intune
+⚠️ Backup list not configured
+🔄 Starting backup: Security
+⚠️ Backup list not configured
+🔄 Starting backup: PowerPlatform
+⚠️ Backup list not configured
+🔄 Starting backup: TenantSettings
+⚠️ Backup list not configured
+🔄 Starting backup: ExchangeOnline
+⚠️ Backup list not configured
