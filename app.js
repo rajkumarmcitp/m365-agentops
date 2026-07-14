@@ -31,6 +31,7 @@ import { initSettings } from './pages/settings.js'
 import { initMsgCenter } from './pages/msgcenter.js'
 import { initMessages } from './pages/messages.js'
 import { initTasks } from './pages/tasks.js'
+import { initBackup } from './pages/backup.js'
 import { initNotifications, stopNotifications } from './components/notifications.js'
 import { initApplications } from './pages/applications.js'
 import { initIntune } from './pages/intune.js'
@@ -205,6 +206,7 @@ const PAGE_INIT = {
   'setup-wizard': initSetupWizard,
   audit: initAudit,
   settings: initSettings,
+  backup: initBackup,
 }
 
 // Export configuration utilities
@@ -536,7 +538,7 @@ function renderAllPages() {
   const pages = [
     'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','privaccts','m365config',
     'msgcenter','messages','tasks','applications','intune','licenses','agents','agent-details','approvals','portal','myreqs','myaccount','chat',
-    'graphapi','sso','setup-wizard','audit','settings'
+    'graphapi','sso','setup-wizard','audit','settings','backup'
   ]
   return pages.map(p => `<div class="page" id="page-${p}"></div>`).join('')
 }

@@ -76,6 +76,7 @@ import { IntuneCollector } from './collectors/intune-collector.js'
 import { SecurityCollector } from './collectors/security-collector.js'
 import { PowerPlatformCollector } from './collectors/powerplatform-collector.js'
 import { TenantSettingsCollector } from './collectors/tenantsettings-collector.js'
+import { Dynamics365Collector } from './collectors/dynamics365-collector.js'
 import {
   setExecutorGraphClient,
   validateCreateDG, executeCreateDG,
@@ -17349,6 +17350,14 @@ async function initializeBackupSystem() {
     backupAgent.registerCollector('TenantSettings', tenantSettingsCollector)
     console.log('  ✅ Tenant Settings Collector registered')
 
+    // Dynamics 365 Collector
+    const dynamics365Collector = new Dynamics365Collector(graphClient, {
+      timeout: 30000,
+      maxRetries: 3
+    })
+    backupAgent.registerCollector('Dynamics365', dynamics365Collector)
+    console.log('  ✅ Dynamics 365 Collector registered')
+
     // Setup backup routes
     console.log('📦 Setting up backup routes...')
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
@@ -20035,6 +20044,9 @@ function ensureBackupRoutesRegistered() {
 
     const tenantSettingsCollector = new TenantSettingsCollector(graphClient)
     backupAgent.registerCollector('TenantSettings', tenantSettingsCollector)
+
+    const dynamics365Collector = new Dynamics365Collector(graphClient)
+    backupAgent.registerCollector('Dynamics365', dynamics365Collector)
 
     // Setup routes
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)

@@ -871,3 +871,119 @@ Fetching users...
 🚀 [approval] Agent executing...
 ✅ [approval] Agent completed in 0ms
    Alerts: 0
+📡 Bearer token detected in request
+📋 Determining role for user: a9430520-42e0-4be6-9e0e-8d711b062ea5
+✓ Bearer token validated for authenticated request
+✓ User is member of 13 groups: 759a2e72-72b8-4416-8833-ff157d53a206, cfd90836-667e-4f80-b325-064439da062f, 36e1ecd7-f54c-4d34-b41f-0991efe0dd40, 6426d00c-62fa-433c-896c-87c94fe1dd94, b8e07f4a-fa8a-4935-b5a2-3a2ba890536a, 091aee9d-21c8-4177-ac5c-7f3b3c88ceac, 444a74d6-5b3c-4684-8f10-ed726e9d557a, 99f66318-45df-4ba3-b1b0-96a1c0614296, 16f9b80f-f6e7-4f66-9ba5-80d121284df0, 74df478e-a359-448a-9340-7d6a2f14ebd8, 65eca76c-bcb4-464b-b408-e7dfa75355d2, 4b87f912-2811-474b-8a01-692036be503b, 4fe74ac1-bf65-4290-9833-8f90fd0c4caf
+✓ User is SUPER ADMIN
+✓ Role determination complete: super
+[Service Health] Fetching messages (skip=0, top=100) from SharePoint list 1cf87003-50ce-4881-8783-21a6572fb117...
+[Service Health] Graph API error (undefined): $skip is not supported on this API. Only URLs returned by the API can be used to page.
+📡 Fetching Message Center messages from Graph API...
+Fetching managed devices...
+Fetching users...
+📊 Fetching secure score from Graph API...
+📋 Loading Zero Trust results from SharePoint lists (primary database)...
+✓ CIS Validator: Using cached results (TTL valid)
+📡 Fetching privileged accounts from Azure AD...
+ℹ️ SharePoint lists are empty, falling back to snapshot...
+📦 Returning latest snapshot from disk: snapshot-2026-07-14.json
+📊 Sample SKU structure: {
+  "accountName": "NassTech",
+  "accountId": "b9cc8284-05ed-452f-877a-970779430dcb",
+  "appliesTo": "User",
+  "capabilityStatus": "Suspended",
+  "consumedUnits": 5,
+  "id": "b9cc8284-05ed-452f-877a-970779430dcb_b05e124f-c7cc-45a0-a6aa-8cf78c946968",
+  "skuId": "b05e124f-c7cc-45a0-a6aa-8cf78c946968",
+  "skuPartNumber": "EMSPREMIUM",
+  "subscriptionIds": [
+    "6cef0959-1f32-4fbb-974c-fa93f17e6338"
+  ],
+  "prepaidUnits": {
+    "enabled": 0,
+    "suspended": 25,
+    "warning": 0,
+    "lockedOut": 
+⏭️  Excluding free/trial license: EMSPREMIUM (prepaid: 0, isFree: false)
+⏭️  Excluding free/trial license: FLOW_FREE (prepaid: 10000, isFree: true)
+⏭️  Excluding free/trial license: ENTERPRISEPREMIUM_NOPSTNCONF (prepaid: 0, isFree: false)
+⏭️  Excluding free/trial license: SPE_E3 (prepaid: 0, isFree: false)
+✓ Found 0 PAID license SKUs (excluding free/trial)
+📊 License totals (paid only): 0 total, 0 consumed, 0 available
+✓ Found 15 users
+✗ Devices API error: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: 45d8893a-15c4-e123-d494-ed52e8a4e521 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceFE/StatelessDeviceFEService/deviceManagement/managedDevices?api-version=2025-07-09\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ Risk data not available: Parsing OData Select and Expand failed: Could not find a property named 'userRiskLevel' on type 'microsoft.graph.riskyUser'.
+✅ Privileged accounts: 7 accounts, 0 at risk
+✓ Message Center: 100 messages found
+📡 Fetching Service Health from Graph API...
+✓ Secure score: 101.71/273
+✓ Service Health: 100 issues found
+❌ Failed to get setup config: Requested site could not be found
+⏰ Running scheduled sync (hourly, 7-day window)...
+
+🔄 ═══════════════════════════════════════════════════════
+📅 Starting announcement sync at 2026-07-14T19:25:20.022Z
+🔄 ═══════════════════════════════════════════════════════
+📅 Filtered to 82 announcements from last 7 days
+   📌 Using cached Change Announcements: e2c2e08f-774f-4c36-b319-55617e511305
+   📋 Using list ID: e2c2e08f-774f-4c36-b319-55617e511305
+📥 Fetching existing announcements from SharePoint (max 1000)...
+📋 Found 147 existing items in SharePoint list
+   First item Title: MC1419802|Microsoft Teams: New layout for sharing content in Teams events|Microsoft Teams|normal
+📊 Announcements to sync: 82
+📋 Already in SharePoint: 147
+   Existing IDs: MC1419802, MC1419801, MC1419800
+✓ Sync complete: Added 0 new | Skipped 82 (duplicates) | Total processed at 2026-07-14T19:25:21.278Z
+📡 Bearer token detected in request
+📋 Determining role for user: a9430520-42e0-4be6-9e0e-8d711b062ea5
+✓ Bearer token validated for authenticated request
+✓ User is member of 13 groups: 759a2e72-72b8-4416-8833-ff157d53a206, cfd90836-667e-4f80-b325-064439da062f, 36e1ecd7-f54c-4d34-b41f-0991efe0dd40, 6426d00c-62fa-433c-896c-87c94fe1dd94, b8e07f4a-fa8a-4935-b5a2-3a2ba890536a, 091aee9d-21c8-4177-ac5c-7f3b3c88ceac, 444a74d6-5b3c-4684-8f10-ed726e9d557a, 99f66318-45df-4ba3-b1b0-96a1c0614296, 16f9b80f-f6e7-4f66-9ba5-80d121284df0, 74df478e-a359-448a-9340-7d6a2f14ebd8, 65eca76c-bcb4-464b-b408-e7dfa75355d2, 4b87f912-2811-474b-8a01-692036be503b, 4fe74ac1-bf65-4290-9833-8f90fd0c4caf
+✓ User is SUPER ADMIN
+✓ Role determination complete: super
+[Service Health] Fetching messages (skip=0, top=100) from SharePoint list 1cf87003-50ce-4881-8783-21a6572fb117...
+[Service Health] Graph API error (undefined): $skip is not supported on this API. Only URLs returned by the API can be used to page.
+Fetching managed devices...
+📡 Fetching Message Center messages from Graph API...
+📋 Loading Zero Trust results from SharePoint lists (primary database)...
+Fetching users...
+📊 Fetching secure score from Graph API...
+✓ CIS Validator: Using cached results (TTL valid)
+📡 Fetching privileged accounts from Azure AD...
+✗ Devices API error: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: f29607a5-c515-2124-40ac-622f3a274581 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceFE/StatelessDeviceFEService/deviceManagement/managedDevices?api-version=2025-07-09\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+ℹ️ SharePoint lists are empty, falling back to snapshot...
+📦 Returning latest snapshot from disk: snapshot-2026-07-14.json
+📊 Sample SKU structure: {
+  "accountName": "NassTech",
+  "accountId": "b9cc8284-05ed-452f-877a-970779430dcb",
+  "appliesTo": "User",
+  "capabilityStatus": "Suspended",
+  "consumedUnits": 5,
+  "id": "b9cc8284-05ed-452f-877a-970779430dcb_b05e124f-c7cc-45a0-a6aa-8cf78c946968",
+  "skuId": "b05e124f-c7cc-45a0-a6aa-8cf78c946968",
+  "skuPartNumber": "EMSPREMIUM",
+  "subscriptionIds": [
+    "6cef0959-1f32-4fbb-974c-fa93f17e6338"
+  ],
+  "prepaidUnits": {
+    "enabled": 0,
+    "suspended": 25,
+    "warning": 0,
+    "lockedOut": 
+⏭️  Excluding free/trial license: EMSPREMIUM (prepaid: 0, isFree: false)
+⏭️  Excluding free/trial license: FLOW_FREE (prepaid: 10000, isFree: true)
+⏭️  Excluding free/trial license: ENTERPRISEPREMIUM_NOPSTNCONF (prepaid: 0, isFree: false)
+⏭️  Excluding free/trial license: SPE_E3 (prepaid: 0, isFree: false)
+✓ Found 0 PAID license SKUs (excluding free/trial)
+📊 License totals (paid only): 0 total, 0 consumed, 0 available
+✓ Found 15 users
+⚠️ Risk data not available: Parsing OData Select and Expand failed: Could not find a property named 'userRiskLevel' on type 'microsoft.graph.riskyUser'.
+✅ Privileged accounts: 7 accounts, 0 at risk
+❌ Failed to get setup config: Requested site could not be found
+✓ Message Center: 100 messages found
+📡 Fetching Service Health from Graph API...
+✓ Service Health: 100 issues found
+✓ Secure score: 101.71/273
+🔗 Starting correlation analysis...
+📊 Analyzing 0 alerts
+ℹ️ Not enough alerts for correlation

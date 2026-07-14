@@ -28,7 +28,8 @@ const NAV_ITEMS = {
     { id: 'approvals', label: 'Pending Approvals', icon: 'ti-check-list', badge: '3', badgeCls: 'red' },
   ],
   config: [
-    { id: 'audit',    label: 'Audit Log',       icon: 'ti-database' },
+    { id: 'backup',   label: 'Backup & Restore', icon: 'ti-database-backup' },
+    { id: 'audit',    label: 'Audit Log',        icon: 'ti-database' },
     { id: 'settings', label: 'Admin Settings',   icon: 'ti-adjustments-horizontal' },
   ],
   super: [
