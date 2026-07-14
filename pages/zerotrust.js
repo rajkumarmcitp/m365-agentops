@@ -986,6 +986,26 @@ function renderZTExceptions() {
   `
 }
 
+window.approveException = async function(exceptionId) {
+  try {
+    const response = await fetch(`/api/zero-trust/exceptions/${exceptionId}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approvedBy: 'current-admin' })
+    })
+    const result = await response.json()
+    if (result.success) {
+      showToast('Exception approved successfully', 'success')
+      window.loadZTExceptions()
+    } else {
+      showToast('Failed to approve exception: ' + (result.error || 'Unknown error'), 'error')
+    }
+  } catch (error) {
+    console.error('Error approving exception:', error)
+    showToast('Error approving exception: ' + error.message, 'error')
+  }
+}
+
 window.deleteException = async function(exceptionId) {
   try {
     const response = await fetch(`/api/zero-trust/exceptions/${exceptionId}`, {
@@ -1068,15 +1088,31 @@ window.loadZTExceptions = async function() {
       html += `<td style="padding:12px">${requestedDate}</td>`
       html += `<td style="padding:12px">${expiryDate}</td>`
       html += `<td style="padding:12px;word-wrap:break-word">${exc.reason || ''}</td>`
-      html += `<td style="padding:12px;text-align:center"><button class="btn-delete-exception" data-id="${exc.spItemId || exc.exceptionId || exc.id}" style="padding:4px 8px;font-size:11px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;display:none">Delete</button></td>`
+      html += `<td style="padding:12px;text-align:center;display:flex;gap:6px;justify-content:center">`
+      if (exc.status !== 'approved') {
+        html += `<button class="btn-approve-exception" data-id="${exc.spItemId || exc.exceptionId || exc.id}" style="padding:4px 8px;font-size:11px;background:#16a34a;color:white;border:none;border-radius:4px;cursor:pointer;display:none">Approve</button>`
+      }
+      html += `<button class="btn-delete-exception" data-id="${exc.spItemId || exc.exceptionId || exc.id}" style="padding:4px 8px;font-size:11px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;display:none">Delete</button>`
+      html += `</td>`
       html += `</tr>`
     })
     html += '</tbody></table>'
 
     contentEl.innerHTML = html
 
-    // Show delete buttons for super admins
+    // Show approve/delete buttons for admins
     fetch('/api/user/role').then(r => r.json()).then(data => {
+      if (data.isAdmin || data.isSuperAdmin) {
+        document.querySelectorAll('.btn-approve-exception').forEach(btn => {
+          btn.style.display = 'block'
+          btn.addEventListener('click', (e) => {
+            const exceptionId = e.target.dataset.id
+            if (confirm('Approve this exception request?')) {
+              approveException(exceptionId)
+            }
+          })
+        })
+      }
       if (data.isSuperAdmin) {
         document.querySelectorAll('.btn-delete-exception').forEach(btn => {
           btn.style.display = 'block'
