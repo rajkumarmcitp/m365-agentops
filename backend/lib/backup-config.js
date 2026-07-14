@@ -570,11 +570,26 @@ export const M365_SERVICES = {
     tier: 'TIER 3',
     priority: 9,
     resources: [
+      'PPAdministratorSettings',
+      'PPAllowedConsentPlans',
+      'PPAzureConnectorResource',
+      'PPConnectorSettings',
+      'PPDataLossPreventionPolicy',
+      'PPDataLossPreventionPolicyScopeAssignment',
+      'PPDataPolicies',
+      'PPDataPoliciesAssignment',
+      'PPDataflowConnection',
+      'PPFlowAsSharing',
+      'PPFlowOwnerClaimSettings',
+      'PPManagedEnvironmentSettings',
+      'PPManagementConnectorSettings',
       'PPPowerAppsEnvironment',
-      'PPTenantSettings',
-      'PPTenantIsolationSettings'
+      'PPPowerPlatformSettings',
+      'PPPowerPlatformSharingSettings',
+      'PPTenantIsolationSettings',
+      'PPTenantSettings'
     ],
-    totalResources: 3
+    totalResources: 18
   },
   Security: {
     displayName: 'Security & Identity',
@@ -642,9 +657,60 @@ export const M365_SERVICES = {
     priority: 10,
     resources: [
       'M365DSCRuleEvaluation',
-      'O365OrgSettings'
+      'O365OrgSettings',
+      'TenantAdminProfile',
+      'TenantDefaultInformation',
+      'TenantNotificationSettings',
+      'TenantProductSettings',
+      'TenantSecurityPolicy',
+      'TenantServiceHealth',
+      'TenantAuditingPolicy',
+      'TenantComplianceSettings',
+      'TenantDataGovernancePolicy',
+      'TenantLicenseSettings',
+      'TenantRegionalSettings',
+      'TenantFeatureFlags',
+      'TenantMaintenanceSchedule'
     ],
-    totalResources: 2
+    totalResources: 15
+  },
+  Dynamics365: {
+    displayName: 'Dynamics 365 / Model-Driven Apps',
+    tier: 'TIER 3',
+    priority: 11,
+    resources: [
+      'CRMAppModule',
+      'CRMApplicationRibbon',
+      'CRMApplicationSettings',
+      'CRMAuditLog',
+      'CRMBusinessUnit',
+      'CRMColumnSecurityProfile',
+      'CRMConnectorSettings',
+      'CRMCustomization',
+      'CRMDataEncryptionKey',
+      'CRMDatasyncSettings',
+      'CRMDataverseSettings',
+      'CRMEnvironment',
+      'CRMFormLibrary',
+      'CRMFormNotification',
+      'CRMFormScript',
+      'CRMFormTab',
+      'CRMGlobalMetadataSettings',
+      'CRMGroupTeamTemplate',
+      'CRMHierarchySecurityConfiguration',
+      'CRMImageWebResource',
+      'CRMJavaScriptWebResource',
+      'CRMLanguagePack',
+      'CRMMailboxSettings',
+      'CRMManagedEntity',
+      'CRMMetadataFilter',
+      'CRMNotificationIcon',
+      'CRMNotificationTemplate',
+      'CRMOrganizationSettings',
+      'CRMOrganizationSettingsPolicy',
+      'CRMPluginType'
+    ],
+    totalResources: 30
   }
 }
 

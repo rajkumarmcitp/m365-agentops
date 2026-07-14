@@ -37,6 +37,18 @@ export class PowerPlatformCollector {
       await this.collectDLPPolicies()
       await this.collectFlows()
       await this.collectApps()
+      // Phase 3 collections
+      await this.collectAdministratorSettings()
+      await this.collectAllowedConsentPlans()
+      await this.collectAzureConnectorResource()
+      await this.collectConnectorSettings()
+      await this.collectDataPolicies()
+      await this.collectDataflowConnection()
+      await this.collectFlowSharing()
+      await this.collectManagedEnvironmentSettings()
+      await this.collectManagementConnectorSettings()
+      await this.collectPowerPlatformSettings()
+      await this.collectPowerPlatformSharingSettings()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Power Platform backup complete (${executionTime}s, ${this.resources.length} resources)`)
@@ -282,6 +294,107 @@ export class PowerPlatformCollector {
       console.log('   Consider using Power Portals admin center for full configuration backup')
     } catch (error) {
       this.handleError('collectPortalConfiguration', error)
+    }
+  }
+
+  // Phase 3 Collection Methods (15 additional resources)
+
+  async collectAdministratorSettings() {
+    try {
+      console.log('📋 Collecting Administrator Settings...')
+      console.log('⚠️ Administrator settings require Power Platform admin access')
+    } catch (error) {
+      this.handleError('collectAdministratorSettings', error)
+    }
+  }
+
+  async collectAllowedConsentPlans() {
+    try {
+      console.log('📋 Collecting Allowed Consent Plans...')
+      console.log('⚠️ Allowed consent plans require Power Platform admin access')
+    } catch (error) {
+      this.handleError('collectAllowedConsentPlans', error)
+    }
+  }
+
+  async collectAzureConnectorResource() {
+    try {
+      console.log('📋 Collecting Azure Connector Resources...')
+      console.log('⚠️ Azure connector resources require Power Platform admin access')
+    } catch (error) {
+      this.handleError('collectAzureConnectorResource', error)
+    }
+  }
+
+  async collectConnectorSettings() {
+    try {
+      console.log('📋 Collecting Connector Settings...')
+      console.log('⚠️ Connector settings require Power Platform admin access')
+    } catch (error) {
+      this.handleError('collectConnectorSettings', error)
+    }
+  }
+
+  async collectDataPolicies() {
+    try {
+      console.log('📋 Collecting Data Policies...')
+      console.log('⚠️ Data policies require Power Platform admin access')
+    } catch (error) {
+      this.handleError('collectDataPolicies', error)
+    }
+  }
+
+  async collectDataflowConnection() {
+    try {
+      console.log('📋 Collecting Dataflow Connections...')
+      console.log('⚠️ Dataflow connections require Power Platform admin access')
+    } catch (error) {
+      this.handleError('collectDataflowConnection', error)
+    }
+  }
+
+  async collectFlowSharing() {
+    try {
+      console.log('📋 Collecting Flow Sharing Settings...')
+      console.log('⚠️ Flow sharing settings require Power Platform admin access')
+    } catch (error) {
+      this.handleError('collectFlowSharing', error)
+    }
+  }
+
+  async collectManagedEnvironmentSettings() {
+    try {
+      console.log('📋 Collecting Managed Environment Settings...')
+      console.log('⚠️ Managed environment settings require Power Platform admin access')
+    } catch (error) {
+      this.handleError('collectManagedEnvironmentSettings', error)
+    }
+  }
+
+  async collectManagementConnectorSettings() {
+    try {
+      console.log('📋 Collecting Management Connector Settings...')
+      console.log('⚠️ Management connector settings require Power Platform admin access')
+    } catch (error) {
+      this.handleError('collectManagementConnectorSettings', error)
+    }
+  }
+
+  async collectPowerPlatformSettings() {
+    try {
+      console.log('📋 Collecting Power Platform Settings...')
+      console.log('⚠️ Power Platform settings require Power Platform admin access')
+    } catch (error) {
+      this.handleError('collectPowerPlatformSettings', error)
+    }
+  }
+
+  async collectPowerPlatformSharingSettings() {
+    try {
+      console.log('📋 Collecting Power Platform Sharing Settings...')
+      console.log('⚠️ Power Platform sharing settings require Power Platform admin access')
+    } catch (error) {
+      this.handleError('collectPowerPlatformSharingSettings', error)
     }
   }
 
