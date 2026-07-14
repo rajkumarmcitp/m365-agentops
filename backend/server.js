@@ -1600,6 +1600,49 @@ app.post('/api/zero-trust/exceptions/:id/approve', async (req, res) => {
   }
 })
 
+// Dismiss/revoke an exception (super admin only)
+app.patch('/api/zero-trust/exceptions/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+
+    if (!status || !['dismissed', 'revoked'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid status. Use "dismissed" or "revoked"' })
+    }
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_ZT_EXCEPTIONS_LIST_ID
+
+    if (!siteId || !listId || !graphClient) {
+      return res.status(500).json({ success: false, error: 'SharePoint not configured' })
+    }
+
+    // Find and update the exception
+    const response = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$filter=fields/ExceptionID eq '${id}'&$expand=fields`).get()
+
+    if (!response.value || response.value.length === 0) {
+      return res.status(404).json({ success: false, error: 'Exception not found' })
+    }
+
+    const itemId = response.value[0].id
+    const updateData = {
+      fields: {
+        Status: status.charAt(0).toUpperCase() + status.slice(1),
+        RevokedDate: new Date().toISOString()
+      }
+    }
+
+    await graphClient.api(`/sites/${siteId}/lists/${listId}/items/${itemId}`).patch(updateData)
+
+    console.log(`✅ Exception ${status}: ${id}`)
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error dismissing exception:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 app.delete('/api/zero-trust/exceptions/:id', async (req, res) => {
   try {
     const { id } = req.params

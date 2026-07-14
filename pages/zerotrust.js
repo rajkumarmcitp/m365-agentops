@@ -889,7 +889,7 @@ function renderZTExceptions() {
           <h3 style="margin:0 0 10px 0">Exception Management</h3>
           <p style="margin:0;color:var(--color-text-secondary);font-size:13px">Request exceptions for controls that cannot be immediately remediated</p>
         </div>
-        <button id="zt-request-exception-btn" style="background:#0078d4;color:white;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;font-weight:600">
+        <button id="zt-request-exception-btn" style="background:#0078d4;color:white;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;font-weight:600;display:none">
           <i class="ti ti-plus" style="margin-right:6px"></i>Request Exception
         </button>
       </div>
@@ -1006,6 +1006,26 @@ window.approveException = async function(exceptionId) {
   }
 }
 
+window.dismissException = async function(exceptionId) {
+  try {
+    const response = await fetch(`/api/zero-trust/exceptions/${exceptionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'dismissed' })
+    })
+    const result = await response.json()
+    if (result.success) {
+      showToast('Exception dismissed/revoked successfully', 'success')
+      window.loadZTExceptions()
+    } else {
+      showToast('Failed to dismiss exception: ' + (result.error || 'Unknown error'), 'error')
+    }
+  } catch (error) {
+    console.error('Error dismissing exception:', error)
+    showToast('Error dismissing exception: ' + error.message, 'error')
+  }
+}
+
 window.deleteException = async function(exceptionId) {
   try {
     const response = await fetch(`/api/zero-trust/exceptions/${exceptionId}`, {
@@ -1090,9 +1110,12 @@ window.loadZTExceptions = async function() {
       html += `<td style="padding:12px;word-wrap:break-word">${exc.reason || ''}</td>`
       html += `<td style="padding:12px;text-align:center;display:flex;gap:6px;justify-content:center">`
       if (exc.status !== 'approved') {
-        html += `<button class="btn-approve-exception" data-id="${exc.spItemId || exc.exceptionId || exc.id}" style="padding:4px 8px;font-size:11px;background:#16a34a;color:white;border:none;border-radius:4px;cursor:pointer;display:none">Approve</button>`
+        html += `<button class="btn-approve-exception" data-id="${exc.spItemId || exc.exceptionId || exc.id}" style="padding:4px 8px;font-size:11px;background:#16a34a;color:white;border:none;border-radius:4px;cursor:pointer;display:none" title="Approve this exception">Approve</button>`
       }
-      html += `<button class="btn-delete-exception" data-id="${exc.spItemId || exc.exceptionId || exc.id}" style="padding:4px 8px;font-size:11px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;display:none">Delete</button>`
+      if (exc.status === 'approved') {
+        html += `<button class="btn-dismiss-exception" data-id="${exc.spItemId || exc.exceptionId || exc.id}" style="padding:4px 8px;font-size:11px;background:#f59e0b;color:white;border:none;border-radius:4px;cursor:pointer;display:none" title="Dismiss/Revoke this exception">Dismiss</button>`
+      }
+      html += `<button class="btn-delete-exception" data-id="${exc.spItemId || exc.exceptionId || exc.id}" style="padding:4px 8px;font-size:11px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;display:none" title="Delete this exception">Delete</button>`
       html += `</td>`
       html += `</tr>`
     })
@@ -1100,8 +1123,15 @@ window.loadZTExceptions = async function() {
 
     contentEl.innerHTML = html
 
-    // Show approve/delete buttons for admins
+    // Show buttons based on user role
     fetch('/api/user/role').then(r => r.json()).then(data => {
+      // Show "Request Exception" button for admins and super admins
+      if (data.isAdmin || data.isSuperAdmin) {
+        const requestBtn = document.getElementById('zt-request-exception-btn')
+        if (requestBtn) requestBtn.style.display = 'block'
+      }
+
+      // Approve button for admins and super admins
       if (data.isAdmin || data.isSuperAdmin) {
         document.querySelectorAll('.btn-approve-exception').forEach(btn => {
           btn.style.display = 'block'
@@ -1113,7 +1143,20 @@ window.loadZTExceptions = async function() {
           })
         })
       }
+
+      // Dismiss button only for super admins
       if (data.isSuperAdmin) {
+        document.querySelectorAll('.btn-dismiss-exception').forEach(btn => {
+          btn.style.display = 'block'
+          btn.addEventListener('click', (e) => {
+            const exceptionId = e.target.dataset.id
+            if (confirm('Dismiss/revoke this exception?')) {
+              dismissException(exceptionId)
+            }
+          })
+        })
+
+        // Delete button only for super admins
         document.querySelectorAll('.btn-delete-exception').forEach(btn => {
           btn.style.display = 'block'
           btn.addEventListener('click', (e) => {
