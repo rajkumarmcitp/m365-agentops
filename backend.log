@@ -19,12 +19,13 @@
 ✅ Agent Scheduler initialized
 
 📅 Nightly validations scheduled for 15/7/2026, 2:00:00 am
-⏰ Time until next run: 147 minutes
+⏰ Time until next run: 145 minutes
 ✅ Nightly validation scheduler initialized
 ✓ Azure credentials configured - using real Graph API
 ✅ Backup Agent initialized
 ✅ Collector registered: ExchangeOnline
 ✅ Collector registered: Teams
+✅ Collector registered: SharePoint
 📦 DEBUG: backupRouter type = function
 📦 DEBUG: backupRouter.stack length = 12
 📦 DEBUG: backupRouter instanceof Function = true
@@ -61,7 +62,7 @@
 📅 Starting initial sync of announcements (7-day window)...
 
 🔄 ═══════════════════════════════════════════════════════
-📅 Starting announcement sync at 2026-07-14T18:03:06.226Z
+📅 Starting announcement sync at 2026-07-14T18:05:16.860Z
 🔄 ═══════════════════════════════════════════════════════
 🔄 Message Center sync job started (hourly)
 ✅ Investigation tables initialized
@@ -84,25 +85,25 @@
 ✓ "Change Announcements" list already exists
 ✓ "Change Announcement Tasks" list already exists
 ✅ SharePoint setup complete
-❌ Failed to initialize setup config list: Requested site could not be found
-⚠️ Graph Client initialization failed: Requested site could not be found
-⚠️ Will use simulated data for endpoints
-   └─ Configured 9 columns for ZT-Validations
-   └─ List already exists: ZT-Exceptions
-✅ ZT-Exceptions: 185c7d87-80b0-4a6e-83cb-f309300667b6
 📅 Filtered to 83 announcements from last 7 days
+   └─ Configured 9 columns for ZT-Validations
    📌 Cached Change Announcements: e2c2e08f-774f-4c36-b319-55617e511305
    📋 Using list ID: e2c2e08f-774f-4c36-b319-55617e511305
 📥 Fetching existing announcements from SharePoint (max 1000)...
+   └─ List already exists: ZT-Exceptions
+✅ ZT-Exceptions: 185c7d87-80b0-4a6e-83cb-f309300667b6
 📋 Found 147 existing items in SharePoint list
    First item Title: MC1419802|Microsoft Teams: New layout for sharing content in Teams events|Microsoft Teams|normal
 📊 Announcements to sync: 83
 📋 Already in SharePoint: 147
    Existing IDs: MC1419802, MC1419801, MC1419800
-✓ Sync complete: Added 0 new | Skipped 83 (duplicates) | Total processed at 2026-07-14T18:03:08.170Z
+✓ Sync complete: Added 0 new | Skipped 83 (duplicates) | Total processed at 2026-07-14T18:05:18.086Z
    └─ Configured 13 columns for ZT-Exceptions
    └─ List already exists: ZT-AuditLogs
 ✅ ZT-AuditLogs: 5ee40691-ac67-42e3-b8f8-c2ce32da4ba9
+❌ Failed to initialize setup config list: Requested site could not be found
+⚠️ Graph Client initialization failed: Requested site could not be found
+⚠️ Will use simulated data for endpoints
    └─ Configured 10 columns for ZT-AuditLogs
    └─ List already exists: ZT-RiskScores
 ✅ ZT-RiskScores: aa633dd1-b37c-4d8c-a7f4-0ee3779a7b53
@@ -134,5 +135,5 @@ SHAREPOINT_ZT_COMPLIANCE_LIST_ID=c23036a5-1af0-4c23-b0c4-3b57f24450ee
    • ZT-RiskScores - Risk assessment data
    • ZT-Compliance - Framework compliance metrics
 ✅ Audit logs will now be saved to SharePoint automatically
-🔄 Starting backup: Teams
+🔄 Starting backup: SharePoint
 ⚠️ Backup list not configured

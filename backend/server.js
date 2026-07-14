@@ -68,6 +68,7 @@ import { BackupStorageManager } from './lib/backup-storage.js'
 import setupBackupRoutes from './routes/backup-routes.js'
 import { ExchangeCollector } from './collectors/exchange-collector.js'
 import { TeamsCollector } from './collectors/teams-collector.js'
+import { SharePointCollector } from './collectors/sharepoint-collector.js'
 import {
   setExecutorGraphClient,
   validateCreateDG, executeCreateDG,
@@ -17277,6 +17278,14 @@ async function initializeBackupSystem() {
     backupAgent.registerCollector('Teams', teamsCollector)
     console.log('  ✅ Teams Collector registered')
 
+    // SharePoint Collector
+    const sharePointCollector = new SharePointCollector(graphClient, {
+      timeout: 30000,
+      maxRetries: 3
+    })
+    backupAgent.registerCollector('SharePoint', sharePointCollector)
+    console.log('  ✅ SharePoint Collector registered')
+
     // Setup backup routes
     console.log('📦 Setting up backup routes...')
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
@@ -19939,6 +19948,9 @@ function ensureBackupRoutesRegistered() {
 
     const teamsCollector = new TeamsCollector(graphClient)
     backupAgent.registerCollector('Teams', teamsCollector)
+
+    const sharePointCollector = new SharePointCollector(graphClient)
+    backupAgent.registerCollector('SharePoint', sharePointCollector)
 
     // Setup routes
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
