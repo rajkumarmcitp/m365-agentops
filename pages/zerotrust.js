@@ -479,7 +479,7 @@ function renderZTTabContent(el) {
 function renderZTOverview() {
   if (!realValidations || !realValidations.summary.byPillar) return '<div class="card">Loading...</div>'
 
-  const { summary } = realValidations
+  const { summary, frameworkComparison, complianceSummary } = realValidations
 
   const pillarIcons = {
     'Identity Security': 'ti-shield-check',
@@ -552,6 +552,41 @@ function renderZTOverview() {
               </div>
             `).join('')}
           </div>
+        </div>
+      </div>
+    ` : ''}
+
+    ${frameworkComparison && frameworkComparison.length > 0 ? `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-certificate"></i> Compliance Framework Coverage</span>
+          <span class="badge info">${complianceSummary?.compliantFrameworks || 0}/${complianceSummary?.totalFrameworks || 6} Compliant</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;padding:16px">
+          ${frameworkComparison.map(fw => {
+            const statusColor = fw.status === 'Compliant' ? '#16a34a' : fw.status === 'Partial' ? '#d97706' : '#dc2626'
+            const statusIcon = fw.status === 'Compliant' ? '✓' : fw.status === 'Partial' ? '⚠' : '✗'
+            return `
+              <div style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:12px;cursor:pointer;transition:all 150ms ease"
+                   onmouseover="this.style.background='var(--color-background-secondary)'"
+                   onmouseout="this.style.background='transparent'">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                  <div style="font-size:20px;color:${statusColor}">${statusIcon}</div>
+                  <div>
+                    <div style="font-weight:600;font-size:12px">${fw.frameworkName}</div>
+                    <div style="font-size:10px;color:var(--color-text-tertiary)">${fw.framework}</div>
+                  </div>
+                </div>
+                <div style="background:var(--color-border-secondary);height:6px;border-radius:3px;overflow:hidden;margin-bottom:8px">
+                  <div style="background:${statusColor};height:100%;width:${fw.coveragePercentage}%;transition:width 300ms ease"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary)">
+                  <span>${fw.implementedControls}/${fw.totalControls} mapped</span>
+                  <span>${fw.compliancePercentage}% passing</span>
+                </div>
+              </div>
+            `
+          }).join('')}
         </div>
       </div>
     ` : ''}

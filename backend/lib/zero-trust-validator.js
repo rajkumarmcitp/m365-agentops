@@ -16,6 +16,7 @@ import { InfrastructureCollectors } from './infrastructure-collectors.js'
 import DeviceValidations from './device-validations.js'
 import { unifiedGraphClient } from './graph-client-unified.js'
 import { calculateControlRiskScore, calculatePillarRiskScore, calculateOverallRiskScore, generateRiskSummary, getTopRiskControls } from './risk-scoring.js'
+import { generateComplianceSummary, getFrameworkComparison } from './compliance-calculator.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -161,7 +162,13 @@ export class ZeroTrustValidator {
     results.riskSummary = riskSummary
     results.topRisks = getTopRiskControls(results.validations, 10)
 
-    console.log(`✅ Validation complete: ${results.overallScore}% compliance | Risk Score: ${riskSummary.overallRiskScore}/100`)
+    // Calculate compliance framework coverage
+    const complianceSummary = generateComplianceSummary(results.validations)
+    const frameworkComparison = getFrameworkComparison(results.validations)
+    results.complianceSummary = complianceSummary
+    results.frameworkComparison = frameworkComparison
+
+    console.log(`✅ Validation complete: ${results.overallScore}% compliance | Risk: ${riskSummary.overallRiskScore}/100 | Framework coverage: ${complianceSummary.averageCoverage}%`)
     return results
   }
 

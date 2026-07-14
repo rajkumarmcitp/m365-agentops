@@ -1,0 +1,150 @@
+{
+  "frameworks": {
+    "CIS": {
+      "name": "CIS Microsoft 365 Foundations Benchmark",
+      "description": "Center for Internet Security best practices for Microsoft 365",
+      "version": "1.0",
+      "totalControls": 101,
+      "color": "#0078D4",
+      "icon": "ti-shield",
+      "categories": ["Identity", "Data", "Compliance", "Governance"]
+    },
+    "NIST": {
+      "name": "NIST Cybersecurity Framework",
+      "description": "National Institute of Standards and Technology guidelines",
+      "version": "1.1",
+      "totalControls": 158,
+      "color": "#0066CC",
+      "icon": "ti-server-2",
+      "categories": ["Identify", "Protect", "Detect", "Respond", "Recover"]
+    },
+    "ISO27001": {
+      "name": "ISO/IEC 27001:2022",
+      "description": "Information Security Management Systems standard",
+      "version": "2022",
+      "totalControls": 93,
+      "color": "#8B0000",
+      "icon": "ti-lock",
+      "categories": ["A.5", "A.6", "A.7", "A.8"]
+    },
+    "PCI-DSS": {
+      "name": "PCI Data Security Standard",
+      "description": "Payment Card Industry compliance framework",
+      "version": "3.2.1",
+      "totalControls": 78,
+      "color": "#FF6B35",
+      "icon": "ti-credit-card",
+      "categories": ["Network", "Cardholder Data", "Vulnerability", "Access", "Monitoring"]
+    },
+    "SOC2": {
+      "name": "SOC 2 Type II",
+      "description": "Service Organization Control audit criteria",
+      "version": "2022",
+      "totalControls": 64,
+      "color": "#228B22",
+      "icon": "ti-certificate",
+      "categories": ["CC", "C"]
+    },
+    "GDPR": {
+      "name": "General Data Protection Regulation",
+      "description": "EU regulation on data protection and privacy",
+      "version": "2018",
+      "totalControls": 72,
+      "color": "#003399",
+      "icon": "ti-world",
+      "categories": ["Privacy", "Data Rights", "Security", "Compliance"]
+    }
+  },
+  "frameworkMappings": {
+    "ID-001": {
+      "name": "MFA Enabled for Global Admins",
+      "CIS": ["1.1.1"],
+      "NIST": ["AC-2", "AC-7", "IA-2"],
+      "ISO27001": ["A.9.2.1"],
+      "PCI-DSS": ["8.2.3"],
+      "SOC2": ["CC6.1"],
+      "GDPR": ["32"]
+    },
+    "ID-002": {
+      "name": "MFA Coverage for All Users",
+      "CIS": ["1.1.2"],
+      "NIST": ["AC-2", "IA-2"],
+      "ISO27001": ["A.9.2.1"],
+      "PCI-DSS": ["8.2.3"],
+      "SOC2": ["CC6.1"],
+      "GDPR": ["32"]
+    },
+    "ID-005": {
+      "name": "Conditional Access Policies Enabled",
+      "CIS": ["1.2.1"],
+      "NIST": ["AC-3", "AC-4"],
+      "ISO27001": ["A.13.2"],
+      "PCI-DSS": ["7.1"],
+      "SOC2": ["CC6.2"],
+      "GDPR": ["32"]
+    },
+    "ID-008": {
+      "name": "Risk-Based Access via Identity Protection",
+      "CIS": ["1.3.1"],
+      "NIST": ["AC-2", "AC-3"],
+      "ISO27001": ["A.9.2.5"],
+      "PCI-DSS": ["7.1"],
+      "SOC2": ["CC6.1"],
+      "GDPR": ["32"]
+    },
+    "ID-010": {
+      "name": "PIM (Privileged Identity Management) Enabled",
+      "CIS": ["2.1"],
+      "NIST": ["AC-2", "AC-5"],
+      "ISO27001": ["A.9.2.4"],
+      "PCI-DSS": ["7.1", "8.2"],
+      "SOC2": ["CC6.1"],
+      "GDPR": ["32"]
+    },
+    "ID-011": {
+      "name": "Global Admin Count Minimized",
+      "CIS": ["2.2"],
+      "NIST": ["AC-2"],
+      "ISO27001": ["A.9.2.5"],
+      "PCI-DSS": ["7.1"],
+      "SOC2": ["CC6.1"],
+      "GDPR": ["32"]
+    },
+    "DEV-001": {
+      "name": "Device Compliance Policies Configured",
+      "CIS": ["3.1"],
+      "NIST": ["AC-2", "SI-2"],
+      "ISO27001": ["A.12.2"],
+      "PCI-DSS": ["6.2"],
+      "SOC2": ["CC6.3"],
+      "GDPR": ["32"]
+    },
+    "DATA-001": {
+      "name": "Sensitivity Labels Configured",
+      "CIS": ["4.1"],
+      "NIST": ["SC-28"],
+      "ISO27001": ["A.8.2.4"],
+      "PCI-DSS": ["3.4"],
+      "SOC2": ["CC6.1"],
+      "GDPR": ["33", "34"]
+    },
+    "DATA-002": {
+      "name": "DLP Policies Enabled",
+      "CIS": ["4.2"],
+      "NIST": ["SC-7", "SI-4"],
+      "ISO27001": ["A.13.1"],
+      "PCI-DSS": ["6.5", "10.1"],
+      "SOC2": ["CC7.2"],
+      "GDPR": ["32", "33"]
+    },
+    "APP-001": {
+      "name": "Application Permissions Reviewed",
+      "CIS": ["5.1"],
+      "NIST": ["AC-3"],
+      "ISO27001": ["A.9.1.2"],
+      "PCI-DSS": ["7.1"],
+      "SOC2": ["CC6.2"],
+      "GDPR": ["32"]
+    }
+  }
+}
