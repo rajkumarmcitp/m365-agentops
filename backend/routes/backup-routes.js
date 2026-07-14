@@ -7,8 +7,65 @@ import express from 'express'
 import { BackupAgent } from '../lib/backup-agent.js'
 import { M365_SERVICES } from '../lib/backup-config.js'
 
-export function setupBackupRoutes(app, backupAgent, backupStorage) {
+export function setupBackupRoutes(backupAgent, backupStorage) {
   const router = express.Router()
+
+  // ============================================================
+  // Service Configuration Endpoints (MUST be before parameter routes)
+  // ============================================================
+
+  /**
+   * Get all available services
+   * GET /api/backup/m365/services/list
+   */
+  router.get('/services/list', async (req, res) => {
+    try {
+      const services = Object.entries(M365_SERVICES).map(([key, value]) => ({
+        key,
+        ...value
+      }))
+
+      res.json({
+        success: true,
+        data: services,
+        total: services.length
+      })
+    } catch (error) {
+      console.error('Error getting services list:', error)
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  })
+
+  /**
+   * Get service details
+   * GET /api/backup/m365/services/:service
+   */
+  router.get('/services/:service', async (req, res) => {
+    try {
+      const { service } = req.params
+
+      if (!M365_SERVICES[service]) {
+        return res.status(404).json({
+          success: false,
+          error: `Service not found: ${service}`
+        })
+      }
+
+      res.json({
+        success: true,
+        data: M365_SERVICES[service]
+      })
+    } catch (error) {
+      console.error('Error getting service details:', error)
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  })
 
   // ============================================================
   // Backup Trigger Endpoints
@@ -54,7 +111,7 @@ export function setupBackupRoutes(app, backupAgent, backupStorage) {
 
   /**
    * Trigger backup for all services
-   * POST /api/backup/m365/trigger/all
+   * POST /api/backup/m365/trigger-all
    */
   router.post('/trigger-all', async (req, res) => {
     try {
@@ -134,38 +191,6 @@ export function setupBackupRoutes(app, backupAgent, backupStorage) {
   })
 
   /**
-   * Get backup history for a service
-   * GET /api/backup/m365/history/:service?limit=20
-   */
-  router.get('/history/:service', async (req, res) => {
-    try {
-      const { service } = req.params
-      const limit = Math.min(parseInt(req.query.limit || '20'), 100)
-
-      if (!M365_SERVICES[service]) {
-        return res.status(400).json({
-          success: false,
-          error: `Unknown service: ${service}`
-        })
-      }
-
-      const history = await backupStorage.getBackupHistory(service, limit)
-
-      res.json({
-        success: true,
-        data: history,
-        total: history.length
-      })
-    } catch (error) {
-      console.error('Error getting backup history:', error)
-      res.status(500).json({
-        success: false,
-        error: error.message
-      })
-    }
-  })
-
-  /**
    * Get all backup history
    * GET /api/backup/m365/history?limit=50
    */
@@ -198,33 +223,31 @@ export function setupBackupRoutes(app, backupAgent, backupStorage) {
     }
   })
 
-  // ============================================================
-  // Backup Details Endpoints
-  // ============================================================
-
   /**
-   * Get specific backup details
-   * GET /api/backup/m365/:backupID
+   * Get backup history for a service
+   * GET /api/backup/m365/history/:service?limit=20
    */
-  router.get('/:backupID', async (req, res) => {
+  router.get('/history/:service', async (req, res) => {
     try {
-      const { backupID } = req.params
+      const { service } = req.params
+      const limit = Math.min(parseInt(req.query.limit || '20'), 100)
 
-      const status = await backupAgent.getBackupStatus(backupID)
-
-      if (!status) {
-        return res.status(404).json({
+      if (!M365_SERVICES[service]) {
+        return res.status(400).json({
           success: false,
-          error: 'Backup not found'
+          error: `Unknown service: ${service}`
         })
       }
 
+      const history = await backupStorage.getBackupHistory(service, limit)
+
       res.json({
         success: true,
-        data: status
+        data: history,
+        total: history.length
       })
     } catch (error) {
-      console.error('Error getting backup details:', error)
+      console.error('Error getting backup history:', error)
       res.status(500).json({
         success: false,
         error: error.message
@@ -232,28 +255,27 @@ export function setupBackupRoutes(app, backupAgent, backupStorage) {
     }
   })
 
+  // ============================================================
+  // Backup Details Endpoints (AFTER specific paths)
+  // ============================================================
+
   /**
-   * Get resources from specific backup
-   * GET /api/backup/m365/:backupID/resources?resourceType=EXODistributionGroup
+   * Get changes in specific backup
+   * GET /api/backup/m365/:backupID/changes
    */
-  router.get('/:backupID/resources', async (req, res) => {
+  router.get('/:backupID/changes', async (req, res) => {
     try {
       const { backupID } = req.params
-      const { resourceType } = req.query
 
-      const resources = await backupStorage.getBackupResources(
-        backupID,
-        resourceType
-      )
+      const changes = await backupStorage.getBackupChanges(backupID)
 
       res.json({
         success: true,
-        data: resources,
-        total: resources.length,
-        filter: resourceType || 'all'
+        data: changes,
+        total: changes.length
       })
     } catch (error) {
-      console.error('Error getting backup resources:', error)
+      console.error('Error getting backup changes:', error)
       res.status(500).json({
         success: false,
         error: error.message
@@ -293,79 +315,57 @@ export function setupBackupRoutes(app, backupAgent, backupStorage) {
   })
 
   /**
-   * Get changes in specific backup
-   * GET /api/backup/m365/:backupID/changes
+   * Get resources from specific backup
+   * GET /api/backup/m365/:backupID/resources?resourceType=EXODistributionGroup
    */
-  router.get('/:backupID/changes', async (req, res) => {
+  router.get('/:backupID/resources', async (req, res) => {
+    try {
+      const { backupID } = req.params
+      const { resourceType } = req.query
+
+      const resources = await backupStorage.getBackupResources(
+        backupID,
+        resourceType
+      )
+
+      res.json({
+        success: true,
+        data: resources,
+        total: resources.length,
+        filter: resourceType || 'all'
+      })
+    } catch (error) {
+      console.error('Error getting backup resources:', error)
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  })
+
+  /**
+   * Get specific backup details
+   * GET /api/backup/m365/:backupID
+   */
+  router.get('/:backupID', async (req, res) => {
     try {
       const { backupID } = req.params
 
-      const changes = await backupStorage.getBackupChanges(backupID)
+      const status = await backupAgent.getBackupStatus(backupID)
 
-      res.json({
-        success: true,
-        data: changes,
-        total: changes.length
-      })
-    } catch (error) {
-      console.error('Error getting backup changes:', error)
-      res.status(500).json({
-        success: false,
-        error: error.message
-      })
-    }
-  })
-
-  // ============================================================
-  // Service Configuration Endpoints
-  // ============================================================
-
-  /**
-   * Get all available services
-   * GET /api/backup/m365/services
-   */
-  router.get('/services/list', async (req, res) => {
-    try {
-      const services = Object.entries(M365_SERVICES).map(([key, value]) => ({
-        key,
-        ...value
-      }))
-
-      res.json({
-        success: true,
-        data: services,
-        total: services.length
-      })
-    } catch (error) {
-      console.error('Error getting services list:', error)
-      res.status(500).json({
-        success: false,
-        error: error.message
-      })
-    }
-  })
-
-  /**
-   * Get service details
-   * GET /api/backup/m365/services/:service
-   */
-  router.get('/services/:service', async (req, res) => {
-    try {
-      const { service } = req.params
-
-      if (!M365_SERVICES[service]) {
+      if (!status) {
         return res.status(404).json({
           success: false,
-          error: `Service not found: ${service}`
+          error: 'Backup not found'
         })
       }
 
       res.json({
         success: true,
-        data: M365_SERVICES[service]
+        data: status
       })
     } catch (error) {
-      console.error('Error getting service details:', error)
+      console.error('Error getting backup details:', error)
       res.status(500).json({
         success: false,
         error: error.message

@@ -17270,7 +17270,7 @@ async function initializeBackupSystem() {
 
     // Setup backup routes
     console.log('📦 Setting up backup routes...')
-    const backupRouter = setupBackupRoutes(app, backupAgent, backupStorage)
+    const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
     console.log(`📦 backupRouter type: ${typeof backupRouter}, hasStack: ${backupRouter?.stack ? 'yes' : 'no'}`)
     if (!backupRouter) {
       console.error('❌ setupBackupRoutes returned null/undefined!')
@@ -17349,8 +17349,12 @@ const server = app.listen(PORT, () => {
   console.log(`  Managers: ${ROLE_GROUPS.manager || '❌ NOT CONFIGURED'}`)
   console.log('')
 
-  // Backup system is already initialized before 404 handler
-  // (moved earlier to prevent 404 handler from intercepting routes)
+  // Ensure backup routes are registered after server starts listening
+  if (graphClient && backupAgent && backupStorage) {
+    console.log('📦 Backup system already initialized')
+  } else {
+    ensureBackupRoutesRegistered()
+  }
 
   // Initialize SharePoint lists in background after server starts
   initializeSharePointListsOnStartup().catch(err => {
@@ -19894,7 +19898,7 @@ function ensureBackupRoutesRegistered() {
   }
 
   try {
-    const siteId = process.env.SHAREPOINT_SITE_ID
+    const siteId = SHAREPOINT_SITE_ID
     if (!siteId) return
 
     // Initialize storage
@@ -19925,10 +19929,15 @@ function ensureBackupRoutesRegistered() {
     backupAgent.registerCollector('ExchangeOnline', exchangeCollector)
 
     // Setup routes
-    const backupRouter = setupBackupRoutes(app, backupAgent, backupStorage)
+    const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
     console.log(`📦 DEBUG: backupRouter type = ${typeof backupRouter}`)
     console.log(`📦 DEBUG: backupRouter.stack length = ${backupRouter?.stack?.length || 'N/A'}`)
     console.log(`📦 DEBUG: backupRouter instanceof Function = ${backupRouter instanceof Function}`)
+
+    // Test: Register one route directly on app to verify routing works
+    app.get('/api/backup/m365/direct-test', (req, res) => {
+      res.json({ success: true, message: 'Direct backup route on app works!' })
+    })
 
     app.use('/api/backup/m365', backupRouter)
     console.log('✅ M365 Backup System routes registered')
@@ -19942,9 +19951,36 @@ function ensureBackupRoutesRegistered() {
 ensureBackupRoutesRegistered()
 
 // ============================================================
+// Backup Routes - Mount BEFORE 404 handler
+// ============================================================
+// Create a middleware that waits for backup system to initialize
+app.use('/api/backup/m365', (req, res, next) => {
+  if (backupAgent && backupStorage) {
+    // Backup system ready, create and mount routes dynamically
+    const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
+    backupRouter(req, res, next)
+  } else {
+    // Backup system not ready yet
+    res.status(503).json({
+      success: false,
+      error: 'Backup system not initialized yet'
+    })
+  }
+})
+
+// TEST: Direct route to verify routing works
+app.get('/api/backup/test', (req, res) => {
+  res.json({ success: true, message: 'Direct backup test route works!' })
+})
+
+// ============================================================
 // 404 Handler - MUST be last
 // ============================================================
 app.use((req, res) => {
+  if (req.path.startsWith('/api/backup')) {
+    console.log(`📦 DEBUG 404: Backup route not found: ${req.method} ${req.path}`)
+    console.log(`   backupAgent: ${backupAgent ? 'yes' : 'no'}`)
+  }
   res.status(404).json({
     success: false,
     error: 'Endpoint not found',

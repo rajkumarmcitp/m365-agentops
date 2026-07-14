@@ -19,9 +19,16 @@
 ✅ Agent Scheduler initialized
 
 📅 Nightly validations scheduled for 15/7/2026, 2:00:00 am
-⏰ Time until next run: 551 minutes
+⏰ Time until next run: 158 minutes
 ✅ Nightly validation scheduler initialized
 ✓ Azure credentials configured - using real Graph API
+✅ Backup Agent initialized
+✅ Collector registered: ExchangeOnline
+📦 DEBUG: backupRouter type = function
+📦 DEBUG: backupRouter.stack length = 12
+📦 DEBUG: backupRouter instanceof Function = true
+✅ M365 Backup System routes registered
+📦 DEBUG: app._router.stack.length = 329
 ✅ SharePoint client initialized
 ✓ CIS Validator: Graph Client initialized
 🔧 Initializing UnifiedGraphClient...
@@ -41,16 +48,10 @@
   Admins: aa5fd8d4-ac9c-49e1-85b0-34375e9cd26e
   Managers: b8dee1a4-9a2a-4ff6-bf33-1d28176900c6
 
-🔍 Initializing SharePoint lists...
-✓ Loaded SharePoint configuration from file
-✓ CIS-Validations already configured
-✓ CIS-Results already configured
-✓ CIS-History already configured
-✓ Zero Trust Validations already configured
-✓ Zero Trust Results already configured
-✓ Zero Trust History already configured
-✓ SelfServiceRequests already configured
-✓ SelfServiceAudit already configured
+📦 Backup system already initialized
+
+🔧 Initializing SharePoint lists for Zero Trust enhancements...
+🔧 Initializing SharePoint lists...
 🔧 Initializing TenantGuard...
 ✅ Database initialized (in-memory mode)
 🔧 Starting Message Center sync job...
@@ -59,10 +60,9 @@
 📅 Starting initial sync of announcements (7-day window)...
 
 🔄 ═══════════════════════════════════════════════════════
-📅 Starting announcement sync at 2026-07-14T11:18:35.638Z
+📅 Starting announcement sync at 2026-07-14T17:51:48.125Z
 🔄 ═══════════════════════════════════════════════════════
 🔄 Message Center sync job started (hourly)
-✅ SharePoint list initialization completed
 ✅ Investigation tables initialized
 ℹ️ No alerts to migrate
    ℹ️ Using mock responses (no Claude API configured)
@@ -78,20 +78,60 @@
 ✅ Correlation job started
 ✅ Correlation jobs started
 ✅ TenantGuard initialized - use POST /api/tenantguard/sync for data sync
+   └─ List already exists: ZT-Validations
+✅ ZT-Validations: c3a8a805-26c9-4e7a-a5d6-43d0c18a9ef0
 ✓ "Change Announcements" list already exists
 ✓ "Change Announcement Tasks" list already exists
 ✅ SharePoint setup complete
 ❌ Failed to initialize setup config list: Requested site could not be found
 ⚠️ Graph Client initialization failed: Requested site could not be found
 ⚠️ Will use simulated data for endpoints
-📅 Filtered to 87 announcements from last 7 days
+📅 Filtered to 84 announcements from last 7 days
+   └─ Configured 9 columns for ZT-Validations
+   └─ List already exists: ZT-Exceptions
+✅ ZT-Exceptions: 185c7d87-80b0-4a6e-83cb-f309300667b6
    📌 Cached Change Announcements: e2c2e08f-774f-4c36-b319-55617e511305
    📋 Using list ID: e2c2e08f-774f-4c36-b319-55617e511305
 📥 Fetching existing announcements from SharePoint (max 1000)...
-📋 Found 135 existing items in SharePoint list
+📋 Found 147 existing items in SharePoint list
    First item Title: MC1419802|Microsoft Teams: New layout for sharing content in Teams events|Microsoft Teams|normal
-📊 Announcements to sync: 87
-📋 Already in SharePoint: 135
+📊 Announcements to sync: 84
+📋 Already in SharePoint: 147
    Existing IDs: MC1419802, MC1419801, MC1419800
-✓ Sync complete: Added 0 new | Skipped 87 (duplicates) | Total processed at 2026-07-14T11:18:38.058Z
-📦 Returning snapshot from disk
+✓ Sync complete: Added 0 new | Skipped 84 (duplicates) | Total processed at 2026-07-14T17:51:49.817Z
+   └─ Configured 13 columns for ZT-Exceptions
+   └─ List already exists: ZT-AuditLogs
+✅ ZT-AuditLogs: 5ee40691-ac67-42e3-b8f8-c2ce32da4ba9
+   └─ Configured 10 columns for ZT-AuditLogs
+   └─ List already exists: ZT-RiskScores
+✅ ZT-RiskScores: aa633dd1-b37c-4d8c-a7f4-0ee3779a7b53
+   └─ Configured 9 columns for ZT-RiskScores
+   └─ List already exists: ZT-Compliance
+✅ ZT-Compliance: c23036a5-1af0-4c23-b0c4-3b57f24450ee
+   └─ Configured 10 columns for ZT-Compliance
+
+📋 Add these to Azure App Service Configuration:
+================================================
+SHAREPOINT_ZT_VALIDATIONS_LIST_ID=c3a8a805-26c9-4e7a-a5d6-43d0c18a9ef0
+SHAREPOINT_ZT_EXCEPTIONS_LIST_ID=185c7d87-80b0-4a6e-83cb-f309300667b6
+SHAREPOINT_ZT_AUDIT_LOGS_LIST_ID=5ee40691-ac67-42e3-b8f8-c2ce32da4ba9
+SHAREPOINT_ZT_RISK_SCORES_LIST_ID=aa633dd1-b37c-4d8c-a7f4-0ee3779a7b53
+SHAREPOINT_ZT_COMPLIANCE_LIST_ID=c23036a5-1af0-4c23-b0c4-3b57f24450ee
+================================================
+
+✓ Verifying SharePoint lists...
+   ✓ ZT-Validations: Accessible
+   ✓ ZT-Exceptions: Accessible
+   ✓ ZT-AuditLogs: Accessible
+   ✓ ZT-RiskScores: Accessible
+   ✓ ZT-Compliance: Accessible
+✅ All SharePoint lists initialized successfully
+📊 Lists created:
+   • ZT-Validations - Control validation results
+   • ZT-Exceptions - Exception/waiver management
+   • ZT-AuditLogs - Compliance audit trail
+   • ZT-RiskScores - Risk assessment data
+   • ZT-Compliance - Framework compliance metrics
+✅ Audit logs will now be saved to SharePoint automatically
+🔄 Starting backup: ExchangeOnline
+⚠️ Backup list not configured

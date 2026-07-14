@@ -1,5 +1,499 @@
 [
   {
+    "id": "1784047233033-b2guu875v",
+    "timestamp": "2026-07-14T16:40:33.033Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784047232760",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926864-bmmm95zw5",
+    "timestamp": "2026-07-14T16:35:26.864Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046926659",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926847-exfa87a04",
+    "timestamp": "2026-07-14T16:35:26.847Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046926658",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926749-zz0qpu6l6",
+    "timestamp": "2026-07-14T16:35:26.749Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046926246",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926732-oscjocpcv",
+    "timestamp": "2026-07-14T16:35:26.732Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046926227",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926725-l750lidz4",
+    "timestamp": "2026-07-14T16:35:26.725Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046926493",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926660-3bm9atxyx",
+    "timestamp": "2026-07-14T16:35:26.660Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046926230",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926649-e8zur2ce7",
+    "timestamp": "2026-07-14T16:35:26.649Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046926381",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926637-bg052i4ns",
+    "timestamp": "2026-07-14T16:35:26.637Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046926319",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926483-zp7ffddpm",
+    "timestamp": "2026-07-14T16:35:26.483Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046926067",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926373-zcs83o97w",
+    "timestamp": "2026-07-14T16:35:26.373Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046925805",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926311-44v9tbvgy",
+    "timestamp": "2026-07-14T16:35:26.311Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046926059",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926237-v1z1rh7tw",
+    "timestamp": "2026-07-14T16:35:26.237Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046925810",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926217-2ybfa8ocx",
+    "timestamp": "2026-07-14T16:35:26.217Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046925808",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926208-v73iu5rfc",
+    "timestamp": "2026-07-14T16:35:26.208Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046925806",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926061-kcjcm0sn7",
+    "timestamp": "2026-07-14T16:35:26.061Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046925803",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046926046-numvk226t",
+    "timestamp": "2026-07-14T16:35:26.046Z",
+    "action": "exception_requested",
+    "actor": "current-user",
+    "resourceId": "EXC-1784046925801",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046892830-uub47nflm",
+    "timestamp": "2026-07-14T16:34:52.830Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046892807-5vlu5790z",
+    "timestamp": "2026-07-14T16:34:52.807Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046892617-bzhrv4364",
+    "timestamp": "2026-07-14T16:34:52.617Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046892519-39ibl6oje",
+    "timestamp": "2026-07-14T16:34:52.519Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046892461-tpeug03zd",
+    "timestamp": "2026-07-14T16:34:52.461Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046892443-xxag6jmjv",
+    "timestamp": "2026-07-14T16:34:52.443Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046892355-3oi7ymlrl",
+    "timestamp": "2026-07-14T16:34:52.355Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046884244-ac9kayy2y",
+    "timestamp": "2026-07-14T16:34:44.244Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046884239-fw81lkuvb",
+    "timestamp": "2026-07-14T16:34:44.239Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046884226-0ig15wv5a",
+    "timestamp": "2026-07-14T16:34:44.226Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046884202-x5n86mng9",
+    "timestamp": "2026-07-14T16:34:44.202Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046884176-gds2vloko",
+    "timestamp": "2026-07-14T16:34:44.176Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046884158-mmyk51ljz",
+    "timestamp": "2026-07-14T16:34:44.158Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046884142-wjrkduc38",
+    "timestamp": "2026-07-14T16:34:44.142Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046877846-u1sgjn7ff",
+    "timestamp": "2026-07-14T16:34:37.846Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046870115-incl4e210",
+    "timestamp": "2026-07-14T16:34:30.115Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046870108-902ozx64i",
+    "timestamp": "2026-07-14T16:34:30.108Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046863845-4b18neiyz",
+    "timestamp": "2026-07-14T16:34:23.845Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046862372-5bxo8341o",
+    "timestamp": "2026-07-14T16:34:22.372Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046862363-54op4zu4t",
+    "timestamp": "2026-07-14T16:34:22.363Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046861694-9y4537b7j",
+    "timestamp": "2026-07-14T16:34:21.694Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046856287-17hpmuh44",
+    "timestamp": "2026-07-14T16:34:16.287Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046856281-q8gm9ye71",
+    "timestamp": "2026-07-14T16:34:16.281Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046855315-e0m91qg8h",
+    "timestamp": "2026-07-14T16:34:15.315Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046854793-39fd1h5ff",
+    "timestamp": "2026-07-14T16:34:14.793Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046854784-njpd0sjag",
+    "timestamp": "2026-07-14T16:34:14.784Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046854693-eqexhyllg",
+    "timestamp": "2026-07-14T16:34:14.693Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046853953-sgu5e0a7o",
+    "timestamp": "2026-07-14T16:34:13.953Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046853947-kyhnmr0c9",
+    "timestamp": "2026-07-14T16:34:13.947Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046851625-wt5909ks4",
+    "timestamp": "2026-07-14T16:34:11.625Z",
+    "action": "validation_completed",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046736000-7epb4b8e6",
+    "timestamp": "2026-07-14T16:32:16.000Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046735971-d00j1nftm",
+    "timestamp": "2026-07-14T16:32:15.971Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046735942-l12gxitl8",
+    "timestamp": "2026-07-14T16:32:15.942Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046735922-07ht6gtj7",
+    "timestamp": "2026-07-14T16:32:15.922Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046735889-176ge8e1o",
+    "timestamp": "2026-07-14T16:32:15.889Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784046735830-9vpcpfepa",
+    "timestamp": "2026-07-14T16:32:15.830Z",
+    "action": "validation_started",
+    "actor": "system",
+    "resourceType": "validation",
+    "status": "success",
+    "severity": "info"
+  },
+  {
     "id": "1784038439163-4vv2io0ia",
     "timestamp": "2026-07-14T14:13:59.163Z",
     "action": "exception_requested",
