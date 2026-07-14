@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
@@ -11243,8 +11244,46 @@ app.get('/api/zero-trust/last-results', async (req, res) => {
         compliance: compliance,
         overallScore: compliance,
         totalValidations: validations.length,
+        riskSummary: lastZeroTrustResults.riskSummary || {},
+        complianceSummary: lastZeroTrustResults.complianceSummary || {},
+        frameworkComparison: lastZeroTrustResults.frameworkComparison || [],
+        snapshotStats: lastZeroTrustResults.snapshotStats || {},
+        complianceTrends: lastZeroTrustResults.complianceTrends || [],
+        exceptionStats: lastZeroTrustResults.exceptionStats || {},
+        complianceWithExceptions: lastZeroTrustResults.complianceWithExceptions || {},
         source: 'cache'
       })
+    }
+
+    // Fallback: Try to load latest snapshot from disk
+    try {
+      const snapshotDir = join(__dirname, '../data/snapshots')
+      const today = new Date().toISOString().split('T')[0]
+      const snapshotPath = join(snapshotDir, `snapshot-${today}.json`)
+
+      if (fs.existsSync(snapshotPath)) {
+        const snapshotData = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'))
+        console.log('📦 Returning snapshot from disk')
+        return res.json({
+          success: true,
+          hasResults: true,
+          lastRunTime: snapshotData.timestamp,
+          validations: snapshotData.validations || [],
+          summary: snapshotData.summary || { pass: 0, fail: 0, warn: 0 },
+          overallScore: snapshotData.overallScore || 0,
+          totalValidations: snapshotData.totalValidations || 0,
+          riskSummary: snapshotData.riskSummary || {},
+          complianceSummary: snapshotData.complianceSummary || {},
+          frameworkComparison: snapshotData.frameworkComparison || [],
+          snapshotStats: snapshotData.snapshotStats || {},
+          complianceTrends: snapshotData.complianceTrends || [],
+          exceptionStats: snapshotData.exceptionStats || {},
+          complianceWithExceptions: snapshotData.complianceWithExceptions || {},
+          source: 'snapshot'
+        })
+      }
+    } catch (error) {
+      console.log('⚠️ Could not load snapshot:', error.message)
     }
 
     const siteId = process.env.SHAREPOINT_SITE_ID
