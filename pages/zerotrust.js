@@ -517,7 +517,16 @@ function renderZTTabContent(el) {
 
 function renderZTValidationResults() {
   if (!realValidations || !realValidations.validations || realValidations.validations.length === 0) {
-    return `<div class="card" style="padding:20px"><p>No validation results available. Run a Full Scan first.</p></div>`
+    return `
+      <div style="padding:40px;text-align:center;color:var(--color-text-secondary)">
+        <div style="font-size:48px;margin-bottom:16px"><i class="ti ti-inbox" style="color:var(--color-text-tertiary)"></i></div>
+        <h3 style="margin:0 0 8px 0;color:var(--color-text-primary)">No validation results yet</h3>
+        <p style="margin:0 0 16px 0;font-size:13px">Run a complete Zero Trust scan to generate validation results for all security controls.</p>
+        <button onclick="document.getElementById('zt-rescan')?.click()" style="background:#0078d4;color:white;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;font-weight:600">
+          <i class="ti ti-refresh" style="margin-right:6px"></i>Run Full Scan
+        </button>
+      </div>
+    `
   }
 
   const { validations } = realValidations
@@ -699,7 +708,16 @@ window.loadZTAuditLogs = async function() {
     const response = await callAPI('/zero-trust/audit-logs')
 
     if (!response.success || !response.data) {
-      loadingEl.innerHTML = '<div style="text-align:center;padding:40px"><p style="color:var(--color-text-secondary);font-size:14px">No audit logs found yet</p><p style="color:var(--color-text-tertiary);font-size:12px">Run a validation scan to generate audit events</p></div>'
+      loadingEl.innerHTML = `
+        <div style="text-align:center;padding:40px">
+          <div style="font-size:48px;margin-bottom:16px"><i class="ti ti-inbox" style="color:var(--color-text-tertiary)"></i></div>
+          <h3 style="margin:0 0 8px 0;color:var(--color-text-primary)">No audit logs yet</h3>
+          <p style="margin:0 0 16px 0;font-size:13px;color:var(--color-text-secondary)">Compliance audit trail will populate after running validation scans and making framework changes.</p>
+          <button onclick="document.getElementById('zt-rescan')?.click()" style="background:#0078d4;color:white;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;font-weight:600">
+            <i class="ti ti-refresh" style="margin-right:6px"></i>Run Scan to Generate Logs
+          </button>
+        </div>
+      `
       return
     }
 
@@ -707,7 +725,16 @@ window.loadZTAuditLogs = async function() {
 
     // Handle empty logs
     if (logs.length === 0) {
-      loadingEl.innerHTML = '<div style="text-align:center;padding:40px"><p style="color:var(--color-text-secondary);font-size:14px">No audit logs yet</p><p style="color:var(--color-text-tertiary);font-size:12px">Framework compliance changes will appear here after running validation scans</p></div>'
+      loadingEl.innerHTML = `
+        <div style="text-align:center;padding:40px">
+          <div style="font-size:48px;margin-bottom:16px"><i class="ti ti-inbox" style="color:var(--color-text-tertiary)"></i></div>
+          <h3 style="margin:0 0 8px 0;color:var(--color-text-primary)">No audit logs yet</h3>
+          <p style="margin:0 0 16px 0;font-size:13px;color:var(--color-text-secondary)">Compliance audit trail will populate after running validation scans and making framework changes.</p>
+          <button onclick="document.getElementById('zt-rescan')?.click()" style="background:#0078d4;color:white;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;font-weight:600">
+            <i class="ti ti-refresh" style="margin-right:6px"></i>Run Scan to Generate Logs
+          </button>
+        </div>
+      `
       return
     }
 
@@ -994,7 +1021,18 @@ window.loadZTExceptions = async function() {
     loadingEl.style.display = 'none'
 
     if (!result.success || result.data.length === 0) {
-      contentEl.innerHTML = '<div style="text-align:center;padding:40px"><p style="color:var(--color-text-secondary)">No exceptions yet</p></div>'
+      contentEl.innerHTML = `
+        <div style="text-align:center;padding:40px">
+          <div style="font-size:48px;margin-bottom:16px"><i class="ti ti-inbox" style="color:var(--color-text-tertiary)"></i></div>
+          <h3 style="margin:0 0 8px 0;color:var(--color-text-primary)">No exceptions requested</h3>
+          <p style="margin:0 0 16px 0;font-size:13px;color:var(--color-text-secondary)">Request exceptions for controls that cannot be immediately remediated due to business requirements.</p>
+          <button id="zt-request-exception-btn" style="background:#0078d4;color:white;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;font-weight:600">
+            <i class="ti ti-plus" style="margin-right:6px"></i>Request Exception
+          </button>
+        </div>
+      `
+      // Re-attach the request button handler since we're replacing the content
+      setTimeout(() => setupExceptionHandlers(), 50)
       return
     }
 
