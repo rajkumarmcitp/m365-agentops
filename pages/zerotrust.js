@@ -490,7 +490,12 @@ function renderZTTabContent(el) {
 function renderZTOverview() {
   if (!realValidations || !realValidations.summary.byPillar) return '<div class="card">Loading...</div>'
 
-  const { summary, frameworkComparison, complianceSummary } = realValidations
+  const { summary, frameworkComparison, complianceSummary, overallScore, snapshotStats } = realValidations
+  const scoreColor = overallScore >= 80 ? '#16a34a' : overallScore >= 60 ? '#d97706' : '#dc2626'
+  const trendDirection = snapshotStats?.trendDirection || 'stable'
+  const trendValue = snapshotStats?.trendValue || 0
+  const trendArrow = trendValue > 0 ? '↑' : trendValue < 0 ? '↓' : '→'
+  const trendColor = trendValue > 0 ? '#16a34a' : trendValue < 0 ? '#dc2626' : '#6b7280'
 
   const pillarIcons = {
     'Identity Security': 'ti-shield-check',
