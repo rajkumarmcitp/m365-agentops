@@ -75,6 +75,7 @@ import { GroupsCollector } from './collectors/groups-collector.js'
 import { IntuneCollector } from './collectors/intune-collector.js'
 import { SecurityCollector } from './collectors/security-collector.js'
 import { PowerPlatformCollector } from './collectors/powerplatform-collector.js'
+import { TenantSettingsCollector } from './collectors/tenantsettings-collector.js'
 import {
   setExecutorGraphClient,
   validateCreateDG, executeCreateDG,
@@ -17340,6 +17341,14 @@ async function initializeBackupSystem() {
     backupAgent.registerCollector('PowerPlatform', powerPlatformCollector)
     console.log('  ✅ Power Platform Collector registered')
 
+    // Tenant Settings Collector
+    const tenantSettingsCollector = new TenantSettingsCollector(graphClient, {
+      timeout: 30000,
+      maxRetries: 3
+    })
+    backupAgent.registerCollector('TenantSettings', tenantSettingsCollector)
+    console.log('  ✅ Tenant Settings Collector registered')
+
     // Setup backup routes
     console.log('📦 Setting up backup routes...')
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
@@ -20023,6 +20032,9 @@ function ensureBackupRoutesRegistered() {
 
     const powerPlatformCollector = new PowerPlatformCollector(graphClient)
     backupAgent.registerCollector('PowerPlatform', powerPlatformCollector)
+
+    const tenantSettingsCollector = new TenantSettingsCollector(graphClient)
+    backupAgent.registerCollector('TenantSettings', tenantSettingsCollector)
 
     // Setup routes
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
