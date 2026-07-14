@@ -4,6 +4,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid'
+import { logAction, AUDIT_ACTIONS } from './audit-logger.js'
 
 const EXCEPTION_STATUSES = {
   PENDING: 'pending',
@@ -76,6 +77,24 @@ export function requestException(data) {
     }
 
     exceptions.push(exception)
+
+    // Log audit event
+    logAction({
+      action: AUDIT_ACTIONS.EXCEPTION_REQUESTED,
+      actor: requestedBy,
+      resourceId: exceptionId,
+      resourceType: 'exception',
+      description: `Exception requested for control ${controlName} (${controlId})`,
+      details: {
+        controlId,
+        controlName,
+        priority,
+        expiryDays,
+        approverEmail
+      },
+      status: 'success'
+    })
+
     console.log(`✓ Exception requested: ${exceptionId} for control ${controlId}`)
     return exception
   } catch (error) {
@@ -108,6 +127,22 @@ export function approveException(exceptionId, approverEmail, notes = '') {
       action: 'approved',
       actor: approverEmail,
       note: notes || 'Approved'
+    })
+
+    // Log audit event
+    logAction({
+      action: AUDIT_ACTIONS.EXCEPTION_APPROVED,
+      actor: approverEmail,
+      resourceId: exceptionId,
+      resourceType: 'exception',
+      description: `Exception approved for control ${exception.controlName} (${exception.controlId})`,
+      details: {
+        controlId: exception.controlId,
+        controlName: exception.controlName,
+        requestedBy: exception.requestedBy,
+        notes
+      },
+      status: 'success'
     })
 
     console.log(`✓ Exception approved: ${exceptionId}`)
@@ -147,6 +182,22 @@ export function rejectException(exceptionId, rejectorEmail, rejectionReason) {
       action: 'rejected',
       actor: rejectorEmail,
       note: rejectionReason
+    })
+
+    // Log audit event
+    logAction({
+      action: AUDIT_ACTIONS.EXCEPTION_REJECTED,
+      actor: rejectorEmail,
+      resourceId: exceptionId,
+      resourceType: 'exception',
+      description: `Exception rejected for control ${exception.controlName} (${exception.controlId})`,
+      details: {
+        controlId: exception.controlId,
+        controlName: exception.controlName,
+        requestedBy: exception.requestedBy,
+        rejectionReason
+      },
+      status: 'success'
     })
 
     console.log(`✓ Exception rejected: ${exceptionId}`)
@@ -250,6 +301,22 @@ export function autoExpireExceptions() {
         action: 'auto_expired',
         actor: 'system',
         note: 'Automatically expired after expiry date'
+      })
+
+      // Log audit event
+      logAction({
+        action: AUDIT_ACTIONS.EXCEPTION_EXPIRED,
+        actor: 'system',
+        resourceId: exception.id,
+        resourceType: 'exception',
+        description: `Exception auto-expired for control ${exception.controlName} (${exception.controlId})`,
+        details: {
+          controlId: exception.controlId,
+          controlName: exception.controlName,
+          approvedBy: exception.approvedBy,
+          expiryDate: exception.expiryDate
+        },
+        status: 'success'
       })
 
       expiredCount++

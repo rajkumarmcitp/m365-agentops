@@ -19,6 +19,7 @@ import { calculateControlRiskScore, calculatePillarRiskScore, calculateOverallRi
 import { generateComplianceSummary, getFrameworkComparison } from './compliance-calculator.js'
 import { createSnapshot, getSnapshotStats, calculateComplianceTrends, clearOldSnapshots } from './validation-snapshots.js'
 import { calculateComplianceWithExceptions, getExceptionStats } from './exception-manager.js'
+import { logAction, AUDIT_ACTIONS } from './audit-logger.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -56,6 +57,18 @@ export class ZeroTrustValidator {
    */
   async validateAll() {
     console.log('🔍 Starting Zero Trust validation across all pillars...')
+
+    // Log audit event - validation started
+    logAction({
+      action: AUDIT_ACTIONS.VALIDATION_STARTED,
+      actor: 'system',
+      resourceType: 'validation',
+      description: 'Zero Trust validation started across all pillars',
+      details: {
+        totalValidations: catalog.validations.length
+      },
+      status: 'success'
+    })
 
     // Pre-collect all security data to avoid redundant API calls
     console.log('📊 Collecting data from all pillars...')
@@ -186,6 +199,25 @@ export class ZeroTrustValidator {
 
     // Cleanup old snapshots (older than 365 days)
     clearOldSnapshots(365)
+
+    // Log audit event - validation completed
+    logAction({
+      action: AUDIT_ACTIONS.VALIDATION_COMPLETED,
+      actor: 'system',
+      resourceType: 'validation',
+      description: 'Zero Trust validation completed successfully',
+      details: {
+        totalValidations: results.totalValidations,
+        passed: results.summary.pass,
+        failed: results.summary.fail,
+        warnings: results.summary.warn,
+        overallScore: results.overallScore,
+        riskScore: riskSummary.overallRiskScore,
+        exceptionCount: complianceWithExceptions.exceptionCount,
+        collectionTime: totalCollectionTime
+      },
+      status: 'success'
+    })
 
     console.log(`✅ Validation complete: ${results.overallScore}% compliance | Exceptions: ${complianceWithExceptions.exceptionCount} active | Risk: ${riskSummary.overallRiskScore}/100`)
     return results

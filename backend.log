@@ -1418,3 +1418,572 @@
 ⚠️ Could not save result for DEV-064: Invalid request
 ⚠️ Could not save result for DEV-065: Invalid request
 ✓ Saved 303 results to SharePoint
+🚀 [approval] Agent executing...
+✅ [approval] Agent completed in 1ms
+   Alerts: 0
+🔗 Starting correlation analysis...
+📊 Analyzing 0 alerts
+ℹ️ Not enough alerts for correlation
+📡 Bearer token detected in request
+📋 Determining role for user: a9430520-42e0-4be6-9e0e-8d711b062ea5
+✓ Bearer token validated for authenticated request
+✓ User is member of 13 groups: 759a2e72-72b8-4416-8833-ff157d53a206, cfd90836-667e-4f80-b325-064439da062f, 36e1ecd7-f54c-4d34-b41f-0991efe0dd40, 6426d00c-62fa-433c-896c-87c94fe1dd94, b8e07f4a-fa8a-4935-b5a2-3a2ba890536a, 091aee9d-21c8-4177-ac5c-7f3b3c88ceac, 444a74d6-5b3c-4684-8f10-ed726e9d557a, 99f66318-45df-4ba3-b1b0-96a1c0614296, 16f9b80f-f6e7-4f66-9ba5-80d121284df0, 74df478e-a359-448a-9340-7d6a2f14ebd8, 65eca76c-bcb4-464b-b408-e7dfa75355d2, 4b87f912-2811-474b-8a01-692036be503b, 4fe74ac1-bf65-4290-9833-8f90fd0c4caf
+✓ User is SUPER ADMIN
+✓ Role determination complete: super
+[Service Health] Fetching messages (skip=0, top=100) from SharePoint list 1cf87003-50ce-4881-8783-21a6572fb117...
+[Service Health] Graph API error (undefined): $skip is not supported on this API. Only URLs returned by the API can be used to page.
+📦 Returning cached Zero Trust results (303 validations)
+🔍 CIS Validator: Starting comprehensive validation...
+Fetching managed devices...
+📡 Fetching Message Center messages from Graph API...
+Fetching users...
+📊 Fetching secure score from Graph API...
+📡 Fetching privileged accounts from Azure AD...
+❌ Failed to get setup config: Requested site could not be found
+⚠️ Security Defaults validation failed: Resource not found for the segment 'identitySecurityDefaultEnforcementPolicy'.
+⚠️ DLP Policies validation failed: Resource not found for the segment 'datalossprevention'.
+⚠️ Exchange Spam Policies validation failed: Resource not found for the segment 'emailThreatSubmissionPolicies'.
+⚠️ Device Enrollment Restrictions validation failed: Resource not found for the segment 'deviceEnrollmentPlatformRestrictionsConfiguration'.
+⚠️ Group Creation Restriction validation failed: Resource not found for the segment 'settings'.
+⚠️ External Sharing validation failed: Resource not found for the segment 'tenant'.
+⚠️ Password Hash Sync validation failed: Resource not found for the segment 'onPremisesSyncContainers'.
+⚠️ Collaboration Invitation Restriction validation failed: Resource not found for the segment 'externalIdentitiesPolicy'.
+📊 Sample SKU structure: {
+  "accountName": "NassTech",
+  "accountId": "b9cc8284-05ed-452f-877a-970779430dcb",
+  "appliesTo": "User",
+  "capabilityStatus": "Suspended",
+  "consumedUnits": 5,
+  "id": "b9cc8284-05ed-452f-877a-970779430dcb_b05e124f-c7cc-45a0-a6aa-8cf78c946968",
+  "skuId": "b05e124f-c7cc-45a0-a6aa-8cf78c946968",
+  "skuPartNumber": "EMSPREMIUM",
+  "subscriptionIds": [
+    "6cef0959-1f32-4fbb-974c-fa93f17e6338"
+  ],
+  "prepaidUnits": {
+    "enabled": 0,
+    "suspended": 25,
+    "warning": 0,
+    "lockedOut": 
+⏭️  Excluding free/trial license: EMSPREMIUM (prepaid: 0, isFree: false)
+⏭️  Excluding free/trial license: FLOW_FREE (prepaid: 10000, isFree: true)
+⏭️  Excluding free/trial license: ENTERPRISEPREMIUM_NOPSTNCONF (prepaid: 0, isFree: false)
+⏭️  Excluding free/trial license: SPE_E3 (prepaid: 0, isFree: false)
+✓ Found 0 PAID license SKUs (excluding free/trial)
+📊 License totals (paid only): 0 total, 0 consumed, 0 available
+⚠️ Allow Limited Access validation failed: Resource not found for the segment 'dataLossPreventionPolicies'.
+⚠️ Device list fetch failed: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: 7596c63f-f7d5-0c77-21c4-bea81f95ed21 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceFE/StatelessDeviceFEService/deviceManagement/managedDevices?api-version=2025-07-09&$top=999\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ External User Expiration validation failed: Caller does not have required permissions for this API
+⚠️ SharePoint Modern Auth validation failed: Caller does not have required permissions for this API
+⚠️ DLP for Collaboration validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ Mail Flow Rules validation failed: Resource not found for the segment 'transportRules'.
+⚠️ Mailbox Audit Retention validation failed: Resource not found for the segment 'audit'.
+⚠️ DLP for Teams validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ Restrict External Sharing validation failed: Resource not found for the segment 'policy'.
+⚠️ Forwarding Rules validation failed: Resource not found for the segment 'forwardingPolicy'.
+⚠️ MFA for PowerShell validation failed: Resource not found for the segment 'authenticationMethods'.
+⚠️ Mailbox Auditing validation failed: Resource not found for the segment 'audit'.
+⚠️ Meeting Organizer Only validation failed: Requested API is not supported in application-only context
+⚠️ E2E Encryption validation failed: Requested API is not supported in application-only context
+⚠️ Emergency Access Accounts validation failed: Invalid filter clause: Syntax error: character '"' is not valid at position 8 in 'mail eq "emergencyaccess*"'.
+⚠️ Prevent Dial-Out validation failed: Requested API is not supported in application-only context
+⚠️ Sensitivity Labels validation failed: Resource not found for the segment 'policy'.
+⚠️ Live Captions validation failed: Requested API is not supported in application-only context
+⚠️ Fabric Service Principal API Access validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Safe Attachments validation failed: {"error":"Resource doesn\u0027t exist for the tenant. ActivityId: 63242788-4ed0-b573-04c3-d0aca2376cf8. Learn more: https://docs.microsoft.com/en-us/graph/api/resources/service-communications-api-overview?view=graph-rest-beta\u0026preserve-view=true."}
+⚠️ Recording Notifications validation failed: Requested API is not supported in application-only context
+⚠️ Defender for Endpoint validation failed: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: 53414855-b2c2-e5e1-8cff-50ec0400bfb3 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceFE/StatelessDeviceFEService/deviceManagement/managedDevices?api-version=2025-07-09&$top=999\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ Safe Links validation failed: {"error":"Resource doesn\u0027t exist for the tenant. ActivityId: 5beb6ed2-0a5e-f604-6611-ce0f0767f5ad. Learn more: https://docs.microsoft.com/en-us/graph/api/resources/service-communications-api-overview?view=graph-rest-beta\u0026preserve-view=true."}
+⚠️ Comprehensive Attachment Filtering validation failed: Resource not found for the segment 'securitySettings'.
+⚠️ Connection Filter Safe List validation failed: Resource not found for the segment 'securitySettings'.
+⚠️ Teams External File Sharing validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Device Compliance validation failed: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: e60db407-35f7-bcf9-b8c4-450cb7571bb7 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceConfiguration_2606/StatelessDeviceConfigurationFEService/deviceManagement/deviceCompliancePolicies?api-version=2022-06-13\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ Privileged Role Assignment JIT validation failed: {"ErrorCode":"CultureNotFoundException","Message":"Culture is not supported.\r\nParameter name: name\r\n* is an invalid culture identifier.","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[],"TypeAnnotation":null}
+⚠️ Priority Accounts Strict Protection validation failed: Resource not found for the segment 'priorityAccounts'.
+⚠️ Meeting Transcripts validation failed: Requested API is not supported in application-only context
+⚠️ Teams External Domain Restriction validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Privileged Role Admin Approval validation failed: {"ErrorCode":"CultureNotFoundException","Message":"Culture is not supported.\r\nParameter name: name\r\n* is an invalid culture identifier.","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[],"TypeAnnotation":null}
+⚠️ Teams External Initiate Conversations validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Teams Trial Tenants validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Defender for Cloud Apps validation failed: Resource not found for the segment 'cloudAppSecurityPolicies'.
+⚠️ Zero-Hour Auto Purge validation failed: Requested API is not supported in application-only context
+⚠️ Teams Unmanaged Users Communication validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Global Admin Approval validation failed: {"ErrorCode":"CultureNotFoundException","Message":"Culture is not supported.\r\nParameter name: name\r\n* is an invalid culture identifier.","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[],"TypeAnnotation":null}
+⚠️ Group Creation validation failed: Resource not found for the segment 'directorySettingTemplates'.
+⚠️ Teams Report Security Concerns validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ DLP Policies Enabled validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ Teams App Permission Policies validation failed: Resource not found for the segment 'appCatalog'.
+⚠️ Audit Log Search validation failed: Resource not found for the segment 'audit'.
+⚠️ Client Access validation failed: Resource not found for the segment 'clientAccessPolicy'.
+⚠️ Mailbox Delegation Auditing validation failed: Resource not found for the segment 'audit'.
+⚠️ Fabric Service Principal Provisioning validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric External Data Sharing validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Restrict Unmanaged Devices validation failed: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: c8958d61-bdb4-70aa-194d-06e9f30001b0 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceConfiguration_2606/StatelessDeviceConfigurationFEService/deviceManagement/deviceCompliancePolicies?api-version=2022-06-13\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ Fabric Python/R Sharing validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Sensitivity Labels validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Publish to Web validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Guest Access validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric External Invitations validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Service Principal Workspace Creation validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Shared Bookings Pages validation failed: Resource not found for the segment 'appsManagement'.
+⚠️ Fabric ResourceKey Authentication validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Shareable Links validation failed: Resource not found for the segment 'powerBi'.
+✓ Found 15 users
+⚠️ Fabric Guest Content Access validation failed: Resource not found for the segment 'powerBi'.
+⚠️ SharePoint Terms Acceptance validation failed: Caller does not have required permissions for this API
+⚠️ External Calendar Sharing validation failed: Caller does not have required permissions for this API
+⚠️ Prevent Anonymous Users validation failed: Requested API is not supported in application-only context
+⚠️ Legacy Authentication validation failed: Resource not found for the segment 'authenticationMethods'.
+⚠️ Third-Party Storage Services validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ Teams Live Events Restricted validation failed: Requested API is not supported in application-only context
+⚠️ Q&A Not Available validation failed: Requested API is not supported in application-only context
+⚠️ AIR Remediation validation failed: Resource not found for the segment 'automationRules'.
+⚠️ SharePoint Infected Files validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ Teams Email Channel Address validation failed: Resource not found for the segment 'teamsSettings'.
+✗ Devices API error: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: 184e08b0-0074-5600-5183-dae59086cf58 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceFE/StatelessDeviceFEService/deviceManagement/managedDevices?api-version=2025-07-09\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ SSPR Enabled validation failed: Resource not found for segment 'authenticationMethodsPolicy/authenticationMethodConfigurations'.
+⚠️ Per-User MFA Disabled validation failed: Resource not found for segment 'authenticationMethodsPolicy/authenticationMethodConfigurations'.
+⚠️ Risk data not available: Parsing OData Select and Expand failed: Could not find a property named 'userRiskLevel' on type 'microsoft.graph.riskyUser'.
+✅ Privileged accounts: 7 accounts, 0 at risk
+⚠️ Guest Access Reviews validation failed: Attempted to perform an unauthorized operation.
+⚠️ Safe Attachments for SPO/Teams validation failed: {"error":"Resource doesn\u0027t exist for the tenant. ActivityId: cc62a2ec-c8e8-ddb7-4402-abfbbf6f434f. Learn more: https://docs.microsoft.com/en-us/graph/api/resources/service-communications-api-overview?view=graph-rest-beta\u0026preserve-view=true."}
+✓ Message Center: 100 messages found
+📡 Fetching Service Health from Graph API...
+⚠️ Privileged Role Access Reviews validation failed: Attempted to perform an unauthorized operation.
+✓ Service Health: 100 issues found
+📦 Returning cached Zero Trust results (303 validations)
+📈 Fetching Zero Trust trends...
+✓ Secure score: 101.71/273
+🔧 Executing PowerShell for control 1.1.1 (7 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.1.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.1.1
+🔧 Executing PowerShell for control 1.1.3 (12 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.1.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.1.3
+🔧 Executing PowerShell for control 1.1.4 (11 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.1.4: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.1.4
+🔧 Executing PowerShell for control 1.2.1 (9 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.2.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.2.1
+🔧 Executing PowerShell for control 1.2.2 (12 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.2.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.2.2
+🔧 Executing PowerShell for control 1.3.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.3.1
+🔧 Executing PowerShell for control 1.3.2 (9 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.3.2
+🔧 Executing PowerShell for control 1.3.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.3.3
+🔧 Executing PowerShell for control 1.3.4 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.4: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.3.4
+🔧 Executing PowerShell for control 1.3.5 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.5: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.3.5
+🔧 Executing PowerShell for control 1.3.6 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.6: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.3.6
+🔧 Executing PowerShell for control 1.3.7 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.7: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.3.7
+🔧 Executing PowerShell for control 1.3.9 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.9: failed
+⚠️ PowerShell system configuration issue - using Graph API for 1.3.9
+🔧 Executing PowerShell for control 2.1.1 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.1
+🔧 Executing PowerShell for control 2.1.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.2
+🔧 Executing PowerShell for control 2.1.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.3
+🔧 Executing PowerShell for control 2.1.4 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.4: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.4
+🔧 Executing PowerShell for control 2.1.5 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.5: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.5
+🔧 Executing PowerShell for control 2.1.6 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.6: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.6
+🔧 Executing PowerShell for control 2.1.7 (3 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.7: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.7
+🔧 Executing PowerShell for control 2.1.8 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.8: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.8
+🔧 Executing PowerShell for control 2.1.9 (7 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.9: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.9
+🔧 Executing PowerShell for control 2.1.10 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.10: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.10
+🔧 Executing PowerShell for control 2.1.11 (11 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.11: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.11
+🔧 Executing PowerShell for control 2.1.12 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.12: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.12
+🔧 Executing PowerShell for control 2.1.13 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.13: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.13
+🔧 Executing PowerShell for control 2.1.14 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.14: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.14
+🔧 Executing PowerShell for control 2.1.15 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.15: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.1.15
+🔧 Executing PowerShell for control 2.4.1 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.4.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.4.1
+🔧 Executing PowerShell for control 2.4.2 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.4.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.4.2
+🔧 Executing PowerShell for control 2.4.4 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.4.4: failed
+⚠️ PowerShell system configuration issue - using Graph API for 2.4.4
+🔧 Executing PowerShell for control 3.1.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 3.1.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 3.1.1
+🔧 Executing PowerShell for control 3.2.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 3.2.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 3.2.1
+🔧 Executing PowerShell for control 3.2.2 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 3.2.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 3.2.2
+🔧 Executing PowerShell for control 3.2.3 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 3.2.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 3.2.3
+🔧 Executing PowerShell for control 3.3.1 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 3.3.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 3.3.1
+🔧 Executing PowerShell for control 4.1 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 4.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 4.1
+🔧 Executing PowerShell for control 4.2 (10 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 4.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 4.2
+🔧 Executing PowerShell for control 5.1.2.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.2.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.2.1
+🔧 Executing PowerShell for control 5.1.2.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.2.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.2.2
+🔧 Executing PowerShell for control 5.1.2.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.2.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.2.3
+🔧 Executing PowerShell for control 5.1.3.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.3.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.3.1
+🔧 Executing PowerShell for control 5.1.3.4 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.3.4: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.3.4
+🔧 Executing PowerShell for control 5.1.4.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.4.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.4.1
+🔧 Executing PowerShell for control 5.1.4.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.4.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.4.2
+🔧 Executing PowerShell for control 5.1.4.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.4.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.4.3
+🔧 Executing PowerShell for control 5.1.4.4 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.4.4: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.4.4
+🔧 Executing PowerShell for control 5.1.4.5 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.4.5: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.4.5
+🔧 Executing PowerShell for control 5.1.4.6 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.4.6: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.4.6
+🔧 Executing PowerShell for control 5.1.5.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.5.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.5.1
+🔧 Executing PowerShell for control 5.1.5.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.5.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.5.2
+🔧 Executing PowerShell for control 5.1.5.3 (4 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.5.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.5.3
+🔧 Executing PowerShell for control 5.1.6.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.6.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.6.2
+🔧 Executing PowerShell for control 5.1.6.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.6.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.6.3
+🔧 Executing PowerShell for control 5.1.8.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.8.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.1.8.1
+🔧 Executing PowerShell for control 5.2.2.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.2.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.2.2.1
+🔧 Executing PowerShell for control 5.2.3.2 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.2.3.2
+🔧 Executing PowerShell for control 5.2.3.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.2.3.3
+🔧 Executing PowerShell for control 5.2.3.4 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.4: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.2.3.4
+🔧 Executing PowerShell for control 5.2.3.5 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.5: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.2.3.5
+🔧 Executing PowerShell for control 5.2.3.6 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.6: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.2.3.6
+🔧 Executing PowerShell for control 5.2.3.7 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.7: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.2.3.7
+🔧 Executing PowerShell for control 5.2.3.8 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.8: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.2.3.8
+🔧 Executing PowerShell for control 5.2.3.9 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.9: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.2.3.9
+🔧 Executing PowerShell for control 5.2.3.10 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.10: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.2.3.10
+🔧 Executing PowerShell for control 5.2.4 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.4: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.2.4
+🔧 Executing PowerShell for control 5.3.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.3.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 5.3.1
+🔧 Executing PowerShell for control 6.1.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.1.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.1.1
+🔧 Executing PowerShell for control 6.1.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.1.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.1.2
+🔧 Executing PowerShell for control 6.1.3 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.1.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.1.3
+🔧 Executing PowerShell for control 6.2.1 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.2.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.2.1
+🔧 Executing PowerShell for control 6.2.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.2.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.2.2
+🔧 Executing PowerShell for control 6.2.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.2.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.2.3
+🔧 Executing PowerShell for control 6.3.1 (3 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.3.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.3.1
+🔧 Executing PowerShell for control 6.3.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.3.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.3.2
+🔧 Executing PowerShell for control 6.5.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.5.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.5.1
+🔧 Executing PowerShell for control 6.5.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.5.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.5.2
+🔧 Executing PowerShell for control 6.5.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.5.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.5.3
+🔧 Executing PowerShell for control 6.5.4 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.5.4: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.5.4
+🔧 Executing PowerShell for control 6.5.5 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.5.5: failed
+⚠️ PowerShell system configuration issue - using Graph API for 6.5.5
+🔧 Executing PowerShell for control 7.2.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 7.2.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 7.2.1
+🔧 Executing PowerShell for control 7.2.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 7.2.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 7.2.2
+🔧 Executing PowerShell for control 7.2.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 7.2.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 7.2.3
+🔧 Executing PowerShell for control 7.2.4 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 7.2.4: failed
+⚠️ PowerShell system configuration issue - using Graph API for 7.2.4
+🔧 Executing PowerShell for control 7.2.5 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 7.2.5: failed
+⚠️ PowerShell system configuration issue - using Graph API for 7.2.5
+🔧 Executing PowerShell for control 7.2.6 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 7.2.6: failed
+⚠️ PowerShell system configuration issue - using Graph API for 7.2.6
+🔧 Executing PowerShell for control 7.2.7 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 7.2.7: failed
+⚠️ PowerShell system configuration issue - using Graph API for 7.2.7
+🔧 Executing PowerShell for control 7.2.8 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 7.2.8: failed
+⚠️ PowerShell system configuration issue - using Graph API for 7.2.8
+🔧 Executing PowerShell for control 7.2.9 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 7.2.9: failed
+⚠️ PowerShell system configuration issue - using Graph API for 7.2.9
+🔧 Executing PowerShell for control 7.2.10 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 7.2.10: failed
+⚠️ PowerShell system configuration issue - using Graph API for 7.2.10
+🔧 Executing PowerShell for control 7.2.11 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 7.2.11: failed
+⚠️ PowerShell system configuration issue - using Graph API for 7.2.11
+🔧 Executing PowerShell for control 7.3.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 7.3.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 7.3.1
+🔧 Executing PowerShell for control 8.1.1 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.1.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.1.1
+🔧 Executing PowerShell for control 8.1.2 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.1.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.1.2
+🔧 Executing PowerShell for control 8.2.1 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.2.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.2.1
+🔧 Executing PowerShell for control 8.2.2 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.2.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.2.2
+🔧 Executing PowerShell for control 8.2.3 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.2.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.2.3
+🔧 Executing PowerShell for control 8.2.4 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.2.4: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.2.4
+🔧 Executing PowerShell for control 8.5.1 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.5.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.5.1
+🔧 Executing PowerShell for control 8.5.2 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.5.2: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.5.2
+🔧 Executing PowerShell for control 8.5.3 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.5.3: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.5.3
+🔧 Executing PowerShell for control 8.5.4 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.5.4: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.5.4
+🔧 Executing PowerShell for control 8.5.5 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.5.5: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.5.5
+🔧 Executing PowerShell for control 8.5.6 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.5.6: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.5.6
+🔧 Executing PowerShell for control 8.5.7 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.5.7: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.5.7
+🔧 Executing PowerShell for control 8.5.8 (8 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.5.8: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.5.8
+🔧 Executing PowerShell for control 8.5.9 (10 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.5.9: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.5.9
+🔧 Executing PowerShell for control 8.6.1 (11 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 8.6.1: failed
+⚠️ PowerShell system configuration issue - using Graph API for 8.6.1
+✓ CIS Validator: Validation complete (131 controls, 2% pass rate, 0 fallbacks)

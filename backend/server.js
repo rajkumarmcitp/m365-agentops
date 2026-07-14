@@ -19166,6 +19166,19 @@ import {
   calculateComplianceWithExceptions
 } from './lib/exception-manager.js'
 
+import {
+  logAction,
+  getAuditLogs,
+  getAuditLogsByDateRange,
+  getAuditLogsByUser,
+  getAuditLogById,
+  getAuditStats,
+  searchAuditLogs,
+  exportAuditLogs,
+  generateComplianceReport,
+  AUDIT_ACTIONS
+} from './lib/audit-logger.js'
+
 /**
  * POST /api/exceptions/request
  * Request a new compliance exception
@@ -19288,6 +19301,157 @@ app.get('/api/exceptions/stats', (req, res) => {
     res.json({ success: true, stats })
   } catch (error) {
     console.error('Error fetching exception stats:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// ============================================================
+// Audit Logs Routes
+// ============================================================
+
+/**
+ * GET /api/audit-logs
+ * Get audit logs with optional filters
+ */
+app.get('/api/audit-logs', (req, res) => {
+  try {
+    const { action, actor, resourceId, resourceType, status, severity, limit = 100 } = req.query
+    const filters = {
+      action,
+      actor,
+      resourceId,
+      resourceType,
+      status,
+      severity,
+      limit: Math.min(parseInt(limit) || 100, 1000)
+    }
+
+    // Remove undefined filters
+    Object.keys(filters).forEach(key => filters[key] === undefined && delete filters[key])
+
+    const logs = getAuditLogs(filters)
+    res.json({ success: true, logs, count: logs.length })
+  } catch (error) {
+    console.error('Error fetching audit logs:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/audit-logs/:id
+ * Get audit log by ID
+ */
+app.get('/api/audit-logs/:id', (req, res) => {
+  try {
+    const log = getAuditLogById(req.params.id)
+    if (!log) {
+      return res.status(404).json({ success: false, error: 'Audit log not found' })
+    }
+    res.json({ success: true, log })
+  } catch (error) {
+    console.error('Error fetching audit log:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/audit-logs/user/:actor
+ * Get audit logs by actor/user
+ */
+app.get('/api/audit-logs/user/:actor', (req, res) => {
+  try {
+    const { limit = 100 } = req.query
+    const logs = getAuditLogsByUser(req.params.actor, Math.min(parseInt(limit) || 100, 1000))
+    res.json({ success: true, logs, count: logs.length })
+  } catch (error) {
+    console.error('Error fetching user audit logs:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/audit-logs/search
+ * Search audit logs by query
+ */
+app.post('/api/audit-logs/search', (req, res) => {
+  try {
+    const { query, limit = 50 } = req.body
+    if (!query) {
+      return res.status(400).json({ success: false, error: 'Search query is required' })
+    }
+    const logs = searchAuditLogs(query, Math.min(parseInt(limit) || 50, 1000))
+    res.json({ success: true, logs, count: logs.length })
+  } catch (error) {
+    console.error('Error searching audit logs:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/audit-logs/date-range
+ * Get audit logs by date range
+ */
+app.post('/api/audit-logs/date-range', (req, res) => {
+  try {
+    const { startDate, endDate, limit = 100 } = req.body
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, error: 'startDate and endDate are required' })
+    }
+    const logs = getAuditLogsByDateRange(startDate, endDate, Math.min(parseInt(limit) || 100, 1000))
+    res.json({ success: true, logs, count: logs.length })
+  } catch (error) {
+    console.error('Error fetching audit logs by date range:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/audit-logs/stats/summary
+ * Get audit statistics
+ */
+app.get('/api/audit-logs/stats/summary', (req, res) => {
+  try {
+    const stats = getAuditStats()
+    res.json({ success: true, stats })
+  } catch (error) {
+    console.error('Error fetching audit stats:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/audit-logs/export
+ * Export audit logs
+ */
+app.post('/api/audit-logs/export', (req, res) => {
+  try {
+    const { format = 'json', filters = {} } = req.body
+    const exported = exportAuditLogs(format, filters)
+
+    if (format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv')
+      res.setHeader('Content-Disposition', 'attachment; filename="audit-logs.csv"')
+      res.send(exported)
+    } else {
+      res.json({ success: true, data: exported })
+    }
+  } catch (error) {
+    console.error('Error exporting audit logs:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/audit-logs/report/compliance
+ * Generate compliance report from audit logs
+ */
+app.get('/api/audit-logs/report/compliance', (req, res) => {
+  try {
+    const { days = 30 } = req.query
+    const report = generateComplianceReport({ days: parseInt(days) || 30 })
+    res.json({ success: true, report })
+  } catch (error) {
+    console.error('Error generating compliance report:', error.message)
     res.status(500).json({ success: false, error: error.message })
   }
 })
