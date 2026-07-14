@@ -73,6 +73,7 @@ import { ComplianceCollector } from './collectors/compliance-collector.js'
 import { OneDriveCollector } from './collectors/onedrive-collector.js'
 import { GroupsCollector } from './collectors/groups-collector.js'
 import { IntuneCollector } from './collectors/intune-collector.js'
+import { SecurityCollector } from './collectors/security-collector.js'
 import {
   setExecutorGraphClient,
   validateCreateDG, executeCreateDG,
@@ -17322,6 +17323,14 @@ async function initializeBackupSystem() {
     backupAgent.registerCollector('Intune', intuneCollector)
     console.log('  ✅ Intune Collector registered')
 
+    // Security Collector
+    const securityCollector = new SecurityCollector(graphClient, {
+      timeout: 30000,
+      maxRetries: 3
+    })
+    backupAgent.registerCollector('Security', securityCollector)
+    console.log('  ✅ Security Collector registered')
+
     // Setup backup routes
     console.log('📦 Setting up backup routes...')
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
@@ -19999,6 +20008,9 @@ function ensureBackupRoutesRegistered() {
 
     const intuneCollector = new IntuneCollector(graphClient)
     backupAgent.registerCollector('Intune', intuneCollector)
+
+    const securityCollector = new SecurityCollector(graphClient)
+    backupAgent.registerCollector('Security', securityCollector)
 
     // Setup routes
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
