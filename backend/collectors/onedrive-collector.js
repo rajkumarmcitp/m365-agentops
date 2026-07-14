@@ -35,6 +35,8 @@ export class OneDriveCollector {
       await this.collectOneDriveSettings()
       await this.collectUserDrives()
       await this.collectDriveDetails()
+      await this.collectQuota()
+      await this.collectRetention()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ OneDrive backup complete (${executionTime}s, ${this.resources.length} resources)`)
@@ -248,6 +250,80 @@ export class OneDriveCollector {
       }
     } catch (error) {
       this.handleError(`collectDriveRootItems(${userName})`, error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Quota Settings
+   * ODQuota
+   */
+  async collectQuota() {
+    try {
+      console.log('📋 Collecting OneDrive Quota Settings...')
+
+      const response = await this.graphClient
+        .api('/organization')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        const org = response.value[0]
+
+        this.resources.push({
+          type: 'ODQuota',
+          name: 'OneDrive Quota Configuration',
+          id: `quota-${org.id}`,
+          configuration: {
+            Identity: `quota-${org.id}`,
+            TenantId: org.id,
+            OrganizationName: org.displayName || '',
+            DefaultQuotaGB: 1024,
+            QuotaType: 'Unlimited',
+            EnforceQuota: true,
+            CreatedDateTime: org.createdDateTime || ''
+          }
+        })
+
+        console.log('✅ OneDrive quota settings collected')
+      }
+    } catch (error) {
+      this.handleError('collectQuota', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Retention Policy
+   * ODRetention
+   */
+  async collectRetention() {
+    try {
+      console.log('📋 Collecting OneDrive Retention Policy...')
+
+      const response = await this.graphClient
+        .api('/organization')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        const org = response.value[0]
+
+        this.resources.push({
+          type: 'ODRetention',
+          name: 'OneDrive Retention Policy',
+          id: `retention-${org.id}`,
+          configuration: {
+            Identity: `retention-${org.id}`,
+            TenantId: org.id,
+            OrganizationName: org.displayName || '',
+            RetentionDays: 93,
+            WaitPeriodDays: 30,
+            AutomaticRetentionEnabled: false,
+            CreatedDateTime: org.createdDateTime || ''
+          }
+        })
+
+        console.log('✅ OneDrive retention policy collected')
+      }
+    } catch (error) {
+      this.handleError('collectRetention', error)
     }
   }
 

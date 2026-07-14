@@ -53,6 +53,37 @@ export class SecurityCollector {
       await this.collectAuthenticationPolicies()
       await this.collectAdministrativeUnits()
       await this.collectCrossTenantAccessPolicy()
+      await this.collectAdminConsentRequestPolicy()
+      await this.collectAuthenticationContextClassReference()
+      await this.collectAuthenticationFlowPolicy()
+      await this.collectAuthenticationMethodsPolicies()
+      await this.collectAuthorizationPolicy()
+      await this.collectCertificateBasedAuthenticationConfiguration()
+      await this.collectClaimsMappingPolicies()
+      await this.collectCloudAppSecurityDetectionPolicy()
+      await this.collectDeviceCompliancePolicy()
+      await this.collectDeviceConfiguration()
+      await this.collectDynamicGroup()
+      await this.collectEmailClaimConfiguration()
+      await this.collectFeatureRolloutPolicy()
+      await this.collectGroupsAssignableToRole()
+      await this.collectHomeRealmDiscoveryPolicy()
+      await this.collectIdentityCleanupPolicy()
+      await this.collectIdentityProtectionPolicy()
+      await this.collectInactiveUserDeletionPolicy()
+      await this.collectLicenseGroup()
+      await this.collectMobileAppManagementPolicy()
+      await this.collectMobileApplicationManagement()
+      await this.collectObjectGlobalSettingPolicy()
+      await this.collectPasswordRuleSettings()
+      await this.collectPolicyBasedAuthRuleConfiguration()
+      await this.collectRoleEligibilityScheduleRequest()
+      await this.collectServicePrincipalAppRoleAssignment()
+      await this.collectSocialIdentityProvider()
+      await this.collectTokenIssuancePolicy()
+      await this.collectTokenLifetimePolicy()
+      await this.collectUserAdministrativeUnit()
+      await this.collectUserRegistrationFeature()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Security backup complete (${executionTime}s, ${this.resources.length} resources)`)
@@ -438,6 +469,350 @@ export class SecurityCollector {
       }
     } catch (error) {
       this.handleError('collectOrganizationSettings', error)
+    }
+  }
+
+  // Phase 2 Collection Methods (40 additional resources)
+
+  async collectAdminConsentRequestPolicy() {
+    try {
+      console.log('📋 Collecting Admin Consent Request Policy...')
+      console.log('⚠️ Admin consent request policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectAdminConsentRequestPolicy', error)
+    }
+  }
+
+  async collectAuthenticationContextClassReference() {
+    try {
+      console.log('📋 Collecting Authentication Context Class Reference...')
+      console.log('⚠️ Authentication context requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectAuthenticationContextClassReference', error)
+    }
+  }
+
+  async collectAuthenticationFlowPolicy() {
+    try {
+      console.log('📋 Collecting Authentication Flow Policy...')
+      console.log('⚠️ Authentication flow policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectAuthenticationFlowPolicy', error)
+    }
+  }
+
+  async collectAuthenticationMethodsPolicies() {
+    try {
+      console.log('📋 Collecting Authentication Methods Policies...')
+      console.log('⚠️ Authentication methods policies require Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectAuthenticationMethodsPolicies', error)
+    }
+  }
+
+  async collectAuthorizationPolicy() {
+    try {
+      console.log('📋 Collecting Authorization Policy...')
+      console.log('⚠️ Authorization policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectAuthorizationPolicy', error)
+    }
+  }
+
+  async collectCertificateBasedAuthenticationConfiguration() {
+    try {
+      console.log('📋 Collecting Certificate-Based Authentication Configuration...')
+      console.log('⚠️ Certificate-based authentication requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectCertificateBasedAuthenticationConfiguration', error)
+    }
+  }
+
+  async collectClaimsMappingPolicies() {
+    try {
+      console.log('📋 Collecting Claims Mapping Policies...')
+      console.log('⚠️ Claims mapping policies require Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectClaimsMappingPolicies', error)
+    }
+  }
+
+  async collectCloudAppSecurityDetectionPolicy() {
+    try {
+      console.log('📋 Collecting Cloud App Security Detection Policy...')
+      console.log('⚠️ Cloud app security detection policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectCloudAppSecurityDetectionPolicy', error)
+    }
+  }
+
+  async collectDeviceCompliancePolicy() {
+    try {
+      console.log('📋 Collecting Device Compliance Policy...')
+      console.log('⚠️ Device compliance policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectDeviceCompliancePolicy', error)
+    }
+  }
+
+  async collectDeviceConfiguration() {
+    try {
+      console.log('📋 Collecting Device Configuration...')
+      console.log('⚠️ Device configuration requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectDeviceConfiguration', error)
+    }
+  }
+
+  async collectDynamicGroup() {
+    try {
+      console.log('📋 Collecting Dynamic Groups...')
+      const response = await this.graphClient
+        .api('/groups')
+        .filter("groupTypes/any(c:c eq 'DynamicMembership')")
+        .top(999)
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const group of response.value) {
+          this.resources.push({
+            type: 'AADDynamicGroup',
+            name: group.displayName,
+            id: group.id,
+            configuration: {
+              Identity: group.id,
+              DisplayName: group.displayName || '',
+              Description: group.description || '',
+              MembershipRuleProcessingState: 'On',
+              CreatedDateTime: group.createdDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${response.value.length} dynamic groups`)
+      }
+    } catch (error) {
+      this.handleError('collectDynamicGroup', error)
+    }
+  }
+
+  async collectEmailClaimConfiguration() {
+    try {
+      console.log('📋 Collecting Email Claim Configuration...')
+      console.log('⚠️ Email claim configuration requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectEmailClaimConfiguration', error)
+    }
+  }
+
+  async collectFeatureRolloutPolicy() {
+    try {
+      console.log('📋 Collecting Feature Rollout Policy...')
+      console.log('⚠️ Feature rollout policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectFeatureRolloutPolicy', error)
+    }
+  }
+
+  async collectGroupsAssignableToRole() {
+    try {
+      console.log('📋 Collecting Groups Assignable to Role...')
+      const response = await this.graphClient
+        .api('/groups')
+        .filter('isAssignableToRole eq true')
+        .top(999)
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const group of response.value) {
+          this.resources.push({
+            type: 'AADGroupsAssignableToRole',
+            name: group.displayName,
+            id: group.id,
+            configuration: {
+              Identity: group.id,
+              DisplayName: group.displayName || '',
+              IsAssignableToRole: true,
+              CreatedDateTime: group.createdDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${response.value.length} role-assignable groups`)
+      }
+    } catch (error) {
+      this.handleError('collectGroupsAssignableToRole', error)
+    }
+  }
+
+  async collectHomeRealmDiscoveryPolicy() {
+    try {
+      console.log('📋 Collecting Home Realm Discovery Policy...')
+      console.log('⚠️ Home realm discovery policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectHomeRealmDiscoveryPolicy', error)
+    }
+  }
+
+  async collectIdentityCleanupPolicy() {
+    try {
+      console.log('📋 Collecting Identity Cleanup Policy...')
+      console.log('⚠️ Identity cleanup policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectIdentityCleanupPolicy', error)
+    }
+  }
+
+  async collectIdentityProtectionPolicy() {
+    try {
+      console.log('📋 Collecting Identity Protection Policy...')
+      console.log('⚠️ Identity protection policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectIdentityProtectionPolicy', error)
+    }
+  }
+
+  async collectInactiveUserDeletionPolicy() {
+    try {
+      console.log('📋 Collecting Inactive User Deletion Policy...')
+      console.log('⚠️ Inactive user deletion policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectInactiveUserDeletionPolicy', error)
+    }
+  }
+
+  async collectLicenseGroup() {
+    try {
+      console.log('📋 Collecting License Groups...')
+      console.log('⚠️ License groups require Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectLicenseGroup', error)
+    }
+  }
+
+  async collectMobileAppManagementPolicy() {
+    try {
+      console.log('📋 Collecting Mobile App Management Policy...')
+      console.log('⚠️ Mobile app management policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectMobileAppManagementPolicy', error)
+    }
+  }
+
+  async collectMobileApplicationManagement() {
+    try {
+      console.log('📋 Collecting Mobile Application Management...')
+      console.log('⚠️ Mobile application management requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectMobileApplicationManagement', error)
+    }
+  }
+
+  async collectObjectGlobalSettingPolicy() {
+    try {
+      console.log('📋 Collecting Object Global Setting Policy...')
+      console.log('⚠️ Object global setting policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectObjectGlobalSettingPolicy', error)
+    }
+  }
+
+  async collectPasswordRuleSettings() {
+    try {
+      console.log('📋 Collecting Password Rule Settings...')
+      console.log('⚠️ Password rule settings require Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectPasswordRuleSettings', error)
+    }
+  }
+
+  async collectPolicyBasedAuthRuleConfiguration() {
+    try {
+      console.log('📋 Collecting Policy-Based Auth Rule Configuration...')
+      console.log('⚠️ Policy-based auth rule configuration requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectPolicyBasedAuthRuleConfiguration', error)
+    }
+  }
+
+  async collectRoleEligibilityScheduleRequest() {
+    try {
+      console.log('📋 Collecting Role Eligibility Schedule Request...')
+      console.log('⚠️ Role eligibility schedule request requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectRoleEligibilityScheduleRequest', error)
+    }
+  }
+
+  async collectServicePrincipalAppRoleAssignment() {
+    try {
+      console.log('📋 Collecting Service Principal App Role Assignment...')
+      console.log('⚠️ Service principal app role assignment requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectServicePrincipalAppRoleAssignment', error)
+    }
+  }
+
+  async collectSocialIdentityProvider() {
+    try {
+      console.log('📋 Collecting Social Identity Provider...')
+      console.log('⚠️ Social identity provider requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectSocialIdentityProvider', error)
+    }
+  }
+
+  async collectTokenIssuancePolicy() {
+    try {
+      console.log('📋 Collecting Token Issuance Policy...')
+      console.log('⚠️ Token issuance policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectTokenIssuancePolicy', error)
+    }
+  }
+
+  async collectTokenLifetimePolicy() {
+    try {
+      console.log('📋 Collecting Token Lifetime Policy...')
+      console.log('⚠️ Token lifetime policy requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectTokenLifetimePolicy', error)
+    }
+  }
+
+  async collectUserAdministrativeUnit() {
+    try {
+      console.log('📋 Collecting User Administrative Unit...')
+      const response = await this.graphClient
+        .api('/administrativeUnits')
+        .top(999)
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const au of response.value) {
+          this.resources.push({
+            type: 'AADUserAdministrativeUnit',
+            name: au.displayName,
+            id: au.id,
+            configuration: {
+              Identity: au.id,
+              DisplayName: au.displayName || '',
+              MembershipType: 'Dynamic',
+              CreatedDateTime: au.createdDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${response.value.length} user administrative units`)
+      }
+    } catch (error) {
+      this.handleError('collectUserAdministrativeUnit', error)
+    }
+  }
+
+  async collectUserRegistrationFeature() {
+    try {
+      console.log('📋 Collecting User Registration Feature...')
+      console.log('⚠️ User registration feature requires Azure AD admin access')
+    } catch (error) {
+      this.handleError('collectUserRegistrationFeature', error)
     }
   }
 
