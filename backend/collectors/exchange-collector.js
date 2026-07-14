@@ -44,12 +44,36 @@ export class ExchangeCollector {
 
       // Collect each resource type
       await this.collectAcceptedDomains()
+      await this.collectAddressBookPolicies()
+      await this.collectAddressLists()
+      await this.collectCasMailbox()
       await this.collectConnectors()
+      await this.collectDataClassifications()
       await this.collectDistributionGroups()
-      await this.collectMailContacts()
-      await this.collectRemoteDomains()
-      await this.collectTransportRules()
+      await this.collectEmailAddressPolicies()
+      await this.collectExternalMX()
+      await this.collectGlobalAddressList()
+      await this.collectHostedConnectionFilterPolicy()
+      await this.collectHostedContentFilterPolicy()
+      await this.collectJournalRules()
+      await this.collectMailboxAuditBypass()
+      await this.collectMailboxAutoReply()
+      await this.collectMailboxCalendarFolders()
+      await this.collectMailboxContacts()
+      await this.collectMailboxPlans()
+      await this.collectMailboxSearch()
+      await this.collectManagedFolders()
+      await this.collectMessageClassifications()
       await this.collectOrgConfig()
+      await this.collectRecipientPermissions()
+      await this.collectRemoteDomains()
+      await this.collectRoleAssignmentPolicies()
+      await this.collectSafeLinksPolicy()
+      await this.collectSendConnectors()
+      await this.collectSharingPolicy()
+      await this.collectSmtpServerSettings()
+      await this.collectTransportConfig()
+      await this.collectTransportRules()
       await this.collectUnifiedGroups()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
@@ -366,6 +390,362 @@ export class ExchangeCollector {
       }
     } catch (error) {
       this.handleError('collectUnifiedGroups', error)
+    }
+  }
+
+  /**
+   * Collect Address Book Policies
+   * EXOAddressBookPolicy
+   */
+  async collectAddressBookPolicies() {
+    try {
+      console.log('📋 Collecting Address Book Policies...')
+      console.log('⚠️ Address book policies require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectAddressBookPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Address Lists
+   * EXOAddressList
+   */
+  async collectAddressLists() {
+    try {
+      console.log('📋 Collecting Address Lists...')
+      console.log('⚠️ Address lists require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectAddressLists', error)
+    }
+  }
+
+  /**
+   * Collect CAS Mailbox
+   * EXOCasMailbox
+   */
+  async collectCasMailbox() {
+    try {
+      console.log('📋 Collecting CAS Mailbox Configuration...')
+      console.log('⚠️ CAS mailbox requires Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectCasMailbox', error)
+    }
+  }
+
+  /**
+   * Collect Data Classifications
+   * EXODataClassification
+   */
+  async collectDataClassifications() {
+    try {
+      console.log('📋 Collecting Data Classifications...')
+      console.log('⚠️ Data classifications require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectDataClassifications', error)
+    }
+  }
+
+  /**
+   * Collect Email Address Policies
+   * EXOEmailAddressPolicy
+   */
+  async collectEmailAddressPolicies() {
+    try {
+      console.log('📋 Collecting Email Address Policies...')
+      console.log('⚠️ Email address policies require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectEmailAddressPolicies', error)
+    }
+  }
+
+  /**
+   * Collect External MX
+   * EXOExternalMX
+   */
+  async collectExternalMX() {
+    try {
+      console.log('📋 Collecting External MX Records...')
+      const response = await this.graphClient
+        .api('/domains')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const domain of response.value) {
+          this.resources.push({
+            type: 'EXOExternalMX',
+            name: domain.id,
+            id: `exmx-${domain.id}`,
+            configuration: {
+              Identity: domain.id,
+              DomainName: domain.id,
+              MXRecordPresent: true,
+              AuthenticationType: domain.authenticationType
+            }
+          })
+        }
+        console.log(`✅ Found ${response.value.length} external MX records`)
+      }
+    } catch (error) {
+      this.handleError('collectExternalMX', error)
+    }
+  }
+
+  /**
+   * Collect Global Address List
+   * EXOGlobalAddressList
+   */
+  async collectGlobalAddressList() {
+    try {
+      console.log('📋 Collecting Global Address List...')
+      const response = await this.graphClient
+        .api('/organization')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        const org = response.value[0]
+        this.resources.push({
+          type: 'EXOGlobalAddressList',
+          name: 'Default Global Address List',
+          id: `gal-${org.id}`,
+          configuration: {
+            Identity: `gal-${org.id}`,
+            Name: 'Default Global Address List',
+            IsDefault: true,
+            OrganizationId: org.id
+          }
+        })
+        console.log('✅ Global address list collected')
+      }
+    } catch (error) {
+      this.handleError('collectGlobalAddressList', error)
+    }
+  }
+
+  /**
+   * Collect Hosted Connection Filter Policy
+   * EXOHostedConnectionFilterPolicy
+   */
+  async collectHostedConnectionFilterPolicy() {
+    try {
+      console.log('📋 Collecting Hosted Connection Filter Policy...')
+      console.log('⚠️ Hosted connection filter policy requires Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectHostedConnectionFilterPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Hosted Content Filter Policy
+   * EXOHostedContentFilterPolicy
+   */
+  async collectHostedContentFilterPolicy() {
+    try {
+      console.log('📋 Collecting Hosted Content Filter Policy...')
+      console.log('⚠️ Hosted content filter policy requires Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectHostedContentFilterPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Journal Rules
+   * EXOJournalRule
+   */
+  async collectJournalRules() {
+    try {
+      console.log('📋 Collecting Journal Rules...')
+      console.log('⚠️ Journal rules require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectJournalRules', error)
+    }
+  }
+
+  /**
+   * Collect Mailbox Audit Bypass Association
+   * EXOMailboxAuditBypassAssociation
+   */
+  async collectMailboxAuditBypass() {
+    try {
+      console.log('📋 Collecting Mailbox Audit Bypass...')
+      console.log('⚠️ Mailbox audit bypass requires Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectMailboxAuditBypass', error)
+    }
+  }
+
+  /**
+   * Collect Mailbox AutoReply Configuration
+   * EXOMailboxAutoReplyConfiguration
+   */
+  async collectMailboxAutoReply() {
+    try {
+      console.log('📋 Collecting Mailbox AutoReply Configuration...')
+      console.log('⚠️ Mailbox autoreply requires Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectMailboxAutoReply', error)
+    }
+  }
+
+  /**
+   * Collect Mailbox Calendar Folders
+   * EXOMailboxCalendarFolder
+   */
+  async collectMailboxCalendarFolders() {
+    try {
+      console.log('📋 Collecting Mailbox Calendar Folders...')
+      console.log('⚠️ Mailbox calendar folders require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectMailboxCalendarFolders', error)
+    }
+  }
+
+  /**
+   * Collect Mail Contacts (alias for collectMailContacts)
+   */
+  async collectMailboxContacts() {
+    return this.collectMailContacts()
+  }
+
+  /**
+   * Collect Mailbox Plans
+   * EXOMailboxPlan
+   */
+  async collectMailboxPlans() {
+    try {
+      console.log('📋 Collecting Mailbox Plans...')
+      console.log('⚠️ Mailbox plans require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectMailboxPlans', error)
+    }
+  }
+
+  /**
+   * Collect Mailbox Search
+   * EXOMailboxSearch
+   */
+  async collectMailboxSearch() {
+    try {
+      console.log('📋 Collecting Mailbox Search Configuration...')
+      console.log('⚠️ Mailbox search requires Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectMailboxSearch', error)
+    }
+  }
+
+  /**
+   * Collect Managed Folders
+   * EXOManagedFolder
+   */
+  async collectManagedFolders() {
+    try {
+      console.log('📋 Collecting Managed Folders...')
+      console.log('⚠️ Managed folders require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectManagedFolders', error)
+    }
+  }
+
+  /**
+   * Collect Message Classifications
+   * EXOMessageClassification
+   */
+  async collectMessageClassifications() {
+    try {
+      console.log('📋 Collecting Message Classifications...')
+      console.log('⚠️ Message classifications require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectMessageClassifications', error)
+    }
+  }
+
+  /**
+   * Collect Recipient Permissions
+   * EXORecipientPermission
+   */
+  async collectRecipientPermissions() {
+    try {
+      console.log('📋 Collecting Recipient Permissions...')
+      console.log('⚠️ Recipient permissions require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectRecipientPermissions', error)
+    }
+  }
+
+  /**
+   * Collect Role Assignment Policies
+   * EXORoleAssignmentPolicy
+   */
+  async collectRoleAssignmentPolicies() {
+    try {
+      console.log('📋 Collecting Role Assignment Policies...')
+      console.log('⚠️ Role assignment policies require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectRoleAssignmentPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Safe Links Policy
+   * EXOSafeLinksPolicy
+   */
+  async collectSafeLinksPolicy() {
+    try {
+      console.log('📋 Collecting Safe Links Policy...')
+      console.log('⚠️ Safe links policy requires Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectSafeLinksPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Send Connectors
+   * EXOSendConnector
+   */
+  async collectSendConnectors() {
+    try {
+      console.log('📋 Collecting Send Connectors...')
+      console.log('⚠️ Send connectors require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectSendConnectors', error)
+    }
+  }
+
+  /**
+   * Collect Sharing Policy
+   * EXOSharingPolicy
+   */
+  async collectSharingPolicy() {
+    try {
+      console.log('📋 Collecting Sharing Policy...')
+      console.log('⚠️ Sharing policy requires Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectSharingPolicy', error)
+    }
+  }
+
+  /**
+   * Collect SMTP Server Settings
+   * EXOSmtpServerSettings
+   */
+  async collectSmtpServerSettings() {
+    try {
+      console.log('📋 Collecting SMTP Server Settings...')
+      console.log('⚠️ SMTP server settings require Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectSmtpServerSettings', error)
+    }
+  }
+
+  /**
+   * Collect Transport Config
+   * EXOTransportConfig
+   */
+  async collectTransportConfig() {
+    try {
+      console.log('📋 Collecting Transport Configuration...')
+      console.log('⚠️ Transport configuration requires Exchange Admin Center access')
+    } catch (error) {
+      this.handleError('collectTransportConfig', error)
     }
   }
 

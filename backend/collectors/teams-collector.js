@@ -43,6 +43,28 @@ export class TeamsCollector {
       await this.collectChannels()
       await this.collectChannelTabs()
       await this.collectTeamsUsers()
+      await this.collectAppPermissionPolicy()
+      await this.collectAppSetupPolicy()
+      await this.collectAutoAttendant()
+      await this.collectCallPark()
+      await this.collectCallQueue()
+      await this.collectCalling()
+      await this.collectCallingLineIdentity()
+      await this.collectCallingPolicy()
+      await this.collectChannelMessagingPolicy()
+      await this.collectChannelModeration()
+      await this.collectClientConfiguration()
+      await this.collectComplianceRecordingPolicy()
+      await this.collectConnectorPolicy()
+      await this.collectDeviceConfiguration()
+      await this.collectEventsPolicy()
+      await this.collectExternalAccessPolicy()
+      await this.collectGuestCallingConfiguration()
+      await this.collectGuestMeetingConfiguration()
+      await this.collectGuestMessagingConfiguration()
+      await this.collectInboundBlockedNumberPattern()
+      await this.collectInteropPolicy()
+      await this.collectMediaLoggingPolicy()
       await this.collectMeetingConfiguration()
       await this.collectTeamsPolicies()
 
@@ -319,6 +341,292 @@ export class TeamsCollector {
       console.log('   Consider using Teams PowerShell for full policy backup')
     } catch (error) {
       this.handleError('collectTeamsPolicies', error)
+    }
+  }
+
+  /**
+   * Collect App Permission Policy
+   * TeamsAppPermissionPolicy
+   */
+  async collectAppPermissionPolicy() {
+    try {
+      console.log('📋 Collecting Teams App Permission Policy...')
+      console.log('⚠️ App permission policy requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectAppPermissionPolicy', error)
+    }
+  }
+
+  /**
+   * Collect App Setup Policy
+   * TeamsAppSetupPolicy
+   */
+  async collectAppSetupPolicy() {
+    try {
+      console.log('📋 Collecting Teams App Setup Policy...')
+      console.log('⚠️ App setup policy requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectAppSetupPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Auto Attendant
+   * TeamsAutoAttendant
+   */
+  async collectAutoAttendant() {
+    try {
+      console.log('📋 Collecting Teams Auto Attendant...')
+      console.log('⚠️ Auto attendant requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectAutoAttendant', error)
+    }
+  }
+
+  /**
+   * Collect Call Park
+   * TeamsCallPark
+   */
+  async collectCallPark() {
+    try {
+      console.log('📋 Collecting Teams Call Park Configuration...')
+      console.log('⚠️ Call park requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectCallPark', error)
+    }
+  }
+
+  /**
+   * Collect Call Queue
+   * TeamsCallQueue
+   */
+  async collectCallQueue() {
+    try {
+      console.log('📋 Collecting Teams Call Queue...')
+      console.log('⚠️ Call queue requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectCallQueue', error)
+    }
+  }
+
+  /**
+   * Collect Calling Configuration
+   * TeamsCalling
+   */
+  async collectCalling() {
+    try {
+      console.log('📋 Collecting Teams Calling Configuration...')
+      console.log('⚠️ Calling configuration requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectCalling', error)
+    }
+  }
+
+  /**
+   * Collect Calling Line Identity
+   * TeamsCallingLineIdentity
+   */
+  async collectCallingLineIdentity() {
+    try {
+      console.log('📋 Collecting Teams Calling Line Identity...')
+      console.log('⚠️ Calling line identity requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectCallingLineIdentity', error)
+    }
+  }
+
+  /**
+   * Collect Calling Policy
+   * TeamsCallingPolicy
+   */
+  async collectCallingPolicy() {
+    try {
+      console.log('📋 Collecting Teams Calling Policy...')
+      console.log('⚠️ Calling policy requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectCallingPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Channel Messaging Policy
+   * TeamsChannelMessagingPolicy
+   */
+  async collectChannelMessagingPolicy() {
+    try {
+      console.log('📋 Collecting Teams Channel Messaging Policy...')
+      console.log('⚠️ Channel messaging policy requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectChannelMessagingPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Channel Moderation
+   * TeamsChannelModeration
+   */
+  async collectChannelModeration() {
+    try {
+      console.log('📋 Collecting Teams Channel Moderation Settings...')
+      console.log('⚠️ Channel moderation requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectChannelModeration', error)
+    }
+  }
+
+  /**
+   * Collect Client Configuration
+   * TeamsClientConfiguration
+   */
+  async collectClientConfiguration() {
+    try {
+      console.log('📋 Collecting Teams Client Configuration...')
+      console.log('⚠️ Client configuration requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectClientConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Compliance Recording Policy
+   * TeamsComplianceRecordingPolicy
+   */
+  async collectComplianceRecordingPolicy() {
+    try {
+      console.log('📋 Collecting Teams Compliance Recording Policy...')
+      console.log('⚠️ Compliance recording policy requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectComplianceRecordingPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Connector Policy
+   * TeamsConnectorPolicy
+   */
+  async collectConnectorPolicy() {
+    try {
+      console.log('📋 Collecting Teams Connector Policy...')
+      console.log('⚠️ Connector policy requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectConnectorPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Device Configuration
+   * TeamsDeviceConfiguration
+   */
+  async collectDeviceConfiguration() {
+    try {
+      console.log('📋 Collecting Teams Device Configuration...')
+      console.log('⚠️ Device configuration requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectDeviceConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Events Policy
+   * TeamsEventsPolicy
+   */
+  async collectEventsPolicy() {
+    try {
+      console.log('📋 Collecting Teams Events Policy...')
+      console.log('⚠️ Events policy requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectEventsPolicy', error)
+    }
+  }
+
+  /**
+   * Collect External Access Policy
+   * TeamsExternalAccessPolicy
+   */
+  async collectExternalAccessPolicy() {
+    try {
+      console.log('📋 Collecting Teams External Access Policy...')
+      console.log('⚠️ External access policy requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectExternalAccessPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Guest Calling Configuration
+   * TeamsGuestCallingConfiguration
+   */
+  async collectGuestCallingConfiguration() {
+    try {
+      console.log('📋 Collecting Teams Guest Calling Configuration...')
+      console.log('⚠️ Guest calling configuration requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectGuestCallingConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Guest Meeting Configuration
+   * TeamsGuestMeetingConfiguration
+   */
+  async collectGuestMeetingConfiguration() {
+    try {
+      console.log('📋 Collecting Teams Guest Meeting Configuration...')
+      console.log('⚠️ Guest meeting configuration requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectGuestMeetingConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Guest Messaging Configuration
+   * TeamsGuestMessagingConfiguration
+   */
+  async collectGuestMessagingConfiguration() {
+    try {
+      console.log('📋 Collecting Teams Guest Messaging Configuration...')
+      console.log('⚠️ Guest messaging configuration requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectGuestMessagingConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Inbound Blocked Number Pattern
+   * TeamsInboundBlockedNumberPattern
+   */
+  async collectInboundBlockedNumberPattern() {
+    try {
+      console.log('📋 Collecting Teams Inbound Blocked Number Patterns...')
+      console.log('⚠️ Inbound blocked patterns require Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectInboundBlockedNumberPattern', error)
+    }
+  }
+
+  /**
+   * Collect Interop Policy
+   * TeamsInteropPolicy
+   */
+  async collectInteropPolicy() {
+    try {
+      console.log('📋 Collecting Teams Interop Policy...')
+      console.log('⚠️ Interop policy requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectInteropPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Media Logging Policy
+   * TeamsMediaLoggingPolicy
+   */
+  async collectMediaLoggingPolicy() {
+    try {
+      console.log('📋 Collecting Teams Media Logging Policy...')
+      console.log('⚠️ Media logging policy requires Teams Admin Center access')
+    } catch (error) {
+      this.handleError('collectMediaLoggingPolicy', error)
     }
   }
 

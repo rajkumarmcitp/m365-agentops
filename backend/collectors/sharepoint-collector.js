@@ -42,6 +42,22 @@ export class SharePointCollector {
       await this.collectSites()
       await this.collectHubSites()
       await this.collectSiteDesigns()
+      await this.collectBrowserIdleSignOut()
+      await this.collectCompatibilityRange()
+      await this.collectDataConnectionLibrary()
+      await this.collectDataLocationGeoMoveStatus()
+      await this.collectDataResidencyNotification()
+      await this.collectExternalUser()
+      await this.collectFileVersionExpirationReportLibrary()
+      await this.collectHideDefaultThemes()
+      await this.collectHomeSiteUrl()
+      await this.collectInformationBarrier()
+      await this.collectListInformationRightsManagement()
+      await this.collectMigrationJobStatus()
+      await this.collectMultiGeoCompanyAllowedDataLocation()
+      await this.collectOrgAssetsLibrary()
+      await this.collectOrgNewsSite()
+      await this.collectPersonalSiteCapabilities()
       await this.collectTenantSettings()
       await this.collectSharingSettings()
 
@@ -312,6 +328,231 @@ export class SharePointCollector {
       }
     } catch (error) {
       this.handleError(`collectSiteDrives(${siteName})`, error)
+    }
+  }
+
+  /**
+   * Collect Browser Idle SignOut
+   * SPOBrowserIdleSignOut
+   */
+  async collectBrowserIdleSignOut() {
+    try {
+      console.log('📋 Collecting Browser Idle SignOut Settings...')
+      console.log('⚠️ Browser idle signout requires SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectBrowserIdleSignOut', error)
+    }
+  }
+
+  /**
+   * Collect Compatibility Range
+   * SPOCompatibilityRange
+   */
+  async collectCompatibilityRange() {
+    try {
+      console.log('📋 Collecting Compatibility Range Settings...')
+      console.log('⚠️ Compatibility range requires SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectCompatibilityRange', error)
+    }
+  }
+
+  /**
+   * Collect Data Connection Library
+   * SPODataConnectionLibrary
+   */
+  async collectDataConnectionLibrary() {
+    try {
+      console.log('📋 Collecting Data Connection Library...')
+      console.log('⚠️ Data connection library requires SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectDataConnectionLibrary', error)
+    }
+  }
+
+  /**
+   * Collect Data Location Geo Move Status
+   * SPODataLocationGeoMoveStatus
+   */
+  async collectDataLocationGeoMoveStatus() {
+    try {
+      console.log('📋 Collecting Data Location Geo Move Status...')
+      console.log('⚠️ Data location geo move requires SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectDataLocationGeoMoveStatus', error)
+    }
+  }
+
+  /**
+   * Collect Data Residency Notification
+   * SPODataResidencyNotification
+   */
+  async collectDataResidencyNotification() {
+    try {
+      console.log('📋 Collecting Data Residency Notifications...')
+      console.log('⚠️ Data residency notification requires SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectDataResidencyNotification', error)
+    }
+  }
+
+  /**
+   * Collect External User
+   * SPOExternalUser
+   */
+  async collectExternalUser() {
+    try {
+      console.log('📋 Collecting External Users...')
+      console.log('⚠️ External users require SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectExternalUser', error)
+    }
+  }
+
+  /**
+   * Collect File Version Expiration Report Library
+   * SPOFileVersionExpirationReportLibrary
+   */
+  async collectFileVersionExpirationReportLibrary() {
+    try {
+      console.log('📋 Collecting File Version Expiration Report Library...')
+      console.log('⚠️ File version expiration requires SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectFileVersionExpirationReportLibrary', error)
+    }
+  }
+
+  /**
+   * Collect Hide Default Themes
+   * SPOHideDefaultThemes
+   */
+  async collectHideDefaultThemes() {
+    try {
+      console.log('📋 Collecting Hide Default Themes Settings...')
+      console.log('⚠️ Theme settings require SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectHideDefaultThemes', error)
+    }
+  }
+
+  /**
+   * Collect Home Site URL
+   * SPOHomeSiteUrl
+   */
+  async collectHomeSiteUrl() {
+    try {
+      console.log('📋 Collecting Home Site URL...')
+      const response = await this.graphClient
+        .api('/sites')
+        .filter("webUrl eq 'home'")
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        this.resources.push({
+          type: 'SPOHomeSiteUrl',
+          name: 'Home Site',
+          id: 'home-site',
+          configuration: {
+            Identity: 'home-site',
+            Url: response.value[0].webUrl || '',
+            SiteId: response.value[0].id || ''
+          }
+        })
+        console.log('✅ Home site URL collected')
+      }
+    } catch (error) {
+      this.handleError('collectHomeSiteUrl', error)
+    }
+  }
+
+  /**
+   * Collect Information Barrier
+   * SPOInformationBarrier
+   */
+  async collectInformationBarrier() {
+    try {
+      console.log('📋 Collecting Information Barrier Settings...')
+      console.log('⚠️ Information barriers require SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectInformationBarrier', error)
+    }
+  }
+
+  /**
+   * Collect List Information Rights Management
+   * SPOListInformationRightsManagement
+   */
+  async collectListInformationRightsManagement() {
+    try {
+      console.log('📋 Collecting List Information Rights Management...')
+      console.log('⚠️ List IRM requires SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectListInformationRightsManagement', error)
+    }
+  }
+
+  /**
+   * Collect Migration Job Status
+   * SPOMigrationJobStatus
+   */
+  async collectMigrationJobStatus() {
+    try {
+      console.log('📋 Collecting Migration Job Status...')
+      console.log('⚠️ Migration jobs require SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectMigrationJobStatus', error)
+    }
+  }
+
+  /**
+   * Collect Multi-Geo Company Allowed Data Location
+   * SPOMultiGeoCompanyAllowedDataLocation
+   */
+  async collectMultiGeoCompanyAllowedDataLocation() {
+    try {
+      console.log('📋 Collecting Multi-Geo Company Allowed Data Locations...')
+      console.log('⚠️ Multi-geo settings require SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectMultiGeoCompanyAllowedDataLocation', error)
+    }
+  }
+
+  /**
+   * Collect Org Assets Library
+   * SPOOrgAssetsLibrary
+   */
+  async collectOrgAssetsLibrary() {
+    try {
+      console.log('📋 Collecting Organization Assets Library...')
+      console.log('⚠️ Org assets require SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectOrgAssetsLibrary', error)
+    }
+  }
+
+  /**
+   * Collect Org News Site
+   * SPOOrgNewsSite
+   */
+  async collectOrgNewsSite() {
+    try {
+      console.log('📋 Collecting Organization News Site...')
+      console.log('⚠️ Org news site requires SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectOrgNewsSite', error)
+    }
+  }
+
+  /**
+   * Collect Personal Site Capabilities
+   * SPOPersonalSiteCapabilities
+   */
+  async collectPersonalSiteCapabilities() {
+    try {
+      console.log('📋 Collecting Personal Site Capabilities...')
+      console.log('⚠️ Personal site capabilities require SharePoint Admin Center access')
+    } catch (error) {
+      this.handleError('collectPersonalSiteCapabilities', error)
     }
   }
 
