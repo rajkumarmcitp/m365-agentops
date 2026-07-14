@@ -1098,8 +1098,13 @@ window.loadZTExceptions = async function() {
   }
 }
 
+let exceptionsHandlersAttached = false
+
 function setupExceptionHandlers() {
-  // Request exception button
+  // Prevent duplicate event listener attachment
+  if (exceptionsHandlersAttached) return
+  exceptionsHandlersAttached = true
+
   const requestBtn = document.getElementById('zt-request-exception-btn')
   const modal = document.getElementById('zt-exception-modal')
   const closeBtn = document.getElementById('zt-modal-close')
@@ -1152,7 +1157,7 @@ function setupExceptionHandlers() {
           showToast('Exception request submitted successfully!', 'success')
           modal.style.display = 'none'
           form.reset()
-          // Reload exceptions
+          exceptionsHandlersAttached = false
           setTimeout(() => window.loadZTExceptions(), 500)
         } else {
           showToast('Error: ' + result.error, 'error')
@@ -1163,15 +1168,18 @@ function setupExceptionHandlers() {
     })
   }
 
-  // Filter buttons
-  document.querySelectorAll('.zt-exc-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      document.querySelectorAll('.zt-exc-btn').forEach(b => b.style.background = '#999')
-      e.target.style.background = e.target.dataset.filter === 'pending' ? '#d97706' :
-        e.target.dataset.filter === 'approved' ? '#16a34a' :
-        e.target.dataset.filter === 'expired' ? '#dc2626' : '#666'
+  // Filter buttons - use event delegation to avoid duplicate listeners
+  const filterBtnContainer = document.querySelector('[id$="zt-exc"]')?.parentElement
+  if (filterBtnContainer) {
+    filterBtnContainer.addEventListener('click', (e) => {
+      if (e.target.classList.contains('zt-exc-btn')) {
+        document.querySelectorAll('.zt-exc-btn').forEach(b => b.style.background = '#999')
+        e.target.style.background = e.target.dataset.filter === 'pending' ? '#d97706' :
+          e.target.dataset.filter === 'approved' ? '#16a34a' :
+          e.target.dataset.filter === 'expired' ? '#dc2626' : '#666'
+      }
     })
-  })
+  }
 
   // Close modal on background click
   modal?.addEventListener('click', (e) => {
