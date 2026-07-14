@@ -17,6 +17,7 @@ import DeviceValidations from './device-validations.js'
 import { unifiedGraphClient } from './graph-client-unified.js'
 import { calculateControlRiskScore, calculatePillarRiskScore, calculateOverallRiskScore, generateRiskSummary, getTopRiskControls } from './risk-scoring.js'
 import { generateComplianceSummary, getFrameworkComparison } from './compliance-calculator.js'
+import { createSnapshot, getSnapshotStats, calculateComplianceTrends, clearOldSnapshots } from './validation-snapshots.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -168,7 +169,19 @@ export class ZeroTrustValidator {
     results.complianceSummary = complianceSummary
     results.frameworkComparison = frameworkComparison
 
-    console.log(`✅ Validation complete: ${results.overallScore}% compliance | Risk: ${riskSummary.overallRiskScore}/100 | Framework coverage: ${complianceSummary.averageCoverage}%`)
+    // Create snapshot for historical tracking
+    createSnapshot(results)
+
+    // Get trend analysis
+    const snapshotStats = getSnapshotStats(90)
+    const complianceTrends = calculateComplianceTrends(90)
+    results.snapshotStats = snapshotStats
+    results.complianceTrends = complianceTrends
+
+    // Cleanup old snapshots (older than 365 days)
+    clearOldSnapshots(365)
+
+    console.log(`✅ Validation complete: ${results.overallScore}% compliance | Risk: ${riskSummary.overallRiskScore}/100 | Trend: ${snapshotStats?.trendDirection}`)
     return results
   }
 

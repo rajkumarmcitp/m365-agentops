@@ -324,16 +324,20 @@ function renderZeroTrustWithData(el) {
     return
   }
 
-  const { totalValidations, summary, overallScore, riskSummary } = realValidations
+  const { totalValidations, summary, overallScore, riskSummary, snapshotStats, complianceTrends } = realValidations
   const scoreColor = overallScore >= 80 ? 'success' : overallScore >= 60 ? 'warning' : 'danger'
   const riskScore = riskSummary?.overallRiskScore || 0
+  const trendDirection = snapshotStats?.trendDirection || 'stable'
+  const trendValue = snapshotStats?.trendValue || 0
+  const trendArrow = trendValue > 0 ? '↑' : trendValue < 0 ? '↓' : '→'
+  const trendColor = trendValue > 0 ? '#16a34a' : trendValue < 0 ? '#dc2626' : '#6b7280'
   const criticalIssues = summary.fail + summary.warn
 
   el.innerHTML = `
     <div class="page-header">
       <div>
         <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
-        <div class="page-subtitle">${totalValidations} security controls · Risk Score: ${riskScore}/100 · Last run: ${lastRunTime ? new Date(lastRunTime).toLocaleString() : 'Unknown'}</div>
+        <div class="page-subtitle">${totalValidations} controls · Risk ${riskScore}/100 · Trend <span style="color:${trendColor};font-weight:600">${trendArrow} ${trendValue > 0 ? '+' : ''}${trendValue}%</span> · Last run: ${lastRunTime ? new Date(lastRunTime).toLocaleString() : 'Unknown'}</div>
       </div>
       <div class="page-actions">
         <button class="btn" id="zt-rescan"><i class="ti ti-refresh"></i> Refresh</button>
@@ -587,6 +591,38 @@ function renderZTOverview() {
               </div>
             `
           }).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    ${snapshotStats ? `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="ti ti-trending-${trendDirection === 'improving' ? 'up' : 'down'}"></i> Compliance Trends (90 Days)</span>
+          <span class="badge ${trendDirection === 'improving' ? 'success' : trendDirection === 'declining' ? 'danger' : 'warning'}">${trendArrow} ${Math.abs(snapshotStats.trendValue)}% ${trendDirection}</span>
+        </div>
+        <div style="padding:16px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));gap:12px">
+            <div style="text-align:center">
+              <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:4px">Current</div>
+              <div style="font-size:28px;font-weight:700;color:${scoreColor}">${snapshotStats.currentScore}%</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:4px">90d Avg</div>
+              <div style="font-size:28px;font-weight:700">${snapshotStats.averageScore}%</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:4px">Velocity</div>
+              <div style="font-size:28px;font-weight:700;color:${trendColor}">${trendArrow} ${Math.abs(snapshotStats.trendValue || 0)}%</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:4px">Range</div>
+              <div style="font-size:14px;font-weight:600">${snapshotStats.minScore}%—${snapshotStats.maxScore}%</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-top:12px;line-height:1.5">
+            <i class="ti ti-info-circle"></i> ${trendDirection === 'improving' ? '📈 Compliance improving—maintain momentum' : trendDirection === 'declining' ? '📉 Declining—prioritize critical fixes' : '→ Stable—continue monitoring'}
+          </div>
         </div>
       </div>
     ` : ''}
