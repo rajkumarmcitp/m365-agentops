@@ -63,6 +63,10 @@ import {
 import {
   provisionRequest, setProvisioningGraphClient, getProvisioningErrorMessage
 } from './provisioning.js'
+import { BackupAgent } from './lib/backup-agent.js'
+import { BackupStorageManager } from './lib/backup-storage.js'
+import setupBackupRoutes from './routes/backup-routes.js'
+import { ExchangeCollector } from './collectors/exchange-collector.js'
 import {
   setExecutorGraphClient,
   validateCreateDG, executeCreateDG,
@@ -17204,6 +17208,75 @@ app.post('/api/setup/initialize-services', async (req, res) => {
 })
 
 // ============================================================
+// M365 Backup System Variables
+// ============================================================
+let backupAgent = null
+let backupStorage = null
+
+// ============================================================
+// Initialize M365 Backup System
+// ============================================================
+async function initializeBackupSystem() {
+  if (!graphClient) {
+    console.warn('⚠️ GraphClient not initialized - skipping backup system initialization')
+    return
+  }
+
+  const siteId = process.env.SHAREPOINT_SITE_ID
+  if (!siteId) {
+    console.warn('⚠️ SHAREPOINT_SITE_ID not configured - skipping backup system')
+    return
+  }
+
+  try {
+    console.log('\n🔧 Initializing M365 Backup System...')
+
+    // Initialize storage manager
+    backupStorage = new BackupStorageManager(graphClient, siteId, {
+      backupListId: process.env.SHAREPOINT_BACKUP_LIST_ID,
+      backupMetadataListId: process.env.SHAREPOINT_BACKUP_METADATA_LIST_ID,
+      backupResourcesListId: process.env.SHAREPOINT_BACKUP_RESOURCES_LIST_ID,
+      backupChangesListId: process.env.SHAREPOINT_BACKUP_CHANGES_LIST_ID,
+      backupDataLibraryId: process.env.SHAREPOINT_BACKUP_DATA_LIBRARY_ID,
+      backupDSCLibraryId: process.env.SHAREPOINT_BACKUP_DSC_LIBRARY_ID
+    })
+
+    // Initialize backup agent
+    backupAgent = new BackupAgent(graphClient, {
+      siteId: siteId,
+      storage: {
+        backupListId: process.env.SHAREPOINT_BACKUP_LIST_ID,
+        backupMetadataListId: process.env.SHAREPOINT_BACKUP_METADATA_LIST_ID,
+        backupResourcesListId: process.env.SHAREPOINT_BACKUP_RESOURCES_LIST_ID,
+        backupChangesListId: process.env.SHAREPOINT_BACKUP_CHANGES_LIST_ID,
+        backupDataLibraryId: process.env.SHAREPOINT_BACKUP_DATA_LIBRARY_ID,
+        backupDSCLibraryId: process.env.SHAREPOINT_BACKUP_DSC_LIBRARY_ID
+      }
+    })
+
+    // Register collectors
+    console.log('📦 Registering backup collectors...')
+
+    // Exchange Online Collector
+    const exchangeCollector = new ExchangeCollector(graphClient, {
+      timeout: 30000,
+      maxRetries: 3
+    })
+    backupAgent.registerCollector('ExchangeOnline', exchangeCollector)
+    console.log('  ✅ Exchange Online Collector registered')
+
+    // Setup backup routes
+    setupBackupRoutes(app, backupAgent, backupStorage)
+    console.log('  ✅ Backup API routes configured')
+
+    console.log('✅ M365 Backup System initialized successfully')
+    console.log('   📊 API endpoints available at /api/backup/m365/*')
+  } catch (error) {
+    console.error('❌ Backup system initialization failed:', error.message)
+  }
+}
+
+// ============================================================
 // Auto-Initialize SharePoint Lists on Startup
 // ============================================================
 async function initializeSharePointListsOnStartup() {
@@ -17264,6 +17337,11 @@ const server = app.listen(PORT, () => {
   console.log(`  Admins: ${ROLE_GROUPS.admin || '❌ NOT CONFIGURED'}`)
   console.log(`  Managers: ${ROLE_GROUPS.manager || '❌ NOT CONFIGURED'}`)
   console.log('')
+
+  // Initialize backup system in background after server starts
+  initializeBackupSystem().catch(err => {
+    console.error('❌ Backup system initialization failed:', err.message)
+  })
 
   // Initialize SharePoint lists in background after server starts
   initializeSharePointListsOnStartup().catch(err => {
