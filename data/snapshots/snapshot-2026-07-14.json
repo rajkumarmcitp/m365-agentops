@@ -1,0 +1,3713 @@
+{
+  "timestamp": "2026-07-14T09:37:33.359Z",
+  "dateKey": "2026-07-14",
+  "overallScore": 11,
+  "totalValidations": 303,
+  "summary": {
+    "pass": 33,
+    "fail": 39,
+    "warn": 231,
+    "byPillar": {
+      "Identity Security": {
+        "pass": 7,
+        "fail": 9,
+        "warn": 30,
+        "validations": [
+          {
+            "id": "ID-001",
+            "name": "MFA Enabled for Global Admins",
+            "status": "pass"
+          },
+          {
+            "id": "ID-002",
+            "name": "MFA Coverage for All Users",
+            "status": "fail"
+          },
+          {
+            "id": "ID-004",
+            "name": "Passwordless Authentication Adoption",
+            "status": "fail"
+          },
+          {
+            "id": "ID-005",
+            "name": "Conditional Access Policies Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "ID-006",
+            "name": "Require MFA for All Users via CA",
+            "status": "pass"
+          },
+          {
+            "id": "ID-008",
+            "name": "Risk-Based Access via Identity Protection",
+            "status": "warn"
+          },
+          {
+            "id": "ID-009",
+            "name": "Sign-in Risk Detection Enabled",
+            "status": "pass"
+          },
+          {
+            "id": "ID-010",
+            "name": "PIM (Privileged Identity Management) Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "ID-011",
+            "name": "Global Admin Count Minimized",
+            "status": "pass"
+          },
+          {
+            "id": "ID-013",
+            "name": "Inactive Applications - Privileged Graph Permissions",
+            "status": "pass"
+          },
+          {
+            "id": "ID-014",
+            "name": "Inactive Applications - Privileged Role Assignments (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "ID-015",
+            "name": "Application Credentials - No Shared Secrets (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "ID-016",
+            "name": "Application Credentials - Certificate Lifecycle",
+            "status": "fail"
+          },
+          {
+            "id": "ID-017",
+            "name": "Microsoft Service Applications - No Configured Credentials (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "ID-018",
+            "name": "Application Management Policies - Enforce Standards (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "ID-019",
+            "name": "User Consent Settings - Restricted (Manual)",
+            "status": "fail"
+          },
+          {
+            "id": "ID-020",
+            "name": "Multitenant Application Instance Lock (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "ID-021",
+            "name": "ADAL Deprecation - Legacy Library Migration (Manual)",
+            "status": "pass"
+          },
+          {
+            "id": "ID-022",
+            "name": "Phishing-Resistant MFA - Privileged Users",
+            "status": "fail"
+          },
+          {
+            "id": "ID-023",
+            "name": "Phishing-Resistant Methods - Admin Registration",
+            "status": "fail"
+          },
+          {
+            "id": "ID-024",
+            "name": "Conditional Access - Admin MFA Strength Policy",
+            "status": "warn"
+          },
+          {
+            "id": "ID-025",
+            "name": "All Users - Phishing-Resistant MFA Enforcement",
+            "status": "fail"
+          },
+          {
+            "id": "ID-026",
+            "name": "Token Protection - Prevent Token Theft",
+            "status": "warn"
+          },
+          {
+            "id": "ID-027",
+            "name": "Universal MFA - All Users Enforcement",
+            "status": "pass"
+          },
+          {
+            "id": "ID-028",
+            "name": "Authentication Methods - User Registration",
+            "status": "fail"
+          },
+          {
+            "id": "ID-029",
+            "name": "Microsoft Authenticator - Sign-in Context Display (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "ID-030",
+            "name": "Legacy MFA/SSPR - Migrate to Modern Policies (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "ID-110",
+            "name": "High Privilege API Permissions Reviewed",
+            "status": "warn"
+          },
+          {
+            "id": "ID-111",
+            "name": "Expired Client Secrets",
+            "status": "warn"
+          },
+          {
+            "id": "ID-112",
+            "name": "Certificates Expiring in 30 Days",
+            "status": "warn"
+          },
+          {
+            "id": "ID-113",
+            "name": "Phishing Resistant MFA Coverage",
+            "status": "warn"
+          },
+          {
+            "id": "ID-114",
+            "name": "Password Spray Detection Review",
+            "status": "warn"
+          },
+          {
+            "id": "ID-115",
+            "name": "Emergency Access Account Monitoring",
+            "status": "warn"
+          },
+          {
+            "id": "ID-012",
+            "name": "Passwordless Authentication Adoption",
+            "status": "fail"
+          },
+          {
+            "id": "ID-116",
+            "name": "Approval Required for Role Activation",
+            "status": "warn"
+          },
+          {
+            "id": "ID-117",
+            "name": "MFA Required for Role Activation",
+            "status": "warn"
+          },
+          {
+            "id": "ID-118",
+            "name": "Enterprise App Inventory Reviewed",
+            "status": "warn"
+          },
+          {
+            "id": "ID-119",
+            "name": "Application Sign-in Monitoring",
+            "status": "warn"
+          },
+          {
+            "id": "ID-120",
+            "name": "Application Credential Governance",
+            "status": "warn"
+          },
+          {
+            "id": "ID-121",
+            "name": "High Privilege Service Principals",
+            "status": "warn"
+          },
+          {
+            "id": "ID-122",
+            "name": "OAuth2 Permission Grants Reviewed",
+            "status": "warn"
+          },
+          {
+            "id": "ID-123",
+            "name": "Authentication Methods Policy Configured",
+            "status": "warn"
+          },
+          {
+            "id": "ID-124",
+            "name": "Microsoft Authenticator Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "ID-125",
+            "name": "FIDO2 Policy Configured",
+            "status": "warn"
+          },
+          {
+            "id": "ID-126",
+            "name": "Authentication Strength Policies",
+            "status": "warn"
+          },
+          {
+            "id": "ID-127",
+            "name": "Custom Banned Password List Configured",
+            "status": "warn"
+          }
+        ],
+        "riskScore": 43
+      },
+      "Infrastructure & Workload Security": {
+        "pass": 7,
+        "fail": 1,
+        "warn": 63,
+        "validations": [
+          {
+            "id": "ID-003",
+            "name": "Legacy Authentication Blocked",
+            "status": "pass"
+          },
+          {
+            "id": "EMAIL-001",
+            "name": "Anti-Phishing Policy Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "EMAIL-002",
+            "name": "Safe Links Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "EMAIL-003",
+            "name": "Safe Attachments Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "EMAIL-004",
+            "name": "Anti-Spam Policy Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "EMAIL-005",
+            "name": "DKIM Configured (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "EMAIL-006",
+            "name": "SPF Configured (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "EMAIL-007",
+            "name": "DMARC Configured (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "EMAIL-008",
+            "name": "External Forwarding Blocked (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-002",
+            "name": "Modern Authentication Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-003",
+            "name": "SMTP AUTH Disabled",
+            "status": "fail"
+          },
+          {
+            "id": "INFRA-005",
+            "name": "External Forwarding Rules",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-006",
+            "name": "Mailbox Delegation Review",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-007",
+            "name": "Inactive Mailboxes Management",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-008",
+            "name": "Exchange Transport Rules (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-009",
+            "name": "Anti-Phishing Policies (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-012",
+            "name": "Anti-Spam Policies",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-013",
+            "name": "Anti-Malware Policies",
+            "status": "pass"
+          },
+          {
+            "id": "INFRA-014",
+            "name": "DKIM Signing Configured",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-015",
+            "name": "SPF Record Configured",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-016",
+            "name": "DMARC Policy Configured",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-017",
+            "name": "Accepted Domains Reviewed",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-018",
+            "name": "Mail Flow Connectors (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-019",
+            "name": "Litigation Hold Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-020",
+            "name": "Remote Domains Configured",
+            "status": "pass"
+          },
+          {
+            "id": "INFRA-021",
+            "name": "SharePoint External Sharing Restricted",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-022",
+            "name": "SharePoint Anonymous Links Disabled",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-023",
+            "name": "SharePoint Site Owners Reviewed",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-024",
+            "name": "SharePoint Permissions Audited",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-025",
+            "name": "SharePoint Sensitivity Labels Applied",
+            "status": "pass"
+          },
+          {
+            "id": "INFRA-026",
+            "name": "SharePoint Restricted Domains",
+            "status": "pass"
+          },
+          {
+            "id": "INFRA-028",
+            "name": "SharePoint Hub Sites",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-029",
+            "name": "SharePoint External Users (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-030",
+            "name": "SharePoint Storage Monitored",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-031",
+            "name": "SharePoint Version History",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-032",
+            "name": "SharePoint Recycle Bin",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-033",
+            "name": "SharePoint Custom Scripts",
+            "status": "pass"
+          },
+          {
+            "id": "INFRA-034",
+            "name": "SharePoint Idle Sites (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-035",
+            "name": "SharePoint Oversharing Detection",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-037",
+            "name": "Teams External Access",
+            "status": "pass"
+          },
+          {
+            "id": "INFRA-038",
+            "name": "Teams Creation Audit",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-039",
+            "name": "Teams Private Channels",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-040",
+            "name": "Teams Shared Channels",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-041",
+            "name": "Teams Owners Assigned",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-042",
+            "name": "Teams Inactive Teams",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-043",
+            "name": "Teams Apps Audit",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-044",
+            "name": "Teams Third-Party Apps",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-045",
+            "name": "Teams Compliance Recording",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-046",
+            "name": "Teams Meeting Policies",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-047",
+            "name": "Teams Messaging Policies",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-048",
+            "name": "Teams Guest Messaging",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-049",
+            "name": "Teams File Sharing",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-050",
+            "name": "Teams Sensitivity Labels",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-051",
+            "name": "OneDrive Sharing Restricted",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-052",
+            "name": "OneDrive Anonymous Links",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-053",
+            "name": "OneDrive Sharing Audited",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-054",
+            "name": "OneDrive Inactive Drives",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-055",
+            "name": "OneDrive Large Sharing Events",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-056",
+            "name": "OneDrive Sync Restriction",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-057",
+            "name": "OneDrive Known Folder Move",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-058",
+            "name": "OneDrive Sensitivity Labels",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-059",
+            "name": "OneDrive Storage Monitored",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-060",
+            "name": "OneDrive Oversharing",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-061",
+            "name": "Defender Safe Links",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-062",
+            "name": "Defender Safe Attachments",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-064",
+            "name": "Defender Zero Hour Auto Purge",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-066",
+            "name": "Defender Anti-Phishing",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-067",
+            "name": "Defender Impersonation Protection",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-068",
+            "name": "Defender Automated Investigation",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-069",
+            "name": "Defender Threat Policies",
+            "status": "warn"
+          },
+          {
+            "id": "INFRA-070",
+            "name": "Defender Quarantine Policies",
+            "status": "warn"
+          }
+        ],
+        "riskScore": 30
+      },
+      "Device Security": {
+        "pass": 0,
+        "fail": 20,
+        "warn": 53,
+        "validations": [
+          {
+            "id": "ID-007",
+            "name": "Require Compliant Devices via CA",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-069",
+            "name": "Intune MDM Enrollment Required",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-070",
+            "name": "Device Compliance Policy Enforced",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-071",
+            "name": "BitLocker Enabled on Windows Devices",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-072",
+            "name": "Windows Defender Enabled",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-073",
+            "name": "Mobile Device Management Enrollment",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-001",
+            "name": "Windows Firewall - Policies Configured and Enforced",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-002",
+            "name": "Windows Compliance Policies - Enforced",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-003",
+            "name": "macOS Compliance Policies - Enforced",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-004",
+            "name": "iOS/iPadOS Compliance Policies - Enforced",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-005",
+            "name": "Android Compliance Policies - Managed Devices (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-006",
+            "name": "Windows Automatic Device Enrollment - Enforced",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-007",
+            "name": "Android Personal Compliance Policies - Enforced",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-008",
+            "name": "iOS App Protection Policies - Data Protection",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-009",
+            "name": "Android App Protection Policies - Data Protection",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-010",
+            "name": "Windows BitLocker Encryption - Enforced",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-011",
+            "name": "macOS FileVault Encryption - Enforced",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-012",
+            "name": "Windows Hello for Business - Authentication (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-013",
+            "name": "Windows LAPS - Local Admin Credential Protection",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-014",
+            "name": "macOS LAPS - Local Admin Credential Protection",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-015",
+            "name": "Windows Local Account Restrictions - Enforced (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-016",
+            "name": "macOS Platform SSO - Authentication",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-017",
+            "name": "Windows Update Policies - Enforced",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-018",
+            "name": "macOS Update Policies - Enforced",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-019",
+            "name": "iOS/iPadOS Update Policies - Enforced",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-020",
+            "name": "Intune Scope Tags - Delegated Administration",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-022",
+            "name": "Windows Security Baselines - Applied",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-023",
+            "name": "Attack Surface Reduction Rules - Configured",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-024",
+            "name": "Microsoft Defender Antivirus - Windows Protection",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-025",
+            "name": "Microsoft Defender Antivirus - macOS Protection",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-026",
+            "name": "Endpoint Analytics - Risk Identification",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-027",
+            "name": "Device Cleanup Rules - Tenant Hygiene",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-028",
+            "name": "Company Portal Branding - User Experience",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-029",
+            "name": "Conditional Access - Noncompliant Devices Blocked (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-030",
+            "name": "Conditional Access - Unmanaged Apps Blocked (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-031",
+            "name": "iOS Secure Wi-Fi Profiles - Network Protection",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-032",
+            "name": "Android Secure Wi-Fi Profiles - Network Protection",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-033",
+            "name": "Terms and Conditions Policies - Data Access Protection",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-034",
+            "name": "macOS Firewall Policies - Network Protection",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-035",
+            "name": "Password/Passcode Requirements",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-036",
+            "name": "Password Complexity Policy",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-037",
+            "name": "Password Expiration Policy",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-038",
+            "name": "Jailbreak/Root Detection",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-039",
+            "name": "Google Play Integrity Check (Android)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-040",
+            "name": "Defender for Endpoint Integration",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-041",
+            "name": "Device Risk-Based Access (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-042",
+            "name": "Minimum OS Version Enforcement",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-043",
+            "name": "OS Update Compliance",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-044",
+            "name": "Disk Encryption (FileVault, BitLocker, FDE)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-045",
+            "name": "TPM 2.0 Requirement (Windows)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-046",
+            "name": "Secure Boot Enforcement (Windows)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-047",
+            "name": "USB Restrictions",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-048",
+            "name": "Developer Mode / Developer Options Disabled",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-049",
+            "name": "Camera Restrictions",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-050",
+            "name": "Unknown Sources Blocked (Android)",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-051",
+            "name": "Bluetooth Restrictions",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-052",
+            "name": "NFC Restrictions (Mobile)",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-053",
+            "name": "Screen Capture Disabled",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-054",
+            "name": "Clipboard Restrictions",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-055",
+            "name": "AirDrop/Nearby Share Disabled",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-056",
+            "name": "iCloud Backup Restrictions (iOS)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-057",
+            "name": "Voice Assistant Restrictions (Siri/Google Assistant)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-058",
+            "name": "App Store / Play Store Restrictions",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-059",
+            "name": "Managed Browser Enforcement",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-060",
+            "name": "Mobile App Protection Policies (MAM)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-061",
+            "name": "Compliance Policy Deployment Status",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-062",
+            "name": "Configuration Profile Deployment",
+            "status": "fail"
+          },
+          {
+            "id": "DEV-063",
+            "name": "Device Compliance Rate",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-064",
+            "name": "Managed Device Inventory",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-065",
+            "name": "Device Sync Health",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-066",
+            "name": "Android Compliance Policies – Managed Devices",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-067",
+            "name": "Device Enrollment Notifications (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "DEV-068",
+            "name": "Windows Local Account Restrictions",
+            "status": "warn"
+          }
+        ],
+        "riskScore": 42
+      },
+      "Application Security": {
+        "pass": 12,
+        "fail": 6,
+        "warn": 6,
+        "validations": [
+          {
+            "id": "APP-001",
+            "name": "High-Privilege Applications Identified",
+            "status": "pass"
+          },
+          {
+            "id": "APP-002",
+            "name": "Unused Enterprise Applications Removed",
+            "status": "fail"
+          },
+          {
+            "id": "APP-003",
+            "name": "Stale Service Principals Removed",
+            "status": "warn"
+          },
+          {
+            "id": "APP-004",
+            "name": "OAuth Admin Consent Workflow Enabled",
+            "status": "fail"
+          },
+          {
+            "id": "APP-005",
+            "name": "Risky Graph Permissions Detected",
+            "status": "pass"
+          },
+          {
+            "id": "APP-006",
+            "name": "Expiring Client Secrets",
+            "status": "fail"
+          },
+          {
+            "id": "APP-007",
+            "name": "Application Owners Configured",
+            "status": "fail"
+          },
+          {
+            "id": "APP-008",
+            "name": "Directory.ReadWrite.All Permission Control",
+            "status": "pass"
+          },
+          {
+            "id": "APP-009",
+            "name": "RoleManagement.ReadWrite.Directory Control",
+            "status": "pass"
+          },
+          {
+            "id": "APP-010",
+            "name": "Long-Lived Client Secrets",
+            "status": "warn"
+          },
+          {
+            "id": "APP-011",
+            "name": "Certificates Expiring Soon",
+            "status": "pass"
+          },
+          {
+            "id": "APP-012",
+            "name": "Multiple Active Secrets Cleanup",
+            "status": "warn"
+          },
+          {
+            "id": "APP-013",
+            "name": "Workload Identity Conditional Access",
+            "status": "warn"
+          },
+          {
+            "id": "APP-014",
+            "name": "Managed Identity Adoption",
+            "status": "warn"
+          },
+          {
+            "id": "APP-015",
+            "name": "Service Principal Sign-in Monitoring",
+            "status": "pass"
+          },
+          {
+            "id": "APP-016",
+            "name": "Verified Publisher Status",
+            "status": "fail"
+          },
+          {
+            "id": "APP-017",
+            "name": "Never-Used Applications",
+            "status": "pass"
+          },
+          {
+            "id": "APP-018",
+            "name": "Failed Application Sign-ins",
+            "status": "pass"
+          },
+          {
+            "id": "APP-019",
+            "name": "New Enterprise Applications Review",
+            "status": "pass"
+          },
+          {
+            "id": "APP-020",
+            "name": "User Consent Disabled",
+            "status": "pass"
+          },
+          {
+            "id": "APP-021",
+            "name": "Admin Consent Requests Reviewed",
+            "status": "warn"
+          },
+          {
+            "id": "APP-022",
+            "name": "Orphaned Applications",
+            "status": "fail"
+          },
+          {
+            "id": "APP-023",
+            "name": "Disabled Applications Review",
+            "status": "pass"
+          },
+          {
+            "id": "APP-024",
+            "name": "Duplicate Applications",
+            "status": "pass"
+          }
+        ],
+        "riskScore": 29
+      },
+      "Data Protection & Compliance": {
+        "pass": 7,
+        "fail": 3,
+        "warn": 29,
+        "validations": [
+          {
+            "id": "DATA-001",
+            "name": "DLP Policies Configured",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-002",
+            "name": "Sensitivity Labels Configured",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-003",
+            "name": "Auto-Labeling Rules Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-004",
+            "name": "SharePoint Sharing Policy Restricted",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-005",
+            "name": "OneDrive Sharing Policy Restricted",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-006",
+            "name": "Data Classification Framework Implemented",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-007",
+            "name": "Sensitivity Labels Applied to Sensitive Data",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-008",
+            "name": "Data Loss Prevention (DLP) Policies Comprehensive",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-009",
+            "name": "Azure Information Protection (AIP) Deployed",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-010",
+            "name": "Content Search & eDiscovery Audit Logging",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-011",
+            "name": "SharePoint Site Permissions Auditing",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-012",
+            "name": "OneDrive Sharing Policy Enforcement",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-013",
+            "name": "Teams Guest Access Controls",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-014",
+            "name": "Retention Policies Applied to All Workloads",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-015",
+            "name": "Advanced Threat Protection (ATP) for SharePoint/OneDrive",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-016",
+            "name": "Conditional Access - Unmanaged Device Data Blocking",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-017",
+            "name": "Tenant Restrictions V2 for Data Protection",
+            "status": "pass"
+          },
+          {
+            "id": "DATA-018",
+            "name": "Insider Risk Management Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-019",
+            "name": "Communication Compliance - Data in Messages",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-020",
+            "name": "Information Barrier Policies for Data Separation",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-021",
+            "name": "Compliance Manager - Data Protection Controls",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-022",
+            "name": "Data Residency & Geo-Compliance Enforced",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-023",
+            "name": "Recoverable Items Retention - Legal Hold",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-024",
+            "name": "Data Subject Rights Automation",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-025",
+            "name": "eDiscovery & Litigation Hold Management",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-027",
+            "name": "Communication Compliance Policies",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-028",
+            "name": "Audit Logging Comprehensive",
+            "status": "pass"
+          },
+          {
+            "id": "DATA-029",
+            "name": "Subject Rights Requests (DSR) Tracking",
+            "status": "pass"
+          },
+          {
+            "id": "DATA-030",
+            "name": "Data Residency Compliance",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-031",
+            "name": "Sensitivity Labels Published",
+            "status": "fail"
+          },
+          {
+            "id": "DATA-032",
+            "name": "Auto-Labeling Rules Configured",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-033",
+            "name": "Anonymous Links Disabled",
+            "status": "pass"
+          },
+          {
+            "id": "DATA-034",
+            "name": "Encryption in Transit (TLS)",
+            "status": "pass"
+          },
+          {
+            "id": "DATA-035",
+            "name": "Encryption at Rest",
+            "status": "pass"
+          },
+          {
+            "id": "DATA-036",
+            "name": "Customer Key Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-037",
+            "name": "Double Key Encryption Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "DATA-038",
+            "name": "DLP Policy Enforcement",
+            "status": "fail"
+          },
+          {
+            "id": "DATA-039",
+            "name": "Teams Guest Access Restricted",
+            "status": "pass"
+          },
+          {
+            "id": "DATA-040",
+            "name": "SharePoint Site Classification",
+            "status": "fail"
+          }
+        ],
+        "riskScore": 34
+      },
+      "AI Security & Governance": {
+        "pass": 0,
+        "fail": 0,
+        "warn": 27,
+        "validations": [
+          {
+            "id": "AI-001",
+            "name": "Copilot User MFA Enforcement (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-002",
+            "name": "Overshared SharePoint Sites Detected",
+            "status": "warn"
+          },
+          {
+            "id": "AI-003",
+            "name": "Overshared OneDrive Content Detected",
+            "status": "warn"
+          },
+          {
+            "id": "AI-004",
+            "name": "AI Agent Graph Permissions Minimal (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-005",
+            "name": "AI Agent Secrets Rotation",
+            "status": "warn"
+          },
+          {
+            "id": "AI-006",
+            "name": "Copilot License Assignment & Governance (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-007",
+            "name": "Copilot Data Privacy Mode Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "AI-008",
+            "name": "Copilot Tenant Isolation Enforced (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-009",
+            "name": "Copilot Feedback & Logging Audit",
+            "status": "warn"
+          },
+          {
+            "id": "AI-010",
+            "name": "Copilot Ground Truth Data Protection (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-011",
+            "name": "Oversharing Detection - SharePoint AI Indexing",
+            "status": "warn"
+          },
+          {
+            "id": "AI-012",
+            "name": "Oversharing Detection - OneDrive AI Indexing",
+            "status": "warn"
+          },
+          {
+            "id": "AI-013",
+            "name": "AI Plugin Security - Permission Minimization (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-014",
+            "name": "AI Agent Secrets Management - Rotation (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-015",
+            "name": "AI Agent Access Logging & Audit",
+            "status": "warn"
+          },
+          {
+            "id": "AI-016",
+            "name": "AI Model Input Validation & Sanitization (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-017",
+            "name": "AI Output Filtering & Content Moderation (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-018",
+            "name": "Conditional Access - AI Agent Device Compliance",
+            "status": "warn"
+          },
+          {
+            "id": "AI-019",
+            "name": "AI Training Data Governance - Retention Limits",
+            "status": "warn"
+          },
+          {
+            "id": "AI-020",
+            "name": "AI Bias & Fairness Monitoring (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-021",
+            "name": "AI Model Version Control & Governance (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-022",
+            "name": "DLP Policy for AI-Generated Content (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-023",
+            "name": "AI Model Explainability & Transparency (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-024",
+            "name": "Responsible AI Governance Board (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-025",
+            "name": "AI Compliance Attestation & Reporting (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-026",
+            "name": "Adversarial Testing & Red Teaming (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "AI-027",
+            "name": "AI Privacy Impact Assessment (PIA) (Manual)",
+            "status": "warn"
+          }
+        ],
+        "riskScore": 35
+      },
+      "Network & Threat Protection": {
+        "pass": 0,
+        "fail": 0,
+        "warn": 23,
+        "validations": [
+          {
+            "id": "AUDIT-001",
+            "name": "Unified Audit Logging Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "AUDIT-002",
+            "name": "Mailbox Auditing Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "AUDIT-003",
+            "name": "Alert Policies Configured",
+            "status": "warn"
+          },
+          {
+            "id": "THREAT-001",
+            "name": "Microsoft Defender Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "THREAT-002",
+            "name": "Zero-Hour Auto Purge (ZAP) Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "THREAT-003",
+            "name": "Threat Analytics Review",
+            "status": "warn"
+          },
+          {
+            "id": "ID-93",
+            "name": "Threat Intelligence Integration",
+            "status": "warn"
+          },
+          {
+            "id": "ID-94",
+            "name": "Automated Incident Response Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "ID-95",
+            "name": "Ransomware Detection Configured",
+            "status": "warn"
+          },
+          {
+            "id": "ID-96",
+            "name": "Anomaly Detection Alerts Enabled",
+            "status": "warn"
+          },
+          {
+            "id": "ID-97",
+            "name": "Threat Exposure Score Monitored",
+            "status": "warn"
+          },
+          {
+            "id": "ID-98",
+            "name": "Advanced Email Threat Filtering",
+            "status": "warn"
+          },
+          {
+            "id": "ID-99",
+            "name": "Attachment Analysis & Sandboxing",
+            "status": "warn"
+          },
+          {
+            "id": "ID-100",
+            "name": "Defender for Endpoint Onboarded",
+            "status": "warn"
+          },
+          {
+            "id": "ID-101",
+            "name": "Credential Guard Enabled (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "ID-102",
+            "name": "Exploit Guard Protection Rules",
+            "status": "warn"
+          },
+          {
+            "id": "ID-103",
+            "name": "Incident Response Plan Documented (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "ID-104",
+            "name": "Threat Hunting Program Active (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "ID-105",
+            "name": "Breach Investigation Capability",
+            "status": "warn"
+          },
+          {
+            "id": "ID-106",
+            "name": "Incident Response Time Tracking",
+            "status": "warn"
+          },
+          {
+            "id": "ID-107",
+            "name": "Recovery Testing Program (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "ID-108",
+            "name": "Security Information & Event Management (SIEM) (Manual)",
+            "status": "warn"
+          },
+          {
+            "id": "ID-109",
+            "name": "Threat Data Sharing & Collaboration (Manual)",
+            "status": "warn"
+          }
+        ],
+        "riskScore": 36
+      }
+    }
+  },
+  "riskSummary": {
+    "overallRiskScore": 36,
+    "riskLevel": "Medium",
+    "controlsByRisk": {
+      "critical": 0,
+      "high": 18,
+      "medium": 243,
+      "low": 42
+    },
+    "pillarRisks": {
+      "Identity Security": {
+        "riskScore": 43,
+        "riskLevel": "Medium",
+        "compliance": 15
+      },
+      "Infrastructure & Workload Security": {
+        "riskScore": 30,
+        "riskLevel": "Medium",
+        "compliance": 10
+      },
+      "Device Security": {
+        "riskScore": 42,
+        "riskLevel": "Medium",
+        "compliance": 0
+      },
+      "Application Security": {
+        "riskScore": 29,
+        "riskLevel": "Medium",
+        "compliance": 50
+      },
+      "Data Protection & Compliance": {
+        "riskScore": 34,
+        "riskLevel": "Medium",
+        "compliance": 18
+      },
+      "AI Security & Governance": {
+        "riskScore": 35,
+        "riskLevel": "Medium",
+        "compliance": 0
+      },
+      "Network & Threat Protection": {
+        "riskScore": 36,
+        "riskLevel": "Medium",
+        "compliance": 0
+      }
+    }
+  },
+  "complianceSummary": {
+    "frameworkCoverage": {
+      "CIS": {
+        "framework": "CIS Microsoft 365 Foundations Benchmark",
+        "version": "1.0",
+        "description": "Center for Internet Security best practices for Microsoft 365",
+        "color": "#0078D4",
+        "icon": "ti-shield",
+        "totalControls": 101,
+        "implementedControls": 10,
+        "coveragePercentage": 10,
+        "failingControls": 2,
+        "compliancePercentage": 80,
+        "status": "Compliant",
+        "mappedControlIds": [
+          "ID-001",
+          "ID-002",
+          "ID-005",
+          "ID-008",
+          "ID-010",
+          "ID-011",
+          "DEV-001",
+          "APP-001",
+          "DATA-001",
+          "DATA-002"
+        ]
+      },
+      "NIST": {
+        "framework": "NIST Cybersecurity Framework",
+        "version": "1.1",
+        "description": "National Institute of Standards and Technology guidelines",
+        "color": "#0066CC",
+        "icon": "ti-server-2",
+        "totalControls": 158,
+        "implementedControls": 10,
+        "coveragePercentage": 6,
+        "failingControls": 2,
+        "compliancePercentage": 80,
+        "status": "Compliant",
+        "mappedControlIds": [
+          "ID-001",
+          "ID-002",
+          "ID-005",
+          "ID-008",
+          "ID-010",
+          "ID-011",
+          "DEV-001",
+          "APP-001",
+          "DATA-001",
+          "DATA-002"
+        ]
+      },
+      "ISO27001": {
+        "framework": "ISO/IEC 27001:2022",
+        "version": "2022",
+        "description": "Information Security Management Systems standard",
+        "color": "#8B0000",
+        "icon": "ti-lock",
+        "totalControls": 93,
+        "implementedControls": 10,
+        "coveragePercentage": 11,
+        "failingControls": 2,
+        "compliancePercentage": 80,
+        "status": "Compliant",
+        "mappedControlIds": [
+          "ID-001",
+          "ID-002",
+          "ID-005",
+          "ID-008",
+          "ID-010",
+          "ID-011",
+          "DEV-001",
+          "APP-001",
+          "DATA-001",
+          "DATA-002"
+        ]
+      },
+      "PCI-DSS": {
+        "framework": "PCI Data Security Standard",
+        "version": "3.2.1",
+        "description": "Payment Card Industry compliance framework",
+        "color": "#FF6B35",
+        "icon": "ti-credit-card",
+        "totalControls": 78,
+        "implementedControls": 10,
+        "coveragePercentage": 13,
+        "failingControls": 2,
+        "compliancePercentage": 80,
+        "status": "Compliant",
+        "mappedControlIds": [
+          "ID-001",
+          "ID-002",
+          "ID-005",
+          "ID-008",
+          "ID-010",
+          "ID-011",
+          "DEV-001",
+          "APP-001",
+          "DATA-001",
+          "DATA-002"
+        ]
+      },
+      "SOC2": {
+        "framework": "SOC 2 Type II",
+        "version": "2022",
+        "description": "Service Organization Control audit criteria",
+        "color": "#228B22",
+        "icon": "ti-certificate",
+        "totalControls": 64,
+        "implementedControls": 10,
+        "coveragePercentage": 16,
+        "failingControls": 2,
+        "compliancePercentage": 80,
+        "status": "Compliant",
+        "mappedControlIds": [
+          "ID-001",
+          "ID-002",
+          "ID-005",
+          "ID-008",
+          "ID-010",
+          "ID-011",
+          "DEV-001",
+          "APP-001",
+          "DATA-001",
+          "DATA-002"
+        ]
+      },
+      "GDPR": {
+        "framework": "General Data Protection Regulation",
+        "version": "2018",
+        "description": "EU regulation on data protection and privacy",
+        "color": "#003399",
+        "icon": "ti-world",
+        "totalControls": 72,
+        "implementedControls": 10,
+        "coveragePercentage": 14,
+        "failingControls": 2,
+        "compliancePercentage": 80,
+        "status": "Compliant",
+        "mappedControlIds": [
+          "ID-001",
+          "ID-002",
+          "ID-005",
+          "ID-008",
+          "ID-010",
+          "ID-011",
+          "DEV-001",
+          "APP-001",
+          "DATA-001",
+          "DATA-002"
+        ]
+      }
+    },
+    "averageCoverage": 12,
+    "averageCompliance": 80,
+    "compliancePriorities": [],
+    "unmappedControls": [
+      {
+        "id": "ID-004",
+        "name": "Passwordless Authentication Adoption",
+        "pillar": "Identity Security",
+        "status": "fail"
+      },
+      {
+        "id": "ID-006",
+        "name": "Require MFA for All Users via CA",
+        "pillar": "Identity Security",
+        "status": "pass"
+      },
+      {
+        "id": "ID-009",
+        "name": "Sign-in Risk Detection Enabled",
+        "pillar": "Identity Security",
+        "status": "pass"
+      },
+      {
+        "id": "ID-013",
+        "name": "Inactive Applications - Privileged Graph Permissions",
+        "pillar": "Identity Security",
+        "status": "pass"
+      },
+      {
+        "id": "ID-014",
+        "name": "Inactive Applications - Privileged Role Assignments (Manual)",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-015",
+        "name": "Application Credentials - No Shared Secrets (Manual)",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-016",
+        "name": "Application Credentials - Certificate Lifecycle",
+        "pillar": "Identity Security",
+        "status": "fail"
+      },
+      {
+        "id": "ID-017",
+        "name": "Microsoft Service Applications - No Configured Credentials (Manual)",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-018",
+        "name": "Application Management Policies - Enforce Standards (Manual)",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-019",
+        "name": "User Consent Settings - Restricted (Manual)",
+        "pillar": "Identity Security",
+        "status": "fail"
+      },
+      {
+        "id": "ID-020",
+        "name": "Multitenant Application Instance Lock (Manual)",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-021",
+        "name": "ADAL Deprecation - Legacy Library Migration (Manual)",
+        "pillar": "Identity Security",
+        "status": "pass"
+      },
+      {
+        "id": "ID-022",
+        "name": "Phishing-Resistant MFA - Privileged Users",
+        "pillar": "Identity Security",
+        "status": "fail"
+      },
+      {
+        "id": "ID-023",
+        "name": "Phishing-Resistant Methods - Admin Registration",
+        "pillar": "Identity Security",
+        "status": "fail"
+      },
+      {
+        "id": "ID-024",
+        "name": "Conditional Access - Admin MFA Strength Policy",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-025",
+        "name": "All Users - Phishing-Resistant MFA Enforcement",
+        "pillar": "Identity Security",
+        "status": "fail"
+      },
+      {
+        "id": "ID-026",
+        "name": "Token Protection - Prevent Token Theft",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-027",
+        "name": "Universal MFA - All Users Enforcement",
+        "pillar": "Identity Security",
+        "status": "pass"
+      },
+      {
+        "id": "ID-028",
+        "name": "Authentication Methods - User Registration",
+        "pillar": "Identity Security",
+        "status": "fail"
+      },
+      {
+        "id": "ID-029",
+        "name": "Microsoft Authenticator - Sign-in Context Display (Manual)",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-030",
+        "name": "Legacy MFA/SSPR - Migrate to Modern Policies (Manual)",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-110",
+        "name": "High Privilege API Permissions Reviewed",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-111",
+        "name": "Expired Client Secrets",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-112",
+        "name": "Certificates Expiring in 30 Days",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-113",
+        "name": "Phishing Resistant MFA Coverage",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-114",
+        "name": "Password Spray Detection Review",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-115",
+        "name": "Emergency Access Account Monitoring",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-012",
+        "name": "Passwordless Authentication Adoption",
+        "pillar": "Identity Security",
+        "status": "fail"
+      },
+      {
+        "id": "ID-116",
+        "name": "Approval Required for Role Activation",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-117",
+        "name": "MFA Required for Role Activation",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-118",
+        "name": "Enterprise App Inventory Reviewed",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-119",
+        "name": "Application Sign-in Monitoring",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-120",
+        "name": "Application Credential Governance",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-121",
+        "name": "High Privilege Service Principals",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-122",
+        "name": "OAuth2 Permission Grants Reviewed",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-123",
+        "name": "Authentication Methods Policy Configured",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-124",
+        "name": "Microsoft Authenticator Enabled",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-125",
+        "name": "FIDO2 Policy Configured",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-126",
+        "name": "Authentication Strength Policies",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-127",
+        "name": "Custom Banned Password List Configured",
+        "pillar": "Identity Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-003",
+        "name": "Legacy Authentication Blocked",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "pass"
+      },
+      {
+        "id": "EMAIL-001",
+        "name": "Anti-Phishing Policy Enabled",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "EMAIL-002",
+        "name": "Safe Links Enabled",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "EMAIL-003",
+        "name": "Safe Attachments Enabled",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "EMAIL-004",
+        "name": "Anti-Spam Policy Enabled",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "EMAIL-005",
+        "name": "DKIM Configured (Manual)",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "EMAIL-006",
+        "name": "SPF Configured (Manual)",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "EMAIL-007",
+        "name": "DMARC Configured (Manual)",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "EMAIL-008",
+        "name": "External Forwarding Blocked (Manual)",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-002",
+        "name": "Modern Authentication Enabled",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-003",
+        "name": "SMTP AUTH Disabled",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "fail"
+      },
+      {
+        "id": "INFRA-005",
+        "name": "External Forwarding Rules",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-006",
+        "name": "Mailbox Delegation Review",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-007",
+        "name": "Inactive Mailboxes Management",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-008",
+        "name": "Exchange Transport Rules (Manual)",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-009",
+        "name": "Anti-Phishing Policies (Manual)",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-012",
+        "name": "Anti-Spam Policies",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-013",
+        "name": "Anti-Malware Policies",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "pass"
+      },
+      {
+        "id": "INFRA-014",
+        "name": "DKIM Signing Configured",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-015",
+        "name": "SPF Record Configured",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-016",
+        "name": "DMARC Policy Configured",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-017",
+        "name": "Accepted Domains Reviewed",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-018",
+        "name": "Mail Flow Connectors (Manual)",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-019",
+        "name": "Litigation Hold Enabled",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-020",
+        "name": "Remote Domains Configured",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "pass"
+      },
+      {
+        "id": "INFRA-021",
+        "name": "SharePoint External Sharing Restricted",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-022",
+        "name": "SharePoint Anonymous Links Disabled",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-023",
+        "name": "SharePoint Site Owners Reviewed",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-024",
+        "name": "SharePoint Permissions Audited",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-025",
+        "name": "SharePoint Sensitivity Labels Applied",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "pass"
+      },
+      {
+        "id": "INFRA-026",
+        "name": "SharePoint Restricted Domains",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "pass"
+      },
+      {
+        "id": "INFRA-028",
+        "name": "SharePoint Hub Sites",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-029",
+        "name": "SharePoint External Users (Manual)",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-030",
+        "name": "SharePoint Storage Monitored",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-031",
+        "name": "SharePoint Version History",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-032",
+        "name": "SharePoint Recycle Bin",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-033",
+        "name": "SharePoint Custom Scripts",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "pass"
+      },
+      {
+        "id": "INFRA-034",
+        "name": "SharePoint Idle Sites (Manual)",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-035",
+        "name": "SharePoint Oversharing Detection",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-037",
+        "name": "Teams External Access",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "pass"
+      },
+      {
+        "id": "INFRA-038",
+        "name": "Teams Creation Audit",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-039",
+        "name": "Teams Private Channels",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-040",
+        "name": "Teams Shared Channels",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-041",
+        "name": "Teams Owners Assigned",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-042",
+        "name": "Teams Inactive Teams",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-043",
+        "name": "Teams Apps Audit",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-044",
+        "name": "Teams Third-Party Apps",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-045",
+        "name": "Teams Compliance Recording",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-046",
+        "name": "Teams Meeting Policies",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-047",
+        "name": "Teams Messaging Policies",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-048",
+        "name": "Teams Guest Messaging",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-049",
+        "name": "Teams File Sharing",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-050",
+        "name": "Teams Sensitivity Labels",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-051",
+        "name": "OneDrive Sharing Restricted",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-052",
+        "name": "OneDrive Anonymous Links",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-053",
+        "name": "OneDrive Sharing Audited",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-054",
+        "name": "OneDrive Inactive Drives",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-055",
+        "name": "OneDrive Large Sharing Events",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-056",
+        "name": "OneDrive Sync Restriction",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-057",
+        "name": "OneDrive Known Folder Move",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-058",
+        "name": "OneDrive Sensitivity Labels",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-059",
+        "name": "OneDrive Storage Monitored",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-060",
+        "name": "OneDrive Oversharing",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-061",
+        "name": "Defender Safe Links",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-062",
+        "name": "Defender Safe Attachments",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-064",
+        "name": "Defender Zero Hour Auto Purge",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-066",
+        "name": "Defender Anti-Phishing",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-067",
+        "name": "Defender Impersonation Protection",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-068",
+        "name": "Defender Automated Investigation",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-069",
+        "name": "Defender Threat Policies",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "INFRA-070",
+        "name": "Defender Quarantine Policies",
+        "pillar": "Infrastructure & Workload Security",
+        "status": "warn"
+      },
+      {
+        "id": "ID-007",
+        "name": "Require Compliant Devices via CA",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-069",
+        "name": "Intune MDM Enrollment Required",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-070",
+        "name": "Device Compliance Policy Enforced",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-071",
+        "name": "BitLocker Enabled on Windows Devices",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-072",
+        "name": "Windows Defender Enabled",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-073",
+        "name": "Mobile Device Management Enrollment",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-002",
+        "name": "Windows Compliance Policies - Enforced",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-003",
+        "name": "macOS Compliance Policies - Enforced",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-004",
+        "name": "iOS/iPadOS Compliance Policies - Enforced",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-005",
+        "name": "Android Compliance Policies - Managed Devices (Manual)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-006",
+        "name": "Windows Automatic Device Enrollment - Enforced",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-007",
+        "name": "Android Personal Compliance Policies - Enforced",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-008",
+        "name": "iOS App Protection Policies - Data Protection",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-009",
+        "name": "Android App Protection Policies - Data Protection",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-010",
+        "name": "Windows BitLocker Encryption - Enforced",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-011",
+        "name": "macOS FileVault Encryption - Enforced",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-012",
+        "name": "Windows Hello for Business - Authentication (Manual)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-013",
+        "name": "Windows LAPS - Local Admin Credential Protection",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-014",
+        "name": "macOS LAPS - Local Admin Credential Protection",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-015",
+        "name": "Windows Local Account Restrictions - Enforced (Manual)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-016",
+        "name": "macOS Platform SSO - Authentication",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-017",
+        "name": "Windows Update Policies - Enforced",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-018",
+        "name": "macOS Update Policies - Enforced",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-019",
+        "name": "iOS/iPadOS Update Policies - Enforced",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-020",
+        "name": "Intune Scope Tags - Delegated Administration",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-022",
+        "name": "Windows Security Baselines - Applied",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-023",
+        "name": "Attack Surface Reduction Rules - Configured",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-024",
+        "name": "Microsoft Defender Antivirus - Windows Protection",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-025",
+        "name": "Microsoft Defender Antivirus - macOS Protection",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-026",
+        "name": "Endpoint Analytics - Risk Identification",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-027",
+        "name": "Device Cleanup Rules - Tenant Hygiene",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-028",
+        "name": "Company Portal Branding - User Experience",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-029",
+        "name": "Conditional Access - Noncompliant Devices Blocked (Manual)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-030",
+        "name": "Conditional Access - Unmanaged Apps Blocked (Manual)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-031",
+        "name": "iOS Secure Wi-Fi Profiles - Network Protection",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-032",
+        "name": "Android Secure Wi-Fi Profiles - Network Protection",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-033",
+        "name": "Terms and Conditions Policies - Data Access Protection",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-034",
+        "name": "macOS Firewall Policies - Network Protection",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-035",
+        "name": "Password/Passcode Requirements",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-036",
+        "name": "Password Complexity Policy",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-037",
+        "name": "Password Expiration Policy",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-038",
+        "name": "Jailbreak/Root Detection",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-039",
+        "name": "Google Play Integrity Check (Android)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-040",
+        "name": "Defender for Endpoint Integration",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-041",
+        "name": "Device Risk-Based Access (Manual)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-042",
+        "name": "Minimum OS Version Enforcement",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-043",
+        "name": "OS Update Compliance",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-044",
+        "name": "Disk Encryption (FileVault, BitLocker, FDE)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-045",
+        "name": "TPM 2.0 Requirement (Windows)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-046",
+        "name": "Secure Boot Enforcement (Windows)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-047",
+        "name": "USB Restrictions",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-048",
+        "name": "Developer Mode / Developer Options Disabled",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-049",
+        "name": "Camera Restrictions",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-050",
+        "name": "Unknown Sources Blocked (Android)",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-051",
+        "name": "Bluetooth Restrictions",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-052",
+        "name": "NFC Restrictions (Mobile)",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-053",
+        "name": "Screen Capture Disabled",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-054",
+        "name": "Clipboard Restrictions",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-055",
+        "name": "AirDrop/Nearby Share Disabled",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-056",
+        "name": "iCloud Backup Restrictions (iOS)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-057",
+        "name": "Voice Assistant Restrictions (Siri/Google Assistant)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-058",
+        "name": "App Store / Play Store Restrictions",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-059",
+        "name": "Managed Browser Enforcement",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-060",
+        "name": "Mobile App Protection Policies (MAM)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-061",
+        "name": "Compliance Policy Deployment Status",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-062",
+        "name": "Configuration Profile Deployment",
+        "pillar": "Device Security",
+        "status": "fail"
+      },
+      {
+        "id": "DEV-063",
+        "name": "Device Compliance Rate",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-064",
+        "name": "Managed Device Inventory",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-065",
+        "name": "Device Sync Health",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-066",
+        "name": "Android Compliance Policies – Managed Devices",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-067",
+        "name": "Device Enrollment Notifications (Manual)",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "DEV-068",
+        "name": "Windows Local Account Restrictions",
+        "pillar": "Device Security",
+        "status": "warn"
+      },
+      {
+        "id": "APP-002",
+        "name": "Unused Enterprise Applications Removed",
+        "pillar": "Application Security",
+        "status": "fail"
+      },
+      {
+        "id": "APP-003",
+        "name": "Stale Service Principals Removed",
+        "pillar": "Application Security",
+        "status": "warn"
+      },
+      {
+        "id": "APP-004",
+        "name": "OAuth Admin Consent Workflow Enabled",
+        "pillar": "Application Security",
+        "status": "fail"
+      },
+      {
+        "id": "APP-005",
+        "name": "Risky Graph Permissions Detected",
+        "pillar": "Application Security",
+        "status": "pass"
+      },
+      {
+        "id": "APP-006",
+        "name": "Expiring Client Secrets",
+        "pillar": "Application Security",
+        "status": "fail"
+      },
+      {
+        "id": "APP-007",
+        "name": "Application Owners Configured",
+        "pillar": "Application Security",
+        "status": "fail"
+      },
+      {
+        "id": "APP-008",
+        "name": "Directory.ReadWrite.All Permission Control",
+        "pillar": "Application Security",
+        "status": "pass"
+      },
+      {
+        "id": "APP-009",
+        "name": "RoleManagement.ReadWrite.Directory Control",
+        "pillar": "Application Security",
+        "status": "pass"
+      },
+      {
+        "id": "APP-010",
+        "name": "Long-Lived Client Secrets",
+        "pillar": "Application Security",
+        "status": "warn"
+      },
+      {
+        "id": "APP-011",
+        "name": "Certificates Expiring Soon",
+        "pillar": "Application Security",
+        "status": "pass"
+      },
+      {
+        "id": "APP-012",
+        "name": "Multiple Active Secrets Cleanup",
+        "pillar": "Application Security",
+        "status": "warn"
+      },
+      {
+        "id": "APP-013",
+        "name": "Workload Identity Conditional Access",
+        "pillar": "Application Security",
+        "status": "warn"
+      },
+      {
+        "id": "APP-014",
+        "name": "Managed Identity Adoption",
+        "pillar": "Application Security",
+        "status": "warn"
+      },
+      {
+        "id": "APP-015",
+        "name": "Service Principal Sign-in Monitoring",
+        "pillar": "Application Security",
+        "status": "pass"
+      },
+      {
+        "id": "APP-016",
+        "name": "Verified Publisher Status",
+        "pillar": "Application Security",
+        "status": "fail"
+      },
+      {
+        "id": "APP-017",
+        "name": "Never-Used Applications",
+        "pillar": "Application Security",
+        "status": "pass"
+      },
+      {
+        "id": "APP-018",
+        "name": "Failed Application Sign-ins",
+        "pillar": "Application Security",
+        "status": "pass"
+      },
+      {
+        "id": "APP-019",
+        "name": "New Enterprise Applications Review",
+        "pillar": "Application Security",
+        "status": "pass"
+      },
+      {
+        "id": "APP-020",
+        "name": "User Consent Disabled",
+        "pillar": "Application Security",
+        "status": "pass"
+      },
+      {
+        "id": "APP-021",
+        "name": "Admin Consent Requests Reviewed",
+        "pillar": "Application Security",
+        "status": "warn"
+      },
+      {
+        "id": "APP-022",
+        "name": "Orphaned Applications",
+        "pillar": "Application Security",
+        "status": "fail"
+      },
+      {
+        "id": "APP-023",
+        "name": "Disabled Applications Review",
+        "pillar": "Application Security",
+        "status": "pass"
+      },
+      {
+        "id": "APP-024",
+        "name": "Duplicate Applications",
+        "pillar": "Application Security",
+        "status": "pass"
+      },
+      {
+        "id": "DATA-003",
+        "name": "Auto-Labeling Rules Enabled",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-004",
+        "name": "SharePoint Sharing Policy Restricted",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-005",
+        "name": "OneDrive Sharing Policy Restricted",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-006",
+        "name": "Data Classification Framework Implemented",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-007",
+        "name": "Sensitivity Labels Applied to Sensitive Data",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-008",
+        "name": "Data Loss Prevention (DLP) Policies Comprehensive",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-009",
+        "name": "Azure Information Protection (AIP) Deployed",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-010",
+        "name": "Content Search & eDiscovery Audit Logging",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-011",
+        "name": "SharePoint Site Permissions Auditing",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-012",
+        "name": "OneDrive Sharing Policy Enforcement",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-013",
+        "name": "Teams Guest Access Controls",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-014",
+        "name": "Retention Policies Applied to All Workloads",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-015",
+        "name": "Advanced Threat Protection (ATP) for SharePoint/OneDrive",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-016",
+        "name": "Conditional Access - Unmanaged Device Data Blocking",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-017",
+        "name": "Tenant Restrictions V2 for Data Protection",
+        "pillar": "Data Protection & Compliance",
+        "status": "pass"
+      },
+      {
+        "id": "DATA-018",
+        "name": "Insider Risk Management Enabled",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-019",
+        "name": "Communication Compliance - Data in Messages",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-020",
+        "name": "Information Barrier Policies for Data Separation",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-021",
+        "name": "Compliance Manager - Data Protection Controls",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-022",
+        "name": "Data Residency & Geo-Compliance Enforced",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-023",
+        "name": "Recoverable Items Retention - Legal Hold",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-024",
+        "name": "Data Subject Rights Automation",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-025",
+        "name": "eDiscovery & Litigation Hold Management",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-027",
+        "name": "Communication Compliance Policies",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-028",
+        "name": "Audit Logging Comprehensive",
+        "pillar": "Data Protection & Compliance",
+        "status": "pass"
+      },
+      {
+        "id": "DATA-029",
+        "name": "Subject Rights Requests (DSR) Tracking",
+        "pillar": "Data Protection & Compliance",
+        "status": "pass"
+      },
+      {
+        "id": "DATA-030",
+        "name": "Data Residency Compliance",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-031",
+        "name": "Sensitivity Labels Published",
+        "pillar": "Data Protection & Compliance",
+        "status": "fail"
+      },
+      {
+        "id": "DATA-032",
+        "name": "Auto-Labeling Rules Configured",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-033",
+        "name": "Anonymous Links Disabled",
+        "pillar": "Data Protection & Compliance",
+        "status": "pass"
+      },
+      {
+        "id": "DATA-034",
+        "name": "Encryption in Transit (TLS)",
+        "pillar": "Data Protection & Compliance",
+        "status": "pass"
+      },
+      {
+        "id": "DATA-035",
+        "name": "Encryption at Rest",
+        "pillar": "Data Protection & Compliance",
+        "status": "pass"
+      },
+      {
+        "id": "DATA-036",
+        "name": "Customer Key Enabled",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-037",
+        "name": "Double Key Encryption Enabled",
+        "pillar": "Data Protection & Compliance",
+        "status": "warn"
+      },
+      {
+        "id": "DATA-038",
+        "name": "DLP Policy Enforcement",
+        "pillar": "Data Protection & Compliance",
+        "status": "fail"
+      },
+      {
+        "id": "DATA-039",
+        "name": "Teams Guest Access Restricted",
+        "pillar": "Data Protection & Compliance",
+        "status": "pass"
+      },
+      {
+        "id": "DATA-040",
+        "name": "SharePoint Site Classification",
+        "pillar": "Data Protection & Compliance",
+        "status": "fail"
+      },
+      {
+        "id": "AI-001",
+        "name": "Copilot User MFA Enforcement (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-002",
+        "name": "Overshared SharePoint Sites Detected",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-003",
+        "name": "Overshared OneDrive Content Detected",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-004",
+        "name": "AI Agent Graph Permissions Minimal (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-005",
+        "name": "AI Agent Secrets Rotation",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-006",
+        "name": "Copilot License Assignment & Governance (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-007",
+        "name": "Copilot Data Privacy Mode Enabled",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-008",
+        "name": "Copilot Tenant Isolation Enforced (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-009",
+        "name": "Copilot Feedback & Logging Audit",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-010",
+        "name": "Copilot Ground Truth Data Protection (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-011",
+        "name": "Oversharing Detection - SharePoint AI Indexing",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-012",
+        "name": "Oversharing Detection - OneDrive AI Indexing",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-013",
+        "name": "AI Plugin Security - Permission Minimization (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-014",
+        "name": "AI Agent Secrets Management - Rotation (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-015",
+        "name": "AI Agent Access Logging & Audit",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-016",
+        "name": "AI Model Input Validation & Sanitization (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-017",
+        "name": "AI Output Filtering & Content Moderation (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-018",
+        "name": "Conditional Access - AI Agent Device Compliance",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-019",
+        "name": "AI Training Data Governance - Retention Limits",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-020",
+        "name": "AI Bias & Fairness Monitoring (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-021",
+        "name": "AI Model Version Control & Governance (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-022",
+        "name": "DLP Policy for AI-Generated Content (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-023",
+        "name": "AI Model Explainability & Transparency (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-024",
+        "name": "Responsible AI Governance Board (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-025",
+        "name": "AI Compliance Attestation & Reporting (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-026",
+        "name": "Adversarial Testing & Red Teaming (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AI-027",
+        "name": "AI Privacy Impact Assessment (PIA) (Manual)",
+        "pillar": "AI Security & Governance",
+        "status": "warn"
+      },
+      {
+        "id": "AUDIT-001",
+        "name": "Unified Audit Logging Enabled",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "AUDIT-002",
+        "name": "Mailbox Auditing Enabled",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "AUDIT-003",
+        "name": "Alert Policies Configured",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "THREAT-001",
+        "name": "Microsoft Defender Enabled",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "THREAT-002",
+        "name": "Zero-Hour Auto Purge (ZAP) Enabled",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "THREAT-003",
+        "name": "Threat Analytics Review",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-93",
+        "name": "Threat Intelligence Integration",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-94",
+        "name": "Automated Incident Response Enabled",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-95",
+        "name": "Ransomware Detection Configured",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-96",
+        "name": "Anomaly Detection Alerts Enabled",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-97",
+        "name": "Threat Exposure Score Monitored",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-98",
+        "name": "Advanced Email Threat Filtering",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-99",
+        "name": "Attachment Analysis & Sandboxing",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-100",
+        "name": "Defender for Endpoint Onboarded",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-101",
+        "name": "Credential Guard Enabled (Manual)",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-102",
+        "name": "Exploit Guard Protection Rules",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-103",
+        "name": "Incident Response Plan Documented (Manual)",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-104",
+        "name": "Threat Hunting Program Active (Manual)",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-105",
+        "name": "Breach Investigation Capability",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-106",
+        "name": "Incident Response Time Tracking",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-107",
+        "name": "Recovery Testing Program (Manual)",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-108",
+        "name": "Security Information & Event Management (SIEM) (Manual)",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      },
+      {
+        "id": "ID-109",
+        "name": "Threat Data Sharing & Collaboration (Manual)",
+        "pillar": "Network & Threat Protection",
+        "status": "warn"
+      }
+    ],
+    "totalFrameworks": 6,
+    "compliantFrameworks": 6
+  },
+  "frameworkComparison": [
+    {
+      "frameworkName": "SOC2",
+      "framework": "SOC 2 Type II",
+      "version": "2022",
+      "description": "Service Organization Control audit criteria",
+      "color": "#228B22",
+      "icon": "ti-certificate",
+      "totalControls": 64,
+      "implementedControls": 10,
+      "coveragePercentage": 16,
+      "failingControls": 2,
+      "compliancePercentage": 80,
+      "status": "Compliant",
+      "mappedControlIds": [
+        "ID-001",
+        "ID-002",
+        "ID-005",
+        "ID-008",
+        "ID-010",
+        "ID-011",
+        "DEV-001",
+        "APP-001",
+        "DATA-001",
+        "DATA-002"
+      ]
+    },
+    {
+      "frameworkName": "GDPR",
+      "framework": "General Data Protection Regulation",
+      "version": "2018",
+      "description": "EU regulation on data protection and privacy",
+      "color": "#003399",
+      "icon": "ti-world",
+      "totalControls": 72,
+      "implementedControls": 10,
+      "coveragePercentage": 14,
+      "failingControls": 2,
+      "compliancePercentage": 80,
+      "status": "Compliant",
+      "mappedControlIds": [
+        "ID-001",
+        "ID-002",
+        "ID-005",
+        "ID-008",
+        "ID-010",
+        "ID-011",
+        "DEV-001",
+        "APP-001",
+        "DATA-001",
+        "DATA-002"
+      ]
+    },
+    {
+      "frameworkName": "PCI-DSS",
+      "framework": "PCI Data Security Standard",
+      "version": "3.2.1",
+      "description": "Payment Card Industry compliance framework",
+      "color": "#FF6B35",
+      "icon": "ti-credit-card",
+      "totalControls": 78,
+      "implementedControls": 10,
+      "coveragePercentage": 13,
+      "failingControls": 2,
+      "compliancePercentage": 80,
+      "status": "Compliant",
+      "mappedControlIds": [
+        "ID-001",
+        "ID-002",
+        "ID-005",
+        "ID-008",
+        "ID-010",
+        "ID-011",
+        "DEV-001",
+        "APP-001",
+        "DATA-001",
+        "DATA-002"
+      ]
+    },
+    {
+      "frameworkName": "ISO27001",
+      "framework": "ISO/IEC 27001:2022",
+      "version": "2022",
+      "description": "Information Security Management Systems standard",
+      "color": "#8B0000",
+      "icon": "ti-lock",
+      "totalControls": 93,
+      "implementedControls": 10,
+      "coveragePercentage": 11,
+      "failingControls": 2,
+      "compliancePercentage": 80,
+      "status": "Compliant",
+      "mappedControlIds": [
+        "ID-001",
+        "ID-002",
+        "ID-005",
+        "ID-008",
+        "ID-010",
+        "ID-011",
+        "DEV-001",
+        "APP-001",
+        "DATA-001",
+        "DATA-002"
+      ]
+    },
+    {
+      "frameworkName": "CIS",
+      "framework": "CIS Microsoft 365 Foundations Benchmark",
+      "version": "1.0",
+      "description": "Center for Internet Security best practices for Microsoft 365",
+      "color": "#0078D4",
+      "icon": "ti-shield",
+      "totalControls": 101,
+      "implementedControls": 10,
+      "coveragePercentage": 10,
+      "failingControls": 2,
+      "compliancePercentage": 80,
+      "status": "Compliant",
+      "mappedControlIds": [
+        "ID-001",
+        "ID-002",
+        "ID-005",
+        "ID-008",
+        "ID-010",
+        "ID-011",
+        "DEV-001",
+        "APP-001",
+        "DATA-001",
+        "DATA-002"
+      ]
+    },
+    {
+      "frameworkName": "NIST",
+      "framework": "NIST Cybersecurity Framework",
+      "version": "1.1",
+      "description": "National Institute of Standards and Technology guidelines",
+      "color": "#0066CC",
+      "icon": "ti-server-2",
+      "totalControls": 158,
+      "implementedControls": 10,
+      "coveragePercentage": 6,
+      "failingControls": 2,
+      "compliancePercentage": 80,
+      "status": "Compliant",
+      "mappedControlIds": [
+        "ID-001",
+        "ID-002",
+        "ID-005",
+        "ID-008",
+        "ID-010",
+        "ID-011",
+        "DEV-001",
+        "APP-001",
+        "DATA-001",
+        "DATA-002"
+      ]
+    }
+  ],
+  "validationCounts": {
+    "pass": 33,
+    "fail": 39,
+    "warn": 231
+  }
+}

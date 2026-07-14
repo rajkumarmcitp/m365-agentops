@@ -18,6 +18,7 @@ import { unifiedGraphClient } from './graph-client-unified.js'
 import { calculateControlRiskScore, calculatePillarRiskScore, calculateOverallRiskScore, generateRiskSummary, getTopRiskControls } from './risk-scoring.js'
 import { generateComplianceSummary, getFrameworkComparison } from './compliance-calculator.js'
 import { createSnapshot, getSnapshotStats, calculateComplianceTrends, clearOldSnapshots } from './validation-snapshots.js'
+import { calculateComplianceWithExceptions, getExceptionStats } from './exception-manager.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -169,6 +170,11 @@ export class ZeroTrustValidator {
     results.complianceSummary = complianceSummary
     results.frameworkComparison = frameworkComparison
 
+    // Calculate compliance with exceptions
+    const complianceWithExceptions = calculateComplianceWithExceptions(results.validations)
+    results.complianceWithExceptions = complianceWithExceptions
+    results.exceptionStats = getExceptionStats()
+
     // Create snapshot for historical tracking
     createSnapshot(results)
 
@@ -181,7 +187,7 @@ export class ZeroTrustValidator {
     // Cleanup old snapshots (older than 365 days)
     clearOldSnapshots(365)
 
-    console.log(`✅ Validation complete: ${results.overallScore}% compliance | Risk: ${riskSummary.overallRiskScore}/100 | Trend: ${snapshotStats?.trendDirection}`)
+    console.log(`✅ Validation complete: ${results.overallScore}% compliance | Exceptions: ${complianceWithExceptions.exceptionCount} active | Risk: ${riskSummary.overallRiskScore}/100`)
     return results
   }
 

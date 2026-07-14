@@ -19152,6 +19152,147 @@ app.use('/graph', graphConfigApiRouter)
 app.use('/api/graph', graphConfigApiRouter)
 
 // ============================================================
+// Exception Management Routes
+// ============================================================
+import {
+  requestException,
+  approveException,
+  rejectException,
+  getAllExceptions,
+  getExceptionsByStatus,
+  getPendingApprovalsFor,
+  getExceptionById,
+  getExceptionStats,
+  calculateComplianceWithExceptions
+} from './lib/exception-manager.js'
+
+/**
+ * POST /api/exceptions/request
+ * Request a new compliance exception
+ */
+app.post('/api/exceptions/request', (req, res) => {
+  try {
+    const { controlId, controlName, reason, businessJustification, requestedBy, approverEmail, expiryDays, priority } = req.body
+
+    if (!controlId || !controlName || !reason || !requestedBy || !approverEmail) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields'
+      })
+    }
+
+    const exception = requestException({
+      controlId,
+      controlName,
+      reason,
+      businessJustification,
+      requestedBy,
+      approverEmail,
+      expiryDays: expiryDays || 30,
+      priority: priority || 'medium'
+    })
+
+    res.json({ success: true, exception })
+  } catch (error) {
+    console.error('Error requesting exception:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/exceptions
+ * Get all exceptions or filter by status
+ */
+app.get('/api/exceptions', (req, res) => {
+  try {
+    const { status, approver } = req.query
+    let exceptions
+
+    if (status) {
+      exceptions = getExceptionsByStatus(status)
+    } else if (approver) {
+      exceptions = getPendingApprovalsFor(approver)
+    } else {
+      exceptions = getAllExceptions()
+    }
+
+    res.json({ success: true, count: exceptions.length, exceptions })
+  } catch (error) {
+    console.error('Error fetching exceptions:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/exceptions/:id
+ * Get exception details
+ */
+app.get('/api/exceptions/:id', (req, res) => {
+  try {
+    const exception = getExceptionById(req.params.id)
+    if (!exception) {
+      return res.status(404).json({ success: false, error: 'Exception not found' })
+    }
+    res.json({ success: true, exception })
+  } catch (error) {
+    console.error('Error fetching exception:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/exceptions/:id/approve
+ * Approve an exception
+ */
+app.post('/api/exceptions/:id/approve', (req, res) => {
+  try {
+    const { approverEmail, notes } = req.body
+    if (!approverEmail) {
+      return res.status(400).json({ success: false, error: 'approverEmail required' })
+    }
+
+    const exception = approveException(req.params.id, approverEmail, notes)
+    res.json({ success: true, exception })
+  } catch (error) {
+    console.error('Error approving exception:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * POST /api/exceptions/:id/reject
+ * Reject an exception
+ */
+app.post('/api/exceptions/:id/reject', (req, res) => {
+  try {
+    const { rejectorEmail, rejectionReason } = req.body
+    if (!rejectorEmail || !rejectionReason) {
+      return res.status(400).json({ success: false, error: 'rejectorEmail and rejectionReason required' })
+    }
+
+    const exception = rejectException(req.params.id, rejectorEmail, rejectionReason)
+    res.json({ success: true, exception })
+  } catch (error) {
+    console.error('Error rejecting exception:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * GET /api/exceptions/stats
+ * Get exception statistics
+ */
+app.get('/api/exceptions/stats', (req, res) => {
+  try {
+    const stats = getExceptionStats()
+    res.json({ success: true, stats })
+  } catch (error) {
+    console.error('Error fetching exception stats:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// ============================================================
 // 404 Handler - MUST be last
 // ============================================================
 app.use((req, res) => {
