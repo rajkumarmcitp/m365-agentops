@@ -66,7 +66,14 @@ async function loadCachedZeroTrustData(el) {
         validations,
         summary: { ...summary, byPillar: Object.keys(byPillar).length > 0 ? byPillar : (summary.byPillar || {}) },
         overallScore: cachedResult.overallScore || cachedResult.compliance || 0,
-        totalValidations: cachedResult.totalValidations || validations.length
+        totalValidations: cachedResult.totalValidations || validations.length,
+        riskSummary: cachedResult.riskSummary || { overallRiskScore: 0 },
+        complianceSummary: cachedResult.complianceSummary || {},
+        frameworkComparison: cachedResult.frameworkComparison || [],
+        snapshotStats: cachedResult.snapshotStats || { currentScore: 0, averageScore: 0, trendDirection: 'stable', trendValue: 0, minScore: 0, maxScore: 0 },
+        complianceTrends: cachedResult.complianceTrends || [],
+        exceptionStats: cachedResult.exceptionStats || {},
+        complianceWithExceptions: cachedResult.complianceWithExceptions || {}
       }
       lastRunTime = cachedResult.lastRunTime
 
