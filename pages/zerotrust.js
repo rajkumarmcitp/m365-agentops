@@ -324,15 +324,16 @@ function renderZeroTrustWithData(el) {
     return
   }
 
-  const { totalValidations, summary, overallScore } = realValidations
+  const { totalValidations, summary, overallScore, riskSummary } = realValidations
   const scoreColor = overallScore >= 80 ? 'success' : overallScore >= 60 ? 'warning' : 'danger'
+  const riskScore = riskSummary?.overallRiskScore || 0
   const criticalIssues = summary.fail + summary.warn
 
   el.innerHTML = `
     <div class="page-header">
       <div>
         <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
-        <div class="page-subtitle">${totalValidations} security controls · Last run: ${lastRunTime ? new Date(lastRunTime).toLocaleString() : 'Unknown'}</div>
+        <div class="page-subtitle">${totalValidations} security controls · Risk Score: ${riskScore}/100 · Last run: ${lastRunTime ? new Date(lastRunTime).toLocaleString() : 'Unknown'}</div>
       </div>
       <div class="page-actions">
         <button class="btn" id="zt-rescan"><i class="ti ti-refresh"></i> Refresh</button>
@@ -342,7 +343,7 @@ function renderZeroTrustWithData(el) {
 
     <!-- KPI Row -->
     <div class="kpi-row">
-      ${renderZTKPIs(overallScore, scoreColor, totalValidations, summary)}
+      ${renderZTKPIs(overallScore, scoreColor, riskScore, totalValidations, summary)}
     </div>
 
     <!-- Tab Navigation -->
@@ -386,7 +387,8 @@ function renderZeroTrustWithData(el) {
   attachZTEventListeners(el)
 }
 
-function renderZTKPIs(score, scoreColor, total, summary) {
+function renderZTKPIs(score, scoreColor, riskScore, total, summary) {
+  const riskColor = riskScore >= 75 ? 'danger' : riskScore >= 50 ? 'warning' : 'success'
   return `
     <div class="kpi-tile sec-kpi-primary" style="min-width:160px">
       <div style="display:flex;align-items:center;gap:12px">
@@ -401,6 +403,22 @@ function renderZTKPIs(score, scoreColor, total, summary) {
           <div class="kpi-value ${scoreColor}" style="font-size:28px;font-weight:700">${score}<span style="font-size:12px;font-weight:500;color:var(--color-text-tertiary)">%</span></div>
           <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Compliance</div>
           <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${summary.pass}/${total} passed</div>
+        </div>
+      </div>
+    </div>
+    <div class="kpi-tile">
+      <div style="display:flex;align-items:center;gap:12px">
+        <svg width="52" height="52" viewBox="0 0 52 52" style="flex-shrink:0">
+          <circle cx="26" cy="26" r="21.32" fill="none" stroke="var(--color-border-tertiary)" stroke-width="7"/>
+          <circle cx="26" cy="26" r="21.32" fill="none" stroke="var(--clr-${riskColor}-text)" stroke-width="7"
+            stroke-dasharray="${133.1 * (riskScore / 100)} 133.1" stroke-dashoffset="33.275"
+            stroke-linecap="round" transform="rotate(-90 26 26)"/>
+          <text x="26" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="var(--clr-${riskColor}-text)">${riskScore}</text>
+        </svg>
+        <div>
+          <div class="kpi-value ${riskColor}" style="font-size:28px;font-weight:700">${riskScore}<span style="font-size:12px;font-weight:500;color:var(--color-text-tertiary)">/100</span></div>
+          <div class="kpi-label" style="font-size:10px;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600">Risk Score</div>
+          <div style="font-size:10px;margin-top:3px;color:var(--color-text-tertiary)">${riskScore >= 75 ? '🔴 Critical' : riskScore >= 50 ? '🟠 High' : '🟢 Low'}</div>
         </div>
       </div>
     </div>

@@ -15,6 +15,7 @@ import { ApplicationCollectors } from './application-collectors.js'
 import { InfrastructureCollectors } from './infrastructure-collectors.js'
 import DeviceValidations from './device-validations.js'
 import { unifiedGraphClient } from './graph-client-unified.js'
+import { calculateControlRiskScore, calculatePillarRiskScore, calculateOverallRiskScore, generateRiskSummary, getTopRiskControls } from './risk-scoring.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -144,12 +145,23 @@ export class ZeroTrustValidator {
       })
     }
 
-    // Calculate scores
+    // Calculate compliance scores
     results.overallScore = Math.round(
       (results.summary.pass / results.totalValidations) * 100
     )
 
-    console.log(`✅ Validation complete: ${results.overallScore}% compliance`)
+    // Calculate risk scores per pillar
+    for (const [pillar, pillarData] of Object.entries(results.summary.byPillar)) {
+      const pillarValidations = results.validations.filter(v => v.pillar === pillar)
+      pillarData.riskScore = calculatePillarRiskScore(pillarValidations)
+    }
+
+    // Calculate overall risk score and risk summary
+    const riskSummary = generateRiskSummary(results.validations, results.summary.byPillar)
+    results.riskSummary = riskSummary
+    results.topRisks = getTopRiskControls(results.validations, 10)
+
+    console.log(`✅ Validation complete: ${results.overallScore}% compliance | Risk Score: ${riskSummary.overallRiskScore}/100`)
     return results
   }
 
@@ -203,6 +215,10 @@ export class ZeroTrustValidator {
       }
 
       result.executionTime = Date.now() - startTime
+
+      // Calculate risk score for this control
+      result.riskScore = calculateControlRiskScore(validation, result)
+      result.riskLevel = result.riskScore >= 75 ? 'Critical' : result.riskScore >= 50 ? 'High' : result.riskScore >= 25 ? 'Medium' : 'Low'
 
       // Cache result
       validationCache.set(cacheKey, { result, timestamp: Date.now() })

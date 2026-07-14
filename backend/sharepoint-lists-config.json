@@ -1,0 +1,13 @@
+{
+  "lists": {
+    "cisValidations": "bdf2fe31-b424-49d8-87ba-5531a3702b13",
+    "cisResults": "a3c5997d-eb70-469a-a131-3ea58773b0e3",
+    "cisHistory": "cd89db1a-6e63-4638-95dd-9be079de79a6",
+    "zeroTrustValidations": "b0b7baf6-c401-4b86-b396-e256f139d762",
+    "zeroTrustResults": "51d13b27-ac5c-4dd5-9fd1-d72c0a3c4bb1",
+    "zeroTrustHistory": "8f4ee188-2340-4807-a9b2-8d7003ae735f",
+    "selfServiceRequests": "d0888a4f-07e4-4ac4-bf1f-fbbc699cc15d",
+    "selfServiceAudit": "0b2b2304-fbbc-412a-a1d0-587e29092a21"
+  },
+  "lastUpdated": "2026-07-14T03:15:29.551Z"
+}
