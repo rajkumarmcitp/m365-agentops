@@ -1131,8 +1131,8 @@ window.loadZTExceptions = async function() {
         if (requestBtn) requestBtn.style.display = 'block'
       }
 
-      // Approve button for admins and super admins
-      if (data.isAdmin || data.isSuperAdmin) {
+      // Approve button only for super admins
+      if (data.isSuperAdmin) {
         document.querySelectorAll('.btn-approve-exception').forEach(btn => {
           btn.style.display = 'block'
           btn.addEventListener('click', (e) => {

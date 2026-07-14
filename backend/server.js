@@ -1560,11 +1560,17 @@ app.get('/api/zero-trust/exceptions', async (req, res) => {
   }
 })
 
-// Approve an exception
+// Approve an exception (Super Admin only)
 app.post('/api/zero-trust/exceptions/:id/approve', async (req, res) => {
   try {
     const { id } = req.params
     const { approvedBy } = req.body
+    const userRole = req.get('X-User-Role') || req.body.userRole
+
+    // Only super admins can approve
+    if (userRole !== 'super-admin' && userRole !== 'superadmin' && !req.user?.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Only Super Admins can approve exceptions' })
+    }
 
     const siteId = process.env.SHAREPOINT_SITE_ID
     const listId = process.env.SHAREPOINT_ZT_EXCEPTIONS_LIST_ID

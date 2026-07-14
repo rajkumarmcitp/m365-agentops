@@ -146,22 +146,27 @@ export function resetSettings() {
 export function hasAccess(pageId) {
   if (!state.currentUser) return false
 
-  // Special case: user-investigation is available for super/admin users
-  if (pageId === 'user-investigation') {
-    return ['super', 'admin'].includes(state.currentUser.role)
+  const userRole = state.currentUser.role
+
+  // Self-service pages - available to all roles
+  const selfServicePages = ['dashboard', 'myreqs', 'myaccount', 'portal', 'chat']
+  if (selfServicePages.includes(pageId)) {
+    return true
   }
 
-  // Special case: setup-wizard is available for super/admin users
-  if (pageId === 'setup-wizard') {
-    return ['super', 'admin'].includes(state.currentUser.role)
+  // Administration pages - only available to admins and super admins
+  const adminPages = [
+    'zerotrust', 'setup-wizard', 'applications', 'agents', 'audit', 'graphapi',
+    'intune', 'sso', 'approvals', 'security', 'tasks', 'm365config',
+    'validation-settings', 'user-investigation', 'agent-details', 'tenantguard',
+    'tenantguard-enhanced', 'privaccts', 'licenses', 'msgcenter', 'messages', 'settings'
+  ]
+  if (adminPages.includes(pageId)) {
+    return ['admin', 'super'].includes(userRole)
   }
 
-  // Special case: agent-details is available for admin users (detail view)
-  if (pageId === 'agent-details') {
-    return ['super', 'admin'].includes(state.currentUser.role)
-  }
-
-  return state.currentUser.navAccess.includes(pageId)
+  // Fallback to navAccess if defined
+  return state.currentUser.navAccess?.includes(pageId) || false
 }
 
 export function isRole(...roles) {
