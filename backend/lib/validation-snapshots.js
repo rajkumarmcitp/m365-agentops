@@ -34,6 +34,11 @@ export function createSnapshot(validationResults) {
       riskSummary: validationResults.riskSummary || {},
       complianceSummary: validationResults.complianceSummary || {},
       frameworkComparison: validationResults.frameworkComparison || [],
+      validations: validationResults.validations || [],
+      snapshotStats: validationResults.snapshotStats || {},
+      complianceTrends: validationResults.complianceTrends || [],
+      exceptionStats: validationResults.exceptionStats || {},
+      complianceWithExceptions: validationResults.complianceWithExceptions || {},
       validationCounts: {
         pass: validationResults.summary?.pass || 0,
         fail: validationResults.summary?.fail || 0,

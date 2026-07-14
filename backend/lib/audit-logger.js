@@ -34,6 +34,12 @@ export const AUDIT_ACTIONS = {
   CONTROL_REMEDIATED: 'control_remediated',
   CONTROL_MANUAL_VALIDATION: 'control_manual_validation',
 
+  // Framework actions (NEW)
+  FRAMEWORK_ALIGNMENT_CHANGED: 'framework_alignment_changed',
+  FRAMEWORK_COMPLIANCE_CHANGED: 'framework_compliance_changed',
+  CONTROL_MAPPING_UPDATED: 'control_mapping_updated',
+  FRAMEWORK_COVERAGE_CHANGED: 'framework_coverage_changed',
+
   // Settings actions
   SETTINGS_CHANGED: 'settings_changed',
   CONFIGURATION_UPDATED: 'configuration_updated',
@@ -85,10 +91,46 @@ export function logAction(data) {
     updateAuditIndex(logEntry)
 
     console.log(`📝 Audit: ${action} by ${actor}`)
+
+    // Asynchronously save to SharePoint (non-blocking)
+    if (global.graphClient && global.sharePointSiteId && global.auditLogsListId) {
+      saveToSharePointAsync(logEntry).catch(e => console.warn('⚠️ Could not save audit log to SharePoint:', e.message))
+    }
+
     return logEntry
   } catch (error) {
     console.error(`❌ Failed to log audit action:`, error.message)
     throw error
+  }
+}
+
+/**
+ * Save audit log to SharePoint asynchronously
+ */
+async function saveToSharePointAsync(logEntry) {
+  try {
+    const itemData = {
+      fields: {
+        LogID: logEntry.id,
+        Timestamp: logEntry.timestamp,
+        Action: logEntry.action,
+        Actor: logEntry.actor,
+        ResourceID: logEntry.resourceId || '',
+        ResourceType: logEntry.resourceType || '',
+        Description: logEntry.description || '',
+        Details: JSON.stringify(logEntry.details || {}),
+        Severity: logEntry.severity?.toUpperCase() || 'INFO',
+        Status: logEntry.status?.toUpperCase() || 'SUCCESS'
+      }
+    }
+
+    await global.graphClient.api(
+      `/sites/${global.sharePointSiteId}/lists/${global.auditLogsListId}/items`
+    ).post(itemData)
+
+    console.log(`✓ Audit log saved to SharePoint: ${logEntry.id}`)
+  } catch (error) {
+    console.warn(`⚠️ Failed to save audit log to SharePoint:`, error.message)
   }
 }
 
@@ -354,6 +396,128 @@ export function purgeOldAuditLogs(olderThanDays = 365) {
     console.error(`❌ Failed to purge old audit logs:`, error.message)
     throw error
   }
+}
+
+/**
+ * Log framework alignment change
+ */
+export function logFrameworkAlignmentChange(framework, previousScore, newScore, changedControls) {
+  return logAction({
+    action: AUDIT_ACTIONS.FRAMEWORK_ALIGNMENT_CHANGED,
+    actor: 'system',
+    resourceId: framework,
+    resourceType: 'framework',
+    description: `Framework alignment changed: ${framework}`,
+    details: {
+      framework,
+      previousCompliance: previousScore,
+      newCompliance: newScore,
+      change: newScore - previousScore,
+      changedControlsCount: changedControls?.length || 0,
+      changedControls: changedControls?.slice(0, 10) // Log first 10 changed controls
+    },
+    severity: Math.abs(newScore - previousScore) > 10 ? 'warning' : 'info',
+    status: 'success'
+  })
+}
+
+/**
+ * Log framework compliance state change
+ */
+export function logFrameworkComplianceChange(framework, previousStatus, newStatus, details) {
+  return logAction({
+    action: AUDIT_ACTIONS.FRAMEWORK_COMPLIANCE_CHANGED,
+    actor: 'system',
+    resourceId: framework,
+    resourceType: 'framework',
+    description: `${framework} compliance status: ${previousStatus} → ${newStatus}`,
+    details: {
+      framework,
+      previousStatus,
+      newStatus,
+      ...details
+    },
+    severity: newStatus === 'Non-Compliant' ? 'error' : newStatus === 'Partial' ? 'warning' : 'info',
+    status: 'success'
+  })
+}
+
+/**
+ * Log control-to-framework mapping update
+ */
+export function logControlMappingUpdate(controlId, framework, action, reason) {
+  return logAction({
+    action: AUDIT_ACTIONS.CONTROL_MAPPING_UPDATED,
+    actor: 'system',
+    resourceId: controlId,
+    resourceType: 'control_mapping',
+    description: `Control ${controlId} mapping to ${framework}: ${action}`,
+    details: {
+      controlId,
+      framework,
+      action, // 'added', 'removed', 'updated'
+      reason
+    },
+    severity: 'info',
+    status: 'success'
+  })
+}
+
+/**
+ * Log framework coverage change
+ */
+export function logFrameworkCoverageChange(framework, previousCoverage, newCoverage, details) {
+  return logAction({
+    action: AUDIT_ACTIONS.FRAMEWORK_COVERAGE_CHANGED,
+    actor: 'system',
+    resourceId: framework,
+    resourceType: 'framework_coverage',
+    description: `${framework} coverage: ${previousCoverage}% → ${newCoverage}%`,
+    details: {
+      framework,
+      previousCoverage,
+      newCoverage,
+      change: newCoverage - previousCoverage,
+      ...details
+    },
+    severity: newCoverage < previousCoverage ? 'warning' : 'info',
+    status: 'success'
+  })
+}
+
+/**
+ * Get framework audit logs
+ */
+export function getFrameworkAuditLogs(framework, limit = 100) {
+  return getAuditLogs({
+    resourceId: framework,
+    resourceType: 'framework',
+    limit
+  })
+}
+
+/**
+ * Get all framework changes in date range
+ */
+export function getFrameworkChangesInRange(startDate, endDate) {
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+
+  return auditLogs
+    .filter(log => {
+      const logDate = new Date(log.timestamp)
+      return (
+        logDate >= start &&
+        logDate <= end &&
+        [
+          AUDIT_ACTIONS.FRAMEWORK_ALIGNMENT_CHANGED,
+          AUDIT_ACTIONS.FRAMEWORK_COMPLIANCE_CHANGED,
+          AUDIT_ACTIONS.CONTROL_MAPPING_UPDATED,
+          AUDIT_ACTIONS.FRAMEWORK_COVERAGE_CHANGED
+        ].includes(log.action)
+      )
+    })
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 }
 
 /**

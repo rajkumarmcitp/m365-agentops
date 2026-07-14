@@ -73,7 +73,8 @@ async function loadCachedZeroTrustData(el) {
         snapshotStats: cachedResult.snapshotStats || { currentScore: 0, averageScore: 0, trendDirection: 'stable', trendValue: 0, minScore: 0, maxScore: 0 },
         complianceTrends: cachedResult.complianceTrends || [],
         exceptionStats: cachedResult.exceptionStats || {},
-        complianceWithExceptions: cachedResult.complianceWithExceptions || {}
+        complianceWithExceptions: cachedResult.complianceWithExceptions || {},
+        lastRunTime: cachedResult.lastRunTime || new Date().toISOString()
       }
       lastRunTime = cachedResult.lastRunTime
 
@@ -387,6 +388,15 @@ function renderZeroTrustWithData(el) {
         <button class="tab-btn" data-zt-tab="frameworks">
           <i class="ti ti-certificate"></i><span>Frameworks</span>
         </button>
+        <button class="tab-btn" data-zt-tab="results">
+          <i class="ti ti-list-check"></i><span>Validation Results</span>
+        </button>
+        <button class="tab-btn" data-zt-tab="audit">
+          <i class="ti ti-history"></i><span>Audit Logs</span>
+        </button>
+        <button class="tab-btn" data-zt-tab="exceptions">
+          <i class="ti ti-alert-circle"></i><span>Exceptions</span>
+        </button>
       </div>
     </div>
 
@@ -482,6 +492,19 @@ function renderZTTabContent(el) {
     contentEl.innerHTML = renderZTOverview()
   } else if (activeTab === 'frameworks') {
     contentEl.innerHTML = renderZTFrameworks()
+  } else if (activeTab === 'results') {
+    contentEl.innerHTML = renderZTValidationResults()
+  } else if (activeTab === 'audit') {
+    contentEl.innerHTML = renderZTAuditLogs()
+    // Load audit log data after rendering HTML
+    setTimeout(() => window.loadZTAuditLogs(), 100)
+  } else if (activeTab === 'exceptions') {
+    contentEl.innerHTML = renderZTExceptions()
+    // Setup event handlers immediately after rendering
+    setTimeout(() => {
+      setupExceptionHandlers()
+      window.loadZTExceptions()
+    }, 50)
   } else {
     const pillarName = pillarsMap[activeTab]
     const pillarStats = realValidations.summary.byPillar[pillarName]
@@ -492,111 +515,729 @@ function renderZTTabContent(el) {
   }
 }
 
-function renderZTFrameworks() {
-  const frameworks = [
-    {
-      name: 'CIS Microsoft 365',
-      id: 'CIS',
-      description: 'Center for Internet Security best practices',
-      icon: 'ti-shield',
-      color: '#0078D4',
-      mappedControls: 303
-    },
-    {
-      name: 'NIST Cybersecurity',
-      id: 'NIST',
-      description: 'National Institute of Standards & Technology',
-      icon: 'ti-server-2',
-      color: '#0066CC',
-      mappedControls: 303
-    },
-    {
-      name: 'ISO/IEC 27001:2022',
-      id: 'ISO27001',
-      description: 'Information Security Management Systems',
-      icon: 'ti-lock',
-      color: '#8B0000',
-      mappedControls: 303
-    },
-    {
-      name: 'PCI Data Security Standard',
-      id: 'PCI-DSS',
-      description: 'Payment Card Industry compliance',
-      icon: 'ti-credit-card',
-      color: '#FF6B35',
-      mappedControls: 303
-    },
-    {
-      name: 'SOC 2 Type II',
-      id: 'SOC2',
-      description: 'Service Organization Control criteria',
-      icon: 'ti-certificate',
-      color: '#228B22',
-      mappedControls: 303
-    },
-    {
-      name: 'GDPR',
-      id: 'GDPR',
-      description: 'EU General Data Protection Regulation',
-      icon: 'ti-world',
-      color: '#003399',
-      mappedControls: 303
+function renderZTValidationResults() {
+  if (!realValidations || !realValidations.validations || realValidations.validations.length === 0) {
+    return `<div class="card" style="padding:20px"><p>No validation results available. Run a Full Scan first.</p></div>`
+  }
+
+  const { validations } = realValidations
+  const statusCounts = { pass: 0, fail: 0, warning: 0 }
+  validations.forEach(v => {
+    if (v.status === 'pass') statusCounts.pass++
+    else if (v.status === 'fail') statusCounts.fail++
+    else if (v.status === 'warning') statusCounts.warning++
+  })
+
+  return `
+    <div style="padding:20px">
+      <div style="margin-bottom:20px">
+        <div style="display:flex;gap:15px;margin-bottom:20px">
+          <div>
+            <button onclick="window.ztFilterResults('all')" class="zt-filter-btn active" data-filter="all" style="background:#666;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+              All (${validations.length})
+            </button>
+          </div>
+          <div>
+            <button onclick="window.ztFilterResults('pass')" class="zt-filter-btn" data-filter="pass" style="background:#16a34a;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+              ✓ Passing (${statusCounts.pass})
+            </button>
+          </div>
+          <div>
+            <button onclick="window.ztFilterResults('fail')" class="zt-filter-btn" data-filter="fail" style="background:#dc2626;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+              ✗ Failing (${statusCounts.fail})
+            </button>
+          </div>
+          <div>
+            <button onclick="window.ztFilterResults('warning')" class="zt-filter-btn" data-filter="warning" style="background:#d97706;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+              ⚠ Warnings (${statusCounts.warning})
+            </button>
+          </div>
+        </div>
+        <input type="text" id="zt-search-controls" placeholder="Search controls..." style="width:100%;max-width:400px;padding:10px;border:1px solid var(--color-border);border-radius:6px;font-size:13px">
+      </div>
+
+      <div style="overflow-x:auto">
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <thead>
+            <tr style="background:var(--color-bg-secondary);border-bottom:1px solid var(--color-border)">
+              <th style="padding:12px;text-align:left">Control ID</th>
+              <th style="padding:12px;text-align:left">Control Name</th>
+              <th style="padding:12px;text-align:left">Pillar</th>
+              <th style="padding:12px;text-align:center">Status</th>
+              <th style="padding:12px;text-align:left">Frameworks</th>
+              <th style="padding:12px;text-align:left">Message</th>
+            </tr>
+          </thead>
+          <tbody id="zt-results-tbody">
+            ${validations.map((v, idx) => {
+              const statusColor = v.status === 'pass' ? '#16a34a' : v.status === 'fail' ? '#dc2626' : '#d97706'
+              const statusIcon = v.status === 'pass' ? '✓' : v.status === 'fail' ? '✗' : '⚠'
+              const frameworks = getControlFrameworks(v.id).join(', ') || 'N/A'
+              return `
+                <tr style="border-bottom:1px solid var(--color-border);display:none" class="zt-result-row" data-status="${v.status}" data-search="${(v.id + ' ' + (v.name || '')).toLowerCase()}">
+                  <td style="padding:12px;font-weight:600">${v.id}</td>
+                  <td style="padding:12px">${v.name || 'N/A'}</td>
+                  <td style="padding:12px">${v.pillar || 'N/A'}</td>
+                  <td style="padding:12px;text-align:center">
+                    <span style="background:${statusColor}20;color:${statusColor};padding:4px 8px;border-radius:4px;font-weight:600">
+                      ${statusIcon} ${v.status.toUpperCase()}
+                    </span>
+                  </td>
+                  <td style="padding:12px;font-size:11px">${frameworks}</td>
+                  <td style="padding:12px;color:var(--color-text-secondary);max-width:300px">${v.description || v.error || ''}</td>
+                </tr>
+              `
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+}
+
+function getControlFrameworks(controlId) {
+  if (!realValidations || !realValidations.frameworkComparison) return []
+  const frameworks = []
+  realValidations.frameworkComparison.forEach(fw => {
+    if (fw.mappedControlIds && fw.mappedControlIds.includes(controlId)) {
+      // Extract short name
+      const shortName = fw.framework.split(' ').slice(0, 2).join(' ')
+      frameworks.push(shortName)
     }
-  ]
+  })
+  return frameworks
+}
+
+window.ztFilterResults = function(status) {
+  const rows = document.querySelectorAll('.zt-result-row')
+  const buttons = document.querySelectorAll('.zt-filter-btn')
+
+  buttons.forEach(btn => {
+    btn.style.background = btn.dataset.filter === status ? (
+      btn.dataset.filter === 'pass' ? '#16a34a' :
+      btn.dataset.filter === 'fail' ? '#dc2626' :
+      btn.dataset.filter === 'warning' ? '#d97706' : '#666'
+    ) : '#999'
+  })
+
+  rows.forEach(row => {
+    if (status === 'all' || row.dataset.status === status) {
+      row.style.display = ''
+    } else {
+      row.style.display = 'none'
+    }
+  })
+}
+
+window.ztSearchControls = function(query) {
+  const rows = document.querySelectorAll('.zt-result-row')
+  const searchLower = query.toLowerCase()
+  rows.forEach(row => {
+    if (row.dataset.search.includes(searchLower)) {
+      row.style.display = ''
+    } else {
+      row.style.display = 'none'
+    }
+  })
+}
+
+// Setup search listener
+setTimeout(() => {
+  const searchInput = document.getElementById('zt-search-controls')
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => window.ztSearchControls(e.target.value))
+    window.ztFilterResults('all')
+  }
+}, 100)
+
+function renderZTAuditLogs() {
+  return `
+    <div style="padding:20px">
+      <div style="margin-bottom:20px">
+        <h3 style="margin:0 0 10px 0">Audit Logs</h3>
+        <p style="margin:0;color:var(--color-text-secondary);font-size:13px">Compliance audit trail of all Zero Trust validation activities</p>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap">
+          <button id="zt-audit-all" class="zt-audit-btn active" data-filter="all" style="background:#666;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+            All Events
+          </button>
+          <button id="zt-audit-validation" class="zt-audit-btn" data-filter="validation" style="background:#0078d4;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+            Validations
+          </button>
+          <button id="zt-audit-framework" class="zt-audit-btn" data-filter="framework" style="background:#228b22;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+            Framework Changes
+          </button>
+          <button id="zt-audit-exception" class="zt-audit-btn" data-filter="exception" style="background:#d97706;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+            Exceptions
+          </button>
+        </div>
+        <input type="text" id="zt-audit-search" placeholder="Search audit logs..." style="width:100%;max-width:400px;padding:10px;border:1px solid var(--color-border);border-radius:6px;font-size:13px">
+      </div>
+
+      <div id="zt-audit-loading" style="text-align:center;padding:20px;color:var(--color-text-secondary)">
+        Loading audit logs...
+      </div>
+
+      <div id="zt-audit-content" style="overflow-x:auto"></div>
+    </div>
+  `
+}
+
+window.loadZTAuditLogs = async function() {
+  try {
+    const loadingEl = document.getElementById('zt-audit-loading')
+    const contentEl = document.getElementById('zt-audit-content')
+
+    if (!loadingEl || !contentEl) return
+
+    loadingEl.style.display = 'block'
+    contentEl.innerHTML = ''
+
+    // Fetch all audit logs (validations, framework changes, exceptions, etc.)
+    const response = await callAPI('/zero-trust/audit-logs')
+
+    if (!response.success || !response.data) {
+      loadingEl.innerHTML = '<div style="text-align:center;padding:40px"><p style="color:var(--color-text-secondary);font-size:14px">No audit logs found yet</p><p style="color:var(--color-text-tertiary);font-size:12px">Run a validation scan to generate audit events</p></div>'
+      return
+    }
+
+    const logs = response.data
+
+    // Handle empty logs
+    if (logs.length === 0) {
+      loadingEl.innerHTML = '<div style="text-align:center;padding:40px"><p style="color:var(--color-text-secondary);font-size:14px">No audit logs yet</p><p style="color:var(--color-text-tertiary);font-size:12px">Framework compliance changes will appear here after running validation scans</p></div>'
+      return
+    }
+
+    loadingEl.style.display = 'none'
+
+    // Build table with proper column widths
+    const table = document.createElement('table')
+    table.style.width = '100%'
+    table.style.fontSize = '12px'
+    table.style.borderCollapse = 'collapse'
+    table.style.tableLayout = 'fixed'
+
+    // Header
+    const header = table.createTHead()
+    const headerRow = header.insertRow()
+    headerRow.style.background = 'var(--color-bg-secondary)'
+    headerRow.style.borderBottom = '1px solid var(--color-border)'
+
+    const headerSpecs = [
+      { name: 'Timestamp', width: '140px' },
+      { name: 'Event Type', width: '160px' },
+      { name: 'Framework/Resource', width: '140px' },
+      { name: 'Details', width: 'auto' },
+      { name: 'Status', width: '80px' }
+    ]
+
+    headerSpecs.forEach(spec => {
+      const th = document.createElement('th')
+      th.textContent = spec.name
+      th.style.padding = '12px'
+      th.style.textAlign = 'left'
+      th.style.width = spec.width
+      th.style.minWidth = spec.width
+      th.style.wordWrap = 'break-word'
+      th.style.overflowWrap = 'break-word'
+      headerRow.appendChild(th)
+    })
+
+    // Body
+    const tbody = table.createTBody()
+    logs.forEach(log => {
+      const row = tbody.insertRow()
+      row.style.borderBottom = '1px solid var(--color-border)'
+      row.className = 'zt-audit-row'
+      row.dataset.action = log.action
+      row.dataset.search = (log.action + ' ' + (log.description || '') + ' ' + (log.resourceId || '')).toLowerCase()
+
+      const timestamp = new Date(log.timestamp).toLocaleString()
+      const actionLabel = log.action.replace(/_/g, ' ').toUpperCase()
+      const resourceId = log.resourceId || log.resourceType || 'N/A'
+
+      let detailsText = ''
+      if (log.details) {
+        if (log.details.framework) detailsText = log.details.framework + ': ' + log.details.previousCompliance + '% → ' + log.details.newCompliance + '%'
+        else if (log.details.previousStatus) detailsText = log.details.previousStatus + ' → ' + log.details.newStatus
+        else detailsText = JSON.stringify(log.details).substring(0, 100)
+      }
+
+      const statusColor = log.severity === 'error' ? '#dc2626' : log.severity === 'warning' ? '#d97706' : '#16a34a'
+
+      const cells = [timestamp, actionLabel, resourceId, detailsText, log.severity?.toUpperCase() || 'INFO']
+      const cellWidths = ['140px', '160px', '140px', 'auto', '80px']
+
+      cells.forEach((text, idx) => {
+        const cell = row.insertCell()
+        cell.textContent = text
+        cell.style.padding = '12px'
+        cell.style.width = cellWidths[idx]
+        cell.style.minWidth = cellWidths[idx]
+        cell.style.wordWrap = 'break-word'
+        cell.style.overflowWrap = 'break-word'
+        cell.style.whiteSpace = idx === 3 ? 'pre-wrap' : 'normal'
+
+        if (idx === 4) {
+          cell.style.color = statusColor
+          cell.style.fontWeight = '600'
+        }
+      })
+    })
+
+    // Wrap table in scrollable container
+    const tableWrapper = document.createElement('div')
+    tableWrapper.style.overflowX = 'auto'
+    tableWrapper.style.borderRadius = '6px'
+    tableWrapper.appendChild(table)
+    contentEl.appendChild(tableWrapper)
+
+    // Setup filters
+    document.querySelectorAll('.zt-audit-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.zt-audit-btn').forEach(b => b.style.background = '#999')
+        e.target.style.background = e.target.dataset.filter === 'validation' ? '#0078d4' :
+          e.target.dataset.filter === 'framework' ? '#228b22' :
+          e.target.dataset.filter === 'exception' ? '#d97706' : '#666'
+
+        const filter = e.target.dataset.filter
+        document.querySelectorAll('.zt-audit-row').forEach(row => {
+          if (filter === 'all') {
+            row.style.display = ''
+          } else if (filter === 'validation' && row.dataset.action.includes('validation')) {
+            row.style.display = ''
+          } else if (filter === 'framework' && row.dataset.action.includes('framework')) {
+            row.style.display = ''
+          } else if (filter === 'exception' && row.dataset.action.includes('exception')) {
+            row.style.display = ''
+          } else {
+            row.style.display = 'none'
+          }
+        })
+      })
+    })
+
+    // Setup search
+    const searchInput = document.getElementById('zt-audit-search')
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase()
+        document.querySelectorAll('.zt-audit-row').forEach(row => {
+          if (row.dataset.search.includes(query)) {
+            row.style.display = ''
+          } else {
+            row.style.display = 'none'
+          }
+        })
+      })
+    }
+
+  } catch (error) {
+    console.error('Error loading audit logs:', error)
+    const contentEl = document.getElementById('zt-audit-content')
+    if (contentEl) {
+      contentEl.innerHTML = '<p style="color:#dc2626">Error loading audit logs: ' + error.message + '</p>'
+    }
+  }
+}
+
+// Load audit logs when tab is shown
+setTimeout(() => {
+  const auditTab = document.querySelector('[data-zt-tab="audit"]')
+  if (auditTab) {
+    auditTab.addEventListener('click', () => {
+      setTimeout(() => window.loadZTAuditLogs(), 100)
+    })
+  }
+}, 500)
+
+function renderZTExceptions() {
+  return `
+    <div style="padding:20px">
+      <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h3 style="margin:0 0 10px 0">Exception Management</h3>
+          <p style="margin:0;color:var(--color-text-secondary);font-size:13px">Request exceptions for controls that cannot be immediately remediated</p>
+        </div>
+        <button id="zt-request-exception-btn" style="background:#0078d4;color:white;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;font-weight:600">
+          <i class="ti ti-plus" style="margin-right:6px"></i>Request Exception
+        </button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+        <div class="card" style="background:var(--color-bg-secondary)">
+          <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">PENDING APPROVAL</div>
+          <div style="font-size:24px;font-weight:700;color:#d97706">0</div>
+          <div style="font-size:11px;color:var(--color-text-tertiary)">Waiting for approval</div>
+        </div>
+        <div class="card" style="background:var(--color-bg-secondary)">
+          <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">APPROVED & ACTIVE</div>
+          <div style="font-size:24px;font-weight:700;color:#16a34a">0</div>
+          <div style="font-size:11px;color:var(--color-text-tertiary)">Currently approved</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <div style="display:flex;gap:10px;margin-bottom:15px">
+          <button id="zt-exc-all" class="zt-exc-btn active" data-filter="all" style="background:#666;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+            All
+          </button>
+          <button id="zt-exc-pending" class="zt-exc-btn" data-filter="pending" style="background:#d97706;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+            Pending
+          </button>
+          <button id="zt-exc-approved" class="zt-exc-btn" data-filter="approved" style="background:#16a34a;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+            Approved
+          </button>
+          <button id="zt-exc-expired" class="zt-exc-btn" data-filter="expired" style="background:#dc2626;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">
+            Expired
+          </button>
+        </div>
+        <input type="text" id="zt-exc-search" placeholder="Search control ID or reason..." style="width:100%;max-width:400px;padding:10px;border:1px solid var(--color-border);border-radius:6px;font-size:13px">
+      </div>
+
+      <div id="zt-exc-loading" style="text-align:center;padding:20px;color:var(--color-text-secondary)">
+        Loading exceptions...
+      </div>
+
+      <div id="zt-exc-content"></div>
+
+      <!-- Modal for requesting exception -->
+      <div id="zt-exception-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;justify-content:center;align-items:center">
+        <div class="card" style="width:90%;max-width:500px;max-height:90vh;overflow-y:auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <h3 style="margin:0">Request Exception</h3>
+            <button id="zt-modal-close" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--color-text-secondary)">×</button>
+          </div>
+
+          <form id="zt-exception-form" style="display:flex;flex-direction:column;gap:15px">
+            <div>
+              <label style="display:block;margin-bottom:6px;font-weight:600;font-size:13px">Control ID *</label>
+              <input type="text" id="exc-control-id" placeholder="e.g., ID-001, EMAIL-005" style="width:100%;padding:10px;border:1px solid var(--color-border);border-radius:6px;box-sizing:border-box" required>
+            </div>
+
+            <div>
+              <label style="display:block;margin-bottom:6px;font-weight:600;font-size:13px">Priority *</label>
+              <select id="exc-priority" style="width:100%;padding:10px;border:1px solid var(--color-border);border-radius:6px;box-sizing:border-box" required>
+                <option value="">Select Priority</option>
+                <option value="low">Low - Can be deferred</option>
+                <option value="medium">Medium - Should be addressed</option>
+                <option value="high">High - Urgent</option>
+                <option value="critical">Critical - Blocking business</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="display:block;margin-bottom:6px;font-weight:600;font-size:13px">Reason *</label>
+              <input type="text" id="exc-reason" placeholder="Why can't this be immediately remediated?" style="width:100%;padding:10px;border:1px solid var(--color-border);border-radius:6px;box-sizing:border-box" required>
+            </div>
+
+            <div>
+              <label style="display:block;margin-bottom:6px;font-weight:600;font-size:13px">Business Justification *</label>
+              <textarea id="exc-justification" placeholder="Detailed business justification..." style="width:100%;padding:10px;border:1px solid var(--color-border);border-radius:6px;box-sizing:border-box;font-family:monospace;min-height:100px" required></textarea>
+            </div>
+
+            <div>
+              <label style="display:block;margin-bottom:6px;font-weight:600;font-size:13px">Expiry Date *</label>
+              <input type="date" id="exc-expiry" style="width:100%;padding:10px;border:1px solid var(--color-border);border-radius:6px;box-sizing:border-box" required>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:20px">
+              <button type="submit" style="flex:1;background:#0078d4;color:white;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600">
+                Submit Request
+              </button>
+              <button type="button" id="zt-modal-cancel" style="flex:1;background:var(--color-bg-secondary);border:1px solid var(--color-border);padding:12px;border-radius:6px;cursor:pointer">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+window.deleteException = async function(exceptionId) {
+  try {
+    const response = await fetch(`/api/zero-trust/exceptions/${exceptionId}`, {
+      method: 'DELETE'
+    })
+    const result = await response.json()
+    if (result.success) {
+      showToast('Exception deleted successfully', 'success')
+      window.loadZTExceptions()
+    } else {
+      showToast('Failed to delete exception: ' + (result.error || 'Unknown error'), 'error')
+    }
+  } catch (error) {
+    console.error('Error deleting exception:', error)
+    showToast('Error deleting exception: ' + error.message, 'error')
+  }
+}
+
+window.loadZTExceptions = async function() {
+  try {
+    const loadingEl = document.getElementById('zt-exc-loading')
+    const contentEl = document.getElementById('zt-exc-content')
+
+    if (!loadingEl || !contentEl) return
+
+    loadingEl.style.display = 'block'
+    contentEl.innerHTML = ''
+
+    // Fetch exceptions from API
+    const response = await fetch('/api/zero-trust/exceptions')
+    const result = await response.json()
+
+    loadingEl.style.display = 'none'
+
+    if (!result.success || result.data.length === 0) {
+      contentEl.innerHTML = '<div style="text-align:center;padding:40px"><p style="color:var(--color-text-secondary)">No exceptions yet</p></div>'
+      return
+    }
+
+    const exceptions = result.data
+
+    // Build HTML table string to avoid DOM manipulation issues
+    let html = '<table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">'
+
+    // Add header row once
+    html += '<thead><tr style="background:var(--color-bg-secondary);border-bottom:1px solid var(--color-border)">'
+    html += '<th style="padding:12px;text-align:left;width:100px">Control ID</th>'
+    html += '<th style="padding:12px;text-align:left;width:80px">Priority</th>'
+    html += '<th style="padding:12px;text-align:left;width:100px">Status</th>'
+    html += '<th style="padding:12px;text-align:left;width:120px">Requested</th>'
+    html += '<th style="padding:12px;text-align:left;width:120px">Expires</th>'
+    html += '<th style="padding:12px;text-align:left;width:auto">Reason</th>'
+    html += '<th style="padding:12px;text-align:center;width:60px">Action</th>'
+    html += '</tr></thead>'
+
+    // Add body rows
+    html += '<tbody>'
+    exceptions.forEach(exc => {
+      const statusColor = exc.status === 'pending' ? '#d97706' : exc.status === 'approved' ? '#16a34a' : '#dc2626'
+      const priorityColor = exc.priority === 'critical' ? '#dc2626' : exc.priority === 'high' ? '#d97706' : '#0078d4'
+
+      const requestedDate = new Date(exc.requestedDate).toLocaleDateString()
+      const expiryDate = new Date(exc.expiryDate).toLocaleDateString()
+
+      html += `<tr style="border-bottom:1px solid var(--color-border)">`
+      html += `<td style="padding:12px">${exc.controlId}</td>`
+      html += `<td style="padding:12px;color:${priorityColor}">${exc.priority?.toUpperCase() || 'MEDIUM'}</td>`
+      html += `<td style="padding:12px;color:${statusColor}">${exc.status?.toUpperCase() || 'PENDING'}</td>`
+      html += `<td style="padding:12px">${requestedDate}</td>`
+      html += `<td style="padding:12px">${expiryDate}</td>`
+      html += `<td style="padding:12px;word-wrap:break-word">${exc.reason || ''}</td>`
+      html += `<td style="padding:12px;text-align:center"><button class="btn-delete-exception" data-id="${exc.spItemId || exc.exceptionId || exc.id}" style="padding:4px 8px;font-size:11px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;display:none">Delete</button></td>`
+      html += `</tr>`
+    })
+    html += '</tbody></table>'
+
+    contentEl.innerHTML = html
+
+    // Show delete buttons for super admins
+    fetch('/api/user/role').then(r => r.json()).then(data => {
+      if (data.isSuperAdmin) {
+        document.querySelectorAll('.btn-delete-exception').forEach(btn => {
+          btn.style.display = 'block'
+          btn.addEventListener('click', (e) => {
+            const exceptionId = e.target.dataset.id
+            if (confirm('Delete this exception request?')) {
+              deleteException(exceptionId)
+            }
+          })
+        })
+      }
+    }).catch(err => console.warn('Could not check user role:', err.message))
+  } catch (error) {
+    console.error('Error loading exceptions:', error)
+    const contentEl = document.getElementById('zt-exc-content')
+    if (contentEl) {
+      contentEl.innerHTML = '<p style="color:#dc2626">Error loading exceptions</p>'
+    }
+  }
+}
+
+function setupExceptionHandlers() {
+  // Request exception button
+  const requestBtn = document.getElementById('zt-request-exception-btn')
+  const modal = document.getElementById('zt-exception-modal')
+  const closeBtn = document.getElementById('zt-modal-close')
+  const cancelBtn = document.getElementById('zt-modal-cancel')
+  const form = document.getElementById('zt-exception-form')
+
+  if (requestBtn) {
+    requestBtn.addEventListener('click', () => {
+      modal.style.display = 'flex'
+    })
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      modal.style.display = 'none'
+      form.reset()
+    })
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      modal.style.display = 'none'
+      form.reset()
+    })
+  }
+
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault()
+
+      const data = {
+        controlId: document.getElementById('exc-control-id').value,
+        priority: document.getElementById('exc-priority').value,
+        reason: document.getElementById('exc-reason').value,
+        businessJustification: document.getElementById('exc-justification').value,
+        expiryDate: document.getElementById('exc-expiry').value,
+        requestedBy: 'current-user'
+      }
+
+      try {
+        const response = await fetch('/api/zero-trust/exceptions/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        })
+
+        const result = await response.json()
+
+        if (result.success) {
+          showToast('Exception request submitted successfully!', 'success')
+          modal.style.display = 'none'
+          form.reset()
+          // Reload exceptions
+          setTimeout(() => window.loadZTExceptions(), 500)
+        } else {
+          showToast('Error: ' + result.error, 'error')
+        }
+      } catch (error) {
+        showToast('Failed to submit exception: ' + error.message, 'error')
+      }
+    })
+  }
+
+  // Filter buttons
+  document.querySelectorAll('.zt-exc-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.zt-exc-btn').forEach(b => b.style.background = '#999')
+      e.target.style.background = e.target.dataset.filter === 'pending' ? '#d97706' :
+        e.target.dataset.filter === 'approved' ? '#16a34a' :
+        e.target.dataset.filter === 'expired' ? '#dc2626' : '#666'
+    })
+  })
+
+  // Close modal on background click
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.style.display = 'none'
+      form.reset()
+    }
+  })
+}
+
+function renderZTFrameworks() {
+  if (!realValidations || !realValidations.frameworkComparison || realValidations.frameworkComparison.length === 0) {
+    return `
+      <div style="padding:20px">
+        <div class="card">
+          <p style="color:var(--color-text-secondary)">Run a Full Scan to populate framework compliance data</p>
+        </div>
+      </div>
+    `
+  }
+
+  const comparisonData = realValidations.frameworkComparison
+  const frameworkMap = {
+    'CIS Microsoft 365 Foundations Benchmark': { id: 'CIS', icon: 'ti-shield', color: '#0078D4' },
+    'NIST Cybersecurity Framework': { id: 'NIST', icon: 'ti-server-2', color: '#0066CC' },
+    'ISO/IEC 27001:2022': { id: 'ISO27001', icon: 'ti-lock', color: '#8B0000' },
+    'PCI Data Security Standard': { id: 'PCI-DSS', icon: 'ti-credit-card', color: '#FF6B35' },
+    'SOC 2 Type II': { id: 'SOC2', icon: 'ti-certificate', color: '#228B22' },
+    'General Data Protection Regulation': { id: 'GDPR', icon: 'ti-world', color: '#003399' }
+  }
+
+  const getComplianceColor = (percentage) => {
+    if (percentage >= 80) return '#16a34a'
+    if (percentage >= 60) return '#d97706'
+    return '#dc2626'
+  }
+
+  const getComplianceStatus = (percentage) => {
+    if (percentage >= 80) return 'Compliant'
+    if (percentage >= 60) return 'At Risk'
+    return 'Non-Compliant'
+  }
 
   return `
     <div style="padding:20px">
       <div style="margin-bottom:30px">
         <h3 style="margin:0 0 10px 0">Compliance Framework Coverage</h3>
-        <p style="margin:0;color:var(--color-text-secondary);font-size:13px">All 303 Zero Trust controls are mapped to the following compliance frameworks</p>
+        <p style="margin:0;color:var(--color-text-secondary);font-size:13px">Real-time compliance status across all frameworks</p>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:20px">
-        ${frameworks.map(fw => `
-          <div class="card" style="border-left:4px solid ${fw.color}">
-            <div style="display:flex;align-items:center;margin-bottom:15px">
-              <div style="flex:1">
-                <div style="font-weight:600;font-size:15px;color:var(--color-text-primary)">${fw.name}</div>
-                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px">${fw.description}</div>
+        ${comparisonData.map(fw => {
+          const meta = frameworkMap[fw.framework] || { icon: 'ti-shield', color: '#666' }
+          const compliance = fw.compliancePercentage || 0
+          const color = getComplianceColor(compliance)
+          const status = getComplianceStatus(compliance)
+
+          return `
+            <div class="card" style="border-left:4px solid ${color}">
+              <div style="display:flex;align-items:center;margin-bottom:15px">
+                <div style="flex:1">
+                  <div style="font-weight:600;font-size:15px;color:var(--color-text-primary)">${fw.framework}</div>
+                  <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px">${fw.mappedControlIds?.length || 303} of 303 controls</div>
+                </div>
+                <div style="background:${color}20;color:${color};padding:8px 12px;border-radius:6px;font-weight:600;font-size:14px;text-align:center">
+                  <div style="font-size:24px;font-weight:700">${compliance}%</div>
+                  <div style="font-size:11px;margin-top:4px">${status}</div>
+                </div>
               </div>
-              <div style="background:${fw.color}20;color:${fw.color};padding:8px 12px;border-radius:6px;font-weight:600;font-size:12px;text-align:center">
-                <i class="ti ${fw.icon}" style="display:block;font-size:20px;margin-bottom:4px"></i>
-                ${fw.mappedControls} / 303
+              <div style="background:var(--color-bg-secondary);padding:12px;border-radius:6px;font-size:12px;color:var(--color-text-secondary)">
+                <div style="margin-bottom:8px"><strong>Coverage:</strong> ${fw.coveragePercentage || 100}%</div>
+                <div><strong>Mapped:</strong> <span style="color:${color}">✓ ${fw.status || 'Compliant'}</span></div>
               </div>
             </div>
-            <div style="background:var(--color-bg-secondary);padding:12px;border-radius:6px;font-size:12px;color:var(--color-text-secondary)">
-              <div style="margin-bottom:8px"><strong>Coverage:</strong> 100%</div>
-              <div><strong>Status:</strong> <span style="color:#16a34a">✓ Mapped</span></div>
-            </div>
-          </div>
-        `).join('')}
+          `
+        }).join('')}
       </div>
 
       <div class="card" style="margin-top:30px">
-        <div style="font-weight:600;margin-bottom:15px">Framework Mapping Summary</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));gap:15px;font-size:13px">
+        <div style="font-weight:600;margin-bottom:15px">Compliance Summary</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:15px;font-size:13px">
           <div>
-            <div style="color:var(--color-text-secondary);margin-bottom:8px">Total Controls Mapped</div>
-            <div style="font-size:24px;font-weight:700;color:#1976d2">4,392</div>
-            <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px">Across all frameworks</div>
+            <div style="color:var(--color-text-secondary);margin-bottom:8px">Overall Compliance</div>
+            <div style="font-size:24px;font-weight:700;color:#1976d2">${realValidations.overallScore || 0}%</div>
+            <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px">All frameworks</div>
           </div>
           <div>
-            <div style="color:var(--color-text-secondary);margin-bottom:8px">Coverage Rate</div>
-            <div style="font-size:24px;font-weight:700;color:#16a34a">100%</div>
-            <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px">All 303 controls</div>
+            <div style="color:var(--color-text-secondary);margin-bottom:8px">Frameworks Compliant</div>
+            <div style="font-size:24px;font-weight:700;color:#16a34a">${comparisonData.filter(f => (f.compliancePercentage || 0) >= 80).length}/6</div>
+            <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px">≥80% compliance</div>
           </div>
           <div>
-            <div style="color:var(--color-text-secondary);margin-bottom:8px">Avg Frameworks per Control</div>
-            <div style="font-size:24px;font-weight:700;color:#ff9800">2.5</div>
-            <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px">Multi-framework alignment</div>
+            <div style="color:var(--color-text-secondary);margin-bottom:8px">Total Controls Evaluated</div>
+            <div style="font-size:24px;font-weight:700;color:#ff9800">${realValidations.totalValidations || 303}</div>
+            <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px">Across all scans</div>
           </div>
         </div>
       </div>
 
       <div class="card" style="margin-top:20px;background:var(--color-bg-secondary)">
         <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.6">
-          <strong>📋 Framework Data Integration:</strong><br>
-          Run a <strong>Full Scan</strong> (Refresh button) to see framework compliance coverage for your environment. The system automatically aligns detected controls with these frameworks and generates compliance reports.
+          <strong>📊 Compliance Status:</strong><br>
+          Last updated: ${realValidations.lastRunTime ? new Date(realValidations.lastRunTime).toLocaleString() : 'Just now'}<br>
+          Click <strong>Refresh</strong> to run a new compliance scan and update framework percentages.
         </div>
       </div>
     </div>
@@ -1071,6 +1712,15 @@ function renderZeroTrustWithDemoData(el) {
         </button>
         <button class="tab-btn" data-zt-tab="frameworks">
           <i class="ti ti-certificate"></i><span>Frameworks</span>
+        </button>
+        <button class="tab-btn" data-zt-tab="results">
+          <i class="ti ti-list-check"></i><span>Validation Results</span>
+        </button>
+        <button class="tab-btn" data-zt-tab="audit">
+          <i class="ti ti-history"></i><span>Audit Logs</span>
+        </button>
+        <button class="tab-btn" data-zt-tab="exceptions">
+          <i class="ti ti-alert-circle"></i><span>Exceptions</span>
         </button>
       </div>
     </div>

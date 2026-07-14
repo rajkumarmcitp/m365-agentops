@@ -53,24 +53,34 @@ export function calculateFrameworkCoverageMetrics(validations) {
 
   for (const [frameworkName, framework] of Object.entries(FRAMEWORKS)) {
     const mappedControls = new Set()
+    const passingControls = new Set()
     const failingControls = new Set()
+    const warningControls = new Set()
 
     for (const validation of validations) {
       const controlMappings = getControlFrameworkMappings(validation.id)
       if (controlMappings[frameworkName]) {
         mappedControls.add(validation.id)
 
-        if (validation.status === 'fail') {
+        if (validation.status === 'pass') {
+          passingControls.add(validation.id)
+        } else if (validation.status === 'fail') {
           failingControls.add(validation.id)
+        } else if (validation.status === 'warning') {
+          warningControls.add(validation.id)
         }
       }
     }
 
     const coverageCount = mappedControls.size
     const coveragePercentage = Math.round((coverageCount / framework.totalControls) * 100)
+    const passingCount = passingControls.size
     const failureCount = failingControls.size
+    const warningCount = warningControls.size
+
+    // Compliance: Only count passing controls (matches overall score methodology)
     const compliancePercentage = coverageCount > 0
-      ? Math.round(((coverageCount - failureCount) / coverageCount) * 100)
+      ? Math.round((passingCount / coverageCount) * 100)
       : 0
 
     metrics[frameworkName] = {
@@ -82,7 +92,9 @@ export function calculateFrameworkCoverageMetrics(validations) {
       totalControls: framework.totalControls,
       implementedControls: coverageCount,
       coveragePercentage: coveragePercentage,
+      passingControls: passingCount,
       failingControls: failureCount,
+      warningControls: warningCount,
       compliancePercentage: compliancePercentage,
       status: compliancePercentage >= 80 ? 'Compliant' : compliancePercentage >= 60 ? 'Partial' : 'Non-Compliant',
       mappedControlIds: Array.from(mappedControls)

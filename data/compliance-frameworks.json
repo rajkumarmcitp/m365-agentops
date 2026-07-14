@@ -103,18 +103,9 @@
         "A.9.2.1",
         "A.9.4.3"
       ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-002": {
       "name": "MFA Coverage for All Users",
@@ -133,18 +124,9 @@
         "A.9.2.1",
         "A.9.4.3"
       ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-003": {
       "name": "Legacy Authentication Blocked",
@@ -161,20 +143,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-004": {
       "name": "Passwordless Authentication Adoption",
@@ -193,18 +164,9 @@
         "A.9.2.1",
         "A.9.4.3"
       ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-005": {
       "name": "Conditional Access Policies Enabled",
@@ -222,18 +184,9 @@
         "A.13.1",
         "A.13.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "7.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-006": {
       "name": "Require MFA for All Users via CA",
@@ -251,18 +204,9 @@
         "A.13.1",
         "A.13.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "7.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-007": {
       "name": "Require Compliant Devices via CA",
@@ -279,18 +223,9 @@
         "A.12.2.1",
         "A.12.6.1"
       ],
-      "PCI-DSS": [
-        "6.1",
-        "6.2"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-008": {
       "name": "Risk-Based Access via Identity Protection",
@@ -307,18 +242,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-009": {
       "name": "Sign-in Risk Detection Enabled",
@@ -335,18 +261,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-010": {
       "name": "PIM (Privileged Identity Management) Enabled",
@@ -366,18 +283,9 @@
         "A.9.2.4",
         "A.9.2.5"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-011": {
       "name": "Global Admin Count Minimized",
@@ -397,1536 +305,9 @@
         "A.9.2.4",
         "A.9.2.5"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-069": {
-      "name": "Intune MDM Enrollment Required",
-      "CIS": [
-        "3.1",
-        "3.2"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-4",
-        "SI-7"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.1",
-        "6.2"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-070": {
-      "name": "Device Compliance Policy Enforced",
-      "CIS": [
-        "3.1",
-        "3.2"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-4",
-        "SI-7"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.1",
-        "6.2"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-071": {
-      "name": "BitLocker Enabled on Windows Devices",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-072": {
-      "name": "Windows Defender Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-073": {
-      "name": "Mobile Device Management Enrollment",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "APP-001": {
-      "name": "High-Privilege Applications Identified",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "APP-002": {
-      "name": "Unused Enterprise Applications Removed",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "APP-003": {
-      "name": "Stale Service Principals Removed",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "APP-004": {
-      "name": "OAuth Admin Consent Workflow Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "APP-005": {
-      "name": "Risky Graph Permissions Detected",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "APP-006": {
-      "name": "Expiring Client Secrets",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "APP-007": {
-      "name": "Application Owners Configured",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "APP-008": {
-      "name": "Directory.ReadWrite.All Permission Control",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "APP-009": {
-      "name": "RoleManagement.ReadWrite.Directory Control",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "APP-010": {
-      "name": "Long-Lived Client Secrets",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "APP-011": {
-      "name": "Certificates Expiring Soon",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "APP-012": {
-      "name": "Multiple Active Secrets Cleanup",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "APP-013": {
-      "name": "Workload Identity Conditional Access",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "APP-014": {
-      "name": "Managed Identity Adoption",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "APP-015": {
-      "name": "Service Principal Sign-in Monitoring",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "APP-016": {
-      "name": "Verified Publisher Status",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "APP-017": {
-      "name": "Never-Used Applications",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "APP-018": {
-      "name": "Failed Application Sign-ins",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "APP-019": {
-      "name": "New Enterprise Applications Review",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "APP-020": {
-      "name": "User Consent Disabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "PM-1",
-        "PM-2",
-        "PM-7"
-      ],
-      "ISO27001": [
-        "A.5.1.1",
-        "A.5.2.1"
-      ],
-      "PCI-DSS": [
-        "12.1",
-        "12.2"
-      ],
-      "SOC2": [
-        "CC9.1",
-        "CC9.2"
-      ],
-      "GDPR": [
-        "5",
-        "24"
-      ]
-    },
-    "APP-021": {
-      "name": "Admin Consent Requests Reviewed",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "PM-1",
-        "PM-2",
-        "PM-7"
-      ],
-      "ISO27001": [
-        "A.5.1.1",
-        "A.5.2.1"
-      ],
-      "PCI-DSS": [
-        "12.1",
-        "12.2"
-      ],
-      "SOC2": [
-        "CC9.1",
-        "CC9.2"
-      ],
-      "GDPR": [
-        "5",
-        "24"
-      ]
-    },
-    "APP-022": {
-      "name": "Orphaned Applications",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "APP-023": {
-      "name": "Disabled Applications Review",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "APP-024": {
-      "name": "Duplicate Applications",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DATA-001": {
-      "name": "DLP Policies Configured",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-002": {
-      "name": "Sensitivity Labels Configured",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-003": {
-      "name": "Auto-Labeling Rules Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-004": {
-      "name": "SharePoint Sharing Policy Restricted",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-005": {
-      "name": "OneDrive Sharing Policy Restricted",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "EMAIL-001": {
-      "name": "Anti-Phishing Policy Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "EMAIL-002": {
-      "name": "Safe Links Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "EMAIL-003": {
-      "name": "Safe Attachments Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "EMAIL-004": {
-      "name": "Anti-Spam Policy Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "EMAIL-005": {
-      "name": "DKIM Configured (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "EMAIL-006": {
-      "name": "SPF Configured (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "EMAIL-007": {
-      "name": "DMARC Configured (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "EMAIL-008": {
-      "name": "External Forwarding Blocked (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-001": {
-      "name": "Copilot User MFA Enforcement (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-002": {
-      "name": "Overshared SharePoint Sites Detected",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-003": {
-      "name": "Overshared OneDrive Content Detected",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-004": {
-      "name": "AI Agent Graph Permissions Minimal (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-005": {
-      "name": "AI Agent Secrets Rotation",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AUDIT-001": {
-      "name": "Unified Audit Logging Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "AU-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33"
-      ]
-    },
-    "AUDIT-002": {
-      "name": "Mailbox Auditing Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "AU-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33"
-      ]
-    },
-    "AUDIT-003": {
-      "name": "Alert Policies Configured",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "AU-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33"
-      ]
-    },
-    "THREAT-001": {
-      "name": "Microsoft Defender Enabled",
-      "CIS": [
-        "3.1",
-        "5.1"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-3",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.2",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "THREAT-002": {
-      "name": "Zero-Hour Auto Purge (ZAP) Enabled",
-      "CIS": [
-        "3.1",
-        "5.1"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-3",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.2",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-013": {
       "name": "Inactive Applications - Privileged Graph Permissions",
@@ -1943,20 +324,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-014": {
       "name": "Inactive Applications - Privileged Role Assignments (Manual)",
@@ -1973,20 +343,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-015": {
       "name": "Application Credentials - No Shared Secrets (Manual)",
@@ -2003,20 +362,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-016": {
       "name": "Application Credentials - Certificate Lifecycle",
@@ -2033,20 +381,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-017": {
       "name": "Microsoft Service Applications - No Configured Credentials (Manual)",
@@ -2063,20 +400,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-018": {
       "name": "Application Management Policies - Enforce Standards (Manual)",
@@ -2093,20 +419,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-019": {
       "name": "User Consent Settings - Restricted (Manual)",
@@ -2123,20 +438,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-020": {
       "name": "Multitenant Application Instance Lock (Manual)",
@@ -2153,20 +457,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-021": {
       "name": "ADAL Deprecation - Legacy Library Migration (Manual)",
@@ -2183,20 +476,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-022": {
       "name": "Phishing-Resistant MFA - Privileged Users",
@@ -2215,18 +497,9 @@
         "A.9.2.1",
         "A.9.4.3"
       ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-023": {
       "name": "Phishing-Resistant Methods - Admin Registration",
@@ -2245,18 +518,9 @@
         "A.9.2.1",
         "A.9.4.3"
       ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-024": {
       "name": "Conditional Access - Admin MFA Strength Policy",
@@ -2274,18 +538,9 @@
         "A.13.1",
         "A.13.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "7.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-025": {
       "name": "All Users - Phishing-Resistant MFA Enforcement",
@@ -2303,18 +558,9 @@
         "A.13.1",
         "A.13.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "7.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-026": {
       "name": "Token Protection - Prevent Token Theft",
@@ -2332,18 +578,9 @@
         "A.13.1",
         "A.13.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "7.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-027": {
       "name": "Universal MFA - All Users Enforcement",
@@ -2362,18 +599,9 @@
         "A.9.2.1",
         "A.9.4.3"
       ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-028": {
       "name": "Authentication Methods - User Registration",
@@ -2396,14 +624,8 @@
         "8.2.3",
         "8.2.4"
       ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-029": {
       "name": "Microsoft Authenticator - Sign-in Context Display (Manual)",
@@ -2426,14 +648,8 @@
         "8.2.3",
         "8.2.4"
       ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-030": {
       "name": "Legacy MFA/SSPR - Migrate to Modern Policies (Manual)",
@@ -2456,5526 +672,8 @@
         "8.2.3",
         "8.2.4"
       ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-001": {
-      "name": "Windows Firewall - Policies Configured and Enforced",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-002": {
-      "name": "Windows Compliance Policies - Enforced",
-      "CIS": [
-        "3.1",
-        "3.2"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-4",
-        "SI-7"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.1",
-        "6.2"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-003": {
-      "name": "macOS Compliance Policies - Enforced",
-      "CIS": [
-        "3.1",
-        "3.2"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-4",
-        "SI-7"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.1",
-        "6.2"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-004": {
-      "name": "iOS/iPadOS Compliance Policies - Enforced",
-      "CIS": [
-        "3.1",
-        "3.2"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-4",
-        "SI-7"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.1",
-        "6.2"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-005": {
-      "name": "Android Compliance Policies - Managed Devices (Manual)",
-      "CIS": [
-        "3.1",
-        "3.2"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-4",
-        "SI-7"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.1",
-        "6.2"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-006": {
-      "name": "Windows Automatic Device Enrollment - Enforced",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-007": {
-      "name": "Android Personal Compliance Policies - Enforced",
-      "CIS": [
-        "3.1",
-        "3.2"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-4",
-        "SI-7"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.1",
-        "6.2"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-008": {
-      "name": "iOS App Protection Policies - Data Protection",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DEV-009": {
-      "name": "Android App Protection Policies - Data Protection",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DEV-010": {
-      "name": "Windows BitLocker Encryption - Enforced",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DEV-011": {
-      "name": "macOS FileVault Encryption - Enforced",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DEV-012": {
-      "name": "Windows Hello for Business - Authentication (Manual)",
-      "CIS": [
-        "1.1.1",
-        "1.1.2",
-        "1.1.3"
-      ],
-      "NIST": [
-        "IA-2",
-        "IA-4",
-        "IA-5",
-        "AC-2"
-      ],
-      "ISO27001": [
-        "A.9.2.1",
-        "A.9.4.3"
-      ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-013": {
-      "name": "Windows LAPS - Local Admin Credential Protection",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-014": {
-      "name": "macOS LAPS - Local Admin Credential Protection",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-015": {
-      "name": "Windows Local Account Restrictions - Enforced (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-016": {
-      "name": "macOS Platform SSO - Authentication",
-      "CIS": [
-        "1.1.1",
-        "1.1.2",
-        "1.1.3"
-      ],
-      "NIST": [
-        "IA-2",
-        "IA-4",
-        "IA-5",
-        "AC-2"
-      ],
-      "ISO27001": [
-        "A.9.2.1",
-        "A.9.4.3"
-      ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-017": {
-      "name": "Windows Update Policies - Enforced",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-018": {
-      "name": "macOS Update Policies - Enforced",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-019": {
-      "name": "iOS/iPadOS Update Policies - Enforced",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-020": {
-      "name": "Intune Scope Tags - Delegated Administration",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-022": {
-      "name": "Windows Security Baselines - Applied",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-023": {
-      "name": "Attack Surface Reduction Rules - Configured",
-      "CIS": [
-        "3.1",
-        "5.1"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-3",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.2",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-024": {
-      "name": "Microsoft Defender Antivirus - Windows Protection",
-      "CIS": [
-        "3.1",
-        "5.1"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-3",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.2",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-025": {
-      "name": "Microsoft Defender Antivirus - macOS Protection",
-      "CIS": [
-        "3.1",
-        "5.1"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-3",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.2",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-026": {
-      "name": "Endpoint Analytics - Risk Identification",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "SI-4",
-        "CA-7"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.3",
-        "10.4"
-      ],
-      "SOC2": [
-        "CC7.2",
-        "CC7.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-027": {
-      "name": "Device Cleanup Rules - Tenant Hygiene",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-028": {
-      "name": "Company Portal Branding - User Experience",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-029": {
-      "name": "Conditional Access - Noncompliant Devices Blocked (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-030": {
-      "name": "Conditional Access - Unmanaged Apps Blocked (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-031": {
-      "name": "iOS Secure Wi-Fi Profiles - Network Protection",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-032": {
-      "name": "Android Secure Wi-Fi Profiles - Network Protection",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-033": {
-      "name": "Terms and Conditions Policies - Data Access Protection",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-034": {
-      "name": "macOS Firewall Policies - Network Protection",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-035": {
-      "name": "Password/Passcode Requirements",
-      "CIS": [
-        "1.1.1",
-        "1.1.2",
-        "1.1.3"
-      ],
-      "NIST": [
-        "IA-2",
-        "IA-4",
-        "IA-5",
-        "AC-2"
-      ],
-      "ISO27001": [
-        "A.9.2.1",
-        "A.9.4.3"
-      ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-036": {
-      "name": "Password Complexity Policy",
-      "CIS": [
-        "1.1.1",
-        "1.1.2",
-        "1.1.3"
-      ],
-      "NIST": [
-        "IA-2",
-        "IA-4",
-        "IA-5",
-        "AC-2"
-      ],
-      "ISO27001": [
-        "A.9.2.1",
-        "A.9.4.3"
-      ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-037": {
-      "name": "Password Expiration Policy",
-      "CIS": [
-        "1.1.1",
-        "1.1.2",
-        "1.1.3"
-      ],
-      "NIST": [
-        "IA-2",
-        "IA-4",
-        "IA-5",
-        "AC-2"
-      ],
-      "ISO27001": [
-        "A.9.2.1",
-        "A.9.4.3"
-      ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-038": {
-      "name": "Jailbreak/Root Detection",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-039": {
-      "name": "Google Play Integrity Check (Android)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-040": {
-      "name": "Defender for Endpoint Integration",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-041": {
-      "name": "Device Risk-Based Access (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-042": {
-      "name": "Minimum OS Version Enforcement",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-043": {
-      "name": "OS Update Compliance",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-044": {
-      "name": "Disk Encryption (FileVault, BitLocker, FDE)",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-7",
-        "SC-28",
-        "SC-13"
-      ],
-      "ISO27001": [
-        "A.10.1.1",
-        "A.8.1.3"
-      ],
-      "PCI-DSS": [
-        "3.4",
-        "4.1"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.4"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DEV-045": {
-      "name": "TPM 2.0 Requirement (Windows)",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-7",
-        "SC-28",
-        "SC-13"
-      ],
-      "ISO27001": [
-        "A.10.1.1",
-        "A.8.1.3"
-      ],
-      "PCI-DSS": [
-        "3.4",
-        "4.1"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.4"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DEV-046": {
-      "name": "Secure Boot Enforcement (Windows)",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-7",
-        "SC-28",
-        "SC-13"
-      ],
-      "ISO27001": [
-        "A.10.1.1",
-        "A.8.1.3"
-      ],
-      "PCI-DSS": [
-        "3.4",
-        "4.1"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.4"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DEV-047": {
-      "name": "USB Restrictions",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-048": {
-      "name": "Developer Mode / Developer Options Disabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-049": {
-      "name": "Camera Restrictions",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-050": {
-      "name": "Unknown Sources Blocked (Android)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-051": {
-      "name": "Bluetooth Restrictions",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-052": {
-      "name": "NFC Restrictions (Mobile)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-053": {
-      "name": "Screen Capture Disabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-054": {
-      "name": "Clipboard Restrictions",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DEV-055": {
-      "name": "AirDrop/Nearby Share Disabled",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DEV-056": {
-      "name": "iCloud Backup Restrictions (iOS)",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DEV-057": {
-      "name": "Voice Assistant Restrictions (Siri/Google Assistant)",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DEV-058": {
-      "name": "App Store / Play Store Restrictions",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-059": {
-      "name": "Managed Browser Enforcement",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-060": {
-      "name": "Mobile App Protection Policies (MAM)",
-      "CIS": [
-        "5.1",
-        "5.2"
-      ],
-      "NIST": [
-        "AC-3",
-        "AC-2",
-        "IA-2"
-      ],
-      "ISO27001": [
-        "A.9.1.1",
-        "A.9.1.2"
-      ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-061": {
-      "name": "Compliance Policy Deployment Status",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-062": {
-      "name": "Configuration Profile Deployment",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-063": {
-      "name": "Device Compliance Rate",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-064": {
-      "name": "Managed Device Inventory",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-065": {
-      "name": "Device Sync Health",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-066": {
-      "name": "Android Compliance Policies – Managed Devices",
-      "CIS": [
-        "3.1",
-        "3.2"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-4",
-        "SI-7"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.1",
-        "6.2"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DEV-067": {
-      "name": "Device Enrollment Notifications (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DEV-068": {
-      "name": "Windows Local Account Restrictions",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-006": {
-      "name": "Copilot License Assignment & Governance (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "PM-1",
-        "PM-2",
-        "PM-7"
-      ],
-      "ISO27001": [
-        "A.5.1.1",
-        "A.5.2.1"
-      ],
-      "PCI-DSS": [
-        "12.1",
-        "12.2"
-      ],
-      "SOC2": [
-        "CC9.1",
-        "CC9.2"
-      ],
-      "GDPR": [
-        "5",
-        "24"
-      ]
-    },
-    "AI-007": {
-      "name": "Copilot Data Privacy Mode Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "PM-1",
-        "PM-2",
-        "PM-7"
-      ],
-      "ISO27001": [
-        "A.5.1.1",
-        "A.5.2.1"
-      ],
-      "PCI-DSS": [
-        "12.1",
-        "12.2"
-      ],
-      "SOC2": [
-        "CC9.1",
-        "CC9.2"
-      ],
-      "GDPR": [
-        "5",
-        "24"
-      ]
-    },
-    "AI-008": {
-      "name": "Copilot Tenant Isolation Enforced (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "PM-1",
-        "PM-2",
-        "PM-7"
-      ],
-      "ISO27001": [
-        "A.5.1.1",
-        "A.5.2.1"
-      ],
-      "PCI-DSS": [
-        "12.1",
-        "12.2"
-      ],
-      "SOC2": [
-        "CC9.1",
-        "CC9.2"
-      ],
-      "GDPR": [
-        "5",
-        "24"
-      ]
-    },
-    "AI-009": {
-      "name": "Copilot Feedback & Logging Audit",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "PM-1",
-        "PM-2",
-        "PM-7"
-      ],
-      "ISO27001": [
-        "A.5.1.1",
-        "A.5.2.1"
-      ],
-      "PCI-DSS": [
-        "12.1",
-        "12.2"
-      ],
-      "SOC2": [
-        "CC9.1",
-        "CC9.2"
-      ],
-      "GDPR": [
-        "5",
-        "24"
-      ]
-    },
-    "AI-010": {
-      "name": "Copilot Ground Truth Data Protection (Manual)",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "AI-011": {
-      "name": "Oversharing Detection - SharePoint AI Indexing",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "AI-012": {
-      "name": "Oversharing Detection - OneDrive AI Indexing",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "AI-013": {
-      "name": "AI Plugin Security - Permission Minimization (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-014": {
-      "name": "AI Agent Secrets Management - Rotation (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-015": {
-      "name": "AI Agent Access Logging & Audit",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-016": {
-      "name": "AI Model Input Validation & Sanitization (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-017": {
-      "name": "AI Output Filtering & Content Moderation (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-018": {
-      "name": "Conditional Access - AI Agent Device Compliance",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-019": {
-      "name": "AI Training Data Governance - Retention Limits",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "AI-020": {
-      "name": "AI Bias & Fairness Monitoring (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-021": {
-      "name": "AI Model Version Control & Governance (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-022": {
-      "name": "DLP Policy for AI-Generated Content (Manual)",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "AI-023": {
-      "name": "AI Model Explainability & Transparency (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-024": {
-      "name": "Responsible AI Governance Board (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "PM-1",
-        "PM-2",
-        "PM-7"
-      ],
-      "ISO27001": [
-        "A.5.1.1",
-        "A.5.2.1"
-      ],
-      "PCI-DSS": [
-        "12.1",
-        "12.2"
-      ],
-      "SOC2": [
-        "CC9.1",
-        "CC9.2"
-      ],
-      "GDPR": [
-        "5",
-        "24"
-      ]
-    },
-    "AI-025": {
-      "name": "AI Compliance Attestation & Reporting (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "PM-1",
-        "PM-2",
-        "PM-7"
-      ],
-      "ISO27001": [
-        "A.5.1.1",
-        "A.5.2.1"
-      ],
-      "PCI-DSS": [
-        "12.1",
-        "12.2"
-      ],
-      "SOC2": [
-        "CC9.1",
-        "CC9.2"
-      ],
-      "GDPR": [
-        "5",
-        "24"
-      ]
-    },
-    "AI-026": {
-      "name": "Adversarial Testing & Red Teaming (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "AI-027": {
-      "name": "AI Privacy Impact Assessment (PIA) (Manual)",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-28",
-        "SC-7",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.8.2.3",
-        "A.8.2.4"
-      ],
-      "PCI-DSS": [
-        "3.1",
-        "3.4",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DATA-006": {
-      "name": "Data Classification Framework Implemented",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "PM-1",
-        "PM-2",
-        "PM-7"
-      ],
-      "ISO27001": [
-        "A.5.1.1",
-        "A.5.2.1"
-      ],
-      "PCI-DSS": [
-        "12.1",
-        "12.2"
-      ],
-      "SOC2": [
-        "CC9.1",
-        "CC9.2"
-      ],
-      "GDPR": [
-        "5",
-        "24"
-      ]
-    },
-    "DATA-007": {
-      "name": "Sensitivity Labels Applied to Sensitive Data",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-008": {
-      "name": "Data Loss Prevention (DLP) Policies Comprehensive",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-009": {
-      "name": "Azure Information Protection (AIP) Deployed",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-010": {
-      "name": "Content Search & eDiscovery Audit Logging",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "AU-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33"
-      ]
-    },
-    "DATA-011": {
-      "name": "SharePoint Site Permissions Auditing",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-012": {
-      "name": "OneDrive Sharing Policy Enforcement",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-013": {
-      "name": "Teams Guest Access Controls",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-014": {
-      "name": "Retention Policies Applied to All Workloads",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "PM-1",
-        "PM-2",
-        "PM-7"
-      ],
-      "ISO27001": [
-        "A.5.1.1",
-        "A.5.2.1"
-      ],
-      "PCI-DSS": [
-        "12.1",
-        "12.2"
-      ],
-      "SOC2": [
-        "CC9.1",
-        "CC9.2"
-      ],
-      "GDPR": [
-        "5",
-        "24"
-      ]
-    },
-    "DATA-015": {
-      "name": "Advanced Threat Protection (ATP) for SharePoint/OneDrive",
-      "CIS": [
-        "3.1",
-        "5.1"
-      ],
-      "NIST": [
-        "SI-2",
-        "SI-3",
-        "SI-4"
-      ],
-      "ISO27001": [
-        "A.12.2.1",
-        "A.12.6.1"
-      ],
-      "PCI-DSS": [
-        "6.2",
-        "6.5"
-      ],
-      "SOC2": [
-        "CC6.3",
-        "CC7.1"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
-    },
-    "DATA-016": {
-      "name": "Conditional Access - Unmanaged Device Data Blocking",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-017": {
-      "name": "Tenant Restrictions V2 for Data Protection",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-018": {
-      "name": "Insider Risk Management Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "AU-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33"
-      ]
-    },
-    "DATA-019": {
-      "name": "Communication Compliance - Data in Messages",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "AU-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33"
-      ]
-    },
-    "DATA-020": {
-      "name": "Information Barrier Policies for Data Separation",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "PM-1",
-        "PM-2",
-        "PM-7"
-      ],
-      "ISO27001": [
-        "A.5.1.1",
-        "A.5.2.1"
-      ],
-      "PCI-DSS": [
-        "12.1",
-        "12.2"
-      ],
-      "SOC2": [
-        "CC9.1",
-        "CC9.2"
-      ],
-      "GDPR": [
-        "5",
-        "24"
-      ]
-    },
-    "DATA-021": {
-      "name": "Compliance Manager - Data Protection Controls",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-022": {
-      "name": "Data Residency & Geo-Compliance Enforced",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-023": {
-      "name": "Recoverable Items Retention - Legal Hold",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-024": {
-      "name": "Data Subject Rights Automation",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-025": {
-      "name": "eDiscovery & Litigation Hold Management",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "AU-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33"
-      ]
-    },
-    "DATA-027": {
-      "name": "Communication Compliance Policies",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "AU-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33"
-      ]
-    },
-    "DATA-028": {
-      "name": "Audit Logging Comprehensive",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "AU-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33"
-      ]
-    },
-    "DATA-029": {
-      "name": "Subject Rights Requests (DSR) Tracking",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-030": {
-      "name": "Data Residency Compliance",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-031": {
-      "name": "Sensitivity Labels Published",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-032": {
-      "name": "Auto-Labeling Rules Configured",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-033": {
-      "name": "Anonymous Links Disabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-034": {
-      "name": "Encryption in Transit (TLS)",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-7",
-        "SC-28",
-        "SC-13"
-      ],
-      "ISO27001": [
-        "A.10.1.1",
-        "A.8.1.3"
-      ],
-      "PCI-DSS": [
-        "3.4",
-        "4.1"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.4"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DATA-035": {
-      "name": "Encryption at Rest",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-7",
-        "SC-28",
-        "SC-13"
-      ],
-      "ISO27001": [
-        "A.10.1.1",
-        "A.8.1.3"
-      ],
-      "PCI-DSS": [
-        "3.4",
-        "4.1"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.4"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DATA-036": {
-      "name": "Customer Key Enabled",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-7",
-        "SC-28",
-        "SC-13"
-      ],
-      "ISO27001": [
-        "A.10.1.1",
-        "A.8.1.3"
-      ],
-      "PCI-DSS": [
-        "3.4",
-        "4.1"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.4"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DATA-037": {
-      "name": "Double Key Encryption Enabled",
-      "CIS": [
-        "4.1",
-        "4.2"
-      ],
-      "NIST": [
-        "SC-7",
-        "SC-28",
-        "SC-13"
-      ],
-      "ISO27001": [
-        "A.10.1.1",
-        "A.8.1.3"
-      ],
-      "PCI-DSS": [
-        "3.4",
-        "4.1"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.4"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "34"
-      ]
-    },
-    "DATA-038": {
-      "name": "DLP Policy Enforcement",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-039": {
-      "name": "Teams Guest Access Restricted",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "DATA-040": {
-      "name": "SharePoint Site Classification",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "PM-1",
-        "PM-2",
-        "PM-7"
-      ],
-      "ISO27001": [
-        "A.5.1.1",
-        "A.5.2.1"
-      ],
-      "PCI-DSS": [
-        "12.1",
-        "12.2"
-      ],
-      "SOC2": [
-        "CC9.1",
-        "CC9.2"
-      ],
-      "GDPR": [
-        "5",
-        "24"
-      ]
-    },
-    "INFRA-002": {
-      "name": "Modern Authentication Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-003": {
-      "name": "SMTP AUTH Disabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-005": {
-      "name": "External Forwarding Rules",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-006": {
-      "name": "Mailbox Delegation Review",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-007": {
-      "name": "Inactive Mailboxes Management",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-008": {
-      "name": "Exchange Transport Rules (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-009": {
-      "name": "Anti-Phishing Policies (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-012": {
-      "name": "Anti-Spam Policies",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-013": {
-      "name": "Anti-Malware Policies",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-014": {
-      "name": "DKIM Signing Configured",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-015": {
-      "name": "SPF Record Configured",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-016": {
-      "name": "DMARC Policy Configured",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-017": {
-      "name": "Accepted Domains Reviewed",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-018": {
-      "name": "Mail Flow Connectors (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-019": {
-      "name": "Litigation Hold Enabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-020": {
-      "name": "Remote Domains Configured",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-021": {
-      "name": "SharePoint External Sharing Restricted",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-022": {
-      "name": "SharePoint Anonymous Links Disabled",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-023": {
-      "name": "SharePoint Site Owners Reviewed",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-024": {
-      "name": "SharePoint Permissions Audited",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-025": {
-      "name": "SharePoint Sensitivity Labels Applied",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-026": {
-      "name": "SharePoint Restricted Domains",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-028": {
-      "name": "SharePoint Hub Sites",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-029": {
-      "name": "SharePoint External Users (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-030": {
-      "name": "SharePoint Storage Monitored",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-031": {
-      "name": "SharePoint Version History",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-032": {
-      "name": "SharePoint Recycle Bin",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-033": {
-      "name": "SharePoint Custom Scripts",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-034": {
-      "name": "SharePoint Idle Sites (Manual)",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-035": {
-      "name": "SharePoint Oversharing Detection",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-037": {
-      "name": "Teams External Access",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-038": {
-      "name": "Teams Creation Audit",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-039": {
-      "name": "Teams Private Channels",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-040": {
-      "name": "Teams Shared Channels",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-041": {
-      "name": "Teams Owners Assigned",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-042": {
-      "name": "Teams Inactive Teams",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-043": {
-      "name": "Teams Apps Audit",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-044": {
-      "name": "Teams Third-Party Apps",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-045": {
-      "name": "Teams Compliance Recording",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-046": {
-      "name": "Teams Meeting Policies",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-047": {
-      "name": "Teams Messaging Policies",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-048": {
-      "name": "Teams Guest Messaging",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-049": {
-      "name": "Teams File Sharing",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-050": {
-      "name": "Teams Sensitivity Labels",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-051": {
-      "name": "OneDrive Sharing Restricted",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-052": {
-      "name": "OneDrive Anonymous Links",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-053": {
-      "name": "OneDrive Sharing Audited",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-054": {
-      "name": "OneDrive Inactive Drives",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-055": {
-      "name": "OneDrive Large Sharing Events",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-056": {
-      "name": "OneDrive Sync Restriction",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-057": {
-      "name": "OneDrive Known Folder Move",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-058": {
-      "name": "OneDrive Sensitivity Labels",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-059": {
-      "name": "OneDrive Storage Monitored",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-060": {
-      "name": "OneDrive Oversharing",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-061": {
-      "name": "Defender Safe Links",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-062": {
-      "name": "Defender Safe Attachments",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-064": {
-      "name": "Defender Zero Hour Auto Purge",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-066": {
-      "name": "Defender Anti-Phishing",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-067": {
-      "name": "Defender Impersonation Protection",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-068": {
-      "name": "Defender Automated Investigation",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-069": {
-      "name": "Defender Threat Policies",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "INFRA-070": {
-      "name": "Defender Quarantine Policies",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
-    },
-    "THREAT-003": {
-      "name": "Threat Analytics Review",
-      "CIS": [
-        "6.1",
-        "6.2"
-      ],
-      "NIST": [
-        "AU-2",
-        "AU-12",
-        "IR-6"
-      ],
-      "ISO27001": [
-        "A.12.4.1",
-        "A.12.4.5"
-      ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-93": {
       "name": "Threat Intelligence Integration",
@@ -7997,15 +695,8 @@
         "10.2",
         "10.3"
       ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-94": {
       "name": "Automated Incident Response Enabled",
@@ -8026,14 +717,8 @@
         "12.10",
         "6.1"
       ],
-      "SOC2": [
-        "CC7.2",
-        "CC7.3"
-      ],
-      "GDPR": [
-        "33",
-        "34"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-95": {
       "name": "Ransomware Detection Configured",
@@ -8055,15 +740,8 @@
         "10.2",
         "10.3"
       ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-96": {
       "name": "Anomaly Detection Alerts Enabled",
@@ -8085,15 +763,8 @@
         "10.2",
         "10.3"
       ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-97": {
       "name": "Threat Exposure Score Monitored",
@@ -8115,15 +786,8 @@
         "10.2",
         "10.3"
       ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-98": {
       "name": "Advanced Email Threat Filtering",
@@ -8143,14 +807,8 @@
         "6.5",
         "10.3"
       ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-99": {
       "name": "Attachment Analysis & Sandboxing",
@@ -8170,14 +828,8 @@
         "6.5",
         "10.3"
       ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-100": {
       "name": "Defender for Endpoint Onboarded",
@@ -8199,15 +851,8 @@
         "10.2",
         "10.3"
       ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-101": {
       "name": "Credential Guard Enabled (Manual)",
@@ -8229,15 +874,8 @@
         "10.2",
         "10.3"
       ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-102": {
       "name": "Exploit Guard Protection Rules",
@@ -8259,15 +897,8 @@
         "10.2",
         "10.3"
       ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-103": {
       "name": "Incident Response Plan Documented (Manual)",
@@ -8284,18 +915,9 @@
         "A.16.1.1",
         "A.16.1.5"
       ],
-      "PCI-DSS": [
-        "12.10",
-        "6.1"
-      ],
-      "SOC2": [
-        "CC7.2",
-        "CC7.3"
-      ],
-      "GDPR": [
-        "33",
-        "34"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-104": {
       "name": "Threat Hunting Program Active (Manual)",
@@ -8312,20 +934,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-105": {
       "name": "Breach Investigation Capability",
@@ -8342,18 +953,9 @@
         "A.16.1.1",
         "A.16.1.5"
       ],
-      "PCI-DSS": [
-        "12.10",
-        "6.1"
-      ],
-      "SOC2": [
-        "CC7.2",
-        "CC7.3"
-      ],
-      "GDPR": [
-        "33",
-        "34"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-106": {
       "name": "Incident Response Time Tracking",
@@ -8370,18 +972,9 @@
         "A.16.1.1",
         "A.16.1.5"
       ],
-      "PCI-DSS": [
-        "12.10",
-        "6.1"
-      ],
-      "SOC2": [
-        "CC7.2",
-        "CC7.3"
-      ],
-      "GDPR": [
-        "33",
-        "34"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-107": {
       "name": "Recovery Testing Program (Manual)",
@@ -8398,18 +991,9 @@
         "A.16.1.1",
         "A.16.1.5"
       ],
-      "PCI-DSS": [
-        "12.10",
-        "6.1"
-      ],
-      "SOC2": [
-        "CC7.2",
-        "CC7.3"
-      ],
-      "GDPR": [
-        "33",
-        "34"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-108": {
       "name": "Security Information & Event Management (SIEM) (Manual)",
@@ -8426,20 +1010,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-109": {
       "name": "Threat Data Sharing & Collaboration (Manual)",
@@ -8456,20 +1029,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-110": {
       "name": "High Privilege API Permissions Reviewed",
@@ -8486,18 +1048,9 @@
         "A.9.1.1",
         "A.9.1.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-111": {
       "name": "Expired Client Secrets",
@@ -8514,18 +1067,9 @@
         "A.9.1.1",
         "A.9.1.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-112": {
       "name": "Certificates Expiring in 30 Days",
@@ -8542,18 +1086,9 @@
         "A.9.1.1",
         "A.9.1.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-113": {
       "name": "Phishing Resistant MFA Coverage",
@@ -8572,18 +1107,9 @@
         "A.9.2.1",
         "A.9.4.3"
       ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-114": {
       "name": "Password Spray Detection Review",
@@ -8600,18 +1126,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-115": {
       "name": "Emergency Access Account Monitoring",
@@ -8628,20 +1145,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.1",
-        "10.2",
-        "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-012": {
       "name": "Passwordless Authentication Adoption",
@@ -8660,18 +1166,9 @@
         "A.9.2.1",
         "A.9.4.3"
       ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-116": {
       "name": "Approval Required for Role Activation",
@@ -8691,18 +1188,9 @@
         "A.9.2.4",
         "A.9.2.5"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-117": {
       "name": "MFA Required for Role Activation",
@@ -8722,18 +1210,9 @@
         "A.9.2.4",
         "A.9.2.5"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-118": {
       "name": "Enterprise App Inventory Reviewed",
@@ -8750,18 +1229,9 @@
         "A.9.1.1",
         "A.9.1.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-119": {
       "name": "Application Sign-in Monitoring",
@@ -8777,18 +1247,9 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
-      "PCI-DSS": [
-        "10.3",
-        "10.4"
-      ],
-      "SOC2": [
-        "CC7.2",
-        "CC7.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-120": {
       "name": "Application Credential Governance",
@@ -8805,18 +1266,9 @@
         "A.9.1.1",
         "A.9.1.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-121": {
       "name": "High Privilege Service Principals",
@@ -8833,18 +1285,9 @@
         "A.9.1.1",
         "A.9.1.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-122": {
       "name": "OAuth2 Permission Grants Reviewed",
@@ -8861,18 +1304,9 @@
         "A.9.1.1",
         "A.9.1.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "8.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-123": {
       "name": "Authentication Methods Policy Configured",
@@ -8891,18 +1325,9 @@
         "A.9.2.1",
         "A.9.4.3"
       ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-124": {
       "name": "Microsoft Authenticator Enabled",
@@ -8921,18 +1346,9 @@
         "A.9.2.1",
         "A.9.4.3"
       ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-125": {
       "name": "FIDO2 Policy Configured",
@@ -8951,18 +1367,9 @@
         "A.9.2.1",
         "A.9.4.3"
       ],
-      "PCI-DSS": [
-        "8.2.3",
-        "8.2.4"
-      ],
-      "SOC2": [
-        "CC6.1",
-        "CC6.2"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-126": {
       "name": "Authentication Strength Policies",
@@ -8980,18 +1387,9 @@
         "A.13.1",
         "A.13.2"
       ],
-      "PCI-DSS": [
-        "7.1",
-        "7.2"
-      ],
-      "SOC2": [
-        "CC6.2",
-        "CC6.3"
-      ],
-      "GDPR": [
-        "32",
-        "25"
-      ]
+      "PCI-DSS": [],
+      "SOC2": [],
+      "GDPR": []
     },
     "ID-127": {
       "name": "Custom Banned Password List Configured",
@@ -9008,20 +1406,1255 @@
         "A.12.4.1",
         "A.12.4.5"
       ],
+      "PCI-DSS": [],
+      "GDPR": []
+    },
+    "DEV-069": {
+      "name": "Intune MDM Enrollment Required"
+    },
+    "DEV-070": {
+      "name": "Device Compliance Policy Enforced"
+    },
+    "DEV-071": {
+      "name": "BitLocker Enabled on Windows Devices"
+    },
+    "DEV-072": {
+      "name": "Windows Defender Enabled"
+    },
+    "DEV-073": {
+      "name": "Mobile Device Management Enrollment"
+    },
+    "DEV-001": {
+      "name": "Windows Firewall - Policies Configured and Enforced"
+    },
+    "DEV-002": {
+      "name": "Windows Compliance Policies - Enforced"
+    },
+    "DEV-003": {
+      "name": "macOS Compliance Policies - Enforced"
+    },
+    "DEV-004": {
+      "name": "iOS/iPadOS Compliance Policies - Enforced"
+    },
+    "DEV-005": {
+      "name": "Android Compliance Policies - Managed Devices (Manual)"
+    },
+    "DEV-006": {
+      "name": "Windows Automatic Device Enrollment - Enforced"
+    },
+    "DEV-007": {
+      "name": "Android Personal Compliance Policies - Enforced"
+    },
+    "DEV-008": {
+      "name": "iOS App Protection Policies - Data Protection"
+    },
+    "DEV-009": {
+      "name": "Android App Protection Policies - Data Protection"
+    },
+    "DEV-010": {
+      "name": "Windows BitLocker Encryption - Enforced"
+    },
+    "DEV-011": {
+      "name": "macOS FileVault Encryption - Enforced"
+    },
+    "DEV-012": {
+      "name": "Windows Hello for Business - Authentication (Manual)"
+    },
+    "DEV-013": {
+      "name": "Windows LAPS - Local Admin Credential Protection"
+    },
+    "DEV-014": {
+      "name": "macOS LAPS - Local Admin Credential Protection"
+    },
+    "DEV-015": {
+      "name": "Windows Local Account Restrictions - Enforced (Manual)"
+    },
+    "DEV-016": {
+      "name": "macOS Platform SSO - Authentication"
+    },
+    "DEV-017": {
+      "name": "Windows Update Policies - Enforced"
+    },
+    "DEV-018": {
+      "name": "macOS Update Policies - Enforced"
+    },
+    "DEV-019": {
+      "name": "iOS/iPadOS Update Policies - Enforced"
+    },
+    "DEV-020": {
+      "name": "Intune Scope Tags - Delegated Administration"
+    },
+    "DEV-022": {
+      "name": "Windows Security Baselines - Applied"
+    },
+    "DEV-023": {
+      "name": "Attack Surface Reduction Rules - Configured"
+    },
+    "DEV-024": {
+      "name": "Microsoft Defender Antivirus - Windows Protection"
+    },
+    "DEV-025": {
+      "name": "Microsoft Defender Antivirus - macOS Protection"
+    },
+    "DEV-026": {
+      "name": "Endpoint Analytics - Risk Identification"
+    },
+    "DEV-027": {
+      "name": "Device Cleanup Rules - Tenant Hygiene"
+    },
+    "DEV-028": {
+      "name": "Company Portal Branding - User Experience"
+    },
+    "DEV-029": {
+      "name": "Conditional Access - Noncompliant Devices Blocked (Manual)"
+    },
+    "DEV-030": {
+      "name": "Conditional Access - Unmanaged Apps Blocked (Manual)"
+    },
+    "DEV-031": {
+      "name": "iOS Secure Wi-Fi Profiles - Network Protection"
+    },
+    "DEV-032": {
+      "name": "Android Secure Wi-Fi Profiles - Network Protection"
+    },
+    "DEV-033": {
+      "name": "Terms and Conditions Policies - Data Access Protection"
+    },
+    "DEV-034": {
+      "name": "macOS Firewall Policies - Network Protection"
+    },
+    "DEV-035": {
+      "name": "Password/Passcode Requirements"
+    },
+    "DEV-036": {
+      "name": "Password Complexity Policy"
+    },
+    "DEV-037": {
+      "name": "Password Expiration Policy"
+    },
+    "DEV-038": {
+      "name": "Jailbreak/Root Detection"
+    },
+    "DEV-039": {
+      "name": "Google Play Integrity Check (Android)"
+    },
+    "DEV-040": {
+      "name": "Defender for Endpoint Integration"
+    },
+    "DEV-041": {
+      "name": "Device Risk-Based Access (Manual)"
+    },
+    "DEV-042": {
+      "name": "Minimum OS Version Enforcement"
+    },
+    "DEV-043": {
+      "name": "OS Update Compliance"
+    },
+    "DEV-044": {
+      "name": "Disk Encryption (FileVault, BitLocker, FDE)"
+    },
+    "DEV-045": {
+      "name": "TPM 2.0 Requirement (Windows)"
+    },
+    "DEV-046": {
+      "name": "Secure Boot Enforcement (Windows)"
+    },
+    "DEV-047": {
+      "name": "USB Restrictions"
+    },
+    "DEV-048": {
+      "name": "Developer Mode / Developer Options Disabled"
+    },
+    "DEV-049": {
+      "name": "Camera Restrictions"
+    },
+    "DEV-050": {
+      "name": "Unknown Sources Blocked (Android)"
+    },
+    "DEV-051": {
+      "name": "Bluetooth Restrictions"
+    },
+    "DEV-052": {
+      "name": "NFC Restrictions (Mobile)"
+    },
+    "DEV-053": {
+      "name": "Screen Capture Disabled"
+    },
+    "DEV-054": {
+      "name": "Clipboard Restrictions"
+    },
+    "DEV-055": {
+      "name": "AirDrop/Nearby Share Disabled"
+    },
+    "DEV-056": {
+      "name": "iCloud Backup Restrictions (iOS)"
+    },
+    "DEV-057": {
+      "name": "Voice Assistant Restrictions (Siri/Google Assistant)"
+    },
+    "DEV-058": {
+      "name": "App Store / Play Store Restrictions"
+    },
+    "DEV-059": {
+      "name": "Managed Browser Enforcement"
+    },
+    "DEV-060": {
+      "name": "Mobile App Protection Policies (MAM)"
+    },
+    "DEV-061": {
+      "name": "Compliance Policy Deployment Status"
+    },
+    "DEV-062": {
+      "name": "Configuration Profile Deployment"
+    },
+    "DEV-063": {
+      "name": "Device Compliance Rate"
+    },
+    "DEV-064": {
+      "name": "Managed Device Inventory"
+    },
+    "DEV-065": {
+      "name": "Device Sync Health"
+    },
+    "DEV-066": {
+      "name": "Android Compliance Policies \u2013 Managed Devices"
+    },
+    "DEV-067": {
+      "name": "Device Enrollment Notifications (Manual)"
+    },
+    "DEV-068": {
+      "name": "Windows Local Account Restrictions"
+    },
+    "APP-001": {
+      "name": "High-Privilege Applications Identified"
+    },
+    "APP-002": {
+      "name": "Unused Enterprise Applications Removed"
+    },
+    "APP-003": {
+      "name": "Stale Service Principals Removed"
+    },
+    "APP-004": {
+      "name": "OAuth Admin Consent Workflow Enabled"
+    },
+    "APP-005": {
+      "name": "Risky Graph Permissions Detected"
+    },
+    "APP-006": {
+      "name": "Expiring Client Secrets"
+    },
+    "APP-007": {
+      "name": "Application Owners Configured"
+    },
+    "APP-008": {
+      "name": "Directory.ReadWrite.All Permission Control"
+    },
+    "APP-009": {
+      "name": "RoleManagement.ReadWrite.Directory Control"
+    },
+    "APP-010": {
+      "name": "Long-Lived Client Secrets"
+    },
+    "APP-011": {
+      "name": "Certificates Expiring Soon"
+    },
+    "APP-012": {
+      "name": "Multiple Active Secrets Cleanup"
+    },
+    "APP-013": {
+      "name": "Workload Identity Conditional Access"
+    },
+    "APP-014": {
+      "name": "Managed Identity Adoption"
+    },
+    "APP-015": {
+      "name": "Service Principal Sign-in Monitoring"
+    },
+    "APP-016": {
+      "name": "Verified Publisher Status"
+    },
+    "APP-017": {
+      "name": "Never-Used Applications"
+    },
+    "APP-018": {
+      "name": "Failed Application Sign-ins"
+    },
+    "APP-019": {
+      "name": "New Enterprise Applications Review"
+    },
+    "APP-020": {
+      "name": "User Consent Disabled"
+    },
+    "APP-021": {
+      "name": "Admin Consent Requests Reviewed"
+    },
+    "APP-022": {
+      "name": "Orphaned Applications"
+    },
+    "APP-023": {
+      "name": "Disabled Applications Review"
+    },
+    "APP-024": {
+      "name": "Duplicate Applications"
+    },
+    "DATA-001": {
+      "name": "DLP Policies Configured",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [],
       "PCI-DSS": [
         "10.1",
         "10.2",
         "10.3"
-      ],
-      "SOC2": [
-        "CC7.1",
-        "CC7.2"
-      ],
-      "GDPR": [
-        "32",
-        "33",
-        "5"
       ]
+    },
+    "DATA-002": {
+      "name": "Sensitivity Labels Configured",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [],
+      "PCI-DSS": [
+        "10.1",
+        "10.2",
+        "10.3"
+      ]
+    },
+    "DATA-003": {
+      "name": "Auto-Labeling Rules Enabled",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [],
+      "PCI-DSS": [
+        "10.1",
+        "10.2",
+        "10.3"
+      ]
+    },
+    "DATA-004": {
+      "name": "SharePoint Sharing Policy Restricted",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [],
+      "PCI-DSS": [
+        "10.1",
+        "10.2",
+        "10.3"
+      ]
+    },
+    "DATA-005": {
+      "name": "OneDrive Sharing Policy Restricted",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [],
+      "PCI-DSS": [
+        "10.1",
+        "10.2",
+        "10.3"
+      ]
+    },
+    "DATA-006": {
+      "name": "Data Classification Framework Implemented",
+      "NIST": [
+        "PM-1",
+        "PM-2",
+        "PM-7"
+      ],
+      "ISO27001": []
+    },
+    "DATA-007": {
+      "name": "Sensitivity Labels Applied to Sensitive Data",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": []
+    },
+    "DATA-008": {
+      "name": "Data Loss Prevention (DLP) Policies Comprehensive",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": []
+    },
+    "DATA-009": {
+      "name": "Azure Information Protection (AIP) Deployed",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": []
+    },
+    "DATA-010": {
+      "name": "Content Search & eDiscovery Audit Logging",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "AU-6"
+      ],
+      "ISO27001": []
+    },
+    "DATA-011": {
+      "name": "SharePoint Site Permissions Auditing",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": []
+    },
+    "DATA-012": {
+      "name": "OneDrive Sharing Policy Enforcement",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": []
+    },
+    "DATA-013": {
+      "name": "Teams Guest Access Controls",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": []
+    },
+    "DATA-014": {
+      "name": "Retention Policies Applied to All Workloads",
+      "NIST": [
+        "PM-1",
+        "PM-2",
+        "PM-7"
+      ],
+      "ISO27001": []
+    },
+    "DATA-015": {
+      "name": "Advanced Threat Protection (ATP) for SharePoint/OneDrive",
+      "NIST": [
+        "SI-2",
+        "SI-3",
+        "SI-4"
+      ],
+      "ISO27001": []
+    },
+    "DATA-016": {
+      "name": "Conditional Access - Unmanaged Device Data Blocking",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": []
+    },
+    "DATA-017": {
+      "name": "Tenant Restrictions V2 for Data Protection",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": []
+    },
+    "DATA-018": {
+      "name": "Insider Risk Management Enabled",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "AU-6"
+      ],
+      "ISO27001": []
+    },
+    "DATA-019": {
+      "name": "Communication Compliance - Data in Messages",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "AU-6"
+      ],
+      "ISO27001": []
+    },
+    "DATA-020": {
+      "name": "Information Barrier Policies for Data Separation",
+      "NIST": [
+        "PM-1",
+        "PM-2",
+        "PM-7"
+      ],
+      "ISO27001": []
+    },
+    "DATA-021": {
+      "name": "Compliance Manager - Data Protection Controls",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "DATA-022": {
+      "name": "Data Residency & Geo-Compliance Enforced",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "DATA-023": {
+      "name": "Recoverable Items Retention - Legal Hold",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "DATA-024": {
+      "name": "Data Subject Rights Automation",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "DATA-025": {
+      "name": "eDiscovery & Litigation Hold Management",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "AU-6"
+      ]
+    },
+    "DATA-027": {
+      "name": "Communication Compliance Policies",
+      "NIST": []
+    },
+    "DATA-028": {
+      "name": "Audit Logging Comprehensive",
+      "NIST": []
+    },
+    "DATA-029": {
+      "name": "Subject Rights Requests (DSR) Tracking",
+      "NIST": []
+    },
+    "DATA-030": {
+      "name": "Data Residency Compliance",
+      "NIST": []
+    },
+    "DATA-031": {
+      "name": "Sensitivity Labels Published",
+      "NIST": []
+    },
+    "DATA-032": {
+      "name": "Auto-Labeling Rules Configured",
+      "NIST": []
+    },
+    "DATA-033": {
+      "name": "Anonymous Links Disabled",
+      "NIST": []
+    },
+    "DATA-034": {
+      "name": "Encryption in Transit (TLS)",
+      "NIST": []
+    },
+    "DATA-035": {
+      "name": "Encryption at Rest",
+      "NIST": []
+    },
+    "DATA-036": {
+      "name": "Customer Key Enabled",
+      "NIST": []
+    },
+    "DATA-037": {
+      "name": "Double Key Encryption Enabled",
+      "NIST": []
+    },
+    "DATA-038": {
+      "name": "DLP Policy Enforcement",
+      "NIST": []
+    },
+    "DATA-039": {
+      "name": "Teams Guest Access Restricted",
+      "NIST": []
+    },
+    "DATA-040": {
+      "name": "SharePoint Site Classification",
+      "NIST": []
+    },
+    "EMAIL-001": {
+      "name": "Anti-Phishing Policy Enabled",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [
+        "A.12.4.1",
+        "A.12.4.5"
+      ],
+      "PCI-DSS": [],
+      "GDPR": []
+    },
+    "EMAIL-002": {
+      "name": "Safe Links Enabled",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [
+        "A.12.4.1",
+        "A.12.4.5"
+      ],
+      "PCI-DSS": [],
+      "GDPR": []
+    },
+    "EMAIL-003": {
+      "name": "Safe Attachments Enabled",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [
+        "A.12.4.1",
+        "A.12.4.5"
+      ],
+      "PCI-DSS": [],
+      "GDPR": []
+    },
+    "EMAIL-004": {
+      "name": "Anti-Spam Policy Enabled",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [
+        "A.12.4.1",
+        "A.12.4.5"
+      ],
+      "PCI-DSS": [],
+      "GDPR": []
+    },
+    "EMAIL-005": {
+      "name": "DKIM Configured (Manual)",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [
+        "A.12.4.1",
+        "A.12.4.5"
+      ],
+      "PCI-DSS": [],
+      "GDPR": []
+    },
+    "EMAIL-006": {
+      "name": "SPF Configured (Manual)",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [
+        "A.12.4.1",
+        "A.12.4.5"
+      ],
+      "PCI-DSS": [],
+      "GDPR": []
+    },
+    "EMAIL-007": {
+      "name": "DMARC Configured (Manual)",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [
+        "A.12.4.1",
+        "A.12.4.5"
+      ],
+      "PCI-DSS": [],
+      "GDPR": []
+    },
+    "EMAIL-008": {
+      "name": "External Forwarding Blocked (Manual)",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ],
+      "ISO27001": [
+        "A.12.4.1",
+        "A.12.4.5"
+      ],
+      "PCI-DSS": []
+    },
+    "AI-001": {
+      "name": "Copilot User MFA Enforcement (Manual)"
+    },
+    "AI-002": {
+      "name": "Overshared SharePoint Sites Detected"
+    },
+    "AI-003": {
+      "name": "Overshared OneDrive Content Detected"
+    },
+    "AI-004": {
+      "name": "AI Agent Graph Permissions Minimal (Manual)"
+    },
+    "AI-005": {
+      "name": "AI Agent Secrets Rotation"
+    },
+    "AI-006": {
+      "name": "Copilot License Assignment & Governance (Manual)"
+    },
+    "AI-007": {
+      "name": "Copilot Data Privacy Mode Enabled"
+    },
+    "AI-008": {
+      "name": "Copilot Tenant Isolation Enforced (Manual)"
+    },
+    "AI-009": {
+      "name": "Copilot Feedback & Logging Audit"
+    },
+    "AI-010": {
+      "name": "Copilot Ground Truth Data Protection (Manual)"
+    },
+    "AI-011": {
+      "name": "Oversharing Detection - SharePoint AI Indexing"
+    },
+    "AI-012": {
+      "name": "Oversharing Detection - OneDrive AI Indexing"
+    },
+    "AI-013": {
+      "name": "AI Plugin Security - Permission Minimization (Manual)"
+    },
+    "AI-014": {
+      "name": "AI Agent Secrets Management - Rotation (Manual)"
+    },
+    "AI-015": {
+      "name": "AI Agent Access Logging & Audit"
+    },
+    "AI-016": {
+      "name": "AI Model Input Validation & Sanitization (Manual)"
+    },
+    "AI-017": {
+      "name": "AI Output Filtering & Content Moderation (Manual)"
+    },
+    "AI-018": {
+      "name": "Conditional Access - AI Agent Device Compliance"
+    },
+    "AI-019": {
+      "name": "AI Training Data Governance - Retention Limits"
+    },
+    "AI-020": {
+      "name": "AI Bias & Fairness Monitoring (Manual)"
+    },
+    "AI-021": {
+      "name": "AI Model Version Control & Governance (Manual)"
+    },
+    "AI-022": {
+      "name": "DLP Policy for AI-Generated Content (Manual)"
+    },
+    "AI-023": {
+      "name": "AI Model Explainability & Transparency (Manual)"
+    },
+    "AI-024": {
+      "name": "Responsible AI Governance Board (Manual)"
+    },
+    "AI-025": {
+      "name": "AI Compliance Attestation & Reporting (Manual)"
+    },
+    "AI-026": {
+      "name": "Adversarial Testing & Red Teaming (Manual)"
+    },
+    "AI-027": {
+      "name": "AI Privacy Impact Assessment (PIA) (Manual)"
+    },
+    "AUDIT-001": {
+      "name": "Unified Audit Logging Enabled"
+    },
+    "AUDIT-002": {
+      "name": "Mailbox Auditing Enabled"
+    },
+    "AUDIT-003": {
+      "name": "Alert Policies Configured"
+    },
+    "THREAT-001": {
+      "name": "Microsoft Defender Enabled"
+    },
+    "THREAT-002": {
+      "name": "Zero-Hour Auto Purge (ZAP) Enabled"
+    },
+    "THREAT-003": {
+      "name": "Threat Analytics Review"
+    },
+    "INFRA-002": {
+      "name": "Modern Authentication Enabled",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-003": {
+      "name": "SMTP AUTH Disabled",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-005": {
+      "name": "External Forwarding Rules",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-006": {
+      "name": "Mailbox Delegation Review",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-007": {
+      "name": "Inactive Mailboxes Management",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-008": {
+      "name": "Exchange Transport Rules (Manual)",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-009": {
+      "name": "Anti-Phishing Policies (Manual)",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-012": {
+      "name": "Anti-Spam Policies",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-013": {
+      "name": "Anti-Malware Policies",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-014": {
+      "name": "DKIM Signing Configured",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-015": {
+      "name": "SPF Record Configured",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-016": {
+      "name": "DMARC Policy Configured",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-017": {
+      "name": "Accepted Domains Reviewed",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-018": {
+      "name": "Mail Flow Connectors (Manual)",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-019": {
+      "name": "Litigation Hold Enabled",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-020": {
+      "name": "Remote Domains Configured",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-021": {
+      "name": "SharePoint External Sharing Restricted",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-022": {
+      "name": "SharePoint Anonymous Links Disabled",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-023": {
+      "name": "SharePoint Site Owners Reviewed",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-024": {
+      "name": "SharePoint Permissions Audited",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-025": {
+      "name": "SharePoint Sensitivity Labels Applied",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-026": {
+      "name": "SharePoint Restricted Domains",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-028": {
+      "name": "SharePoint Hub Sites",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-029": {
+      "name": "SharePoint External Users (Manual)",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-030": {
+      "name": "SharePoint Storage Monitored",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-031": {
+      "name": "SharePoint Version History",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-032": {
+      "name": "SharePoint Recycle Bin",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-033": {
+      "name": "SharePoint Custom Scripts",
+      "CIS": [
+        "6.1",
+        "6.2"
+      ],
+      "NIST": []
+    },
+    "INFRA-034": {
+      "name": "SharePoint Idle Sites (Manual)",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-035": {
+      "name": "SharePoint Oversharing Detection",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-037": {
+      "name": "Teams External Access",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-038": {
+      "name": "Teams Creation Audit",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-039": {
+      "name": "Teams Private Channels",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-040": {
+      "name": "Teams Shared Channels",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-041": {
+      "name": "Teams Owners Assigned",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-042": {
+      "name": "Teams Inactive Teams",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-043": {
+      "name": "Teams Apps Audit",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-044": {
+      "name": "Teams Third-Party Apps",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-045": {
+      "name": "Teams Compliance Recording",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-046": {
+      "name": "Teams Meeting Policies",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-047": {
+      "name": "Teams Messaging Policies",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-048": {
+      "name": "Teams Guest Messaging",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-049": {
+      "name": "Teams File Sharing",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-050": {
+      "name": "Teams Sensitivity Labels",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-051": {
+      "name": "OneDrive Sharing Restricted",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-052": {
+      "name": "OneDrive Anonymous Links",
+      "NIST": [
+        "AU-2",
+        "AU-12",
+        "IR-6"
+      ]
+    },
+    "INFRA-053": {
+      "name": "OneDrive Sharing Audited"
+    },
+    "INFRA-054": {
+      "name": "OneDrive Inactive Drives"
+    },
+    "INFRA-055": {
+      "name": "OneDrive Large Sharing Events"
+    },
+    "INFRA-056": {
+      "name": "OneDrive Sync Restriction"
+    },
+    "INFRA-057": {
+      "name": "OneDrive Known Folder Move"
+    },
+    "INFRA-058": {
+      "name": "OneDrive Sensitivity Labels"
+    },
+    "INFRA-059": {
+      "name": "OneDrive Storage Monitored"
+    },
+    "INFRA-060": {
+      "name": "OneDrive Oversharing"
+    },
+    "INFRA-061": {
+      "name": "Defender Safe Links"
+    },
+    "INFRA-062": {
+      "name": "Defender Safe Attachments"
+    },
+    "INFRA-064": {
+      "name": "Defender Zero Hour Auto Purge"
+    },
+    "INFRA-066": {
+      "name": "Defender Anti-Phishing"
+    },
+    "INFRA-067": {
+      "name": "Defender Impersonation Protection"
+    },
+    "INFRA-068": {
+      "name": "Defender Automated Investigation"
+    },
+    "INFRA-069": {
+      "name": "Defender Threat Policies"
+    },
+    "INFRA-070": {
+      "name": "Defender Quarantine Policies"
     }
   }
 }

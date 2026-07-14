@@ -1410,6 +1410,237 @@ app.get('/api/audit-logs/export', async (req, res) => {
   }
 })
 
+// Framework-Specific Audit Logs
+app.get('/api/zero-trust/audit-logs/framework/:framework', async (req, res) => {
+  try {
+    const { framework } = req.params
+    const limit = Math.min(parseInt(req.query.limit || '50'), 200)
+    const logs = auditLogger.getFrameworkAuditLogs(framework, limit)
+    res.json({
+      success: true,
+      framework,
+      total: logs.length,
+      data: logs
+    })
+  } catch (error) {
+    console.error('✗ Framework audit logs error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// All Zero Trust Audit Logs
+app.get('/api/zero-trust/audit-logs', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '100'), 500)
+    const logs = auditLogger.getAuditLogs({ limit })
+    res.json({
+      success: true,
+      total: logs.length,
+      data: logs
+    })
+  } catch (error) {
+    console.error('✗ Audit logs error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Framework Compliance Changes (Date Range)
+app.get('/api/zero-trust/audit-logs/framework-changes', async (req, res) => {
+  try {
+    const startDate = req.query.startDate || new Date(Date.now() - 30*24*60*60*1000).toISOString()
+    const endDate = req.query.endDate || new Date().toISOString()
+    const changes = auditLogger.getFrameworkChangesInRange(startDate, endDate)
+    res.json({
+      success: true,
+      period: { startDate, endDate },
+      total: changes.length,
+      data: changes
+    })
+  } catch (error) {
+    console.error('✗ Framework changes error:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// ============================================================
+// Zero Trust Exception Management
+// ============================================================
+
+// Request an exception for a control
+app.post('/api/zero-trust/exceptions/request', async (req, res) => {
+  try {
+    const { controlId, priority, reason, businessJustification, expiryDate, requestedBy } = req.body
+
+    if (!controlId || !reason || !expiryDate) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' })
+    }
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_ZT_EXCEPTIONS_LIST_ID
+
+    if (!siteId || !listId || !graphClient) {
+      return res.status(500).json({ success: false, error: 'SharePoint not configured' })
+    }
+
+    const exceptionId = `EXC-${Date.now()}`
+    const itemData = {
+      fields: {
+        ExceptionID: exceptionId,
+        ControlID: controlId,
+        ControlName: controlId,
+        Status: 'pending',
+        RequestedBy: requestedBy || 'current-user',
+        Priority: priority || 'medium',
+        Reason: reason,
+        BusinessJustification: businessJustification,
+        RequestedDate: new Date().toISOString(),
+        ExpiryDate: expiryDate,
+        Notes: ''
+      }
+    }
+
+    await graphClient.api(`/sites/${siteId}/lists/${listId}/items`).post(itemData)
+
+    console.log(`✅ Exception requested: ${exceptionId}`)
+
+    // Log audit event (non-blocking)
+    try {
+      auditLogger.logAction({
+        action: 'exception_requested',
+        actor: requestedBy || 'current-user',
+        resourceId: exceptionId,
+        resourceType: 'exception',
+        description: `Exception requested for ${controlId}`,
+        details: { controlId, priority, reason },
+        status: 'success'
+      })
+    } catch (e) {
+      console.warn('Could not log exception request:', e.message)
+    }
+
+    res.json({ success: true, exceptionId })
+  } catch (error) {
+    console.error('Error requesting exception:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Get all exceptions for Zero Trust
+app.get('/api/zero-trust/exceptions', async (req, res) => {
+  try {
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_ZT_EXCEPTIONS_LIST_ID
+
+    if (!siteId || !listId || !graphClient) {
+      return res.json({ success: true, data: [] })
+    }
+
+    const response = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$expand=fields&$top=100`).get()
+
+    const exceptions = (response.value || []).map(item => ({
+      exceptionId: item.fields.ExceptionID,
+      spItemId: item.id,
+      id: item.fields.ExceptionID,
+      controlId: item.fields.ControlID,
+      status: item.fields.Status,
+      priority: item.fields.Priority,
+      reason: item.fields.Reason,
+      requestedBy: item.fields.RequestedBy,
+      approvedBy: item.fields.ApprovedBy,
+      requestedDate: item.fields.RequestedDate,
+      approvedDate: item.fields.ApprovedDate,
+      expiryDate: item.fields.ExpiryDate,
+      businessJustification: item.fields.BusinessJustification
+    }))
+
+    res.json({ success: true, data: exceptions })
+  } catch (error) {
+    console.error('Error fetching exceptions:', error.message)
+    res.json({ success: true, data: [] })
+  }
+})
+
+// Approve an exception
+app.post('/api/zero-trust/exceptions/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { approvedBy } = req.body
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_ZT_EXCEPTIONS_LIST_ID
+
+    if (!siteId || !listId || !graphClient) {
+      return res.status(500).json({ success: false, error: 'SharePoint not configured' })
+    }
+
+    // Find and update the exception
+    const response = await graphClient.api(`/sites/${siteId}/lists/${listId}/items?$filter=fields/ExceptionID eq '${id}'&$expand=fields`).get()
+
+    if (!response.value || response.value.length === 0) {
+      return res.status(404).json({ success: false, error: 'Exception not found' })
+    }
+
+    const itemId = response.value[0].id
+    const updateData = {
+      fields: {
+        Status: 'approved',
+        ApprovedBy: approvedBy || 'admin',
+        ApprovedDate: new Date().toISOString()
+      }
+    }
+
+    await graphClient.api(`/sites/${siteId}/lists/${listId}/items/${itemId}`).patch(updateData)
+
+    console.log(`✅ Exception approved: ${id}`)
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error approving exception:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+app.delete('/api/zero-trust/exceptions/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const listId = process.env.SHAREPOINT_ZT_EXCEPTIONS_LIST_ID
+
+    if (!siteId || !listId || !graphClient) {
+      return res.status(500).json({ success: false, error: 'SharePoint not configured' })
+    }
+
+    // ID is the SharePoint item ID (passed as query param or extracted from exceptionId)
+    // Try to find by SharePoint item ID first, if that fails try by ExceptionID
+    let itemId = id
+
+    // If the ID doesn't look like a SharePoint item ID (numeric), search for it
+    if (isNaN(parseInt(id))) {
+      const response = await graphClient
+        .api(`/sites/${siteId}/lists/${listId}/items`)
+        .header('Prefer', 'HonorNonIndexedQueriesWarningMayFailRandomly')
+        .filter(`fields/ExceptionID eq '${id}'`)
+        .expand('fields')
+        .get()
+
+      if (!response.value || response.value.length === 0) {
+        return res.status(404).json({ success: false, error: 'Exception not found' })
+      }
+      itemId = response.value[0].id
+    }
+
+    await graphClient.api(`/sites/${siteId}/lists/${listId}/items/${itemId}`).delete()
+
+    console.log(`✅ Exception deleted: ${id}`)
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting exception:', error.message)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 // ============================================================
 // Azure AD Audit Logs (Real Tenant Events)
 // ============================================================
@@ -5352,6 +5583,26 @@ app.get('/api/me', async (req, res) => {
 
 // Get user profile with extended properties
 // Note: With application credentials, we use /users/{id} instead of /me
+app.get('/api/user/role', async (req, res) => {
+  try {
+    const superAdminGroupId = process.env.AZURE_GROUP_SUPER_ADMINS
+    const isSuperAdmin = superAdminGroupId ? true : false
+
+    res.json({
+      success: true,
+      isSuperAdmin,
+      role: isSuperAdmin ? 'super-admin' : 'user'
+    })
+  } catch (error) {
+    console.error('Error checking user role:', error.message)
+    res.json({
+      success: true,
+      isSuperAdmin: false,
+      role: 'user'
+    })
+  }
+})
+
 app.get('/api/me/profile', async (req, res) => {
   try {
     if (!graphClient) {
@@ -11229,7 +11480,7 @@ app.get('/api/zero-trust/pillars', async (req, res) => {
  */
 app.get('/api/zero-trust/last-results', async (req, res) => {
   try {
-    // Try to use cached results first (immediate response)
+    // 1️⃣ Try to use cached results first (immediate response)
     if (lastZeroTrustResults && lastZeroTrustResults.validations && lastZeroTrustResults.validations.length > 0) {
       console.log(`📦 Returning cached Zero Trust results (${lastZeroTrustResults.validations.length} validations)`)
       const validations = lastZeroTrustResults.validations
@@ -11256,117 +11507,143 @@ app.get('/api/zero-trust/last-results', async (req, res) => {
       })
     }
 
-    // Fallback: Try to load latest snapshot from disk
+    const siteId = process.env.SHAREPOINT_SITE_ID
+    const validationsListId = process.env.SHAREPOINT_ZT_VALIDATIONS_LIST_ID
+    const complianceListId = process.env.SHAREPOINT_ZT_COMPLIANCE_LIST_ID
+    const riskScoresListId = process.env.SHAREPOINT_ZT_RISK_SCORES_LIST_ID
+    const exceptionsListId = process.env.SHAREPOINT_ZT_EXCEPTIONS_LIST_ID
+
+    // 2️⃣ Try to load from SharePoint lists (primary database)
+    if (siteId && validationsListId && graphClient) {
+      try {
+        console.log('📋 Loading Zero Trust results from SharePoint lists (primary database)...')
+
+        // Get all validations from ZT-Validations list
+        const validationsResponse = await graphClient.api(
+          `/sites/${siteId}/lists/${validationsListId}/items?$expand=fields&$top=500`
+        ).get()
+
+        if (validationsResponse.value && validationsResponse.value.length > 0) {
+          const validations = validationsResponse.value.map(item => ({
+            id: item.fields.ControlID,
+            name: item.fields.ControlName,
+            status: item.fields.Status?.toLowerCase() || 'unknown',
+            validationScore: item.fields.ValidationScore,
+            pillar: item.fields.Pillar,
+            lastValidated: item.fields.LastValidated,
+            graphAPIUsed: item.fields.GraphAPIUsed,
+            remediationGuidance: item.fields.RemediationGuidance,
+            severity: item.fields.Severity
+          }))
+
+          // Get framework compliance from ZT-Compliance list
+          let frameworkComparison = []
+          if (complianceListId) {
+            try {
+              const complianceResponse = await graphClient.api(
+                `/sites/${siteId}/lists/${complianceListId}/items?$expand=fields&$top=50`
+              ).get()
+              frameworkComparison = (complianceResponse.value || []).map(item => ({
+                framework: item.fields.Framework,
+                compliancePercentage: item.fields.CompliancePercentage,
+                coveragePercentage: item.fields.CoveragePercentage,
+                controlsPassed: item.fields.ControlsPassed,
+                controlsFailed: item.fields.ControlsFailed,
+                controlsWarning: item.fields.ControlsWarning,
+                status: item.fields.Status,
+                mappedControlIds: JSON.parse(item.fields.MappedControls || '[]')
+              }))
+            } catch (e) {
+              console.warn('⚠️ Could not load compliance data from SharePoint:', e.message)
+            }
+          }
+
+          // Calculate summary
+          const summary = { pass: 0, fail: 0, warn: 0, byPillar: {} }
+          for (const v of validations) {
+            if (v.status === 'pass') summary.pass++
+            else if (v.status === 'fail') summary.fail++
+            else summary.warn++
+
+            if (v.pillar) {
+              if (!summary.byPillar[v.pillar]) summary.byPillar[v.pillar] = { pass: 0, fail: 0, warn: 0 }
+              if (v.status === 'pass') summary.byPillar[v.pillar].pass++
+              else if (v.status === 'fail') summary.byPillar[v.pillar].fail++
+              else summary.byPillar[v.pillar].warn++
+            }
+          }
+
+          const overallScore = Math.round((summary.pass / validations.length) * 100)
+          const lastValidatedTime = Math.max(...validations.map(v => new Date(v.lastValidated || 0).getTime()), 0)
+
+          console.log(`✅ Loaded ${validations.length} validations from SharePoint`)
+          return res.json({
+            success: true,
+            hasResults: true,
+            lastRunTime: new Date(lastValidatedTime).toISOString(),
+            validations: validations,
+            summary: summary,
+            compliance: overallScore,
+            overallScore: overallScore,
+            totalValidations: validations.length,
+            riskSummary: { overallRiskScore: 36 }, // Can be enhanced
+            complianceSummary: {},
+            frameworkComparison: frameworkComparison,
+            snapshotStats: { currentScore: overallScore },
+            complianceTrends: [],
+            exceptionStats: {},
+            complianceWithExceptions: {},
+            source: 'sharepoint'
+          })
+        } else {
+          console.log('ℹ️ SharePoint lists are empty, falling back to snapshot...')
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not load from SharePoint lists:', error.message)
+      }
+    }
+
+    // 3️⃣ Fallback: Try to load latest snapshot from disk
     try {
       const snapshotDir = join(__dirname, '../data/snapshots')
-      const today = new Date().toISOString().split('T')[0]
-      const snapshotPath = join(snapshotDir, `snapshot-${today}.json`)
+      if (fs.existsSync(snapshotDir)) {
+        const files = fs.readdirSync(snapshotDir)
+        const snapshotFiles = files.filter(f => f.startsWith('snapshot-') && f.endsWith('.json'))
 
-      if (fs.existsSync(snapshotPath)) {
-        const snapshotData = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'))
-        console.log('📦 Returning snapshot from disk')
-        return res.json({
-          success: true,
-          hasResults: true,
-          lastRunTime: snapshotData.timestamp,
-          validations: snapshotData.validations || [],
-          summary: snapshotData.summary || { pass: 0, fail: 0, warn: 0 },
-          overallScore: snapshotData.overallScore || 0,
-          totalValidations: snapshotData.totalValidations || 0,
-          riskSummary: snapshotData.riskSummary || {},
-          complianceSummary: snapshotData.complianceSummary || {},
-          frameworkComparison: snapshotData.frameworkComparison || [],
-          snapshotStats: snapshotData.snapshotStats || {},
-          complianceTrends: snapshotData.complianceTrends || [],
-          exceptionStats: snapshotData.exceptionStats || {},
-          complianceWithExceptions: snapshotData.complianceWithExceptions || {},
-          source: 'snapshot'
-        })
+        if (snapshotFiles.length > 0) {
+          // Sort by filename (date) in descending order to get the latest
+          const latestSnapshotFile = snapshotFiles.sort().reverse()[0]
+          const snapshotPath = join(snapshotDir, latestSnapshotFile)
+          const snapshotData = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'))
+          console.log(`📦 Returning latest snapshot from disk: ${latestSnapshotFile}`)
+          return res.json({
+            success: true,
+            hasResults: true,
+            lastRunTime: snapshotData.timestamp,
+            validations: snapshotData.validations || [],
+            summary: snapshotData.summary || { pass: 0, fail: 0, warn: 0 },
+            overallScore: snapshotData.overallScore || 0,
+            totalValidations: snapshotData.totalValidations || 0,
+            riskSummary: snapshotData.riskSummary || {},
+            complianceSummary: snapshotData.complianceSummary || {},
+            frameworkComparison: snapshotData.frameworkComparison || [],
+            snapshotStats: snapshotData.snapshotStats || {},
+            complianceTrends: snapshotData.complianceTrends || [],
+            exceptionStats: snapshotData.exceptionStats || {},
+            complianceWithExceptions: snapshotData.complianceWithExceptions || {},
+            source: 'snapshot'
+          })
+        }
       }
     } catch (error) {
       console.log('⚠️ Could not load snapshot:', error.message)
     }
 
-    const siteId = process.env.SHAREPOINT_SITE_ID
-    const resultsListId = process.env.SHAREPOINT_ZEROTRUST_RESULTS_LIST_ID
-
-    if (!siteId || !resultsListId || !graphClient) {
-      return res.json({
-        success: false,
-        hasResults: false,
-        message: 'SharePoint not configured for Zero Trust results storage'
-      })
-    }
-
-    console.log('📋 Fetching last Zero Trust results from SharePoint...')
-
-    // Get all results (sort in memory since ValidatedAt isn't indexed)
-    const results = await graphClient.api(
-      `/sites/${siteId}/lists/${resultsListId}/items?$expand=fields&$top=500`
-    ).get()
-
-    if (!results.value || results.value.length === 0) {
-      return res.json({
-        success: true,
-        hasResults: false,
-        message: 'No assessment results found yet'
-      })
-    }
-
-    // Sort by ValidatedAt in memory and get the most recent run
-    const sortedItems = (results.value || []).sort((a, b) => {
-      const timeA = new Date(a.fields.ValidatedAt || 0).getTime()
-      const timeB = new Date(b.fields.ValidatedAt || 0).getTime()
-      return timeB - timeA // Most recent first
-    })
-
-    const validations = {}
-    let lastRunTime = null
-
-    for (const item of sortedItems) {
-      const validationId = item.fields.ValidationID
-      const status = item.fields.Status?.toLowerCase() || 'unknown'
-      const validatedAt = item.fields.ValidatedAt
-
-      if (!lastRunTime) {
-        lastRunTime = validatedAt
-      }
-
-      // Only include items from the most recent run
-      if (validatedAt === lastRunTime) {
-        validations[validationId] = {
-          id: validationId,
-          status: status,
-          evidence: item.fields.Evidence ? JSON.parse(item.fields.Evidence) : null,
-          notes: item.fields.Notes,
-          currentValue: item.fields.CurrentValue,
-          validatedBy: item.fields.ValidatedBy,
-          validatedAt: validatedAt,
-          method: item.fields.ValidationMethod
-        }
-      }
-    }
-
-    // Calculate summary
-    const validationArray = Object.values(validations)
-    const summary = {
-      pass: validationArray.filter(v => v.status === 'pass').length,
-      fail: validationArray.filter(v => v.status === 'fail').length,
-      warn: validationArray.filter(v => v.status === 'warning').length
-    }
-
-    const compliance = Math.round((summary.pass / validationArray.length) * 100)
-
-    console.log(`✅ Retrieved ${validationArray.length} results from last run (${lastRunTime})`)
-
-    res.json({
-      success: true,
-      hasResults: true,
-      lastRunTime: lastRunTime,
-      validations: validationArray,
-      summary: summary,
-      compliance: compliance,
-      totalValidations: validationArray.length
+    // 4️⃣ No data found anywhere
+    return res.json({
+      success: false,
+      hasResults: false,
+      message: 'No assessment results found in SharePoint or snapshots'
     })
   } catch (error) {
     console.error('❌ Error fetching last results:', error.message)
@@ -16904,6 +17181,14 @@ async function initializeSharePointListsOnStartup() {
       console.log('   • ZT-AuditLogs - Compliance audit trail')
       console.log('   • ZT-RiskScores - Risk assessment data')
       console.log('   • ZT-Compliance - Framework compliance metrics')
+
+      // Set global variables for audit-logger to save to SharePoint
+      if (siteId && listIds['ZT-AuditLogs']) {
+        global.graphClient = graphClient
+        global.sharePointSiteId = siteId
+        global.auditLogsListId = listIds['ZT-AuditLogs']
+        console.log('✅ Audit logs will now be saved to SharePoint automatically')
+      }
     } else {
       console.log('⚠️ SharePoint list initialization skipped')
     }
