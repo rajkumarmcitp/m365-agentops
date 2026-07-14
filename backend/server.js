@@ -17266,7 +17266,8 @@ async function initializeBackupSystem() {
     console.log('  ✅ Exchange Online Collector registered')
 
     // Setup backup routes
-    setupBackupRoutes(app, backupAgent, backupStorage)
+    const backupRouter = setupBackupRoutes(app, backupAgent, backupStorage)
+    app.use('/api/backup/m365', backupRouter)
     console.log('  ✅ Backup API routes configured')
 
     console.log('✅ M365 Backup System initialized successfully')
