@@ -10,6 +10,9 @@ import { M365_SERVICES } from '../lib/backup-config.js'
 export function setupBackupRoutes(app, backupAgent, backupStorage) {
   const router = express.Router()
 
+  // Mount routes on the app
+  app.use('/api/backup/m365', router)
+
   // ============================================================
   // Backup Trigger Endpoints
   // ============================================================
