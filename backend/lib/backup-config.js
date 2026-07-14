@@ -309,7 +309,7 @@ export const M365_SERVICES = {
       'EXOTransportRuleCollection',
       'EXOUnifiedGroup'
     ],
-    totalResources: 40
+    totalResources: 38
   },
   Teams: {
     displayName: 'Microsoft Teams',
@@ -362,7 +362,7 @@ export const M365_SERVICES = {
       'TeamsUser',
       'TeamsVoiceRoute'
     ],
-    totalResources: 40
+    totalResources: 45
   },
   SharePoint: {
     displayName: 'SharePoint Online',
@@ -526,7 +526,7 @@ export const M365_SERVICES = {
       'IntuneWindowsUpdateForBusinessConfiguration',
       'IntuneZeroTrustPolicy'
     ],
-    totalResources: 80
+    totalResources: 79
   },
   PowerPlatform: {
     displayName: 'Power Platform',
