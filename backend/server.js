@@ -67,6 +67,7 @@ import { BackupAgent } from './lib/backup-agent.js'
 import { BackupStorageManager } from './lib/backup-storage.js'
 import setupBackupRoutes from './routes/backup-routes.js'
 import { ExchangeCollector } from './collectors/exchange-collector.js'
+import { TeamsCollector } from './collectors/teams-collector.js'
 import {
   setExecutorGraphClient,
   validateCreateDG, executeCreateDG,
@@ -17268,6 +17269,14 @@ async function initializeBackupSystem() {
     backupAgent.registerCollector('ExchangeOnline', exchangeCollector)
     console.log('  ✅ Exchange Online Collector registered')
 
+    // Teams Collector
+    const teamsCollector = new TeamsCollector(graphClient, {
+      timeout: 30000,
+      maxRetries: 3
+    })
+    backupAgent.registerCollector('Teams', teamsCollector)
+    console.log('  ✅ Teams Collector registered')
+
     // Setup backup routes
     console.log('📦 Setting up backup routes...')
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
@@ -19927,6 +19936,9 @@ function ensureBackupRoutesRegistered() {
     // Register collectors
     const exchangeCollector = new ExchangeCollector(graphClient)
     backupAgent.registerCollector('ExchangeOnline', exchangeCollector)
+
+    const teamsCollector = new TeamsCollector(graphClient)
+    backupAgent.registerCollector('Teams', teamsCollector)
 
     // Setup routes
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
