@@ -43,6 +43,7 @@ import {
   getGuestAccessFromGraph
 } from './lib/graph-security-data.js'
 import ZeroTrustValidator from './lib/zero-trust-validator.js'
+import { initializeSharePointLists } from './lib/sharepoint-lists-init.js'
 import { InvestigationService } from './tenantguard/investigation-service.js'
 import { createInvestigationTables } from './tenantguard/investigation-schema.js'
 import { SettingsService } from './tenantguard/settings-service.js'
@@ -16892,9 +16893,20 @@ async function initializeSharePointListsOnStartup() {
   }
 
   try {
-    console.log('🔍 Initializing SharePoint lists...')
-    await initializeAllLists(graphClient, siteId)
-    console.log('✅ SharePoint list initialization completed')
+    console.log('\n🔧 Initializing SharePoint lists for Zero Trust enhancements...')
+    const listIds = await initializeSharePointLists(graphClient, siteId)
+
+    if (listIds) {
+      console.log('✅ All SharePoint lists initialized successfully')
+      console.log('📊 Lists created:')
+      console.log('   • ZT-Validations - Control validation results')
+      console.log('   • ZT-Exceptions - Exception/waiver management')
+      console.log('   • ZT-AuditLogs - Compliance audit trail')
+      console.log('   • ZT-RiskScores - Risk assessment data')
+      console.log('   • ZT-Compliance - Framework compliance metrics')
+    } else {
+      console.log('⚠️ SharePoint list initialization skipped')
+    }
   } catch (error) {
     console.error('❌ SharePoint initialization error:', error.message)
   }

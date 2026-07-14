@@ -19,7 +19,7 @@
 ✅ Agent Scheduler initialized
 
 📅 Nightly validations scheduled for 15/7/2026, 2:00:00 am
-⏰ Time until next run: 619 minutes
+⏰ Time until next run: 551 minutes
 ✅ Nightly validation scheduler initialized
 ✓ Azure credentials configured - using real Graph API
 ✅ SharePoint client initialized
@@ -31,10 +31,10 @@
 ╔════════════════════════════════════════════════════╗
 ║  M365 AgentOps Backend API                         ║
 ╚════════════════════════════════════════════════════╝
-✓ Server running on port 3001
+✓ Server running on port 3000
 ✓ Environment: production
 ✓ CORS enabled for: https://proud-river-0f55f1e10.7.azurestaticapps.net
-✓ Health check: http://localhost:3001/api/health
+✓ Health check: http://localhost:3000/api/health
 
 📋 Role Group Configuration:
   Super Admins: 4b87f912-2811-474b-8a01-692036be503b
@@ -59,7 +59,7 @@
 📅 Starting initial sync of announcements (7-day window)...
 
 🔄 ═══════════════════════════════════════════════════════
-📅 Starting announcement sync at 2026-07-14T10:11:20.840Z
+📅 Starting announcement sync at 2026-07-14T11:18:35.638Z
 🔄 ═══════════════════════════════════════════════════════
 🔄 Message Center sync job started (hourly)
 ✅ SharePoint list initialization completed
@@ -93,6 +93,5 @@
 📊 Announcements to sync: 87
 📋 Already in SharePoint: 135
    Existing IDs: MC1419802, MC1419801, MC1419800
-✓ Sync complete: Added 0 new | Skipped 87 (duplicates) | Total processed at 2026-07-14T10:11:23.368Z
-📝 Audit: exception_requested by qa@company.com
-✓ Exception requested: b218e71a-70b2-4c10-8f49-163e3830934c for control ID-050
+✓ Sync complete: Added 0 new | Skipped 87 (duplicates) | Total processed at 2026-07-14T11:18:38.058Z
+📦 Returning snapshot from disk
