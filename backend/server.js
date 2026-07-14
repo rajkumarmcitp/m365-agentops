@@ -71,6 +71,7 @@ import { TeamsCollector } from './collectors/teams-collector.js'
 import { SharePointCollector } from './collectors/sharepoint-collector.js'
 import { ComplianceCollector } from './collectors/compliance-collector.js'
 import { OneDriveCollector } from './collectors/onedrive-collector.js'
+import { GroupsCollector } from './collectors/groups-collector.js'
 import {
   setExecutorGraphClient,
   validateCreateDG, executeCreateDG,
@@ -17304,6 +17305,14 @@ async function initializeBackupSystem() {
     backupAgent.registerCollector('OneDrive', oneDriveCollector)
     console.log('  ✅ OneDrive Collector registered')
 
+    // Groups Collector
+    const groupsCollector = new GroupsCollector(graphClient, {
+      timeout: 30000,
+      maxRetries: 3
+    })
+    backupAgent.registerCollector('Groups', groupsCollector)
+    console.log('  ✅ Groups Collector registered')
+
     // Setup backup routes
     console.log('📦 Setting up backup routes...')
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
@@ -19975,6 +19984,9 @@ function ensureBackupRoutesRegistered() {
 
     const oneDriveCollector = new OneDriveCollector(graphClient)
     backupAgent.registerCollector('OneDrive', oneDriveCollector)
+
+    const groupsCollector = new GroupsCollector(graphClient)
+    backupAgent.registerCollector('Groups', groupsCollector)
 
     // Setup routes
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
