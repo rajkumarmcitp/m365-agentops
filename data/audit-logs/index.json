@@ -1,0 +1,42 @@
+[
+  {
+    "id": "1784023986538-p3rxyji7n",
+    "timestamp": "2026-07-14T10:13:06.538Z",
+    "action": "exception_requested",
+    "actor": "qa@company.com",
+    "resourceId": "b218e71a-70b2-4c10-8f49-163e3830934c",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784023675655-7osgbjpnt",
+    "timestamp": "2026-07-14T10:07:55.655Z",
+    "action": "exception_requested",
+    "actor": "test@company.com",
+    "resourceId": "bdae5b19-f2f6-40ef-bf8b-13026e21a297",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784023456419-j0ba47j7m",
+    "timestamp": "2026-07-14T10:04:16.419Z",
+    "action": "exception_requested",
+    "actor": "admin@company.com",
+    "resourceId": "4a100cd6-5c33-40b9-930c-34e2877728fb",
+    "resourceType": "exception",
+    "status": "success",
+    "severity": "info"
+  },
+  {
+    "id": "1784022919755-jgezfle87",
+    "timestamp": "2026-07-14T09:55:19.755Z",
+    "action": "test_action",
+    "actor": "test-user",
+    "resourceId": "res-123",
+    "resourceType": "test",
+    "status": "success",
+    "severity": "info"
+  }
+]

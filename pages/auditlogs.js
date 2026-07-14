@@ -41,7 +41,7 @@ export default function AuditLogsPage() {
       if (filters.severity) query.append('severity', filters.severity)
       query.append('limit', filters.limit)
 
-      const response = await fetch(`${api}/audit-logs?${query}`)
+      const response = await fetch(`${api}/compliance/audit-logs?${query}`)
       const data = await response.json()
       setLogs(data.logs || [])
     } catch (error) {
@@ -53,7 +53,7 @@ export default function AuditLogsPage() {
 
   async function fetchStats() {
     try {
-      const response = await fetch(`${api}/audit-logs/stats/summary`)
+      const response = await fetch(`${api}/compliance/audit-logs/stats`)
       const data = await response.json()
       setStats(data.stats)
     } catch (error) {
@@ -66,7 +66,7 @@ export default function AuditLogsPage() {
 
     try {
       setLoading(true)
-      const response = await fetch(`${api}/audit-logs/search`, {
+      const response = await fetch(`${api}/compliance/audit-logs/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: searchQuery, limit: filters.limit })
@@ -85,7 +85,7 @@ export default function AuditLogsPage() {
 
     try {
       setLoading(true)
-      const response = await fetch(`${api}/audit-logs/date-range`, {
+      const response = await fetch(`${api}/compliance/audit-logs/date-range`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -105,7 +105,7 @@ export default function AuditLogsPage() {
 
   async function handleExport() {
     try {
-      const response = await fetch(`${api}/audit-logs/export`, {
+      const response = await fetch(`${api}/compliance/audit-logs/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ format: 'csv', filters })
@@ -128,7 +128,7 @@ export default function AuditLogsPage() {
     try {
       setLoading(true)
       const days = Math.ceil((new Date(dateRange.endDate) - new Date(dateRange.startDate)) / (1000 * 60 * 60 * 24))
-      const response = await fetch(`${api}/audit-logs/report/compliance?days=${days}`)
+      const response = await fetch(`${api}/compliance/audit-logs/report?days=${days}`)
       const data = await response.json()
       // In a real app, this would display or download the report
       console.log('Compliance Report:', data.report)
