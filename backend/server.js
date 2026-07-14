@@ -74,6 +74,7 @@ import { OneDriveCollector } from './collectors/onedrive-collector.js'
 import { GroupsCollector } from './collectors/groups-collector.js'
 import { IntuneCollector } from './collectors/intune-collector.js'
 import { SecurityCollector } from './collectors/security-collector.js'
+import { PowerPlatformCollector } from './collectors/powerplatform-collector.js'
 import {
   setExecutorGraphClient,
   validateCreateDG, executeCreateDG,
@@ -17331,6 +17332,14 @@ async function initializeBackupSystem() {
     backupAgent.registerCollector('Security', securityCollector)
     console.log('  ✅ Security Collector registered')
 
+    // Power Platform Collector
+    const powerPlatformCollector = new PowerPlatformCollector(graphClient, {
+      timeout: 30000,
+      maxRetries: 3
+    })
+    backupAgent.registerCollector('PowerPlatform', powerPlatformCollector)
+    console.log('  ✅ Power Platform Collector registered')
+
     // Setup backup routes
     console.log('📦 Setting up backup routes...')
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
@@ -20011,6 +20020,9 @@ function ensureBackupRoutesRegistered() {
 
     const securityCollector = new SecurityCollector(graphClient)
     backupAgent.registerCollector('Security', securityCollector)
+
+    const powerPlatformCollector = new PowerPlatformCollector(graphClient)
+    backupAgent.registerCollector('PowerPlatform', powerPlatformCollector)
 
     // Setup routes
     const backupRouter = setupBackupRoutes(backupAgent, backupStorage)
