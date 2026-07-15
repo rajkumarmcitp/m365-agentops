@@ -264,6 +264,69 @@ export function setupBackupRoutes(backupAgent, backupStorage) {
   // ============================================================
 
   /**
+   * Get resources from specific backup (MUST be before /:backupID routes)
+   * GET /api/backup/m365/backup/:backupId/resources
+   */
+  router.get('/backup/:backupId/resources', async (req, res) => {
+    try {
+      const { backupId } = req.params
+      const store = backupAgent.useMemoryStore ? backupAgent.memoryStore : backupStorage
+
+      const resources = await store.getBackupResources(backupId)
+
+      res.json({
+        success: true,
+        data: resources,
+        total: resources.length
+      })
+    } catch (error) {
+      console.error('Error getting backup resources:', error)
+      res.json({
+        success: true,
+        data: [],
+        error: error.message
+      })
+    }
+  })
+
+  /**
+   * Get all backups (alias for history)
+   * GET /api/backup/m365/backups
+   */
+  router.get('/backups', async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit || '50'), 500)
+      const services = backupAgent.getCollectors()
+      let allBackups = []
+
+      // Use memory store if available, otherwise use backupStorage
+      const store = backupAgent.useMemoryStore ? backupAgent.memoryStore : backupStorage
+
+      for (const service of services) {
+        const history = await store.getBackupHistory(service, limit)
+        allBackups.push(...history)
+      }
+
+      // Sort by date, newest first
+      allBackups.sort((a, b) => new Date(b.BackupDate || b.timestamp) - new Date(a.BackupDate || a.timestamp))
+      allBackups = allBackups.slice(0, limit)
+
+      res.json({
+        success: true,
+        data: allBackups,
+        total: allBackups.length
+      })
+    } catch (error) {
+      console.error('Error getting backup list:', error)
+      res.json({
+        success: true,
+        data: [],
+        error: error.message
+      })
+    }
+  })
+
+  /**
    * Get changes in specific backup
    * GET /api/backup/m365/:backupID/changes
    */
@@ -342,69 +405,6 @@ export function setupBackupRoutes(backupAgent, backupStorage) {
       console.error('Error getting backup resources:', error)
       res.status(500).json({
         success: false,
-        error: error.message
-      })
-    }
-  })
-
-  /**
-   * Get all backups (alias for history)
-   * GET /api/backup/m365/backups
-   */
-  router.get('/backups', async (req, res) => {
-    try {
-      const limit = Math.min(parseInt(req.query.limit || '50'), 500)
-      const services = backupAgent.getCollectors()
-      let allBackups = []
-
-      // Use memory store if available, otherwise use backupStorage
-      const store = backupAgent.useMemoryStore ? backupAgent.memoryStore : backupStorage
-
-      for (const service of services) {
-        const history = await store.getBackupHistory(service, limit)
-        allBackups.push(...history)
-      }
-
-      // Sort by date, newest first
-      allBackups.sort((a, b) => new Date(b.BackupDate || b.timestamp) - new Date(a.BackupDate || a.timestamp))
-      allBackups = allBackups.slice(0, limit)
-
-      res.json({
-        success: true,
-        data: allBackups,
-        total: allBackups.length
-      })
-    } catch (error) {
-      console.error('Error getting backup list:', error)
-      res.json({
-        success: true,
-        data: [],
-        error: error.message
-      })
-    }
-  })
-
-  /**
-   * Get resources from specific backup
-   * GET /api/backup/m365/backup/:backupId/resources
-   */
-  router.get('/backup/:backupId/resources', async (req, res) => {
-    try {
-      const { backupId } = req.params
-      const store = backupAgent.useMemoryStore ? backupAgent.memoryStore : backupStorage
-
-      const resources = await store.getBackupResources(backupId)
-
-      res.json({
-        success: true,
-        data: resources,
-        total: resources.length
-      })
-    } catch (error) {
-      console.error('Error getting backup resources:', error)
-      res.json({
-        success: true,
-        data: [],
         error: error.message
       })
     }
