@@ -45,11 +45,17 @@ export function renderNav() {
   const u = state.currentUser
   if (!u || !sidebar) return
 
-  let access = u.navAccess
+  let access = u.navAccess || []
 
   // Ensure user-investigation is in access for super/admin users
   if (['super', 'admin'].includes(u.role) && !access.includes('user-investigation')) {
     access = [...access, 'user-investigation']
+  }
+
+  // Ensure backup pages are in access for super/admin users
+  if (['super', 'admin'].includes(u.role)) {
+    if (!access.includes('backup')) access = [...access, 'backup']
+    if (!access.includes('backup-config')) access = [...access, 'backup-config']
   }
 
   let html = `
