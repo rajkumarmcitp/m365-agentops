@@ -174,7 +174,7 @@ function renderServicesView() {
           <thead><tr>
             <th style="width:25%">Service</th>
             <th style="width:15%">Tier</th>
-            <th style="width:15%">Resources</th>
+            <th style="width:15%">Components</th>
             <th style="width:20%">Last Backup</th>
             <th style="width:25%">Action</th>
           </tr></thead>
@@ -194,7 +194,7 @@ function renderServicesView() {
                   <td data-label="Tier">
                     <span class="badge ${tierClass}">${service.tier}</span>
                   </td>
-                  <td data-label="Resources" class="monospace">${service.totalResources}</td>
+                  <td data-label="Components" class="monospace">${service.totalResources}</td>
                   <td data-label="Last Backup" style="font-size:11px">
                     ${lastBackup ? new Date(lastBackup.timestamp).toLocaleString() : '<span style="color:var(--color-text-secondary)">Never</span>'}
                   </td>
