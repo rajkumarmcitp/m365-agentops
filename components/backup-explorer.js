@@ -90,33 +90,16 @@ function getAllBackupDates(backupHistory) {
 }
 
 function renderServiceTree(organized) {
-  // Organize services by category (matching M365 DSC export structure)
-  const serviceCategories = {
-    'Communication & Collaboration': ['ExchangeOnline', 'Teams', 'SharePoint', 'OneDrive', 'Groups'],
-    'Security & Identity': ['Security', 'Compliance'],
-    'Device & Application Management': ['Intune', 'PowerPlatform'],
-    'Business Applications': ['Dynamics365'],
-    'Organization & Settings': ['TenantSettings']
-  }
+  const services = Object.keys(organized).sort()
 
   return `
     <div style="padding:0">
-      ${Object.entries(serviceCategories).map(([category, serviceNames]) => {
-        const categoryServices = serviceNames.filter(s => organized[s])
-        if (categoryServices.length === 0) return ''
+      ${services.map((serviceName, idx) => {
+        const data = organized[serviceName]
+        const latestBackup = data.backups[0]
+        const resourceCount = latestBackup?.resourceCount || 0
 
-        return `
-          <div style="padding:12px 12px 8px 12px;font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--color-border);margin-top:8px">
-            ${category}
-          </div>
-          ${categoryServices.map((serviceName, idx) => {
-            const data = organized[serviceName]
-            const latestBackup = data.backups[0]
-            const resourceCount = latestBackup?.resourceCount || 0
-
-            return renderServiceItem(serviceName, data, latestBackup, resourceCount)
-          }).join('')}
-        `
+        return renderServiceItem(serviceName, data, latestBackup, resourceCount)
       }).join('')}
     </div>
 
