@@ -120,10 +120,10 @@ export class BackupAgent {
       // Update backup record with completion status
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       await store.updateBackupStatus(backupId, 'Completed', {
-        BackupSize: JSON.stringify(resources).length,
-        RecordCount: resources.length,
-        ConfigHash: configHash,
-        Duration: executionTime
+        backupSize: JSON.stringify(resources).length,
+        resourceCount: resources.length,
+        configHash: configHash,
+        duration: executionTime
       })
 
       console.log(`✅ Backup completed: ${serviceName} (${executionTime}s)`)
