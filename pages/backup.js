@@ -1,5 +1,6 @@
 import { showToast } from '../components/toast.js'
 import { customSkeleton } from '../lib/skeleton-custom.js'
+import { renderBackupExplorer, setupBackupExplorerEvents } from '../components/backup-explorer.js'
 
 const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 const API_BASE = import.meta.env.VITE_API_URL || (isDev
@@ -107,10 +108,13 @@ function renderBackupContent(el) {
       <button class="btn ${backupView === 'history' ? 'btn-primary' : 'btn-secondary'}" id="view-history">
         <i class="ti ti-history"></i> Backup History
       </button>
-      <input type="text" class="form-input search" placeholder="Search services..." id="services-search" style="${backupView === 'history' ? 'display:none' : ''}">
+      <button class="btn ${backupView === 'explorer' ? 'btn-primary' : 'btn-secondary'}" id="view-explorer">
+        <i class="ti ti-folder-open"></i> File Explorer
+      </button>
+      <input type="text" class="form-input search" placeholder="Search services..." id="services-search" style="${['services', 'explorer'].includes(backupView) ? '' : 'display:none'}">
     </div>
 
-    ${backupView === 'services' ? renderServicesView() : renderHistoryView()}
+    ${backupView === 'services' ? renderServicesView() : backupView === 'history' ? renderHistoryView() : renderExplorerView()}
   `
 
   // Attach event listeners
@@ -121,6 +125,11 @@ function renderBackupContent(el) {
 
   el.querySelector('#view-history')?.addEventListener('click', () => {
     backupView = 'history'
+    renderBackupContent(el)
+  })
+
+  el.querySelector('#view-explorer')?.addEventListener('click', () => {
+    backupView = 'explorer'
     renderBackupContent(el)
   })
 
@@ -537,4 +546,18 @@ async function restoreBackup(el, backupId, selectedResourceIds = []) {
     console.error('Restore error:', error)
     showToast(`❌ Error: ${error.message}`, 'error')
   }
+}
+
+function renderExplorerView() {
+  const html = renderBackupExplorer(backupHistory)
+
+  // Wrap in a container that will have event listeners attached
+  setTimeout(() => {
+    const explorerEl = document.querySelector('.backup-explorer-container')
+    if (explorerEl) {
+      setupBackupExplorerEvents(explorerEl.closest('[id*="page-"]') || document, API_BASE, showToast)
+    }
+  }, 100)
+
+  return html
 }
