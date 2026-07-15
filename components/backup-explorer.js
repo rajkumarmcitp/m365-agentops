@@ -274,60 +274,89 @@ function setupResourceSelection(el, grouped, backupId, API_BASE, showToast) {
     checkbox.addEventListener('change', () => {
       // Update parent details panel when resource is selected
       if (checkbox.checked) {
-        showResourceDetails(el, checkbox.dataset.resourceId, checkbox.dataset.name, backupId, API_BASE, showToast)
+        // Find the actual resource object from the grouped data
+        let selectedResource = null
+        for (const [type, resources] of Object.entries(grouped)) {
+          const found = resources.find(r => (r.identity || r.name) === checkbox.dataset.resourceId)
+          if (found) {
+            selectedResource = found
+            break
+          }
+        }
+
+        if (selectedResource) {
+          showResourceDetails(el, selectedResource, backupId, API_BASE, showToast)
+        }
       }
     })
   })
 }
 
-function showResourceDetails(el, resourceId, resourceName, backupId, API_BASE, showToast) {
+function showResourceDetails(el, resource, backupId, API_BASE, showToast) {
   const detailsContainer = el.querySelector('#details-container')
+  const resourceId = resource.identity || resource.name
+  const resourceName = resource.name || resource.type
+  const resourceType = resource.type || 'Unknown'
+
+  // Extract config data
+  const config = resource.configuration || resource
+  const configStr = JSON.stringify(config, null, 2)
+  const configSize = configStr.length
+  const configLines = configStr.split('\n').length
 
   detailsContainer.innerHTML = `
-    <div style="padding:16px">
+    <div style="padding:16px;height:100%;display:flex;flex-direction:column">
+      <!-- Header -->
       <div style="margin-bottom:20px">
         <div style="font-size:18px;font-weight:600;margin-bottom:8px">
           <i class="ti ti-file"></i> ${resourceName}
         </div>
-        <div style="font-size:11px;color:var(--color-text-secondary)">
-          ID: ${resourceId.substring(0, 30)}...
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:12px">
+          Type: <strong>${resourceType}</strong> | Size: <strong>${(configSize / 1024).toFixed(1)}KB</strong>
+        </div>
+        <div style="font-size:11px;color:var(--color-text-secondary);word-break:break-all;background:var(--color-background-primary);padding:8px;border-radius:4px">
+          ID: ${resourceId}
         </div>
       </div>
 
-      <div style="background:var(--color-background-primary);padding:12px;border-radius:4px;margin-bottom:20px">
-        <div style="font-size:11px;font-weight:500;margin-bottom:8px">Selected for Restore</div>
-        <div style="font-size:12px;word-break:break-all">${resourceId}</div>
-      </div>
-
-      <div style="display:flex;gap:12px">
-        <button class="btn btn-primary" id="restore-selected-resource" data-resource-id="${resourceId}" data-backup-id="${backupId}" style="flex:1">
-          <i class="ti ti-restore"></i> Restore This Resource
-        </button>
-        <button class="btn btn-secondary" id="view-config-resource" style="flex:1">
-          <i class="ti ti-code"></i> View Configuration
-        </button>
-      </div>
-
-      <div id="config-view" style="margin-top:16px;display:none">
-        <div style="font-size:11px;font-weight:500;margin-bottom:8px">Configuration:</div>
-        <pre style="
+      <!-- Configuration Preview -->
+      <div style="margin-bottom:16px;flex:1;display:flex;flex-direction:column">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:11px;font-weight:500">Configuration (${configLines} lines)</div>
+          <button id="toggle-config" class="btn btn-secondary" style="padding:4px 8px;font-size:11px">
+            <i class="ti ti-chevron-down"></i> Show All
+          </button>
+        </div>
+        <pre id="config-content" style="
           background:var(--color-background-primary);
           padding:12px;
           border-radius:4px;
           font-size:10px;
           overflow-x:auto;
-          max-height:300px;
           overflow-y:auto;
           white-space:pre-wrap;
-          word-break:break-word
-        " id="config-content"></pre>
+          word-break:break-word;
+          flex:1;
+          margin:0;
+          max-height:250px
+        ">${configStr}</pre>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-primary" id="restore-selected-resource" data-resource-id="${resourceId}" data-backup-id="${backupId}" style="flex:1">
+          <i class="ti ti-restore"></i> Restore This Resource
+        </button>
+        <button class="btn btn-secondary" id="copy-config-btn" style="flex:1">
+          <i class="ti ti-copy"></i> Copy Config
+        </button>
       </div>
     </div>
   `
 
   // Restore button handler
   el.querySelector('#restore-selected-resource')?.addEventListener('click', async () => {
-    const resourceId = el.querySelector('#restore-selected-resource').dataset.resourceId
+    const rid = el.querySelector('#restore-selected-resource').dataset.resourceId
     const bid = el.querySelector('#restore-selected-resource').dataset.backupId
 
     try {
@@ -335,7 +364,7 @@ function showResourceDetails(el, resourceId, resourceName, backupId, API_BASE, s
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          resourceIds: [resourceId],
+          resourceIds: [rid],
           targetEnvironment: 'production'
         })
       })
@@ -352,16 +381,29 @@ function showResourceDetails(el, resourceId, resourceName, backupId, API_BASE, s
     }
   })
 
-  // View config button handler
-  el.querySelector('#view-config-resource')?.addEventListener('click', () => {
-    const configView = el.querySelector('#config-view')
-    const isShown = configView.style.display !== 'none'
-    configView.style.display = isShown ? 'none' : 'block'
+  // Toggle full config view
+  el.querySelector('#toggle-config')?.addEventListener('click', () => {
+    const btn = el.querySelector('#toggle-config')
+    const content = el.querySelector('#config-content')
+    const isExpanded = content.style.maxHeight === 'none'
 
-    if (!isShown && !el.querySelector('#config-content').textContent) {
-      // Load config from backup - this is a placeholder
-      el.querySelector('#config-content').textContent = 'Configuration data would be loaded from the backup\n\nResource ID: ' + resourceId
+    if (isExpanded) {
+      content.style.maxHeight = '250px'
+      btn.innerHTML = '<i class="ti ti-chevron-down"></i> Show All'
+    } else {
+      content.style.maxHeight = 'none'
+      btn.innerHTML = '<i class="ti ti-chevron-up"></i> Show Less'
     }
+  })
+
+  // Copy config button handler
+  el.querySelector('#copy-config-btn')?.addEventListener('click', () => {
+    const content = el.querySelector('#config-content').textContent
+    navigator.clipboard.writeText(content).then(() => {
+      showToast('✅ Configuration copied to clipboard', 'success')
+    }).catch(() => {
+      showToast('❌ Failed to copy configuration', 'error')
+    })
   })
 }
 
