@@ -3,6 +3,25 @@
  * File explorer-style navigation for backup resources
  */
 
+// Service display name mapping
+const SERVICE_DISPLAY_NAMES = {
+  'Security': 'Entra ID',
+  'ExchangeOnline': 'Exchange Online',
+  'Teams': 'Teams',
+  'SharePoint': 'SharePoint',
+  'OneDrive': 'OneDrive',
+  'Compliance': 'Compliance',
+  'Groups': 'Groups',
+  'Intune': 'Intune',
+  'PowerPlatform': 'Power Platform',
+  'TenantSettings': 'Tenant Settings',
+  'Dynamics365': 'Dynamics 365'
+}
+
+function getDisplayName(serviceName) {
+  return SERVICE_DISPLAY_NAMES[serviceName] || serviceName
+}
+
 export function renderBackupExplorer(backupHistory) {
   const organizedByService = organizeBackupsByService(backupHistory)
   const allDates = getAllBackupDates(backupHistory)
@@ -128,10 +147,10 @@ function renderServiceItem(serviceName, data, latestBackup, resourceCount) {
               font-size:13px;
               background:var(--color-background-primary);
               border-bottom:1px solid var(--color-border)
-            " onmouseover="this.style.background='var(--color-background-secondary)'" onmouseout="this.style.background='var(--color-background-primary)'">
+            ">
               <i class="ti ti-chevron-right toggle-icon" style="font-size:14px;transition:transform 0.3s ease;transform:rotate(0deg);width:16px;text-align:center;color:var(--color-text-secondary)"></i>
               <i class="ti ti-database" style="font-size:16px;color:var(--color-primary)"></i>
-              <span style="flex:1">${serviceName}</span>
+              <span style="flex:1">${getDisplayName(serviceName)}</span>
               <span style="
                 background:#4a5568;
                 color:#ffffff;
