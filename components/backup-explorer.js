@@ -298,8 +298,17 @@ function showResourceDetails(el, resource, backupId, API_BASE, showToast) {
   const resourceName = resource.name || resource.type
   const resourceType = resource.type || 'Unknown'
 
-  // Extract config data
-  const config = resource.configuration || resource
+  // Extract config data - handle both flat (Teams) and nested (AAD) structures
+  let config = resource.configuration || resource
+
+  // For AAD/Security services, the actual config is nested one level deeper
+  if (config.configuration && typeof config.configuration === 'object' && !Array.isArray(config.configuration)) {
+    // Check if this looks like a nested structure (has metadata like type, name, id at outer level)
+    if (config.type && config.type === resourceType && config.configuration.Identity) {
+      config = config.configuration
+    }
+  }
+
   const configStr = JSON.stringify(config, null, 2)
   const configSize = configStr.length
   const configLines = configStr.split('\n').length
