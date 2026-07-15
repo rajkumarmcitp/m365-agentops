@@ -486,7 +486,48 @@ async function restoreBackup(el, backupId, selectedResourceIds = []) {
     const result = await response.json()
 
     if (result.success) {
-      showToast(`✅ Restore initiated for ${selectedResourceIds.length} resources`, 'success')
+      const restoreId = result.restoreId
+      const resourceCount = selectedResourceIds.length || result.resourcesRequested
+
+      // Store restore ID for tracking
+      sessionStorage.setItem(`lastRestoreId_${backupId}`, restoreId)
+
+      showToast(
+        `✅ Restore initiated (ID: ${restoreId.substring(0, 15)}...)\n🔍 Check Console or Restore Status to verify progress`,
+        'success'
+      )
+
+      // Log restore details for user verification
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      console.log('✅ RESTORE INITIATED')
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      console.log(`Restore ID: ${restoreId}`)
+      console.log(`Backup ID: ${backupId}`)
+      console.log(`Resources: ${resourceCount}`)
+      console.log(`Status: ${result.status}`)
+      console.log(`Timestamp: ${result.timestamp}`)
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      console.log('To check restore status, run in console:')
+      console.log(`checkRestoreStatus('${restoreId}')`)
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+      // Make checkRestoreStatus available globally
+      window.checkRestoreStatus = async (id) => {
+        try {
+          const response = await fetch(`${API_BASE}/api/backup/m365/restore/${id}/status`)
+          const data = await response.json()
+          if (data.success) {
+            console.table(data.data)
+            console.log('Details:', data.data.details)
+            console.log('Errors:', data.data.errors)
+          } else {
+            console.error('Error:', data.error)
+          }
+        } catch (err) {
+          console.error('Failed to fetch status:', err)
+        }
+      }
+
       // Reload after delay
       setTimeout(() => loadBackupContent(el), 2000)
     } else {

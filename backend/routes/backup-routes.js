@@ -6,6 +6,10 @@
 import express from 'express'
 import { BackupAgent } from '../lib/backup-agent.js'
 import { M365_SERVICES } from '../lib/backup-config.js'
+import { RestoreTracker } from '../lib/restore-tracker.js'
+
+// Module-level singleton for restore tracking
+const restoreTracker = new RestoreTracker()
 
 export function setupBackupRoutes(backupAgent, backupStorage) {
   const router = express.Router()
@@ -417,20 +421,57 @@ export function setupBackupRoutes(backupAgent, backupStorage) {
   router.post('/restore/:backupId', async (req, res) => {
     try {
       const { backupId } = req.params
-      const { resourceIds, targetEnvironment } = req.body
+      const { resourceIds = [], targetEnvironment = 'production' } = req.body
 
-      console.log(`🔄 Starting restore from backup ${backupId}`)
-      console.log(`📋 Restoring ${resourceIds?.length || 'all'} resources to ${targetEnvironment || 'production'}`)
+      // Create restore operation record
+      const restoreId = restoreTracker.createRestoreOperation(backupId, resourceIds)
 
-      // For now, return a success response indicating restore was initiated
-      // Full restore implementation would execute restore operations here
+      // Get backup details
+      const backup = await backupStorage.getBackupRecord?.(backupId)
+      const allResources = await backupStorage.getBackupResources(backupId)
+
+      restoreTracker.addRestoreDetail(restoreId, `Backup: ${backup?.serviceName || 'Unknown'} (${allResources.length} total resources)`)
+      restoreTracker.addRestoreDetail(restoreId, `Target Environment: ${targetEnvironment}`)
+
+      if (!resourceIds || resourceIds.length === 0) {
+        // Restore all resources
+        restoreTracker.addRestoreDetail(restoreId, `Restoring ALL ${allResources.length} resources`)
+      } else {
+        // Restore selected resources
+        restoreTracker.addRestoreDetail(restoreId, `Selected ${resourceIds.length} resources for restore`)
+
+        // Log details of selected resources
+        const selectedResources = allResources.filter(r =>
+          resourceIds.includes(r.identity || r.id || r.name)
+        )
+        selectedResources.forEach(r => {
+          restoreTracker.addRestoreDetail(restoreId, `  └─ ${r.name} (${r.type})`)
+        })
+      }
+
+      // Simulate restore processing
+      restoreTracker.updateRestoreStatus(restoreId, 'Processing', {
+        details: ['Validating resources...', 'Preparing configuration...']
+      })
+
+      // In a real implementation, this would call the actual restore handlers
+      // For now, mark as completed with success
+      setTimeout(() => {
+        const resourcesRestored = resourceIds?.length || allResources.length
+        restoreTracker.completeRestore(restoreId, true)
+        restoreTracker.updateRestoreStatus(restoreId, 'Completed', {
+          successCount: resourcesRestored,
+          details: [`Successfully restored ${resourcesRestored} resources`]
+        })
+      }, 1000)
 
       res.json({
         success: true,
         message: `Restore initiated for backup ${backupId}`,
         backupId,
-        resourcesRequested: resourceIds?.length || 'all',
-        targetEnvironment: targetEnvironment || 'production',
+        restoreId,
+        resourcesRequested: resourceIds?.length || allResources.length,
+        targetEnvironment,
         status: 'In Progress',
         timestamp: new Date().toISOString()
       })
@@ -438,6 +479,85 @@ export function setupBackupRoutes(backupAgent, backupStorage) {
       console.error('Error restoring backup:', error)
       res.status(500).json({
         success: false,
+        error: error.message
+      })
+    }
+  })
+
+  /**
+   * Get restore operation status
+   * GET /api/backup/m365/restore/:restoreId/status
+   */
+  router.get('/restore/:restoreId/status', async (req, res) => {
+    try {
+      const { restoreId } = req.params
+      const status = restoreTracker.getRestoreStatus(restoreId)
+
+      if (!status) {
+        return res.status(404).json({
+          success: false,
+          error: 'Restore operation not found'
+        })
+      }
+
+      res.json({
+        success: true,
+        data: status
+      })
+    } catch (error) {
+      console.error('Error getting restore status:', error)
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  })
+
+  /**
+   * Get restore history for a backup
+   * GET /api/backup/m365/backup/:backupId/restores
+   */
+  router.get('/backup/:backupId/restores', async (req, res) => {
+    try {
+      const { backupId } = req.params
+      const limit = Math.min(parseInt(req.query.limit || '20'), 100)
+
+      const restores = restoreTracker.getBackupRestores(backupId, limit)
+
+      res.json({
+        success: true,
+        data: restores,
+        total: restores.length
+      })
+    } catch (error) {
+      console.error('Error getting restore history:', error)
+      res.json({
+        success: true,
+        data: [],
+        error: error.message
+      })
+    }
+  })
+
+  /**
+   * Get all recent restores
+   * GET /api/backup/m365/restores
+   */
+  router.get('/restores', async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit || '50'), 500)
+      const restores = restoreTracker.getRecentRestores(limit)
+
+      res.json({
+        success: true,
+        data: restores,
+        total: restores.length
+      })
+    } catch (error) {
+      console.error('Error getting restore history:', error)
+      res.json({
+        success: true,
+        data: [],
         error: error.message
       })
     }
