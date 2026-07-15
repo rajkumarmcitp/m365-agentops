@@ -235,6 +235,3 @@ function renderError(el, result) {
   `
 }
 
-export default {
-  initBackupConfig
-}
