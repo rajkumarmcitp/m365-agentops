@@ -344,6 +344,40 @@ export function setupBackupRoutes(backupAgent, backupStorage) {
   })
 
   /**
+   * Get all backups (alias for history)
+   * GET /api/backup/m365/backups
+   */
+  router.get('/backups', async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit || '50'), 500)
+      const services = backupAgent.getCollectors()
+      let allBackups = []
+
+      for (const service of services) {
+        const history = await backupStorage.getBackupHistory(service, limit)
+        allBackups.push(...history)
+      }
+
+      // Sort by date, newest first
+      allBackups.sort((a, b) => new Date(b.BackupDate || b.timestamp) - new Date(a.BackupDate || a.timestamp))
+      allBackups = allBackups.slice(0, limit)
+
+      res.json({
+        success: true,
+        data: allBackups,
+        total: allBackups.length
+      })
+    } catch (error) {
+      console.error('Error getting backup list:', error)
+      res.status(500).json({
+        success: true,
+        data: [],
+        error: error.message
+      })
+    }
+  })
+
+  /**
    * Get specific backup details
    * GET /api/backup/m365/:backupID
    */
