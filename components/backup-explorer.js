@@ -450,7 +450,7 @@ function showResourceDetails(el, resource, backupId, API_BASE, showToast) {
           background:var(--color-background-primary);
           padding:12px;
           border-radius:4px;
-          font-size:10px;
+          font-size:12px;
           overflow-x:auto;
           overflow-y:hidden;
           white-space:pre-wrap;
