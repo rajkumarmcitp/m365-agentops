@@ -540,7 +540,7 @@ function renderAllPages() {
   const pages = [
     'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','privaccts','m365config',
     'msgcenter','messages','tasks','applications','intune','licenses','agents','agent-details','approvals','portal','myreqs','myaccount','chat',
-    'graphapi','sso','setup-wizard','audit','settings','backup'
+    'graphapi','sso','setup-wizard','audit','settings','backup','backup-config'
   ]
   return pages.map(p => `<div class="page" id="page-${p}"></div>`).join('')
 }

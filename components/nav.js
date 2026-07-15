@@ -29,6 +29,7 @@ const NAV_ITEMS = {
   ],
   config: [
     { id: 'backup',   label: 'Backup & Restore', icon: 'ti-database-backup' },
+    { id: 'backup-config', label: 'Backup Configuration', icon: 'ti-settings-automation' },
     { id: 'audit',    label: 'Audit Log',        icon: 'ti-database' },
     { id: 'settings', label: 'Admin Settings',   icon: 'ti-adjustments-horizontal' },
   ],
