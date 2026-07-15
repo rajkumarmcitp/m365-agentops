@@ -32,6 +32,7 @@ import { initMsgCenter } from './pages/msgcenter.js'
 import { initMessages } from './pages/messages.js'
 import { initTasks } from './pages/tasks.js'
 import { initBackup } from './pages/backup.js'
+import { initBackupConfig } from './pages/backup-config.js'
 import { initNotifications, stopNotifications } from './components/notifications.js'
 import { initApplications } from './pages/applications.js'
 import { initIntune } from './pages/intune.js'
@@ -207,6 +208,7 @@ const PAGE_INIT = {
   audit: initAudit,
   settings: initSettings,
   backup: initBackup,
+  'backup-config': initBackupConfig,
 }
 
 // Export configuration utilities

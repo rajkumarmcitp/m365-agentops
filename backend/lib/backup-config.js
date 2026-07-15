@@ -592,7 +592,7 @@ export const M365_SERVICES = {
     totalResources: 18
   },
   Security: {
-    displayName: 'Azure AD (Entra ID)',
+    displayName: 'Entra ID',
     tier: 'TIER 1',
     priority: 8,
     resources: [
