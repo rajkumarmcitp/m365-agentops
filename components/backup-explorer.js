@@ -332,7 +332,7 @@ function renderResourceTree(grouped, backupId) {
               background:var(--color-background-secondary);
               border-bottom:1px solid var(--color-border);
               color:var(--color-text)
-            " onmouseover="this.style.background='var(--color-background-primary)'" onmouseout="this.style.background='var(--color-background-secondary)'">
+            ">
               <i class="ti ti-chevron-right resource-toggle" style="font-size:12px;transform:rotate(0deg);transition:transform 0.3s ease;width:14px;text-align:center;color:var(--color-text-secondary)"></i>
               <i class="ti ti-stack" style="font-size:14px;color:var(--color-info)"></i>
               <span style="flex:1">${type}</span>
@@ -352,7 +352,7 @@ function renderResourceTree(grouped, backupId) {
                     transition:all 0.2s;
                     background:${idx % 2 === 0 ? 'transparent' : 'var(--color-background-primary)'};
                     border-bottom:1px solid var(--color-border)
-                  " onmouseover="this.style.background='var(--color-background-primary);this.style.borderLeftColor='var(--color-primary)'" onmouseout="this.style.background='${idx % 2 === 0 ? 'transparent' : 'var(--color-background-primary)'}';this.style.borderLeftColor='transparent'">
+                  ">>
                     <input type="checkbox" class="resource-checkbox" data-resource-id="${r.identity || r.name}" data-name="${r.name}" style="cursor:pointer;width:16px;height:16px">
                     <i class="ti ti-file-document" style="font-size:13px;color:var(--color-text-secondary)"></i>
                     <span style="flex:1;color:var(--color-text)">${r.name || r.type}</span>
