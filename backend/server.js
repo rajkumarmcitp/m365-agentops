@@ -17331,7 +17331,7 @@ async function initializeBackupSystem() {
       timeout: 30000,
       maxRetries: 3
     })
-    backupAgent.registerCollector('Security', securityCollector)
+    backupAgent.registerCollector('AzureAD', securityCollector)
     console.log('  ✅ Security Collector registered')
 
     // Power Platform Collector
@@ -20037,7 +20037,7 @@ function ensureBackupRoutesRegistered() {
     backupAgent.registerCollector('Intune', intuneCollector)
 
     const securityCollector = new SecurityCollector(graphClient)
-    backupAgent.registerCollector('Security', securityCollector)
+    backupAgent.registerCollector('AzureAD', securityCollector)
 
     const powerPlatformCollector = new PowerPlatformCollector(graphClient)
     backupAgent.registerCollector('PowerPlatform', powerPlatformCollector)

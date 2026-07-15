@@ -591,7 +591,7 @@ export const M365_SERVICES = {
     ],
     totalResources: 18
   },
-  Security: {
+  AzureAD: {
     displayName: 'Azure AD',
     tier: 'TIER 1',
     priority: 8,
