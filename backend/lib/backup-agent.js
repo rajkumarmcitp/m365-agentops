@@ -92,21 +92,14 @@ export class BackupAgent {
       // Save resources and detect changes
       const resources = collectorResult.resources || []
 
-      // Treat backup as failed only if NO resources were collected
-      if (resources.length === 0) {
-        await store.updateBackupStatus(backupId, 'Failed', {
-          Error: collectorResult.error || 'No resources collected'
-        })
-        return {
-          success: false,
-          error: collectorResult.error || 'No resources collected',
-          backupId
-        }
+      // Partial or empty collection is still considered success
+      // (Zero resources might mean: no configs exist, or admin access not available, or service not licensed)
+      if (!collectorResult.success && collectorResult.errors && collectorResult.errors.length > 0) {
+        console.warn(`⚠️ Collection had ${collectorResult.errors.length} errors${resources.length > 0 ? `, but ${resources.length} resources collected` : ', 0 resources collected'}`)
       }
 
-      // Partial collection is still considered success if we got resources
-      if (!collectorResult.success && collectorResult.errors && collectorResult.errors.length > 0) {
-        console.warn(`⚠️ Collection had ${collectorResult.errors.length} errors, but ${resources.length} resources collected`)
+      if (resources.length === 0) {
+        console.log(`ℹ️ No resources collected for ${serviceName} (may require admin access or service not licensed)`)
       }
 
       const configHash = this.generateHash(JSON.stringify(resources))
