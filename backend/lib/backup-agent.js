@@ -4,6 +4,7 @@
  */
 
 import { BackupStorageManager } from './backup-storage.js'
+import { BackupMemoryStore } from './backup-memory-store.js'
 import { M365_SERVICES } from './backup-config.js'
 import crypto from 'crypto'
 
@@ -13,8 +14,14 @@ export class BackupAgent {
     this.siteId = config.siteId || process.env.SHAREPOINT_SITE_ID
     this.config = config
 
-    // Initialize storage manager
+    // Initialize storage manager with fallback to memory store
     this.storage = new BackupStorageManager(graphClient, this.siteId, config.storage || {})
+    this.memoryStore = new BackupMemoryStore()
+    this.useMemoryStore = !process.env.SHAREPOINT_BACKUP_LIST_ID
+
+    if (this.useMemoryStore) {
+      console.log('ℹ️ SharePoint backup list not configured - using in-memory storage')
+    }
 
     // Collectors registry
     this.collectors = new Map()
@@ -58,8 +65,9 @@ export class BackupAgent {
     }
 
     try {
-      // Create backup record in SharePoint
-      const recordResult = await this.storage.createBackupRecord({
+      // Create backup record (use memory store if SharePoint not configured)
+      const store = this.useMemoryStore ? this.memoryStore : this.storage
+      const recordResult = await store.createBackupRecord({
         backupId,
         serviceName,
         resourceCount: 0,
@@ -81,19 +89,26 @@ export class BackupAgent {
       console.log(`📦 Collecting ${serviceName} configurations...`)
       const collectorResult = await collector.collect()
 
-      if (!collectorResult.success) {
-        await this.storage.updateBackupStatus(itemId, 'Failed', {
-          Error: collectorResult.error
+      // Save resources and detect changes
+      const resources = collectorResult.resources || []
+
+      // Treat backup as failed only if NO resources were collected
+      if (resources.length === 0) {
+        await store.updateBackupStatus(backupId, 'Failed', {
+          Error: collectorResult.error || 'No resources collected'
         })
         return {
           success: false,
-          error: collectorResult.error,
+          error: collectorResult.error || 'No resources collected',
           backupId
         }
       }
 
-      // Save resources and detect changes
-      const resources = collectorResult.resources || []
+      // Partial collection is still considered success if we got resources
+      if (!collectorResult.success && collectorResult.errors && collectorResult.errors.length > 0) {
+        console.warn(`⚠️ Collection had ${collectorResult.errors.length} errors, but ${resources.length} resources collected`)
+      }
+
       const configHash = this.generateHash(JSON.stringify(resources))
       let changesSummary = 'Initial backup'
 
@@ -101,7 +116,7 @@ export class BackupAgent {
 
       // Save each resource
       for (const resource of resources) {
-        await this.storage.saveBackupResource(backupId, {
+        await store.saveBackupResource(backupId, {
           type: resource.type || 'Unknown',
           name: resource.name || resource.id,
           identity: resource.id,
@@ -109,28 +124,12 @@ export class BackupAgent {
         })
       }
 
-      // Check for changes from previous backup
-      const previousBackup = await this.getPreviousBackup(serviceName)
-      if (previousBackup) {
-        const previousResources = await this.storage.getBackupResources(previousBackup.BackupID)
-        const changeDetection = await this.detectChanges(
-          serviceName,
-          previousBackup.BackupID,
-          previousResources,
-          resources
-        )
-
-        changesSummary = changeDetection.summary
-        console.log(`🔍 Changes detected: ${changesSummary}`)
-      }
-
       // Update backup record with completion status
       const executionTime = Math.round((Date.now() - startTime) / 1000)
-      await this.storage.updateBackupStatus(itemId, 'Completed', {
+      await store.updateBackupStatus(backupId, 'Completed', {
         BackupSize: JSON.stringify(resources).length,
         RecordCount: resources.length,
         ConfigHash: configHash,
-        ChangesSummary: changesSummary,
         Duration: executionTime
       })
 

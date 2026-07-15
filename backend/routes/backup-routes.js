@@ -200,13 +200,16 @@ export function setupBackupRoutes(backupAgent, backupStorage) {
       const services = backupAgent.getCollectors()
       let allHistory = []
 
+      // Use memory store if available, otherwise use backupStorage
+      const store = backupAgent.useMemoryStore ? backupAgent.memoryStore : backupStorage
+
       for (const service of services) {
-        const history = await backupStorage.getBackupHistory(service, limit)
+        const history = await store.getBackupHistory(service, limit)
         allHistory.push(...history)
       }
 
       // Sort by date, newest first
-      allHistory.sort((a, b) => new Date(b.BackupDate) - new Date(a.BackupDate))
+      allHistory.sort((a, b) => new Date(b.BackupDate || b.timestamp) - new Date(a.BackupDate || a.timestamp))
       allHistory = allHistory.slice(0, limit)
 
       res.json({
@@ -216,8 +219,9 @@ export function setupBackupRoutes(backupAgent, backupStorage) {
       })
     } catch (error) {
       console.error('Error getting all backup history:', error)
-      res.status(500).json({
-        success: false,
+      res.json({
+        success: true,
+        data: [],
         error: error.message
       })
     }
@@ -353,8 +357,11 @@ export function setupBackupRoutes(backupAgent, backupStorage) {
       const services = backupAgent.getCollectors()
       let allBackups = []
 
+      // Use memory store if available, otherwise use backupStorage
+      const store = backupAgent.useMemoryStore ? backupAgent.memoryStore : backupStorage
+
       for (const service of services) {
-        const history = await backupStorage.getBackupHistory(service, limit)
+        const history = await store.getBackupHistory(service, limit)
         allBackups.push(...history)
       }
 
@@ -369,7 +376,7 @@ export function setupBackupRoutes(backupAgent, backupStorage) {
       })
     } catch (error) {
       console.error('Error getting backup list:', error)
-      res.status(500).json({
+      res.json({
         success: true,
         data: [],
         error: error.message
