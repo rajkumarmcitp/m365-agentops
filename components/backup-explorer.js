@@ -426,6 +426,13 @@ function showResourceDetails(el, resource, backupId, API_BASE, showToast) {
   const configStr = JSON.stringify(config, null, 2)
   const configSize = configStr.length
   const configLines = configStr.split('\n').length
+  // Escape HTML special characters to prevent injection/syntax errors
+  const escapedConfigStr = configStr
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 
   detailsContainer.innerHTML = `
     <div style="padding:16px;height:100%;display:flex;flex-direction:column;gap:16px">
@@ -464,7 +471,7 @@ function showResourceDetails(el, resource, backupId, API_BASE, showToast) {
           min-height:0;
           max-height:300px;
           transition:max-height 0.3s ease
-        ">${configStr}</pre>
+        ">${escapedConfigStr}</pre>
       </div>
 
       <!-- Action Buttons - Always Visible -->
