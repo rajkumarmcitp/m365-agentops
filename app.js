@@ -161,7 +161,8 @@ export function hasAccess(pageId) {
     'zerotrust', 'setup-wizard', 'applications', 'agents', 'audit', 'graphapi',
     'intune', 'sso', 'approvals', 'security', 'tasks', 'm365config',
     'validation-settings', 'user-investigation', 'agent-details', 'tenantguard',
-    'tenantguard-enhanced', 'privaccts', 'licenses', 'msgcenter', 'messages', 'settings'
+    'tenantguard-enhanced', 'privaccts', 'licenses', 'msgcenter', 'messages', 'settings',
+    'backup', 'backup-config'
   ]
   if (adminPages.includes(pageId)) {
     return ['admin', 'super'].includes(userRole)
