@@ -44,6 +44,10 @@ export class SecurityCollector {
       console.log('🔄 Starting Security & Identity backup collection...')
       const startTime = Date.now()
 
+      // Reset state for fresh collection
+      this.resources = []
+      this.errors = []
+
       // Collect each resource type
       await this.collectApplications()
       await this.collectServicePrincipals()

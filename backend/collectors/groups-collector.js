@@ -31,6 +31,10 @@ export class GroupsCollector {
       console.log('🔄 Starting Microsoft 365 Groups backup collection...')
       const startTime = Date.now()
 
+      // Reset state for fresh collection
+      this.resources = []
+      this.errors = []
+
       // Collect each resource type
       await this.collectGroups()
       await this.collectGroupSettings()

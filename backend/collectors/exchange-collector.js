@@ -42,6 +42,10 @@ export class ExchangeCollector {
       console.log('🔄 Starting Exchange Online backup collection...')
       const startTime = Date.now()
 
+      // Reset state for fresh collection
+      this.resources = []
+      this.errors = []
+
       // Collect each resource type
       await this.collectAcceptedDomains()
       await this.collectAddressBookPolicies()

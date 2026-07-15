@@ -37,6 +37,10 @@ export class ComplianceCollector {
       console.log('🔄 Starting Security & Compliance Center backup collection...')
       const startTime = Date.now()
 
+      // Reset state for fresh collection
+      this.resources = []
+      this.errors = []
+
       // Collect each resource type
       await this.collectSensitivityLabels()
       await this.collectInformationProtectionPolicies()

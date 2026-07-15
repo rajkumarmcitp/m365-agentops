@@ -38,6 +38,10 @@ export class TeamsCollector {
       console.log('🔄 Starting Teams backup collection...')
       const startTime = Date.now()
 
+      // Reset state for fresh collection
+      this.resources = []
+      this.errors = []
+
       // Collect each resource type
       await this.collectTeams()
       await this.collectChannels()

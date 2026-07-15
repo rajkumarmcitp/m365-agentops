@@ -30,6 +30,10 @@ export class TenantSettingsCollector {
       console.log('🔄 Starting Tenant Settings backup collection...')
       const startTime = Date.now()
 
+      // Reset state for fresh collection
+      this.resources = []
+      this.errors = []
+
       // Collect each resource type
       await this.collectOrganizationSettings()
       await this.collectSubscriptionSettings()

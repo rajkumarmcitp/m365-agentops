@@ -58,6 +58,10 @@ export class Dynamics365Collector {
       console.log('🔄 Starting Dynamics 365 / Model-Driven Apps backup collection...')
       const startTime = Date.now()
 
+      // Reset state for fresh collection
+      this.resources = []
+      this.errors = []
+
       // Collect each resource type
       await this.collectEnvironments()
       await this.collectOrganizationSettings()

@@ -31,6 +31,10 @@ export class OneDriveCollector {
       console.log('🔄 Starting OneDrive for Business backup collection...')
       const startTime = Date.now()
 
+      // Reset state for fresh collection
+      this.resources = []
+      this.errors = []
+
       // Collect each resource type
       await this.collectOneDriveSettings()
       await this.collectUserDrives()

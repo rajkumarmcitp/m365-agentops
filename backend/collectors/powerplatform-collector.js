@@ -31,6 +31,10 @@ export class PowerPlatformCollector {
       console.log('🔄 Starting Power Platform backup collection...')
       const startTime = Date.now()
 
+      // Reset state for fresh collection
+      this.resources = []
+      this.errors = []
+
       // Collect each resource type
       await this.collectEnvironments()
       await this.collectTenantSettings()
