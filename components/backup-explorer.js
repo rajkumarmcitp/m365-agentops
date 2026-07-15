@@ -90,16 +90,47 @@ function getAllBackupDates(backupHistory) {
 }
 
 function renderServiceTree(organized) {
-  const services = Object.keys(organized).sort()
+  // Organize services by category (matching M365 DSC export structure)
+  const serviceCategories = {
+    'Communication & Collaboration': ['ExchangeOnline', 'Teams', 'SharePoint', 'OneDrive', 'Groups'],
+    'Security & Identity': ['Security', 'Compliance'],
+    'Device & Application Management': ['Intune', 'PowerPlatform'],
+    'Business Applications': ['Dynamics365'],
+    'Organization & Settings': ['TenantSettings']
+  }
 
   return `
     <div style="padding:0">
-      ${services.map((serviceName, idx) => {
-        const data = organized[serviceName]
-        const latestBackup = data.backups[0]
-        const resourceCount = latestBackup?.resourceCount || 0
+      ${Object.entries(serviceCategories).map(([category, serviceNames]) => {
+        const categoryServices = serviceNames.filter(s => organized[s])
+        if (categoryServices.length === 0) return ''
 
         return `
+          <div style="padding:12px 12px 8px 12px;font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--color-border);margin-top:8px">
+            ${category}
+          </div>
+          ${categoryServices.map((serviceName, idx) => {
+            const data = organized[serviceName]
+            const latestBackup = data.backups[0]
+            const resourceCount = latestBackup?.resourceCount || 0
+
+            return renderServiceItem(serviceName, data, latestBackup, resourceCount)
+          }).join('')}
+        `
+      }).join('')}
+    </div>
+
+    <style>
+      @keyframes spin {
+        from { transform: rotate(0deg) }
+        to { transform: rotate(360deg) }
+      }
+    </style>
+  `
+}
+
+function renderServiceItem(serviceName, data, latestBackup, resourceCount) {
+  return `
           <div class="tree-item" data-service="${serviceName}">
             <div class="tree-item-header" style="
               padding:12px 12px;
@@ -161,16 +192,6 @@ function renderServiceTree(organized) {
             </div>
           </div>
         `
-      }).join('')}
-    </div>
-
-    <style>
-      @keyframes spin {
-        from { transform: rotate(0deg) }
-        to { transform: rotate(360deg) }
-      }
-    </style>
-  `
 }
 
 export function setupBackupExplorerEvents(el, API_BASE, showToast) {
