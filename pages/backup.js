@@ -551,13 +551,17 @@ async function restoreBackup(el, backupId, selectedResourceIds = []) {
 function renderExplorerView() {
   const html = renderBackupExplorer(backupHistory)
 
-  // Wrap in a container that will have event listeners attached
+  // Attach event listeners after a brief delay to ensure DOM is ready
   setTimeout(() => {
-    const explorerEl = document.querySelector('.backup-explorer-container')
-    if (explorerEl) {
-      setupBackupExplorerEvents(explorerEl.closest('[id*="page-"]') || document, API_BASE, showToast)
+    const pageContainer = document.getElementById('page-backup')
+    if (pageContainer) {
+      console.log('Setting up File Explorer events...')
+      setupBackupExplorerEvents(pageContainer, API_BASE, showToast)
+      console.log('File Explorer events attached')
+    } else {
+      console.warn('Page container not found')
     }
-  }, 100)
+  }, 150)
 
   return html
 }

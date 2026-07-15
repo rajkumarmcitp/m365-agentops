@@ -125,49 +125,60 @@ function renderServiceTree(organized) {
 }
 
 export function setupBackupExplorerEvents(el, API_BASE, showToast) {
-  // Toggle service tree items
-  el.querySelectorAll('.tree-item-header').forEach(header => {
-    header.addEventListener('click', (e) => {
+  // Setup all tree item headers with proper expand/collapse
+  const treeHeaders = el.querySelectorAll('.tree-item-header')
+
+  treeHeaders.forEach(header => {
+    header.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      e.preventDefault()
+
       const treeItem = header.closest('.tree-item')
-      const content = treeItem.querySelector('.tree-item-content')
-      const toggle = header.querySelector('.toggle-icon')
+      if (!treeItem) return
+
+      // Find the content to toggle (could be .tree-item-content or .tree-backup-content)
+      const treeContent = treeItem.querySelector('.tree-item-content')
+      const backupContent = treeItem.querySelector('.tree-backup-content')
+      const content = treeContent || backupContent
+
+      // Find toggle icon (could be .toggle-icon or .toggle-icon-backup)
+      const toggleIcon = header.querySelector('.toggle-icon') || header.querySelector('.toggle-icon-backup')
 
       if (content) {
-        const isOpen = content.style.display !== 'none'
-        content.style.display = isOpen ? 'none' : 'block'
-        if (toggle) {
-          toggle.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)'
+        const isCurrentlyOpen = content.style.display !== 'none' && content.style.display !== ''
+
+        // Toggle display
+        content.style.display = isCurrentlyOpen ? 'none' : 'block'
+
+        // Rotate icon
+        if (toggleIcon) {
+          toggleIcon.style.transform = isCurrentlyOpen ? 'rotate(0deg)' : 'rotate(90deg)'
         }
-      }
 
-      e.stopPropagation()
-    })
-  })
+        // If this is a backup and content is now showing, load resources
+        const backup = treeItem.closest('[data-backup]')
+        if (backup && !isCurrentlyOpen) {
+          const backupId = backup.dataset.backup
+          const resourceList = backup.querySelector(`#resource-list-${backupId}`)
 
-  // Load resources when backup is expanded
-  el.querySelectorAll('.tree-item-header').forEach(header => {
-    header.addEventListener('click', async (e) => {
-      const backup = header.closest('[data-backup]')
-      if (!backup) return
+          if (resourceList && resourceList.textContent.includes('Loading')) {
+            try {
+              console.log(`Loading resources for backup: ${backupId}`)
+              const response = await fetch(`${API_BASE}/api/backup/m365/backup/${backupId}/resources`)
+              const result = await response.json()
 
-      const backupId = backup.dataset.backup
-      const resourceContent = backup.querySelector('.tree-backup-content')
-      const resourceList = backup.querySelector(`#resource-list-${backupId}`)
-
-      if (resourceList?.textContent.includes('Loading')) {
-        try {
-          const response = await fetch(`${API_BASE}/api/backup/m365/backup/${backupId}/resources`)
-          const result = await response.json()
-
-          if (result.success && result.data?.length > 0) {
-            const grouped = groupResourcesByType(result.data)
-            resourceList.innerHTML = renderResourceTree(grouped, backupId)
-            setupResourceSelection(el, grouped, backupId, API_BASE, showToast)
-          } else {
-            resourceList.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--color-text-secondary)">No resources in this backup</div>'
+              if (result.success && result.data?.length > 0) {
+                const grouped = groupResourcesByType(result.data)
+                resourceList.innerHTML = renderResourceTree(grouped, backupId)
+                setupResourceSelection(el, grouped, backupId, API_BASE, showToast)
+              } else {
+                resourceList.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--color-text-secondary)">No resources in this backup</div>'
+              }
+            } catch (error) {
+              console.error('Error loading resources:', error)
+              resourceList.innerHTML = `<div style="padding:8px;font-size:11px;color:var(--color-danger)">Error loading resources: ${error.message}</div>`
+            }
           }
-        } catch (error) {
-          resourceList.innerHTML = `<div style="padding:8px;font-size:11px;color:var(--color-danger)">Error loading resources: ${error.message}</div>`
         }
       }
     })
