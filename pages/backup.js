@@ -348,40 +348,147 @@ async function triggerBackupAll(el) {
   }
 }
 
-function showRestoreConfirm(el, backupId) {
+async function showRestoreConfirm(el, backupId) {
   const backup = backupHistory.find(b => b.backupId === backupId)
   if (!backup) return
 
-  const confirmed = confirm(
-    `Are you sure you want to restore from backup "${backupId}"?\n\n` +
-    `Service: ${backup.serviceName}\n` +
-    `Resources: ${backup.resourceCount}\n` +
-    `Created: ${new Date(backup.timestamp).toLocaleString()}\n\n` +
-    `This will overwrite current configuration for ${backup.serviceName}.`
-  )
+  console.log(`📋 Loading resources for backup ${backupId}...`)
 
-  if (confirmed) {
-    restoreBackup(el, backupId)
+  try {
+    // Fetch resources from this backup
+    const response = await fetch(`${API_BASE}/api/backup/m365/backup/${backupId}/resources`)
+    const result = await response.json()
+    const resources = result.data || []
+
+    console.log(`✅ Loaded ${resources.length} resources`)
+
+    // Create restore modal
+    const modalId = `restore-modal-${Date.now()}`
+    const modalHTML = `
+      <div id="${modalId}" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+      ">
+        <div style="
+          background: var(--color-background-primary);
+          border-radius: 8px;
+          padding: 24px;
+          max-width: 600px;
+          max-height: 80vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 25px rgba(0,0,0,0.15);
+        ">
+          <div style="margin-bottom: 20px">
+            <h3 style="margin: 0 0 8px 0; font-size: 18px">Restore Backup</h3>
+            <p style="margin: 0; font-size: 13px; color: var(--color-text-secondary)">
+              Service: <strong>${backup.serviceName}</strong> |
+              Created: ${new Date(backup.timestamp).toLocaleString()}
+            </p>
+          </div>
+
+          <div style="margin-bottom: 20px">
+            <div style="font-weight: 500; margin-bottom: 12px; font-size: 14px">
+              Select resources to restore (${resources.length} available):
+            </div>
+            <div style="border: 1px solid var(--color-border); border-radius: 4px; max-height: 300px; overflow-y: auto">
+              ${resources.length === 0 ? `
+                <div style="padding: 16px; text-align: center; color: var(--color-text-secondary)">
+                  No resources in this backup
+                </div>
+              ` : `
+                <div style="padding: 0">
+                  <label style="display: block; padding: 8px 12px; border-bottom: 1px solid var(--color-border); cursor: pointer">
+                    <input type="checkbox" id="select-all-${modalId}" style="margin-right: 8px">
+                    <strong>Select All</strong>
+                  </label>
+                  ${resources.map((r, idx) => `
+                    <label style="display: block; padding: 8px 12px; border-bottom: 1px solid var(--color-border); cursor: pointer; font-size: 13px">
+                      <input type="checkbox" class="resource-checkbox-${modalId}" data-resource-id="${r.id || idx}" style="margin-right: 8px">
+                      ${r.name || r.type || `Resource ${idx + 1}`}
+                      ${r.type ? `<span style="color: var(--color-text-secondary); margin-left: 8px">(${r.type})</span>` : ''}
+                    </label>
+                  `).join('')}
+                </div>
+              `}
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 12px; justify-content: flex-end">
+            <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">
+              Cancel
+            </button>
+            <button class="btn btn-primary" id="restore-confirm-${modalId}">
+              Restore Selected
+            </button>
+          </div>
+        </div>
+      </div>
+    `
+
+    // Add modal to page
+    const modalDiv = document.createElement('div')
+    modalDiv.innerHTML = modalHTML
+    document.body.appendChild(modalDiv)
+
+    // Handle Select All
+    const selectAllCheckbox = document.getElementById(`select-all-${modalId}`)
+    const resourceCheckboxes = document.querySelectorAll(`.resource-checkbox-${modalId}`)
+
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('change', (e) => {
+        resourceCheckboxes.forEach(cb => cb.checked = e.target.checked)
+      })
+    }
+
+    // Handle Restore button
+    const restoreBtn = document.getElementById(`restore-confirm-${modalId}`)
+    restoreBtn.addEventListener('click', async () => {
+      const selectedResources = Array.from(resourceCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.dataset.resourceId)
+
+      if (selectedResources.length === 0) {
+        showToast('❌ Please select at least one resource to restore', 'error')
+        return
+      }
+
+      document.getElementById(modalId).remove()
+      await restoreBackup(el, backupId, selectedResources)
+    })
+
+  } catch (error) {
+    console.error('Error loading resources:', error)
+    showToast(`❌ Error loading resources: ${error.message}`, 'error')
   }
 }
 
-async function restoreBackup(el, backupId) {
+async function restoreBackup(el, backupId, selectedResourceIds = []) {
   try {
+    showToast(`⏳ Restoring ${selectedResourceIds.length} resources...`, 'info')
+
     const response = await fetch(`${API_BASE}/api/backup/m365/restore/${backupId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        targetEnvironment: 'production',
-        confirmRestore: true
+        resourceIds: selectedResourceIds,
+        targetEnvironment: 'production'
       })
     })
 
     const result = await response.json()
 
     if (result.success) {
-      showToast('✅ Restore initiated. Configuration is being restored...', 'success')
+      showToast(`✅ Restore initiated for ${selectedResourceIds.length} resources`, 'success')
       // Reload after delay
-      setTimeout(() => loadBackupContent(el), 3000)
+      setTimeout(() => loadBackupContent(el), 2000)
     } else {
       showToast(`❌ Restore failed: ${result.error}`, 'error')
     }

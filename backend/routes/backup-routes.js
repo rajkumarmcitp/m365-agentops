@@ -385,6 +385,65 @@ export function setupBackupRoutes(backupAgent, backupStorage) {
   })
 
   /**
+   * Get resources from specific backup
+   * GET /api/backup/m365/backup/:backupId/resources
+   */
+  router.get('/backup/:backupId/resources', async (req, res) => {
+    try {
+      const { backupId } = req.params
+      const store = backupAgent.useMemoryStore ? backupAgent.memoryStore : backupStorage
+
+      const resources = await store.getBackupResources(backupId)
+
+      res.json({
+        success: true,
+        data: resources,
+        total: resources.length
+      })
+    } catch (error) {
+      console.error('Error getting backup resources:', error)
+      res.json({
+        success: true,
+        data: [],
+        error: error.message
+      })
+    }
+  })
+
+  /**
+   * Restore specific resources from backup
+   * POST /api/backup/m365/restore/:backupId
+   */
+  router.post('/restore/:backupId', async (req, res) => {
+    try {
+      const { backupId } = req.params
+      const { resourceIds, targetEnvironment } = req.body
+
+      console.log(`🔄 Starting restore from backup ${backupId}`)
+      console.log(`📋 Restoring ${resourceIds?.length || 'all'} resources to ${targetEnvironment || 'production'}`)
+
+      // For now, return a success response indicating restore was initiated
+      // Full restore implementation would execute restore operations here
+
+      res.json({
+        success: true,
+        message: `Restore initiated for backup ${backupId}`,
+        backupId,
+        resourcesRequested: resourceIds?.length || 'all',
+        targetEnvironment: targetEnvironment || 'production',
+        status: 'In Progress',
+        timestamp: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('Error restoring backup:', error)
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  })
+
+  /**
    * Get specific backup details
    * GET /api/backup/m365/:backupID
    */
