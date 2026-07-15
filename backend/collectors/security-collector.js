@@ -126,28 +126,86 @@ export class SecurityCollector {
 
       const response = await this.graphClient
         .api('/applications')
-        .select('id,appId,displayName,description,createdDateTime,signInAudience')
+        .select('id,appId,displayName,description,createdDateTime,signInAudience,keyCredentials,passwordCredentials,replyUrlsWithType,web,implicitGrantSettings,optionalClaims,publisherDomain')
         .top(999)
         .get()
 
       if (response.value && response.value.length > 0) {
         for (const app of response.value) {
+          // Collect owners
+          let owners = []
+          try {
+            const ownersResponse = await this.graphClient
+              .api(`/applications/${app.id}/owners`)
+              .select('id,displayName,userPrincipalName')
+              .get()
+            owners = ownersResponse.value || []
+          } catch (e) {
+            console.warn(`⚠️ Could not fetch owners for ${app.displayName}`)
+          }
+
+          // Collect API permissions (required resource access)
+          let permissions = []
+          if (app.requiredResourceAccess) {
+            permissions = app.requiredResourceAccess
+          }
+
           this.resources.push({
             type: 'AADApplication',
             name: app.displayName,
             id: app.id,
             configuration: {
+              // Basic Properties
               Identity: app.id,
               AppId: app.appId || '',
               DisplayName: app.displayName || '',
               Description: app.description || '',
               SignInAudience: app.signInAudience || 'AzureADMyOrg',
+              PublisherDomain: app.publisherDomain || '',
               CreatedDateTime: app.createdDateTime || '',
+
+              // Authentication & URLs
+              ReplyUrls: app.replyUrlsWithType || [],
+              WebPlatformRedirectUris: app.web?.redirectUris || [],
+              HomepageUrl: app.web?.homePageUrl || '',
+              LogoUrl: app.web?.logoUrl || '',
+
+              // Implicit Grant Settings
+              ImplicitGrantSettings: {
+                EnableIdTokenIssuance: app.implicitGrantSettings?.enableIdTokenIssuance || false,
+                EnableAccessTokenIssuance: app.implicitGrantSettings?.enableAccessTokenIssuance || false
+              },
+
+              // Credentials
+              CertificatesCount: (app.keyCredentials || []).length,
+              SecretsCount: (app.passwordCredentials || []).length,
+              CertificateDetails: (app.keyCredentials || []).map(cert => ({
+                KeyId: cert.keyId,
+                DisplayName: cert.displayName,
+                StartDate: cert.startDateTime,
+                EndDate: cert.endDateTime,
+                Type: cert.type
+              })),
+
+              // Owners
+              Owners: owners.map(o => ({
+                Id: o.id,
+                DisplayName: o.displayName,
+                UserPrincipalName: o.userPrincipalName || 'N/A'
+              })),
+
+              // API Permissions
+              RequiredResourceAccess: permissions,
+
+              // Token Configuration
+              TokenEncryptionKeyId: app.tokenEncryptionKeyId || '',
+              OptionalClaims: app.optionalClaims || {},
+
               AppType: 'Application'
             }
           })
         }
-        console.log(`✅ Found ${response.value.length} applications`)
+        console.log(`✅ Found ${response.value.length} applications with detailed configuration`)
       } else {
         console.log('ℹ️ No applications found')
       }
@@ -166,27 +224,85 @@ export class SecurityCollector {
 
       const response = await this.graphClient
         .api('/servicePrincipals')
-        .select('id,appId,displayName,appOwnerOrganizationId,createdDateTime,accountEnabled')
+        .select('id,appId,displayName,appOwnerOrganizationId,createdDateTime,accountEnabled,keyCredentials,passwordCredentials,servicePrincipalType,appRoleAssignmentRequired,replyUrls')
         .top(999)
         .get()
 
       if (response.value && response.value.length > 0) {
         for (const sp of response.value) {
+          // Collect owners
+          let owners = []
+          try {
+            const ownersResponse = await this.graphClient
+              .api(`/servicePrincipals/${sp.id}/owners`)
+              .select('id,displayName,userPrincipalName')
+              .get()
+            owners = ownersResponse.value || []
+          } catch (e) {
+            // Some service principals don't have owners
+          }
+
+          // Collect app roles
+          let appRoles = []
+          try {
+            const appRolesResponse = await this.graphClient
+              .api(`/servicePrincipals/${sp.id}/appRoleAssignedTo`)
+              .select('id,appRoleId,principalDisplayName,principalType')
+              .top(100)
+              .get()
+            appRoles = appRolesResponse.value || []
+          } catch (e) {
+            // Might not have app role assignments
+          }
+
           this.resources.push({
             type: 'AADServicePrincipal',
             name: sp.displayName,
             id: sp.id,
             configuration: {
+              // Basic Properties
               Identity: sp.id,
               AppId: sp.appId || '',
               DisplayName: sp.displayName || '',
+              ServicePrincipalType: sp.servicePrincipalType || 'Application',
               AppOwnerOrganizationId: sp.appOwnerOrganizationId || '',
+              CreatedDateTime: sp.createdDateTime || '',
               AccountEnabled: sp.accountEnabled || true,
-              CreatedDateTime: sp.createdDateTime || ''
+
+              // Authentication
+              ReplyUrls: sp.replyUrls || [],
+
+              // Credentials
+              CertificatesCount: (sp.keyCredentials || []).length,
+              SecretsCount: (sp.passwordCredentials || []).length,
+              CertificateDetails: (sp.keyCredentials || []).map(cert => ({
+                KeyId: cert.keyId,
+                DisplayName: cert.displayName,
+                StartDate: cert.startDateTime,
+                EndDate: cert.endDateTime
+              })),
+
+              // Owners
+              Owners: owners.map(o => ({
+                Id: o.id,
+                DisplayName: o.displayName,
+                UserPrincipalName: o.userPrincipalName || 'N/A'
+              })),
+
+              // App Role Assignments
+              AppRoleAssignments: appRoles.map(ar => ({
+                Id: ar.id,
+                AppRoleId: ar.appRoleId,
+                PrincipalDisplayName: ar.principalDisplayName,
+                PrincipalType: ar.principalType
+              })),
+
+              // Settings
+              AppRoleAssignmentRequired: sp.appRoleAssignmentRequired || false
             }
           })
         }
-        console.log(`✅ Found ${response.value.length} service principals`)
+        console.log(`✅ Found ${response.value.length} service principals with detailed configuration`)
       } else {
         console.log('ℹ️ No service principals found')
       }
