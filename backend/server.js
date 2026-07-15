@@ -791,6 +791,57 @@ app.get('/api/health', (req, res) => {
 })
 
 /**
+ * GET /api/debug/auth-status
+ * Diagnostic endpoint to check Azure AD authentication status
+ */
+app.get('/api/debug/auth-status', (req, res) => {
+  const tenantId = process.env.GRAPH_TENANT_ID || process.env.AZURE_TENANT_ID
+  const clientId = process.env.GRAPH_CLIENT_ID || process.env.AZURE_CLIENT_ID
+  const clientSecret = process.env.GRAPH_CLIENT_SECRET || process.env.AZURE_CLIENT_SECRET
+
+  const isValidCredentials =
+    tenantId &&
+    !tenantId.includes('YOUR_') &&
+    clientId &&
+    !clientId.includes('YOUR_') &&
+    clientSecret &&
+    !clientSecret.includes('YOUR_')
+
+  res.json({
+    timestamp: new Date().toISOString(),
+    graphClient: {
+      initialized: isGraphClientAuthenticated(),
+      hasValidCredentials: isValidCredentials,
+      tenantId: tenantId ? `${tenantId.substring(0, 8)}...` : 'NOT SET',
+      clientId: clientId ? `${clientId.substring(0, 8)}...` : 'NOT SET'
+    },
+    backup: {
+      agentReady: backupAgent !== null,
+      storageReady: backupStorage !== null,
+      collectorCount: backupAgent ? backupAgent.getCollectors().length : 0,
+      collectors: backupAgent ? backupAgent.getCollectors() : []
+    },
+    environment: {
+      nodeEnv: process.env.NODE_ENV,
+      port: PORT
+    },
+    tips: isGraphClientAuthenticated()
+      ? [
+          '✓ GraphClient is initialized with real Azure AD credentials',
+          '✓ Backup collectors should use real Graph API',
+          '✓ If still seeing demo data, check Azure AD app permissions in Azure Portal',
+          '✓ Ensure admin consent has been granted for all permissions'
+        ]
+      : [
+          '✗ GraphClient not initialized',
+          'Check environment variables: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET',
+          'Or use: GRAPH_TENANT_ID, GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET',
+          'Verify values in .env do not contain placeholder text (YOUR_*)'
+        ]
+  })
+})
+
+/**
  * GET /api/deployment-test
  * Simple test to verify if latest deployment is active
  */
