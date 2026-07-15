@@ -131,6 +131,11 @@ function renderBackupContent(el) {
     }
   }
 
+  // Attach Backup All button listener
+  el.querySelector('#backup-all-btn')?.addEventListener('click', () => {
+    triggerBackupAll(el)
+  })
+
   // Attach backup button listeners
   el.querySelectorAll('.backup-service-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -298,6 +303,45 @@ async function triggerBackup(el, serviceName) {
     }
   } catch (error) {
     console.error('Backup error:', error)
+    showToast(`❌ Error: ${error.message}`, 'error')
+    btn.innerHTML = originalHTML
+    btn.disabled = false
+  }
+}
+
+async function triggerBackupAll(el) {
+  const btn = el.querySelector('#backup-all-btn')
+  if (!btn) return
+
+  btn.disabled = true
+  const originalHTML = btn.innerHTML
+
+  try {
+    btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> Backing up all...'
+
+    const response = await fetch(`${API_BASE}/api/backup/m365/trigger-all`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        description: `Full backup at ${new Date().toLocaleString()}`,
+        priority: 'high'
+      })
+    })
+
+    const result = await response.json()
+
+    if (result.success) {
+      const count = result.summary?.successful || result.results?.length || 0
+      showToast(`✅ Backup initiated for ${count} services (${result.executionTime}s)`, 'success')
+      // Reload backup content to show updated status
+      setTimeout(() => loadBackupContent(el), 2000)
+    } else {
+      showToast(`❌ Backup failed: ${result.error}`, 'error')
+      btn.innerHTML = originalHTML
+      btn.disabled = false
+    }
+  } catch (error) {
+    console.error('Backup All error:', error)
     showToast(`❌ Error: ${error.message}`, 'error')
     btn.innerHTML = originalHTML
     btn.disabled = false
