@@ -41,17 +41,86 @@ export class ComplianceCollector {
       this.resources = []
       this.errors = []
 
-      // Collect key compliance resources
-      await this.collectSensitivityLabels()
-      await this.collectInformationProtectionPolicies()
-      await this.collectDataGovernanceSettings()
+      // Phase 1: Compliance Core (Data Classification & Retention - 16 resources)
+      console.log('📊 Starting Compliance Phase 1 collection (data classification & retention)...')
 
-      // PowerShell-based collections (non-blocking failures)
-      await this.collectRetentionPoliciesPowerShell()
-      await this.collectDLPPoliciesPowerShell()
-      await this.collectSupervisionPoliciesPowerShell()
-      await this.collectRecordsManagementPowerShell()
+      // Audit & Configuration (3 resources)
+      await this.collectAuditConfiguration()
+      await this.collectAlertPolicies()
+      await this.collectGlobalConfiguration()
+
+      // Classification (4 resources)
+      await this.collectDataClassification()
+      await this.collectDataClassificationConfig()
+      await this.collectEmailClassificationConfig()
+      await this.collectFileClassificationConfig()
+
+      // Sensitivity & Labels (4 resources)
+      await this.collectSensitivityLabels()
+      await this.collectSensitivityPolicy()
       await this.collectRetentionLabelsPowerShell()
+      await this.collectLabelProperty()
+
+      // Retention Policies (3 resources)
+      await this.collectRetentionPoliciesPowerShell()
+      await this.collectRetentionEventType()
+
+      // Encryption & Security (1 resource)
+      await this.collectMessageEncryption()
+
+      // Phase 2: DLP, Search & Supervision (16 resources)
+      console.log('📊 Starting Compliance Phase 2 collection (DLP, search & supervision)...')
+
+      // DLP Policies (2 resources)
+      await this.collectDLPPoliciesPowerShell()
+      await this.collectUnifiedDLPCompliancePolicy()
+
+      // Compliance Search (3 resources)
+      await this.collectDataGovernanceSettings()
+      await this.collectTraditionalSearch()
+      await this.collectConversationSearchTopicIndex()
+
+      // Supervision (2 resources)
+      await this.collectSupervisionPoliciesPowerShell()
+      await this.collectSupervisoryReviewPolicyV2()
+
+      // Case Management (3 resources)
+      await this.collectEdgeCaseHoldPolicy()
+      await this.collectCasePolicyAssociation()
+
+      // Tag & Classification (3 resources)
+      await this.collectComplianceTag()
+      await this.collectManagedClassification()
+      await this.collectManualLabeling()
+
+      // Access & Messaging (2 resources)
+      await this.collectExternalAccessPolicy()
+      await this.collectOrganizationalMessage()
+
+      // Phase 3: Records Management & Advanced Governance (15 resources)
+      console.log('📊 Starting Compliance Phase 3 collection (records & governance)...')
+
+      // Records Management (2 resources)
+      await this.collectRecordsManagementPowerShell()
+      await this.collectInformationProtectionPolicies()
+
+      // File Plan (5 resources)
+      await this.collectFilePlanProperties()
+
+      // Rights Management (1 resource)
+      await this.collectFileShareRightsManagement()
+
+      // Advanced Policies (4 resources)
+      await this.collectIntelligencePolicy()
+      await this.collectRiskPolicy()
+      await this.collectTrustFrameworkPolicy()
+      await this.collectPolicySetting()
+
+      // Information Governance (1 resource)
+      await this.collectInformationGovernance()
+
+      // Exchange Integration (1 resource)
+      await this.collectExchangeBinding()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Compliance backup complete (${executionTime}s, ${this.resources.length} resources)`)
