@@ -53,6 +53,15 @@ export class OneDriveCollector {
       await this.collectAccessAndCompliance() // ODAccessAndCompliance
       await this.collectMobileManagementPolicy() // ODMobileManagementPolicy
 
+      // Phase 2 - Advanced sharing and compliance
+      console.log('📊 Starting OneDrive Phase 2 collection...')
+      await this.collectAdvancedSharingSettings() // ODAdvancedSharingSettings
+      await this.collectComplianceFeatures() // ODComplianceFeatures
+      await this.collectSiteCreationSettings() // ODSiteCreationSettings
+      await this.collectBlockingAndIsolation() // ODBlockingAndIsolation
+      await this.collectFileCollaborationSettings() // ODFileCollaborationSettings
+      await this.collectComplianceAudit() // ODComplianceAudit
+
       // PowerShell-based collections (non-blocking failures)
       console.log('📊 Starting PowerShell-based OneDrive collections...')
       await this.collectSharingSettingsPowerShell()
@@ -857,6 +866,230 @@ export class OneDriveCollector {
       }
     } catch (error) {
       this.handleError('collectMobileManagementPolicy', error)
+    }
+  }
+
+  // ============================================================
+  // PHASE 2: ADVANCED SHARING AND COMPLIANCE COLLECTORS
+  // ============================================================
+
+  /**
+   * Collect Advanced Sharing Settings
+   * ODAdvancedSharingSettings (Phase 2)
+   */
+  async collectAdvancedSharingSettings() {
+    try {
+      console.log('📋 Collecting OneDrive Advanced Sharing Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          PreventExternalSharingOfUnmanagedFiles = (Get-SPOTenant -ErrorAction SilentlyContinue).PreventExternalSharingOfUnmanagedFiles
+          FileAnonymousLinkType = (Get-SPOTenant -ErrorAction SilentlyContinue).FileAnonymousLinkType
+          FolderAnonymousLinkType = (Get-SPOTenant -ErrorAction SilentlyContinue).FolderAnonymousLinkType
+          EnableAnyoneLinks = (Get-SPOTenant -ErrorAction SilentlyContinue).EnableAnyoneLinks
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODAdvancedSharingSettings',
+          name: 'AdvancedSharingSettings',
+          id: 'advanced-sharing-settings',
+          configuration: {
+            Identity: 'advanced-sharing-settings',
+            PreventExternalSharingOfUnmanagedFiles: result.PreventExternalSharingOfUnmanagedFiles || false,
+            FileAnonymousLinkType: result.FileAnonymousLinkType || 'View',
+            FolderAnonymousLinkType: result.FolderAnonymousLinkType || 'View',
+            EnableAnyoneLinks: result.EnableAnyoneLinks !== false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found advanced sharing settings')
+      }
+    } catch (error) {
+      this.handleError('collectAdvancedSharingSettings', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Compliance Features
+   * ODComplianceFeatures (Phase 2)
+   */
+  async collectComplianceFeatures() {
+    try {
+      console.log('📋 Collecting OneDrive Compliance Features (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          EnableAutoExpirationVersionTrim = (Get-SPOTenant -ErrorAction SilentlyContinue).EnableAutoExpirationVersionTrim
+          ExpireVersionsAfterDays = (Get-SPOTenant -ErrorAction SilentlyContinue).ExpireVersionsAfterDays
+          AllowCommentsOnFiles = (Get-SPOTenant -ErrorAction SilentlyContinue).AllowCommentsOnFiles
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODComplianceFeatures',
+          name: 'ComplianceFeatures',
+          id: 'compliance-features',
+          configuration: {
+            Identity: 'compliance-features',
+            AutoExpirationVersionTrimEnabled: result.EnableAutoExpirationVersionTrim || false,
+            ExpireVersionsAfterDays: result.ExpireVersionsAfterDays || 365,
+            AllowCommentsOnFiles: result.AllowCommentsOnFiles !== false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found compliance features')
+      }
+    } catch (error) {
+      this.handleError('collectComplianceFeatures', error)
+    }
+  }
+
+  /**
+   * Collect Site Creation Settings
+   * ODSiteCreationSettings (Phase 2)
+   */
+  async collectSiteCreationSettings() {
+    try {
+      console.log('📋 Collecting OneDrive Site Creation Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          SiteCreationEnabled = (Get-SPOTenant -ErrorAction SilentlyContinue).UserCanCreateSites
+          GroupCreationEnabled = (Get-SPOTenant -ErrorAction SilentlyContinue).GroupCreationEnabled
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODSiteCreationSettings',
+          name: 'SiteCreationSettings',
+          id: 'site-creation-settings',
+          configuration: {
+            Identity: 'site-creation-settings',
+            UserCanCreateSites: result.SiteCreationEnabled !== false,
+            GroupCreationEnabled: result.GroupCreationEnabled !== false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found site creation settings')
+      }
+    } catch (error) {
+      this.handleError('collectSiteCreationSettings', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Blocking and Isolation
+   * ODBlockingAndIsolation (Phase 2)
+   */
+  async collectBlockingAndIsolation() {
+    try {
+      console.log('📋 Collecting OneDrive Blocking & Isolation (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          IPAddressAllowList = (Get-SPOTenant -ErrorAction SilentlyContinue).IPAddressAllowList
+          IPAddressEnforcement = (Get-SPOTenant -ErrorAction SilentlyContinue).IPAddressEnforcement
+          BlockAccessOnUnmanagedDevices = (Get-SPOTenant -ErrorAction SilentlyContinue).BlockAccessOnUnmanagedDevices
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODBlockingAndIsolation',
+          name: 'BlockingAndIsolation',
+          id: 'blocking-isolation',
+          configuration: {
+            Identity: 'blocking-isolation',
+            IPAddressAllowList: result.IPAddressAllowList || '',
+            IPAddressEnforcement: result.IPAddressEnforcement || false,
+            BlockAccessOnUnmanagedDevices: result.BlockAccessOnUnmanagedDevices || false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found blocking and isolation settings')
+      }
+    } catch (error) {
+      this.handleError('collectBlockingAndIsolation', error)
+    }
+  }
+
+  /**
+   * Collect File Collaboration Settings
+   * ODFileCollaborationSettings (Phase 2)
+   */
+  async collectFileCollaborationSettings() {
+    try {
+      console.log('📋 Collecting OneDrive File Collaboration Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          LimitSharingByExternalUsers = (Get-SPOTenant -ErrorAction SilentlyContinue).LimitSharingByExternalUsers
+          PreventExternalUsersFromResharing = (Get-SPOTenant -ErrorAction SilentlyContinue).PreventExternalUsersFromResharing
+          DefaultSharingLinkType = (Get-SPOTenant -ErrorAction SilentlyContinue).DefaultSharingLinkType
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODFileCollaborationSettings',
+          name: 'FileCollaborationSettings',
+          id: 'file-collaboration-settings',
+          configuration: {
+            Identity: 'file-collaboration-settings',
+            LimitSharingByExternalUsers: result.LimitSharingByExternalUsers || false,
+            PreventExternalUsersFromResharing: result.PreventExternalUsersFromResharing || false,
+            DefaultSharingLinkType: result.DefaultSharingLinkType || 'Internal',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found file collaboration settings')
+      }
+    } catch (error) {
+      this.handleError('collectFileCollaborationSettings', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Audit and Compliance
+   * ODComplianceAudit (Phase 2)
+   */
+  async collectComplianceAudit() {
+    try {
+      console.log('📋 Collecting OneDrive Compliance Audit (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          AuditEnabled = (Get-SPOTenant -ErrorAction SilentlyContinue).AuditingEnabled
+          AuditLogMaxRetentionDays = (Get-SPOTenant -ErrorAction SilentlyContinue).AuditLogMaxRetentionDays
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODComplianceAudit',
+          name: 'ComplianceAudit',
+          id: 'compliance-audit',
+          configuration: {
+            Identity: 'compliance-audit',
+            AuditEnabled: result.AuditEnabled !== false,
+            AuditLogMaxRetentionDays: result.AuditLogMaxRetentionDays || 90,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found compliance audit settings')
+      }
+    } catch (error) {
+      this.handleError('collectComplianceAudit', error)
     }
   }
 

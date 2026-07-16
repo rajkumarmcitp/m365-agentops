@@ -594,10 +594,15 @@ export const M365_SERVICES = {
     tier: 'TIER 2',
     priority: 5,
     resources: [
-      'ODAccessAndCompliance',
       'ODAccess',
+      'ODAccessAndCompliance',
+      'ODAdvancedSharingSettings',
+      'ODBlockingAndIsolation',
+      'ODComplianceAudit',
+      'ODComplianceFeatures',
       'ODDeviceAccess',
       'ODExternalSharingPolicy',
+      'ODFileCollaborationSettings',
       'ODMobileManagementPolicy',
       'ODNotifications',
       'ODPersonalSiteCreation',
@@ -607,10 +612,29 @@ export const M365_SERVICES = {
       'ODSettings',
       'ODSharingPolicy',
       'ODSiteCollectionQuota',
+      'ODSiteCreationSettings',
       'ODStorageQuotaPolicy',
       'ODSyncClientSettings'
     ],
-    totalResources: 15
+    totalResources: 21,
+    _note_OneDrive_Phase2: {
+      description: 'Phase 2 additions (2026-07-16): 6 new advanced sharing and compliance resource types',
+      newResources: [
+        'ODAdvancedSharingSettings',
+        'ODBlockingAndIsolation',
+        'ODComplianceAudit',
+        'ODComplianceFeatures',
+        'ODFileCollaborationSettings',
+        'ODSiteCreationSettings'
+      ],
+      categories: {
+        'Advanced Sharing (2)': ['ODAdvancedSharingSettings', 'ODFileCollaborationSettings'],
+        'Compliance & Audit (2)': ['ODComplianceAudit', 'ODComplianceFeatures'],
+        'Access Control & Features (2)': ['ODBlockingAndIsolation', 'ODSiteCreationSettings']
+      },
+      coverage: 'from 50% (15/~30) to 70% (21/~30)',
+      implementationPhase: 'Phase 2 - Advanced sharing, retention, and compliance'
+    }
   },
   Groups: {
     displayName: 'Microsoft 365 Groups',
