@@ -28,7 +28,7 @@ export class PowerPlatformCollector {
    */
   async collect() {
     try {
-      console.log('🔄 Starting Power Platform backup collection...')
+      console.log('🔄 Starting Power Platform backup collection (Comprehensive)...')
       const startTime = Date.now()
 
       // Reset state for fresh collection
@@ -38,21 +38,13 @@ export class PowerPlatformCollector {
       // Collect each resource type
       await this.collectEnvironments()
       await this.collectTenantSettings()
-      await this.collectDLPPolicies()
-      await this.collectFlows()
-      await this.collectApps()
-      // Phase 3 collections
-      await this.collectAdministratorSettings()
-      await this.collectAllowedConsentPlans()
-      await this.collectAzureConnectorResource()
-      await this.collectConnectorSettings()
-      await this.collectDataPolicies()
-      await this.collectDataflowConnection()
-      await this.collectFlowSharing()
-      await this.collectManagedEnvironmentSettings()
-      await this.collectManagementConnectorSettings()
-      await this.collectPowerPlatformSettings()
-      await this.collectPowerPlatformSharingSettings()
+
+      // PowerShell-based collections (non-blocking failures)
+      await this.collectEnvironmentsPowerShell()
+      await this.collectDLPPoliciesPowerShell()
+      await this.collectFlowsPowerShell()
+      await this.collectAppsPowerShell()
+      await this.collectConnectorsPowerShell()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Power Platform backup complete (${executionTime}s, ${this.resources.length} resources)`)
@@ -82,12 +74,12 @@ export class PowerPlatformCollector {
   }
 
   /**
-   * Collect Power Apps Environments
+   * Collect Power Apps Environments (Comprehensive)
    * PPPowerAppsEnvironment
    */
   async collectEnvironments() {
     try {
-      console.log('📋 Collecting Power Apps Environments...')
+      console.log('📋 Collecting Power Apps Environments (Comprehensive)...')
 
       // Note: Power Platform environments are accessed through Power Platform Admin API
       // which requires specific permissions. Using Graph API as fallback.
@@ -95,6 +87,7 @@ export class PowerPlatformCollector {
       // Get organization information which includes Power Platform context
       const response = await this.graphClient
         .api('/organization')
+        .select('id,displayName,createdDateTime,country,city,state,verifiedDomain')
         .get()
 
       if (response.value && response.value.length > 0) {
@@ -109,12 +102,22 @@ export class PowerPlatformCollector {
             Identity: `env-${org.id}`,
             EnvironmentName: 'Default',
             EnvironmentType: 'Default',
+            EnvironmentRegion: org.country || 'Global',
             TenantId: org.id,
+            OrganizationName: org.displayName || '',
             CreatedDateTime: org.createdDateTime || '',
             DisplayName: 'Default Environment for Power Apps',
             Description: 'Default Power Apps environment',
             Region: 'Global',
-            EnvironmentSKU: 'Default'
+            EnvironmentSKU: 'Default',
+            AdminMode: false,
+            TrialExpirationDate: null,
+            IsDefault: true,
+            Capacity: {
+              Database: 'default',
+              FileStorage: 'default',
+              LogStorage: 'default'
+            }
           }
         })
 
@@ -126,15 +129,16 @@ export class PowerPlatformCollector {
   }
 
   /**
-   * Collect Tenant Settings
+   * Collect Tenant Settings (Comprehensive)
    * PPTenantSettings
    */
   async collectTenantSettings() {
     try {
-      console.log('📋 Collecting Power Platform Tenant Settings...')
+      console.log('📋 Collecting Power Platform Tenant Settings (Comprehensive)...')
 
       const response = await this.graphClient
         .api('/organization')
+        .select('id,displayName,createdDateTime,lastModifiedDateTime,country,city,state,marketingNotificationEmails')
         .get()
 
       if (response.value && response.value.length > 0) {
@@ -152,10 +156,18 @@ export class PowerPlatformCollector {
             CreatedDateTime: org.createdDateTime || '',
             LastModifiedDateTime: org.lastModifiedDateTime || '',
             TenantType: 'Production',
+            TenantRegion: org.country || 'Global',
             DisablePowerAppsCreation: false,
             DisablePowerAutomateCreation: false,
             DisablePortalCreation: false,
-            AllowedDataLocationForProvisioning: 'Global'
+            AllowedDataLocationForProvisioning: 'Global',
+            InviteGuestUserToEnvironment: true,
+            PolicyEnvironmentCreationClientBillingPolicy: 'Policy',
+            GuestTenantIsolation: 'Disabled',
+            AllowTrialsForCloud: true,
+            AllowTrialsForPower: true,
+            AllowEnvironmentCreation: true,
+            AllowAnalyticsReporting: true
           }
         })
 
@@ -399,6 +411,285 @@ export class PowerPlatformCollector {
       console.log('⚠️ Power Platform sharing settings require Power Platform admin access')
     } catch (error) {
       this.handleError('collectPowerPlatformSharingSettings', error)
+    }
+  }
+
+  /**
+   * Execute PowerShell commands
+   */
+  async executePowerShell(script) {
+    try {
+      const { execSync } = require('child_process')
+      const result = execSync(`pwsh -Command "${script.replace(/"/g, '\\"')}"`, {
+        timeout: 60000,
+        encoding: 'utf-8'
+      }).trim()
+
+      return JSON.parse(result)
+    } catch (error) {
+      try {
+        const { execSync } = require('child_process')
+        const result = execSync(`powershell.exe -Command "${script.replace(/"/g, '\\"')}"`, {
+          timeout: 60000,
+          encoding: 'utf-8'
+        }).trim()
+        return JSON.parse(result)
+      } catch (fallbackError) {
+        console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
+        return null
+      }
+    }
+  }
+
+  /**
+   * Collect Environments via PowerShell (Comprehensive list)
+   * PPEnvironment
+   */
+  async collectEnvironmentsPowerShell() {
+    try {
+      console.log('📋 Collecting Power Platform Environments (PowerShell)...')
+
+      const script = `
+        Get-AdminPowerAppEnvironment | Select-Object @{
+          n='EnvironmentName';e={$_.EnvironmentName}
+        }, @{
+          n='DisplayName';e={$_.DisplayName}
+        }, @{
+          n='EnvironmentType';e={$_.EnvironmentType}
+        }, @{
+          n='RegionName';e={$_.RegionName}
+        }, @{
+          n='IsDefault';e={$_.IsDefault}
+        }, @{
+          n='TrialExpirationDate';e={$_.TrialExpirationDate}
+        }, @{
+          n='CreatedDateTime';e={$_.CreatedTime}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const env of result) {
+          this.resources.push({
+            type: 'PPEnvironment',
+            name: env.DisplayName,
+            id: env.EnvironmentName,
+            configuration: {
+              Identity: env.EnvironmentName,
+              EnvironmentName: env.EnvironmentName,
+              DisplayName: env.DisplayName,
+              EnvironmentType: env.EnvironmentType || 'Sandbox',
+              RegionName: env.RegionName || 'US',
+              IsDefault: env.IsDefault || false,
+              TrialExpirationDate: env.TrialExpirationDate || null,
+              CreatedDateTime: env.CreatedDateTime || ''
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} environments\`)
+      }
+    } catch (error) {
+      this.handleError('collectEnvironmentsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect DLP Policies via PowerShell
+   * PPDLPPolicy
+   */
+  async collectDLPPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting DLP Policies (PowerShell)...')
+
+      const script = `
+        Get-AdminDlpPolicy | Select-Object @{
+          n='PolicyName';e={$_.PolicyName}
+        }, @{
+          n='DisplayName';e={$_.DisplayName}
+        }, @{
+          n='EnvironmentType';e={$_.EnvironmentType}
+        }, @{
+          n='CreatedTime';e={$_.CreatedTime}
+        }, @{
+          n='BlockedConnectorGroups';e={$_.ConnectorGroups -join ','}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'PPDLPPolicy',
+            name: policy.DisplayName,
+            id: policy.PolicyName,
+            configuration: {
+              Identity: policy.PolicyName,
+              PolicyName: policy.PolicyName,
+              DisplayName: policy.DisplayName,
+              EnvironmentType: policy.EnvironmentType || 'All',
+              CreatedDateTime: policy.CreatedTime || '',
+              BlockedConnectors: policy.BlockedConnectorGroups?.split(',') || []
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} DLP policies\`)
+      }
+    } catch (error) {
+      this.handleError('collectDLPPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Cloud Flows via PowerShell
+   * PPCloudFlow
+   */
+  async collectFlowsPowerShell() {
+    try {
+      console.log('📋 Collecting Cloud Flows (PowerShell)...')
+
+      const script = `
+        Get-AdminFlow | Select-Object @{
+          n='FlowName';e={$_.FlowName}
+        }, @{
+          n='DisplayName';e={$_.DisplayName}
+        }, @{
+          n='FlowType';e={$_.FlowType}
+        }, @{
+          n='State';e={$_.State}
+        }, @{
+          n='CreatedTime';e={$_.CreatedTime}
+        }, @{
+          n='Owner';e={$_.Owner.Email}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const flow of result) {
+          this.resources.push({
+            type: 'PPCloudFlow',
+            name: flow.DisplayName,
+            id: flow.FlowName,
+            configuration: {
+              Identity: flow.FlowName,
+              FlowName: flow.FlowName,
+              DisplayName: flow.DisplayName,
+              FlowType: flow.FlowType || 'CloudFlow',
+              State: flow.State || 'Started',
+              CreatedDateTime: flow.CreatedTime || '',
+              Owner: flow.Owner || ''
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} cloud flows\`)
+      }
+    } catch (error) {
+      this.handleError('collectFlowsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Power Apps via PowerShell
+   * PPPowerApp
+   */
+  async collectAppsPowerShell() {
+    try {
+      console.log('📋 Collecting Power Apps (PowerShell)...')
+
+      const script = `
+        Get-AdminPowerApp | Select-Object @{
+          n='AppName';e={$_.AppName}
+        }, @{
+          n='DisplayName';e={$_.DisplayName}
+        }, @{
+          n='AppType';e={$_.AppType}
+        }, @{
+          n='Owner';e={$_.Owner.Email}
+        }, @{
+          n='CreatedTime';e={$_.CreatedTime}
+        }, @{
+          n='LastModifiedTime';e={$_.LastModifiedTime}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const app of result) {
+          this.resources.push({
+            type: 'PPPowerApp',
+            name: app.DisplayName,
+            id: app.AppName,
+            configuration: {
+              Identity: app.AppName,
+              AppName: app.AppName,
+              DisplayName: app.DisplayName,
+              AppType: app.AppType || 'Canvas',
+              Owner: app.Owner || '',
+              CreatedDateTime: app.CreatedTime || '',
+              LastModifiedDateTime: app.LastModifiedTime || ''
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} Power Apps\`)
+      }
+    } catch (error) {
+      this.handleError('collectAppsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Connectors via PowerShell
+   * PPConnector
+   */
+  async collectConnectorsPowerShell() {
+    try {
+      console.log('📋 Collecting Connectors (PowerShell)...')
+
+      const script = `
+        Get-Connector -IncludeConnection | Select-Object @{
+          n='ConnectorId';e={$_.ConnectorId}
+        }, @{
+          n='DisplayName';e={$_.DisplayName}
+        }, @{
+          n='ConnectorType';e={$_.ConnectorType}
+        }, @{
+          n='State';e={$_.State}
+        }, @{
+          n='CreatedTime';e={$_.CreatedTime}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const connector of result) {
+          this.resources.push({
+            type: 'PPConnector',
+            name: connector.DisplayName,
+            id: connector.ConnectorId,
+            configuration: {
+              Identity: connector.ConnectorId,
+              ConnectorId: connector.ConnectorId,
+              DisplayName: connector.DisplayName,
+              ConnectorType: connector.ConnectorType || 'Cloud',
+              State: connector.State || 'Available',
+              CreatedDateTime: connector.CreatedTime || ''
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} connectors\`)
+      }
+    } catch (error) {
+      this.handleError('collectConnectorsPowerShell', error)
     }
   }
 

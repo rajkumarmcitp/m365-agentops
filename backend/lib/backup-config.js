@@ -586,6 +586,13 @@ export const M365_SERVICES = {
     tier: 'TIER 3',
     priority: 9,
     resources: [
+      'PPPowerAppsEnvironment',
+      'PPTenantSettings',
+      'PPEnvironment',
+      'PPDLPPolicy',
+      'PPCloudFlow',
+      'PPPowerApp',
+      'PPConnector',
       'PPAdministratorSettings',
       'PPAllowedConsentPlans',
       'PPAzureConnectorResource',
@@ -599,13 +606,11 @@ export const M365_SERVICES = {
       'PPFlowOwnerClaimSettings',
       'PPManagedEnvironmentSettings',
       'PPManagementConnectorSettings',
-      'PPPowerAppsEnvironment',
       'PPPowerPlatformSettings',
       'PPPowerPlatformSharingSettings',
-      'PPTenantIsolationSettings',
-      'PPTenantSettings'
+      'PPTenantIsolationSettings'
     ],
-    totalResources: 18
+    totalResources: 23
   },
   Security: {
     displayName: 'Entra ID',
