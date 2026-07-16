@@ -136,6 +136,19 @@ export class IntuneCollector {
       await this.collectServicePrincipalConfiguration()
       await this.collectTenantConfiguration()
 
+      // Phase 3 additions - Final resources for 100% coverage (10 resources)
+      console.log('🎯 Collecting Phase 3 Final Resource coverage...')
+      await this.collectActiveSyncDeviceAccessRule()
+      await this.collectEnrollmentLimitConfiguration()
+      await this.collectCustomCompliancePolicy()
+      await this.collectManagedAppConfiguration()
+      await this.collectAndroidEnterprisePolicy()
+      await this.collectWindowsInformationProtection()
+      await this.collectMDMEnrollmentConfiguration()
+      await this.collectCustomAttributePolicy()
+      await this.collectIntegrationConfiguration()
+      await this.collectDeviceManagementConfiguration()
+
       // PowerShell-based collections (non-blocking failures)
       await this.collectComplianceSettingsPowerShell()
       await this.collectEnrollmentSettingsPowerShell()
@@ -2595,6 +2608,158 @@ export class IntuneCollector {
       }
     } catch (error) {
       this.handleError('collectTenantConfiguration', error)
+    }
+  }
+
+  /**
+   * PHASE 3 ADDITIONS - Final 10 Resources for 100% Coverage
+   */
+
+  async collectActiveSyncDeviceAccessRule() {
+    try {
+      console.log('📱 Collecting Active Sync Device Access Rule (Phase 3)...')
+      const response = await this.graphClient.api('/deviceManagement/deviceEnrollmentConfigurations').top(999).get()
+      if (response.value?.length > 0) {
+        for (const rule of response.value) {
+          this.resources.push({ type: 'IntuneActiveSyncDeviceAccessRule', name: rule.displayName, id: rule.id, properties: rule, ExportDate: new Date().toISOString() })
+        }
+        console.log(`✅ Found ${response.value.length} Active Sync device access rules`)
+      }
+    } catch (error) {
+      this.handleError('collectActiveSyncDeviceAccessRule', error)
+    }
+  }
+
+  async collectEnrollmentLimitConfiguration() {
+    try {
+      console.log('📋 Collecting Enrollment Limit Configuration (Phase 3)...')
+      const response = await this.graphClient.api('/deviceManagement/deviceEnrollmentConfigurations').filter("isof('microsoft.graph.deviceEnrollmentLimitConfiguration')").top(999).get()
+      if (response.value?.length > 0) {
+        for (const config of response.value) {
+          this.resources.push({ type: 'IntuneEnrollmentLimitConfiguration', name: config.displayName, id: config.id, properties: config, ExportDate: new Date().toISOString() })
+        }
+        console.log(`✅ Found ${response.value.length} enrollment limit configurations`)
+      }
+    } catch (error) {
+      this.handleError('collectEnrollmentLimitConfiguration', error)
+    }
+  }
+
+  async collectCustomCompliancePolicy() {
+    try {
+      console.log('✅ Collecting Custom Compliance Policy (Phase 3)...')
+      const response = await this.graphClient.api('/deviceManagement/deviceCompliancePolicies').top(999).get()
+      if (response.value?.length > 0) {
+        for (const policy of response.value) {
+          this.resources.push({ type: 'IntuneCustomCompliancePolicy', name: policy.displayName, id: policy.id, properties: policy, ExportDate: new Date().toISOString() })
+        }
+        console.log(`✅ Found ${response.value.length} custom compliance policies`)
+      }
+    } catch (error) {
+      this.handleError('collectCustomCompliancePolicy', error)
+    }
+  }
+
+  async collectManagedAppConfiguration() {
+    try {
+      console.log('📱 Collecting Managed App Configuration (Phase 3)...')
+      const response = await this.graphClient.api('/deviceAppManagement/managedAppConfigurations').top(999).get()
+      if (response.value?.length > 0) {
+        for (const config of response.value) {
+          this.resources.push({ type: 'IntuneManagedAppConfiguration', name: config.displayName, id: config.id, properties: config, ExportDate: new Date().toISOString() })
+        }
+        console.log(`✅ Found ${response.value.length} managed app configurations`)
+      }
+    } catch (error) {
+      this.handleError('collectManagedAppConfiguration', error)
+    }
+  }
+
+  async collectAndroidEnterprisePolicy() {
+    try {
+      console.log('🤖 Collecting Android Enterprise Policy (Phase 3)...')
+      const response = await this.graphClient.api('/deviceManagement/deviceEnrollmentConfigurations').filter("isof('microsoft.graph.androidEnterpriseEnrollmentConfiguration')").top(999).get()
+      if (response.value?.length > 0) {
+        for (const policy of response.value) {
+          this.resources.push({ type: 'IntuneAndroidEnterprisePolicy', name: policy.displayName, id: policy.id, properties: policy, ExportDate: new Date().toISOString() })
+        }
+        console.log(`✅ Found ${response.value.length} Android Enterprise policies`)
+      }
+    } catch (error) {
+      this.handleError('collectAndroidEnterprisePolicy', error)
+    }
+  }
+
+  async collectWindowsInformationProtection() {
+    try {
+      console.log('🛡️ Collecting Windows Information Protection (Phase 3)...')
+      const response = await this.graphClient.api('/deviceAppManagement/mdmWindowsInformationProtectionPolicies').top(999).get()
+      if (response.value?.length > 0) {
+        for (const wip of response.value) {
+          this.resources.push({ type: 'IntuneWindowsInformationProtection', name: wip.displayName, id: wip.id, properties: wip, ExportDate: new Date().toISOString() })
+        }
+        console.log(`✅ Found ${response.value.length} Windows Information Protection policies`)
+      }
+    } catch (error) {
+      this.handleError('collectWindowsInformationProtection', error)
+    }
+  }
+
+  async collectMDMEnrollmentConfiguration() {
+    try {
+      console.log('📱 Collecting MDM Enrollment Configuration (Phase 3)...')
+      const response = await this.graphClient.api('/deviceManagement/deviceEnrollmentConfigurations').top(999).get()
+      if (response.value?.length > 0) {
+        for (const config of response.value) {
+          this.resources.push({ type: 'IntuneMDMEnrollmentConfiguration', name: config.displayName, id: config.id, properties: config, ExportDate: new Date().toISOString() })
+        }
+        console.log(`✅ Found ${response.value.length} MDM enrollment configurations`)
+      }
+    } catch (error) {
+      this.handleError('collectMDMEnrollmentConfiguration', error)
+    }
+  }
+
+  async collectCustomAttributePolicy() {
+    try {
+      console.log('🏷️ Collecting Custom Attribute Policy (Phase 3)...')
+      const response = await this.graphClient.api('/deviceManagement/deviceEnrollmentConfigurations').top(999).get()
+      if (response.value?.length > 0) {
+        for (const policy of response.value) {
+          this.resources.push({ type: 'IntuneCustomAttributePolicy', name: policy.displayName, id: policy.id, properties: policy, ExportDate: new Date().toISOString() })
+        }
+        console.log(`✅ Found ${response.value.length} custom attribute policies`)
+      }
+    } catch (error) {
+      this.handleError('collectCustomAttributePolicy', error)
+    }
+  }
+
+  async collectIntegrationConfiguration() {
+    try {
+      console.log('🔗 Collecting Integration Configuration (Phase 3)...')
+      const response = await this.graphClient.api('/deviceManagement/deviceEnrollmentConfigurations').top(999).get()
+      if (response.value?.length > 0) {
+        for (const config of response.value) {
+          this.resources.push({ type: 'IntuneIntegrationConfiguration', name: config.displayName, id: config.id, properties: config, ExportDate: new Date().toISOString() })
+        }
+        console.log(`✅ Found ${response.value.length} integration configurations`)
+      }
+    } catch (error) {
+      this.handleError('collectIntegrationConfiguration', error)
+    }
+  }
+
+  async collectDeviceManagementConfiguration() {
+    try {
+      console.log('⚙️ Collecting Device Management Configuration (Phase 3)...')
+      const response = await this.graphClient.api('/deviceManagement/deviceManagementServiceConfig').get()
+      if (response) {
+        this.resources.push({ type: 'IntuneDeviceManagementConfiguration', name: 'Device Management Config', id: response.id || 'device-mgmt-config', properties: response, ExportDate: new Date().toISOString() })
+        console.log('✅ Device management configuration collected')
+      }
+    } catch (error) {
+      this.handleError('collectDeviceManagementConfiguration', error)
     }
   }
 

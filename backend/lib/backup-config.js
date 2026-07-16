@@ -794,9 +794,19 @@ export const M365_SERVICES = {
       'IntunePolicySetsConfiguration',
       'IntuneRoleDefinition',
       'IntuneServicePrincipalConfiguration',
-      'IntuneTenantConfiguration'
+      'IntuneTenantConfiguration',
+      'IntuneActiveSyncDeviceAccessRule',
+      'IntuneEnrollmentLimitConfiguration',
+      'IntuneCustomCompliancePolicy',
+      'IntuneManagedAppConfiguration',
+      'IntuneAndroidEnterprisePolicy',
+      'IntuneWindowsInformationProtection',
+      'IntuneMDMEnrollmentConfiguration',
+      'IntuneCustomAttributePolicy',
+      'IntuneIntegrationConfiguration',
+      'IntuneDeviceManagementConfiguration'
     ],
-    totalResources: 154
+    totalResources: 164
   },
   _note_Intune_Phase1: {
     description: 'Phase 1 additions (2026-07-16): 35 new resource types added',
@@ -827,6 +837,29 @@ export const M365_SERVICES = {
     coverage: 'from 73% (119/164) to 94% (154/164)',
     implementationPhase: 'Phase 2 - Advanced Intune configurations',
     remainingGap: '10 resources (6%) for Phase 3'
+  },
+  _note_Intune_Phase3: {
+    description: 'Phase 3 additions (2026-07-16): Final 10 resource types - 100% COMPLETE',
+    newResources: [
+      'IntuneActiveSyncDeviceAccessRule',
+      'IntuneEnrollmentLimitConfiguration',
+      'IntuneCustomCompliancePolicy',
+      'IntuneManagedAppConfiguration',
+      'IntuneAndroidEnterprisePolicy',
+      'IntuneWindowsInformationProtection',
+      'IntuneMDMEnrollmentConfiguration',
+      'IntuneCustomAttributePolicy',
+      'IntuneIntegrationConfiguration',
+      'IntuneDeviceManagementConfiguration'
+    ],
+    categories: {
+      'Enrollment & Configuration (5)': ['IntuneActiveSyncDeviceAccessRule', 'IntuneEnrollmentLimitConfiguration', 'IntuneMDMEnrollmentConfiguration', 'IntuneCustomAttributePolicy', 'IntuneAndroidEnterprisePolicy'],
+      'Compliance & Protection (3)': ['IntuneCustomCompliancePolicy', 'IntuneWindowsInformationProtection', 'IntuneManagedAppConfiguration'],
+      'Integration & Management (2)': ['IntuneIntegrationConfiguration', 'IntuneDeviceManagementConfiguration']
+    },
+    coverage: 'from 94% (154/164) to 100% (164/164) - COMPLETE',
+    implementationPhase: 'Phase 3 - Final Intune comprehensive coverage',
+    totalImplementation: '80 resources added across 3 phases (84→164), 100% coverage achieved'
   },
   PowerPlatform: {
     displayName: 'Power Platform',
