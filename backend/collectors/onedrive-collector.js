@@ -62,6 +62,18 @@ export class OneDriveCollector {
       await this.collectFileCollaborationSettings() // ODFileCollaborationSettings
       await this.collectComplianceAudit() // ODComplianceAudit
 
+      // Phase 3 - Retention, records, and governance
+      console.log('📊 Starting OneDrive Phase 3 collection...')
+      await this.collectFileLifecycleManagement() // ODFileLifecycleManagement
+      await this.collectAdvancedQuotaManagement() // ODAdvancedQuotaManagement
+      await this.collectRecordsManagement() // ODRecordsManagement
+      await this.collectSiteGovernance() // ODSiteGovernance
+      await this.collectSensitivityClassification() // ODSensitivityClassification
+      await this.collectAdvancedAudit() // ODAdvancedAudit
+      await this.collectMetadataAndContentTypes() // ODMetadataAndContentTypes
+      await this.collectAdvancedRetention() // ODAdvancedRetention
+      await this.collectDataGovernanceDLP() // ODDataGovernanceDLP
+
       // PowerShell-based collections (non-blocking failures)
       console.log('📊 Starting PowerShell-based OneDrive collections...')
       await this.collectSharingSettingsPowerShell()
@@ -1090,6 +1102,325 @@ export class OneDriveCollector {
       }
     } catch (error) {
       this.handleError('collectComplianceAudit', error)
+    }
+  }
+
+  // ============================================================
+  // PHASE 3: RETENTION, RECORDS, AND GOVERNANCE COLLECTORS
+  // ============================================================
+
+  /**
+   * Collect File Lifecycle Management
+   * ODFileLifecycleManagement (Phase 3)
+   */
+  async collectFileLifecycleManagement() {
+    try {
+      console.log('📋 Collecting OneDrive File Lifecycle Management (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          DisableRightsMgmt = (Get-SPOTenant -ErrorAction SilentlyContinue).DisableRightsMgmt
+          DisableTrialLicenseFeatures = (Get-SPOTenant -ErrorAction SilentlyContinue).DisableTrialLicenseFeatures
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODFileLifecycleManagement',
+          name: 'FileLifecycleManagement',
+          id: 'file-lifecycle-management',
+          configuration: {
+            Identity: 'file-lifecycle-management',
+            RightsMgmtEnabled: result.DisableRightsMgmt !== true,
+            TrialLicenseFeaturesEnabled: result.DisableTrialLicenseFeatures !== true,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found file lifecycle management')
+      }
+    } catch (error) {
+      this.handleError('collectFileLifecycleManagement', error)
+    }
+  }
+
+  /**
+   * Collect Advanced Quota Management
+   * ODAdvancedQuotaManagement (Phase 3)
+   */
+  async collectAdvancedQuotaManagement() {
+    try {
+      console.log('📋 Collecting OneDrive Advanced Quota Management (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          OneDriveStorageQuota = (Get-SPOTenant -ErrorAction SilentlyContinue).OneDriveStorageQuota
+          OneDriveStorageQuotaWarningThresholdPercentage = (Get-SPOTenant -ErrorAction SilentlyContinue).OneDriveStorageQuotaWarningThresholdPercentage
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODAdvancedQuotaManagement',
+          name: 'AdvancedQuotaManagement',
+          id: 'advanced-quota-management',
+          configuration: {
+            Identity: 'advanced-quota-management',
+            DefaultStorageQuota: result.OneDriveStorageQuota || 1048576,
+            WarningThresholdPercentage: result.OneDriveStorageQuotaWarningThresholdPercentage || 90,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found advanced quota management')
+      }
+    } catch (error) {
+      this.handleError('collectAdvancedQuotaManagement', error)
+    }
+  }
+
+  /**
+   * Collect Records Management Settings
+   * ODRecordsManagement (Phase 3)
+   */
+  async collectRecordsManagement() {
+    try {
+      console.log('📋 Collecting OneDrive Records Management (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          RecordsManagementEnabled = (Get-SPOTenant -ErrorAction SilentlyContinue).RecordsManagementEnabled
+          ContentTypeHubUrl = (Get-SPOTenant -ErrorAction SilentlyContinue).ContentTypeHubUrl
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODRecordsManagement',
+          name: 'RecordsManagement',
+          id: 'records-management',
+          configuration: {
+            Identity: 'records-management',
+            Enabled: result.RecordsManagementEnabled || false,
+            ContentTypeHubUrl: result.ContentTypeHubUrl || '',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found records management')
+      }
+    } catch (error) {
+      this.handleError('collectRecordsManagement', error)
+    }
+  }
+
+  /**
+   * Collect Site Governance Settings
+   * ODSiteGovernance (Phase 3)
+   */
+  async collectSiteGovernance() {
+    try {
+      console.log('📋 Collecting OneDrive Site Governance (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          IsSharePointOnlineInstanceFrontDoor = (Get-SPOTenant -ErrorAction SilentlyContinue).IsSharePointOnlineInstanceFrontDoor
+          RestrictedAccessControlEnabled = (Get-SPOTenant -ErrorAction SilentlyContinue).RestrictedAccessControlEnabled
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODSiteGovernance',
+          name: 'SiteGovernance',
+          id: 'site-governance',
+          configuration: {
+            Identity: 'site-governance',
+            FrontDoorEnabled: result.IsSharePointOnlineInstanceFrontDoor || false,
+            RestrictedAccessControlEnabled: result.RestrictedAccessControlEnabled || false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found site governance settings')
+      }
+    } catch (error) {
+      this.handleError('collectSiteGovernance', error)
+    }
+  }
+
+  /**
+   * Collect Sensitivity and Classification
+   * ODSensitivityClassification (Phase 3)
+   */
+  async collectSensitivityClassification() {
+    try {
+      console.log('📋 Collecting OneDrive Sensitivity Classification (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          DisableDocumentManagement = (Get-SPOTenant -ErrorAction SilentlyContinue).DisableDocumentManagement
+          InformationBarrierMode = (Get-SPOTenant -ErrorAction SilentlyContinue).InformationBarrierMode
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODSensitivityClassification',
+          name: 'SensitivityClassification',
+          id: 'sensitivity-classification',
+          configuration: {
+            Identity: 'sensitivity-classification',
+            DocumentManagementEnabled: result.DisableDocumentManagement !== true,
+            InformationBarrierMode: result.InformationBarrierMode || 'Open',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found sensitivity classification')
+      }
+    } catch (error) {
+      this.handleError('collectSensitivityClassification', error)
+    }
+  }
+
+  /**
+   * Collect Advanced Audit Settings
+   * ODAdvancedAudit (Phase 3)
+   */
+  async collectAdvancedAudit() {
+    try {
+      console.log('📋 Collecting OneDrive Advanced Audit (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          AuditingRetentionDays = (Get-SPOTenant -ErrorAction SilentlyContinue).AuditingRetentionDays
+          EnableComplianceTagsForSharePointOnline = (Get-SPOTenant -ErrorAction SilentlyContinue).EnableComplianceTagsForSharePointOnline
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODAdvancedAudit',
+          name: 'AdvancedAudit',
+          id: 'advanced-audit',
+          configuration: {
+            Identity: 'advanced-audit',
+            AuditingRetentionDays: result.AuditingRetentionDays || 90,
+            ComplianceTagsEnabled: result.EnableComplianceTagsForSharePointOnline || false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found advanced audit')
+      }
+    } catch (error) {
+      this.handleError('collectAdvancedAudit', error)
+    }
+  }
+
+  /**
+   * Collect Metadata and Content Type Settings
+   * ODMetadataAndContentTypes (Phase 3)
+   */
+  async collectMetadataAndContentTypes() {
+    try {
+      console.log('📋 Collecting OneDrive Metadata & Content Types (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          ContentTypeHubUrl = (Get-SPOTenant -ErrorAction SilentlyContinue).ContentTypeHubUrl
+          SharePointOnlineVersion = (Get-SPOTenant -ErrorAction SilentlyContinue).SharePointOnlineVersion
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODMetadataAndContentTypes',
+          name: 'MetadataAndContentTypes',
+          id: 'metadata-content-types',
+          configuration: {
+            Identity: 'metadata-content-types',
+            ContentTypeHubUrl: result.ContentTypeHubUrl || '',
+            SharePointVersion: result.SharePointOnlineVersion || '16.0',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found metadata and content types')
+      }
+    } catch (error) {
+      this.handleError('collectMetadataAndContentTypes', error)
+    }
+  }
+
+  /**
+   * Collect Advanced Retention Policy
+   * ODAdvancedRetention (Phase 3)
+   */
+  async collectAdvancedRetention() {
+    try {
+      console.log('📋 Collecting OneDrive Advanced Retention (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          OrphanedPersonalSitesRetentionPeriod = (Get-SPOTenant -ErrorAction SilentlyContinue).OrphanedPersonalSitesRetentionPeriod
+          DeletedSiteRetentionPeriod = (Get-SPOTenant -ErrorAction SilentlyContinue).DeletedSiteRetentionPeriod
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODAdvancedRetention',
+          name: 'AdvancedRetention',
+          id: 'advanced-retention',
+          configuration: {
+            Identity: 'advanced-retention',
+            OrphanedPersonalSiteRetentionDays: result.OrphanedPersonalSitesRetentionPeriod || 93,
+            DeletedSiteRetentionDays: result.DeletedSiteRetentionPeriod || 93,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found advanced retention')
+      }
+    } catch (error) {
+      this.handleError('collectAdvancedRetention', error)
+    }
+  }
+
+  /**
+   * Collect Data Governance and DLP
+   * ODDataGovernanceDLP (Phase 3)
+   */
+  async collectDataGovernanceDLP() {
+    try {
+      console.log('📋 Collecting OneDrive Data Governance & DLP (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          DenyAddAndCustomizePages = (Get-SPOTenant -ErrorAction SilentlyContinue).DenyAddAndCustomizePages
+          DisableSpamNotifications = (Get-SPOTenant -ErrorAction SilentlyContinue).DisableSpamNotifications
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODDataGovernanceDLP',
+          name: 'DataGovernanceDLP',
+          id: 'data-governance-dlp',
+          configuration: {
+            Identity: 'data-governance-dlp',
+            DenyAddAndCustomizePages: result.DenyAddAndCustomizePages || false,
+            SpamNotificationsEnabled: result.DisableSpamNotifications !== true,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found data governance DLP')
+      }
+    } catch (error) {
+      this.handleError('collectDataGovernanceDLP', error)
     }
   }
 

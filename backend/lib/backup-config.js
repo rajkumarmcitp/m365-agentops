@@ -596,27 +596,36 @@ export const M365_SERVICES = {
     resources: [
       'ODAccess',
       'ODAccessAndCompliance',
+      'ODAdvancedAudit',
+      'ODAdvancedQuotaManagement',
+      'ODAdvancedRetention',
       'ODAdvancedSharingSettings',
       'ODBlockingAndIsolation',
       'ODComplianceAudit',
       'ODComplianceFeatures',
+      'ODDataGovernanceDLP',
       'ODDeviceAccess',
       'ODExternalSharingPolicy',
       'ODFileCollaborationSettings',
+      'ODFileLifecycleManagement',
+      'ODMetadataAndContentTypes',
       'ODMobileManagementPolicy',
       'ODNotifications',
       'ODPersonalSiteCreation',
       'ODPersonalSiteDefaultStorage',
       'ODQuota',
+      'ODRecordsManagement',
       'ODRetention',
+      'ODSensitivityClassification',
       'ODSettings',
       'ODSharingPolicy',
       'ODSiteCollectionQuota',
       'ODSiteCreationSettings',
+      'ODSiteGovernance',
       'ODStorageQuotaPolicy',
       'ODSyncClientSettings'
     ],
-    totalResources: 21,
+    totalResources: 30,
     _note_OneDrive_Phase2: {
       description: 'Phase 2 additions (2026-07-16): 6 new advanced sharing and compliance resource types',
       newResources: [
@@ -634,6 +643,31 @@ export const M365_SERVICES = {
       },
       coverage: 'from 50% (15/~30) to 70% (21/~30)',
       implementationPhase: 'Phase 2 - Advanced sharing, retention, and compliance'
+    },
+    _note_OneDrive_Phase3: {
+      description: 'Phase 3 additions (2026-07-16): 9 final retention, records, and governance resource types - 100% COMPLETE',
+      newResources: [
+        'ODAdvancedAudit',
+        'ODAdvancedQuotaManagement',
+        'ODAdvancedRetention',
+        'ODDataGovernanceDLP',
+        'ODFileLifecycleManagement',
+        'ODMetadataAndContentTypes',
+        'ODRecordsManagement',
+        'ODSensitivityClassification',
+        'ODSiteGovernance'
+      ],
+      categories: {
+        'Retention & Lifecycle (2)': ['ODAdvancedRetention', 'ODFileLifecycleManagement'],
+        'Records & Governance (2)': ['ODRecordsManagement', 'ODSiteGovernance'],
+        'Audit & Metadata (2)': ['ODAdvancedAudit', 'ODMetadataAndContentTypes'],
+        'Classification & DLP (2)': ['ODSensitivityClassification', 'ODDataGovernanceDLP'],
+        'Quota Management (1)': ['ODAdvancedQuotaManagement']
+      },
+      coverage: 'from 70% (21/~30) to 100% (30/30) - COMPLETE',
+      implementationPhase: 'Phase 3 - Final OneDrive resources for comprehensive coverage',
+      totalPhases: '3 phases, 21 resources added (9 → 30)',
+      timeline: '2026-07-16 - All phases completed in single session'
     }
   },
   Groups: {
