@@ -82,6 +82,7 @@ export class ExchangeCollector {
 
       // PowerShell collection - advanced Exchange components
       console.log('📊 Starting PowerShell-based collection for advanced Exchange components...')
+      await this.collectRoleGroupsPowerShell()
       await this.collectMailboxPoliciesPowerShell()
       await this.collectDLPPoliciesPowerShell()
       await this.collectRetentionPoliciesPowerShell()
@@ -620,8 +621,38 @@ export class ExchangeCollector {
    */
   async collectDataClassifications() {
     try {
-      console.log('📋 Collecting Data Classifications...')
-      console.log('⚠️ Data classifications require Exchange Admin Center access')
+      console.log('📋 Collecting Data Classifications (Phase 1 - 225 instances)...')
+
+      const script = `
+        \$classifications = Get-DataClassification -ErrorAction Continue |
+        Select-Object Name, Description, Guid, @{n='Confidence';e={\$_.Confidence}}, Enabled |
+        ConvertTo-Json -Depth 2
+        if (\$classifications) { Write-Host \$classifications } else { Write-Host '[]' }
+      `
+
+      const classifications = await this.executePowerShell(script)
+
+      if (Array.isArray(classifications) && classifications.length > 0) {
+        for (const dc of classifications) {
+          this.resources.push({
+            type: 'EXODataClassification',
+            name: dc.Name || dc.Guid,
+            id: dc.Guid || dc.Name,
+            properties: {
+              Identity: dc.Guid || dc.Name,
+              Name: dc.Name,
+              Description: dc.Description || '',
+              Guid: dc.Guid,
+              Confidence: dc.Confidence || 'Unknown',
+              Enabled: dc.Enabled !== false,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${classifications.length} data classifications`)
+      } else {
+        console.log('ℹ️ No data classifications found')
+      }
     } catch (error) {
       this.handleError('collectDataClassifications', error)
     }
@@ -633,8 +664,39 @@ export class ExchangeCollector {
    */
   async collectEmailAddressPolicies() {
     try {
-      console.log('📋 Collecting Email Address Policies...')
-      console.log('⚠️ Email address policies require Exchange Admin Center access')
+      console.log('📋 Collecting Email Address Policies (Phase 1)...')
+
+      const script = `
+        \$policies = Get-EmailAddressPolicy -ErrorAction Continue |
+        Select-Object Name, Identity, DisplayName, Priority, RecipientType, RecipientContainer, @{n='Enabled';e={\$_.Enabled}} |
+        ConvertTo-Json -Depth 2
+        if (\$policies) { Write-Host \$policies } else { Write-Host '[]' }
+      `
+
+      const policies = await this.executePowerShell(script)
+
+      if (Array.isArray(policies) && policies.length > 0) {
+        for (const policy of policies) {
+          this.resources.push({
+            type: 'EXOEmailAddressPolicy',
+            name: policy.Name,
+            id: policy.Identity,
+            properties: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              DisplayName: policy.DisplayName || policy.Name,
+              Priority: policy.Priority || 0,
+              RecipientType: policy.RecipientType || 'All',
+              RecipientContainer: policy.RecipientContainer,
+              Enabled: policy.Enabled !== false,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${policies.length} email address policies`)
+      } else {
+        console.log('ℹ️ No email address policies found')
+      }
     } catch (error) {
       this.handleError('collectEmailAddressPolicies', error)
     }
@@ -748,8 +810,38 @@ export class ExchangeCollector {
    */
   async collectMailboxAuditBypass() {
     try {
-      console.log('📋 Collecting Mailbox Audit Bypass...')
-      console.log('⚠️ Mailbox audit bypass requires Exchange Admin Center access')
+      console.log('📋 Collecting Mailbox Audit Bypass Associations (Phase 1 - 140 instances)...')
+
+      const script = `
+        \$bypasses = Get-MailboxAuditBypassAssociation -ErrorAction Continue |
+        Select-Object Identity, Name, AuditBypassEnabled, User, @{n='Type';e={\$_.AuditBypassEnabled}}, Guid |
+        ConvertTo-Json -Depth 2
+        if (\$bypasses) { Write-Host \$bypasses } else { Write-Host '[]' }
+      `
+
+      const bypasses = await this.executePowerShell(script)
+
+      if (Array.isArray(bypasses) && bypasses.length > 0) {
+        for (const bypass of bypasses) {
+          this.resources.push({
+            type: 'EXOMailboxAuditBypassAssociation',
+            name: bypass.Name || bypass.Identity,
+            id: bypass.Identity || bypass.Guid,
+            properties: {
+              Identity: bypass.Identity,
+              Name: bypass.Name,
+              User: bypass.User,
+              AuditBypassEnabled: bypass.AuditBypassEnabled === true || bypass.Type === true,
+              Guid: bypass.Guid,
+              ExportDate: new Date().toISOString(),
+              Status: bypass.AuditBypassEnabled ? 'Bypassed' : 'Audited'
+            }
+          })
+        }
+        console.log(`✅ Found ${bypasses.length} mailbox audit bypass associations`)
+      } else {
+        console.log('ℹ️ No mailbox audit bypass associations found')
+      }
     } catch (error) {
       this.handleError('collectMailboxAuditBypass', error)
     }
@@ -968,6 +1060,64 @@ export class ExchangeCollector {
   // ============================================================
   // POWERSHELL COLLECTION METHODS - Advanced Exchange Components
   // ============================================================
+
+  /**
+   * Collect Exchange Role Groups via PowerShell (Phase 1 - 32 instances)
+   * EXORoleGroup
+   */
+  async collectRoleGroupsPowerShell() {
+    try {
+      console.log('📋 Collecting Exchange Role Groups (Phase 1 - 32 instances)...')
+      const script = `
+        \$roleGroups = Get-RoleGroup -ErrorAction Continue |
+        Select-Object Identity, Name, DisplayName, Description, Members, @{n='MemberCount';e={@(\$_.Members).Count}}, Guid, WhenCreated, WhenChanged |
+        ForEach-Object {
+          [PSCustomObject]@{
+            Identity = \$_.Identity
+            Name = \$_.Name
+            DisplayName = \$_.DisplayName
+            Description = \$_.Description
+            MemberCount = \$_.MemberCount
+            Guid = \$_.Guid
+            WhenCreated = \$_.WhenCreated
+            WhenChanged = \$_.WhenChanged
+            Members = @(\$_.Members) | Select-Object -First 50
+            ExportDate = (Get-Date).ToIso8601String()
+          }
+        } | ConvertTo-Json -Depth 3
+        Write-Host \$roleGroups
+      `
+
+      const roleGroups = await this.executePowerShell(script)
+
+      if (Array.isArray(roleGroups) && roleGroups.length > 0) {
+        for (const rg of roleGroups) {
+          this.resources.push({
+            type: 'EXORoleGroup',
+            name: rg.Name,
+            id: rg.Identity,
+            properties: {
+              Identity: rg.Identity,
+              Name: rg.Name,
+              DisplayName: rg.DisplayName || rg.Name,
+              Description: rg.Description || '',
+              MemberCount: rg.MemberCount || 0,
+              Members: rg.Members || [],
+              Guid: rg.Guid,
+              WhenCreated: rg.WhenCreated,
+              WhenChanged: rg.WhenChanged,
+              ExportDate: rg.ExportDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${roleGroups.length} Exchange role groups`)
+      } else {
+        console.log('ℹ️ No Exchange role groups found')
+      }
+    } catch (error) {
+      this.handleError('collectRoleGroupsPowerShell', error)
+    }
+  }
 
   /**
    * Collect Mailbox Policies via PowerShell (Comprehensive)

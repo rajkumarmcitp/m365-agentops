@@ -100,6 +100,7 @@ export class SecurityCollector {
       await this.collectAppManagementPolicies()
       await this.collectPIMRoleEligibilitySchedules()
       await this.collectPIMActivationRequests()
+      await this.collectPIMRoleAssignmentScheduleRequests()
       await this.collectMultiTenantOrgPolicies()
       await this.collectIdentityProtectionPolicies()
       await this.collectAccessReviewSettings()
@@ -1636,6 +1637,56 @@ export class SecurityCollector {
       }
     } catch (error) {
       this.handleError('collectPIMActivationRequests', error)
+    }
+  }
+
+  /**
+   * Collect PIM Role Assignment Schedule Requests (Phase 1 - 13 instances)
+   * AADRoleAssignmentScheduleRequest
+   */
+  async collectPIMRoleAssignmentScheduleRequests() {
+    try {
+      console.log('📋 Collecting PIM Role Assignment Schedule Requests (Phase 1 - 13 instances)...')
+
+      const script = `
+        @((Get-MgRoleManagementDirectoryRoleAssignmentScheduleRequest -All -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='id';Expression={\$_.id}},
+                        @{Name='principalId';Expression={\$_.principalId}},
+                        @{Name='roleDefinitionId';Expression={\$_.roleDefinitionId}},
+                        @{Name='directoryScopeId';Expression={\$_.directoryScopeId}},
+                        @{Name='action';Expression={\$_.action}},
+                        @{Name='status';Expression={\$_.status}},
+                        @{Name='createdDateTime';Expression={\$_.createdDateTime}},
+                        @{Name='completedDateTime';Expression={\$_.completedDateTime}} |
+          ConvertTo-Json -Depth 1)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const request of result) {
+          this.resources.push({
+            type: 'AADRoleAssignmentScheduleRequest',
+            name: \`PIM-Assignment-\${request.principalId?.substring(0, 8) || 'Unknown'}\`,
+            id: request.id,
+            properties: {
+              Identity: request.id,
+              PrincipalId: request.principalId || '',
+              RoleDefinitionId: request.roleDefinitionId || '',
+              DirectoryScopeId: request.directoryScopeId || '',
+              Action: request.action || 'AssignEligibleRole',
+              Status: request.status || 'Pending',
+              CreatedDateTime: request.createdDateTime || '',
+              CompletedDateTime: request.completedDateTime || '',
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(\`✅ Found \${result.length} PIM role assignment schedule requests\`)
+      } else {
+        console.log('ℹ️ No PIM role assignment schedule requests found')
+      }
+    } catch (error) {
+      this.handleError('collectPIMRoleAssignmentScheduleRequests', error)
     }
   }
 

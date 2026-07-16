@@ -300,6 +300,7 @@ export const M365_SERVICES = {
       'EXORecipientPermission',
       'EXORemoteDomain',
       'EXORoleAssignmentPolicy',
+      'EXORoleGroup',
       'EXOSafeLinksPolicy',
       'EXOSendConnector',
       'EXOSharingPolicy',
@@ -309,7 +310,14 @@ export const M365_SERVICES = {
       'EXOTransportRuleCollection',
       'EXOUnifiedGroup'
     ],
-    totalResources: 38
+    totalResources: 39
+  },
+  _note_Exchange_Phase1: {
+    description: 'Phase 1 additions (2026-07-16):',
+    EXODataClassifications: '225 instances (new)',
+    EXOMailboxAuditBypass: '140 instances (new)',
+    EXORoleGroups: '32 instances (new)',
+    EXOEmailAddressPolicies: 'variable (new)'
   },
   Teams: {
     displayName: 'Microsoft Teams',
@@ -653,6 +661,7 @@ export const M365_SERVICES = {
       'AADAppManagementPolicy',
       'AADPIMRoleEligibilitySchedule',
       'AADPIMActivationRequest',
+      'AADRoleAssignmentScheduleRequest',
       'AADMultiTenantOrgPolicy',
       'AADIdentityProtectionPolicy',
       'AADAccessReviewSetting',
@@ -684,8 +693,9 @@ export const M365_SERVICES = {
       'AADApplicationProxy',
       'AADCertificateAndSecret'
     ],
-    totalResources: 81,
-    note: 'Ultra-comprehensive Entra ID backup with 81+ component types covering complete identity ecosystem: users (200+), devices (150+), groups (100+), applications, roles, policies, sign-in activity, compliance, and governance using hybrid Graph API + PowerShell. Enterprise-grade coverage for GDPR, HIPAA, SOC 2, CCPA, and NIST compliance.'
+    totalResources: 82,
+    _note_Phase1_PIM: 'Phase 1 addition: AADRoleAssignmentScheduleRequest (13 instances)',
+    note: 'Ultra-comprehensive Entra ID backup with 82+ component types covering complete identity ecosystem: users (200+), devices (150+), groups (100+), applications, roles, policies, sign-in activity, compliance, and governance using hybrid Graph API + PowerShell. Enterprise-grade coverage for GDPR, HIPAA, SOC 2, CCPA, and NIST compliance.'
   },
   TenantSettings: {
     displayName: 'Tenant Settings',
