@@ -80,6 +80,13 @@ export class ExchangeCollector {
       await this.collectTransportRules()
       await this.collectUnifiedGroups()
 
+      // PowerShell collection - advanced Exchange components
+      console.log('📊 Starting PowerShell-based collection for advanced Exchange components...')
+      await this.collectMailboxPoliciesPowerShell()
+      await this.collectDLPPoliciesPowerShell()
+      await this.collectRetentionPoliciesPowerShell()
+      await this.collectTransportRulesDetailsPowerShell()
+
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Exchange backup complete (${executionTime}s, ${this.resources.length} resources)`)
 
@@ -785,6 +792,173 @@ export class ExchangeCollector {
    */
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  // ============================================================
+  // POWERSHELL COLLECTION METHODS - Advanced Exchange Components
+  // ============================================================
+
+  /**
+   * Collect Mailbox Policies via PowerShell
+   */
+  async collectMailboxPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Mailbox Policies (PowerShell)...')
+      const script = `
+        @((Get-CasMailbox -ResultSize Unlimited -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='Identity';Expression={$_.Identity}},
+                        @{Name='DisplayName';Expression={$_.DisplayName}},
+                        @{Name='ActiveSyncEnabled';Expression={$_.ActiveSyncEnabled}},
+                        @{Name='OWAEnabled';Expression={$_.OWAEnabled}},
+                        @{Name='IMAPEnabled';Expression={$_.IMAPEnabled}},
+                        @{Name='PopEnabled';Expression={$_.PopEnabled}} |
+          ConvertTo-Json -Depth 1)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXOMailboxPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: policy
+          })
+        }
+        console.log(`✅ Found ${result.length} mailbox policies`)
+      }
+    } catch (error) {
+      this.handleError('collectMailboxPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect DLP Policies via PowerShell
+   */
+  async collectDLPPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting DLP Policies (PowerShell)...')
+      const script = `
+        @((Get-DlpPolicy -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='Identity';Expression={$_.Identity}},
+                        @{Name='Name';Expression={$_.Name}},
+                        @{Name='State';Expression={$_.State}},
+                        @{Name='Description';Expression={$_.Description}} |
+          ConvertTo-Json -Depth 1)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXODLP',
+            name: policy.Name,
+            id: policy.Identity,
+            configuration: policy
+          })
+        }
+        console.log(`✅ Found ${result.length} DLP policies`)
+      }
+    } catch (error) {
+      this.handleError('collectDLPPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Retention Policies via PowerShell
+   */
+  async collectRetentionPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Retention Policies (PowerShell)...')
+      const script = `
+        @((Get-RetentionPolicy -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='Identity';Expression={$_.Identity}},
+                        @{Name='Name';Expression={$_.Name}},
+                        @{Name='Description';Expression={$_.Description}} |
+          ConvertTo-Json -Depth 1)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXORetentionPolicy',
+            name: policy.Name,
+            id: policy.Identity,
+            configuration: policy
+          })
+        }
+        console.log(`✅ Found ${result.length} retention policies`)
+      }
+    } catch (error) {
+      this.handleError('collectRetentionPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Transport Rules Details via PowerShell
+   */
+  async collectTransportRulesDetailsPowerShell() {
+    try {
+      console.log('📋 Collecting Transport Rules Details (PowerShell)...')
+      const script = `
+        @((Get-TransportRule -ResultSize Unlimited -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='Identity';Expression={$_.Identity}},
+                        @{Name='Name';Expression={$_.Name}},
+                        @{Name='Enabled';Expression={$_.Enabled}},
+                        @{Name='Priority';Expression={$_.Priority}},
+                        @{Name='State';Expression={$_.State}} |
+          ConvertTo-Json -Depth 1)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const rule of result) {
+          this.resources.push({
+            type: 'EXOTransportRuleDetail',
+            name: rule.Name,
+            id: rule.Identity,
+            configuration: rule
+          })
+        }
+        console.log(`✅ Found ${result.length} transport rule details`)
+      }
+    } catch (error) {
+      this.handleError('collectTransportRulesDetailsPowerShell', error)
+    }
+  }
+
+  /**
+   * Execute PowerShell script safely
+   */
+  async executePowerShell(script) {
+    try {
+      const { exec } = await import('child_process')
+      const { promisify } = await import('util')
+
+      const execAsync = promisify(exec)
+
+      const psCommand = `
+        \$ErrorActionPreference = 'Continue'
+        ${script}
+      `
+
+      let command = `pwsh -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
+
+      try {
+        const { stdout } = await execAsync(command, { timeout: 60000 })
+        if (stdout && stdout.trim()) {
+          return JSON.parse(stdout)
+        }
+        return []
+      } catch (psError) {
+        command = `powershell -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
+        const { stdout } = await execAsync(command, { timeout: 60000 })
+        if (stdout && stdout.trim()) {
+          return JSON.parse(stdout)
+        }
+        return []
+      }
+    } catch (error) {
+      console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
+      return []
+    }
   }
 
   /**
