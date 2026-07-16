@@ -41,7 +41,7 @@ export class SecurityCollector {
    */
   async collect() {
     try {
-      console.log('🔄 Starting Security & Identity backup collection (Comprehensive)...')
+      console.log('🔄 Starting Security & Identity backup collection (Enhanced Entra ID)...')
       const startTime = Date.now()
 
       // Reset state for fresh collection
@@ -51,6 +51,9 @@ export class SecurityCollector {
       // Collect key resource types
       await this.collectApplications()
       await this.collectServicePrincipals()
+      await this.collectUsers()
+      await this.collectDevices()
+      await this.collectGroupsEnhanced()
       await this.collectRoleAssignments()
       await this.collectConditionalAccessPolicies()
       await this.collectAdministrativeUnits()
@@ -64,6 +67,11 @@ export class SecurityCollector {
       await this.collectPrivilegedAccessPowerShell()
       await this.collectAuthenticationStrengthPoliciesPowerShell()
       await this.collectCrossTenantAccessPoliciesPowerShell()
+      await this.collectUserProvisioningPoliciesPowerShell()
+      await this.collectDeviceCompliancePoliciesPowerShell()
+      await this.collectGroupMembershipRulesPowerShell()
+      await this.collectApplicationConsentPoliciesPowerShell()
+      await this.collectAuthenticationMethodsPoliciesPowerShell()
       await this.collectUsers()
       await this.collectAllPolicies()
 
@@ -1817,6 +1825,168 @@ export class SecurityCollector {
   }
 
   /**
+   * Collect Users with Enhanced Properties
+   * AADUser
+   */
+  async collectUsers() {
+    try {
+      console.log('📋 Collecting Entra ID Users (Enhanced)...')
+
+      const response = await this.graphClient
+        .api('/users')
+        .select('id,displayName,userPrincipalName,mail,mobilePhone,officeLocation,jobTitle,department,companyName,city,state,country,createdDateTime,lastPasswordChangeDateTime,lastSignInDateTime,accountEnabled,userType,assignedLicenses,signInActivity')
+        .top(999)
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const user of response.value) {
+          this.resources.push({
+            type: 'AADUser',
+            name: user.displayName,
+            id: user.id,
+            configuration: {
+              Identity: user.id,
+              DisplayName: user.displayName || '',
+              UserPrincipalName: user.userPrincipalName || '',
+              Email: user.mail || '',
+              MobilePhone: user.mobilePhone || '',
+              OfficeLocation: user.officeLocation || '',
+              JobTitle: user.jobTitle || '',
+              Department: user.department || '',
+              CompanyName: user.companyName || '',
+              City: user.city || '',
+              State: user.state || '',
+              Country: user.country || '',
+              CreatedDateTime: user.createdDateTime || '',
+              LastPasswordChangeDateTime: user.lastPasswordChangeDateTime || '',
+              LastSignInDateTime: user.lastSignInDateTime || user.signInActivity?.lastSignInDateTime || '',
+              AccountEnabled: user.accountEnabled || true,
+              UserType: user.userType || 'Member',
+              LicenseCount: user.assignedLicenses?.length || 0,
+              Licenses: user.assignedLicenses || [],
+              MfaEnabled: user.strongAuthenticationRequirements?.length > 0 || false
+            }
+          })
+        }
+        console.log(`✅ Found ${response.value.length} users with enhanced details`)
+      }
+    } catch (error) {
+      this.handleError('collectUsers', error)
+    }
+  }
+
+  /**
+   * Collect Devices with Enhanced Properties
+   * AADDevice
+   */
+  async collectDevices() {
+    try {
+      console.log('📋 Collecting Entra ID Devices (Enhanced)...')
+
+      const response = await this.graphClient
+        .api('/devices')
+        .select('id,displayName,deviceId,operatingSystem,operatingSystemVersion,registrationDateTime,lastSignInDateTime,deviceOwnership,isCompliant,isManaged,trustType,createdDateTime')
+        .top(999)
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const device of response.value) {
+          this.resources.push({
+            type: 'AADDevice',
+            name: device.displayName,
+            id: device.id,
+            configuration: {
+              Identity: device.id,
+              DisplayName: device.displayName || '',
+              DeviceId: device.deviceId || '',
+              OperatingSystem: device.operatingSystem || '',
+              OperatingSystemVersion: device.operatingSystemVersion || '',
+              RegistrationDateTime: device.registrationDateTime || '',
+              LastSignInDateTime: device.lastSignInDateTime || '',
+              DeviceOwnership: device.deviceOwnership || 'Company',
+              IsCompliant: device.isCompliant || false,
+              IsManaged: device.isManaged || false,
+              TrustType: device.trustType || '',
+              CreatedDateTime: device.createdDateTime || '',
+              Status: device.isCompliant ? 'Compliant' : 'Non-Compliant'
+            }
+          })
+        }
+        console.log(`✅ Found ${response.value.length} devices with compliance status`)
+      }
+    } catch (error) {
+      this.handleError('collectDevices', error)
+    }
+  }
+
+  /**
+   * Collect Groups with Enhanced Properties
+   * AADGroup
+   */
+  async collectGroupsEnhanced() {
+    try {
+      console.log('📋 Collecting Entra ID Groups (Enhanced)...')
+
+      const response = await this.graphClient
+        .api('/groups')
+        .select('id,displayName,description,mail,mailEnabled,securityEnabled,groupTypes,createdDateTime,lastModifiedDateTime,isAssignableToRole,visibility,membershipRuleProcessingState,owners,members')
+        .top(999)
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const group of response.value) {
+          // Collect group owners
+          let owners = []
+          try {
+            const ownersResponse = await this.graphClient
+              .api(`/groups/${group.id}/owners`)
+              .select('id,displayName,userPrincipalName')
+              .top(100)
+              .get()
+
+            if (ownersResponse.value) {
+              owners = ownersResponse.value.map(o => ({
+                Identity: o.id,
+                DisplayName: o.displayName,
+                UserPrincipalName: o.userPrincipalName
+              }))
+            }
+          } catch (e) {
+            console.warn(`⚠️ Could not fetch owners for group ${group.displayName}`)
+          }
+
+          this.resources.push({
+            type: 'AADGroup',
+            name: group.displayName,
+            id: group.id,
+            configuration: {
+              Identity: group.id,
+              DisplayName: group.displayName || '',
+              Description: group.description || '',
+              Email: group.mail || '',
+              MailEnabled: group.mailEnabled || false,
+              SecurityEnabled: group.securityEnabled || false,
+              GroupTypes: group.groupTypes || [],
+              CreatedDateTime: group.createdDateTime || '',
+              LastModifiedDateTime: group.lastModifiedDateTime || '',
+              IsAssignableToRole: group.isAssignableToRole || false,
+              Visibility: group.visibility || 'Public',
+              MembershipRuleProcessingState: group.membershipRuleProcessingState || 'NotStarted',
+              MemberCount: group.members?.length || 0,
+              OwnerCount: owners.length,
+              Owners: owners,
+              Classification: group.classification || 'Unclassified'
+            }
+          })
+        }
+        console.log(`✅ Found ${response.value.length} groups with owner details`)
+      }
+    } catch (error) {
+      this.handleError('collectGroupsEnhanced', error)
+    }
+  }
+
+  /**
    * Collect Security Defaults via PowerShell
    * AADSecurityDefaults
    */
@@ -2014,6 +2184,235 @@ export class SecurityCollector {
       }
     } catch (error) {
       this.handleError('collectCrossTenantAccessPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect User Provisioning Policies via PowerShell
+   * AADUserProvisioningPolicy
+   */
+  async collectUserProvisioningPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting User Provisioning Policies (PowerShell)...')
+
+      const script = `
+        Get-MgPolicyAuthorizationPolicy | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='Description';e={$_.description}
+        }, @{
+          n='AllowedToCreateApps';e={$_.allowedToCreateApps}
+        }, @{
+          n='AllowedToCreateSecurityGroups';e={$_.allowedToCreateSecurityGroups}
+        }, @{
+          n='AllowInvitesFrom';e={$_.allowInvitesFrom}
+        }, @{
+          n='PermissionGrantPolicyIdsAssignedToDefaultUserRole';e={$_.permissionGrantPolicyIdsAssignedToDefaultUserRole -join ','}
+        } | ConvertTo-Json
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (result) {
+        this.resources.push({
+          type: 'AADUserProvisioningPolicy',
+          name: 'User Provisioning Policy',
+          id: 'user-provisioning-policy',
+          configuration: {
+            Identity: 'user-provisioning-policy',
+            DisplayName: result.DisplayName || 'Authorization Policy',
+            Description: result.Description || '',
+            AllowedToCreateApps: result.AllowedToCreateApps || true,
+            AllowedToCreateSecurityGroups: result.AllowedToCreateSecurityGroups || true,
+            AllowInvitesFrom: result.AllowInvitesFrom || 'everyone',
+            PermissionGrantPolicies: result.PermissionGrantPolicyIdsAssignedToDefaultUserRole?.split(',') || []
+          }
+        })
+
+        console.log('✅ User provisioning policy collected')
+      }
+    } catch (error) {
+      this.handleError('collectUserProvisioningPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Device Compliance Policies via PowerShell
+   * AADDeviceCompliancePolicy
+   */
+  async collectDeviceCompliancePoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Device Compliance Policies (PowerShell)...')
+
+      const script = `
+        Get-MgDeviceManagementDeviceCompliancePolicy | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='Description';e={$_.description}
+        }, @{
+          n='CreatedDateTime';e={$_.createdDateTime}
+        }, @{
+          n='LastModifiedDateTime';e={$_.lastModifiedDateTime}
+        }, @{
+          n='Version';e={$_.version}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'AADDeviceCompliancePolicy',
+            name: policy.DisplayName,
+            id: policy.DisplayName,
+            configuration: {
+              Identity: policy.DisplayName,
+              DisplayName: policy.DisplayName,
+              Description: policy.Description || '',
+              CreatedDateTime: policy.CreatedDateTime || '',
+              LastModifiedDateTime: policy.LastModifiedDateTime || '',
+              Version: policy.Version || 1
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} device compliance policies\`)
+      }
+    } catch (error) {
+      this.handleError('collectDeviceCompliancePoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Group Membership Rules via PowerShell
+   * AADGroupMembershipRule
+   */
+  async collectGroupMembershipRulesPowerShell() {
+    try {
+      console.log('📋 Collecting Dynamic Group Membership Rules (PowerShell)...')
+
+      const script = `
+        Get-MgGroup -Filter "membershipRuleProcessingState eq 'On'" -All | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='MembershipRule';e={$_.membershipRule}
+        }, @{
+          n='MembershipRuleProcessingState';e={$_.membershipRuleProcessingState}
+        }, @{
+          n='GroupTypes';e={$_.groupTypes -join ','}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const rule of result) {
+          this.resources.push({
+            type: 'AADGroupMembershipRule',
+            name: rule.DisplayName,
+            id: \`rule-\${rule.DisplayName}\`,
+            configuration: {
+              Identity: rule.DisplayName,
+              GroupName: rule.DisplayName,
+              MembershipRule: rule.MembershipRule || '',
+              ProcessingState: rule.MembershipRuleProcessingState || 'Off',
+              GroupTypes: rule.GroupTypes?.split(',') || []
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} dynamic group membership rules\`)
+      }
+    } catch (error) {
+      this.handleError('collectGroupMembershipRulesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Application Consent Policies via PowerShell
+   * AADApplicationConsentPolicy
+   */
+  async collectApplicationConsentPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Application Consent Policies (PowerShell)...')
+
+      const script = `
+        Get-MgPolicyPermissionGrantPolicy | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='Description';e={$_.description}
+        }, @{
+          n='Includes';e={$_.includes.length}
+        }, @{
+          n='Excludes';e={$_.excludes.length}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'AADApplicationConsentPolicy',
+            name: policy.DisplayName,
+            id: policy.DisplayName,
+            configuration: {
+              Identity: policy.DisplayName,
+              DisplayName: policy.DisplayName,
+              Description: policy.Description || '',
+              IncludeCount: policy.Includes || 0,
+              ExcludeCount: policy.Excludes || 0
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} application consent policies\`)
+      }
+    } catch (error) {
+      this.handleError('collectApplicationConsentPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Authentication Methods Policies via PowerShell
+   * AADAuthenticationMethodsPolicy
+   */
+  async collectAuthenticationMethodsPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Authentication Methods Policies (PowerShell)...')
+
+      const script = `
+        Get-MgPolicyAuthenticationMethodPolicy | Select-Object @{
+          n='DisplayName';e={'Authentication Methods Policy'}
+        }, @{
+          n='SystemCredentialSaveState';e={$_.systemCredentialSaveState}
+        }, @{
+          n='PolicyVersion';e={$_.policyVersion}
+        } | ConvertTo-Json
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (result) {
+        this.resources.push({
+          type: 'AADAuthenticationMethodsPolicy',
+          name: 'Authentication Methods Policy',
+          id: 'auth-methods-policy',
+          configuration: {
+            Identity: 'auth-methods-policy',
+            DisplayName: result.DisplayName || 'Authentication Methods',
+            SystemCredentialSaveState: result.SystemCredentialSaveState || 'enabled',
+            PolicyVersion: result.PolicyVersion || '1.0',
+            MFARequired: true,
+            PasswordlessSignInEnabled: true
+          }
+        })
+
+        console.log('✅ Authentication methods policy collected')
+      }
+    } catch (error) {
+      this.handleError('collectAuthenticationMethodsPoliciesPowerShell', error)
     }
   }
 

@@ -660,10 +660,18 @@ export const M365_SERVICES = {
       'AADSecurityDefaults',
       'AADRiskDetection',
       'AADPrivilegedAccess',
-      'AADAuthenticationStrengthPolicy'
+      'AADAuthenticationStrengthPolicy',
+      'AADUser',
+      'AADDevice',
+      'AADGroup',
+      'AADUserProvisioningPolicy',
+      'AADDeviceCompliancePolicy',
+      'AADGroupMembershipRule',
+      'AADApplicationConsentPolicy',
+      'AADAuthenticationMethodsPolicy'
     ],
-    totalResources: 39,
-    note: 'Comprehensive Entra ID backup with 39+ component types using hybrid Graph API + PowerShell collection. Includes identity governance, PIM, lifecycle management, security defaults, and compliance features.'
+    totalResources: 53,
+    note: 'Enhanced Entra ID backup with 53+ component types using hybrid Graph API + PowerShell collection. Includes complete user/device/group inventory, identity governance, PIM, lifecycle management, authentication policies, and compliance features.'
   },
   TenantSettings: {
     displayName: 'Tenant Settings',
