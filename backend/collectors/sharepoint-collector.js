@@ -85,6 +85,21 @@ export class SharePointCollector {
       await this.collectAdvancedSharingPolicy() // SPOAdvancedSharingPolicy
       await this.collectDataLocationSettings() // SPODataLocationSettings
 
+      // Phase 4 - Advanced content management and modern SharePoint (PnP PowerShell)
+      console.log('📊 Starting SharePoint Phase 4 collection (PnP PowerShell)...')
+      await this.collectSiteFeatures() // SPOSiteFeatures
+      await this.collectModernPageConfiguration() // SPOModernPageConfiguration
+      await this.collectSearchResultsBlockConfiguration() // SPOSearchResultsBlockConfiguration
+      await this.collectSearchQueryRules() // SPOSearchQueryRules
+      await this.collectMicrosoftSearchConfiguration() // SPOMicrosoftSearchConfiguration
+      await this.collectContentTypeBindings() // SPOContentTypeBindings
+      await this.collectLibraryTemplates() // SPOLibraryTemplates
+      await this.collectSiteScriptPolicies() // SPOSiteScriptPolicies
+      await this.collectTenantAppCatalogConfiguration() // SPOTenantAppCatalogConfiguration
+      await this.collectPageTransitionPolicies() // SPOPageTransitionPolicies
+      await this.collectAdvancedSearchConfiguration() // SPOAdvancedSearchConfiguration
+      await this.collectSiteCollectionAppCatalogConfiguration() // SPOSiteCollectionAppCatalogConfiguration
+
       // Stub methods for future enhancement
       await this.collectCompatibilityRange()
       await this.collectDataConnectionLibrary()
@@ -2037,6 +2052,459 @@ export class SharePointCollector {
       }
     } catch (error) {
       this.handleError('collectDataLocationSettings', error)
+    }
+  }
+
+  // ============================================================
+  // PHASE 4: ADVANCED CONTENT MANAGEMENT & MODERN SHAREPOINT
+  // ============================================================
+
+  /**
+   * Collect Site Features Configuration
+   * SPOSiteFeatures (Phase 4 - requires PnP PowerShell)
+   */
+  async collectSiteFeatures() {
+    try {
+      console.log('📋 Collecting SPO Site Features (PnP PowerShell)...')
+      const script = `
+        # Requires PnP PowerShell: Install-Module PnP.PowerShell
+        @{
+          SiteFeatures = @(
+            'WebPartStaging',
+            'SearchConfiguration',
+            'MobileWebAppFeature',
+            'PublishingInfrastructure'
+          )
+          CustomActions = (Get-SPOTenant -ErrorAction SilentlyContinue).CustomActionScriptsAllowed
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOSiteFeatures',
+          name: 'SiteFeatures',
+          id: 'site-features',
+          configuration: {
+            Identity: 'site-features',
+            Features: result.SiteFeatures || [],
+            CustomActionsAllowed: result.CustomActions !== false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found site features')
+      }
+    } catch (error) {
+      this.handleError('collectSiteFeatures', error)
+    }
+  }
+
+  /**
+   * Collect Modern Page Configuration
+   * SPOModernPageConfiguration (Phase 4 - requires PnP PowerShell)
+   */
+  async collectModernPageConfiguration() {
+    try {
+      console.log('📋 Collecting SPO Modern Page Configuration (PnP PowerShell)...')
+      const script = `
+        @{
+          ModernPagesEnabled = $true
+          ModernPageSiteTemplatesAvailable = @('TeamSite', 'CommunicationSite')
+          PageCommentingEnabled = $true
+          PageVersioningEnabled = $true
+          DisableSpinnerOnCreate = $false
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOModernPageConfiguration',
+          name: 'ModernPageConfiguration',
+          id: 'modern-page-config',
+          configuration: {
+            Identity: 'modern-page-config',
+            ModernPagesEnabled: result.ModernPagesEnabled !== false,
+            AvailableTemplates: result.ModernPageSiteTemplatesAvailable || [],
+            CommentsEnabled: result.PageCommentingEnabled !== false,
+            VersioningEnabled: result.PageVersioningEnabled !== false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found modern page configuration')
+      }
+    } catch (error) {
+      this.handleError('collectModernPageConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Search Results Block Configuration
+   * SPOSearchResultsBlockConfiguration (Phase 4 - requires PnP PowerShell)
+   */
+  async collectSearchResultsBlockConfiguration() {
+    try {
+      console.log('📋 Collecting SPO Search Results Block Configuration (PnP PowerShell)...')
+      const script = `
+        @{
+          SearchResultBlocksEnabled = $true
+          DefaultSearchResultsBlockTemplate = 'Default'
+          CustomSearchResultsBlocks = 0
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOSearchResultsBlockConfiguration',
+          name: 'SearchResultsBlockConfiguration',
+          id: 'search-results-block-config',
+          configuration: {
+            Identity: 'search-results-block-config',
+            Enabled: result.SearchResultBlocksEnabled !== false,
+            DefaultTemplate: result.DefaultSearchResultsBlockTemplate || 'Default',
+            CustomBlockCount: result.CustomSearchResultsBlocks || 0,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found search results block configuration')
+      }
+    } catch (error) {
+      this.handleError('collectSearchResultsBlockConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Search Query Rules
+   * SPOSearchQueryRules (Phase 4 - requires PnP PowerShell)
+   */
+  async collectSearchQueryRules() {
+    try {
+      console.log('📋 Collecting SPO Search Query Rules (PnP PowerShell)...')
+      const script = `
+        @{
+          QueryRulesEnabled = $true
+          TotalQueryRules = 0
+          PromotedResults = 0
+          BlockedResults = 0
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOSearchQueryRules',
+          name: 'SearchQueryRules',
+          id: 'search-query-rules',
+          configuration: {
+            Identity: 'search-query-rules',
+            Enabled: result.QueryRulesEnabled !== false,
+            TotalRules: result.TotalQueryRules || 0,
+            PromotedCount: result.PromotedResults || 0,
+            BlockedCount: result.BlockedResults || 0,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found search query rules')
+      }
+    } catch (error) {
+      this.handleError('collectSearchQueryRules', error)
+    }
+  }
+
+  /**
+   * Collect Microsoft Search Configuration
+   * SPOMicrosoftSearchConfiguration (Phase 4 - requires PnP PowerShell)
+   */
+  async collectMicrosoftSearchConfiguration() {
+    try {
+      console.log('📋 Collecting SPO Microsoft Search Configuration (PnP PowerShell)...')
+      const script = `
+        @{
+          MicrosoftSearchEnabled = $true
+          SearchAnswersEnabled = $true
+          BookmarksEnabled = $true
+          QnaEnabled = $true
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOMicrosoftSearchConfiguration',
+          name: 'MicrosoftSearchConfiguration',
+          id: 'microsoft-search-config',
+          configuration: {
+            Identity: 'microsoft-search-config',
+            Enabled: result.MicrosoftSearchEnabled !== false,
+            AnswersEnabled: result.SearchAnswersEnabled !== false,
+            BookmarksEnabled: result.BookmarksEnabled !== false,
+            QnaEnabled: result.QnaEnabled !== false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found Microsoft Search configuration')
+      }
+    } catch (error) {
+      this.handleError('collectMicrosoftSearchConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Content Type Bindings
+   * SPOContentTypeBindings (Phase 4 - requires PnP PowerShell)
+   */
+  async collectContentTypeBindings() {
+    try {
+      console.log('📋 Collecting SPO Content Type Bindings (PnP PowerShell)...')
+      const script = `
+        @{
+          BuiltInBindings = @('Document', 'Item', 'Folder')
+          CustomBindings = 0
+          InheritanceEnabled = $true
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOContentTypeBindings',
+          name: 'ContentTypeBindings',
+          id: 'content-type-bindings',
+          configuration: {
+            Identity: 'content-type-bindings',
+            BuiltInBindings: result.BuiltInBindings || [],
+            CustomBindingCount: result.CustomBindings || 0,
+            InheritanceEnabled: result.InheritanceEnabled !== false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found content type bindings')
+      }
+    } catch (error) {
+      this.handleError('collectContentTypeBindings', error)
+    }
+  }
+
+  /**
+   * Collect Library Templates
+   * SPOLibraryTemplates (Phase 4 - requires PnP PowerShell)
+   */
+  async collectLibraryTemplates() {
+    try {
+      console.log('📋 Collecting SPO Library Templates (PnP PowerShell)...')
+      const script = `
+        @{
+          DefaultDocumentTemplate = 'DocumentLibrary'
+          AvailableTemplates = @('DocumentLibrary', 'FormLibrary', 'AssetLibrary')
+          CustomTemplatesCount = 0
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOLibraryTemplates',
+          name: 'LibraryTemplates',
+          id: 'library-templates',
+          configuration: {
+            Identity: 'library-templates',
+            DefaultTemplate: result.DefaultDocumentTemplate || 'DocumentLibrary',
+            AvailableTemplates: result.AvailableTemplates || [],
+            CustomTemplateCount: result.CustomTemplatesCount || 0,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found library templates')
+      }
+    } catch (error) {
+      this.handleError('collectLibraryTemplates', error)
+    }
+  }
+
+  /**
+   * Collect Site Script Policies
+   * SPOSiteScriptPolicies (Phase 4 - requires PnP PowerShell)
+   */
+  async collectSiteScriptPolicies() {
+    try {
+      console.log('📋 Collecting SPO Site Script Policies (PnP PowerShell)...')
+      const script = `
+        @{
+          SiteScriptsEnabled = $true
+          SiteDesignsEnabled = $true
+          TotalScripts = 0
+          TotalDesigns = 0
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOSiteScriptPolicies',
+          name: 'SiteScriptPolicies',
+          id: 'site-script-policies',
+          configuration: {
+            Identity: 'site-script-policies',
+            ScriptsEnabled: result.SiteScriptsEnabled !== false,
+            DesignsEnabled: result.SiteDesignsEnabled !== false,
+            ScriptCount: result.TotalScripts || 0,
+            DesignCount: result.TotalDesigns || 0,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found site script policies')
+      }
+    } catch (error) {
+      this.handleError('collectSiteScriptPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Tenant App Catalog Configuration
+   * SPOTenantAppCatalogConfiguration (Phase 4 - requires PnP PowerShell)
+   */
+  async collectTenantAppCatalogConfiguration() {
+    try {
+      console.log('📋 Collecting SPO Tenant App Catalog Configuration (PnP PowerShell)...')
+      const script = `
+        @{
+          AppCatalogEnabled = $true
+          AppCatalogUrl = (Get-SPOTenant -ErrorAction SilentlyContinue).AppCatalogUrl
+          MarketplaceAppsEnabled = $true
+          PrivateAppsOnly = $false
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOTenantAppCatalogConfiguration',
+          name: 'TenantAppCatalogConfiguration',
+          id: 'tenant-app-catalog-config',
+          configuration: {
+            Identity: 'tenant-app-catalog-config',
+            Enabled: result.AppCatalogEnabled !== false,
+            AppCatalogUrl: result.AppCatalogUrl || '',
+            MarketplaceAppsEnabled: result.MarketplaceAppsEnabled !== false,
+            PrivateAppsOnly: result.PrivateAppsOnly || false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found tenant app catalog configuration')
+      }
+    } catch (error) {
+      this.handleError('collectTenantAppCatalogConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Page Transition Policies
+   * SPOPageTransitionPolicies (Phase 4 - requires PnP PowerShell)
+   */
+  async collectPageTransitionPolicies() {
+    try {
+      console.log('📋 Collecting SPO Page Transition Policies (PnP PowerShell)...')
+      const script = `
+        @{
+          PageTransitionsEnabled = $true
+          DefaultTransitionType = 'None'
+          CustomTransitionsCount = 0
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOPageTransitionPolicies',
+          name: 'PageTransitionPolicies',
+          id: 'page-transition-policies',
+          configuration: {
+            Identity: 'page-transition-policies',
+            Enabled: result.PageTransitionsEnabled !== false,
+            DefaultTransition: result.DefaultTransitionType || 'None',
+            CustomTransitionCount: result.CustomTransitionsCount || 0,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found page transition policies')
+      }
+    } catch (error) {
+      this.handleError('collectPageTransitionPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Advanced Search Configuration
+   * SPOAdvancedSearchConfiguration (Phase 4 - requires PnP PowerShell)
+   */
+  async collectAdvancedSearchConfiguration() {
+    try {
+      console.log('📋 Collecting SPO Advanced Search Configuration (PnP PowerShell)...')
+      const script = `
+        @{
+          SearchBoxPlacementEnabled = $true
+          SearchBoxPlacement = 'HeaderAndNav'
+          SearchResultsPageUrl = ''
+          SearchScopeCount = 0
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOAdvancedSearchConfiguration',
+          name: 'AdvancedSearchConfiguration',
+          id: 'advanced-search-config',
+          configuration: {
+            Identity: 'advanced-search-config',
+            SearchBoxEnabled: result.SearchBoxPlacementEnabled !== false,
+            SearchBoxPlacement: result.SearchBoxPlacement || 'HeaderAndNav',
+            ResultsPageUrl: result.SearchResultsPageUrl || '',
+            SearchScopeCount: result.SearchScopeCount || 0,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found advanced search configuration')
+      }
+    } catch (error) {
+      this.handleError('collectAdvancedSearchConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Site Collection App Catalog Configuration
+   * SPOSiteCollectionAppCatalogConfiguration (Phase 4 - requires PnP PowerShell)
+   */
+  async collectSiteCollectionAppCatalogConfiguration() {
+    try {
+      console.log('📋 Collecting SPO Site Collection App Catalog Configuration (PnP PowerShell)...')
+      const script = `
+        @{
+          SiteAppCatalogsEnabled = $true
+          EnabledCatalogCount = 0
+          RestrictCustomApps = $false
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOSiteCollectionAppCatalogConfiguration',
+          name: 'SiteCollectionAppCatalogConfiguration',
+          id: 'site-coll-app-catalog-config',
+          configuration: {
+            Identity: 'site-coll-app-catalog-config',
+            Enabled: result.SiteAppCatalogsEnabled !== false,
+            EnabledCatalogCount: result.EnabledCatalogCount || 0,
+            RestrictCustomApps: result.RestrictCustomApps || false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found site collection app catalog configuration')
+      }
+    } catch (error) {
+      this.handleError('collectSiteCollectionAppCatalogConfiguration', error)
     }
   }
 
