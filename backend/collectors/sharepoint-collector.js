@@ -74,6 +74,17 @@ export class SharePointCollector {
       await this.collectPowerPlatformIntegration() // SPOPowerPlatformIntegration
       await this.collectSiteCollectionAdmins() // SPOSiteCollectionAdmin
 
+      // Phase 3 - Final organizational and advanced settings
+      console.log('📊 Starting SharePoint Phase 3 collection...')
+      await this.collectExternalUserSharing() // SPOExternalUserSharing
+      await this.collectHideDefaultThemesSettings() // SPOHideDefaultThemes
+      await this.collectRecordManagementSettings() // SPORecordManagement
+      await this.collectTenantProperties() // SPOTenantProperties
+      await this.collectPersonalSiteSettings() // SPOPersonalSiteSettings
+      await this.collectOffice365GroupsSettings() // SPOOffice365GroupsSettings
+      await this.collectAdvancedSharingPolicy() // SPOAdvancedSharingPolicy
+      await this.collectDataLocationSettings() // SPODataLocationSettings
+
       // Stub methods for future enhancement
       await this.collectCompatibilityRange()
       await this.collectDataConnectionLibrary()
@@ -1717,6 +1728,315 @@ export class SharePointCollector {
       }
     } catch (error) {
       this.handleError('collectPowerPlatformIntegration', error)
+    }
+  }
+
+  /**
+   * Collect External User Sharing
+   * SPOExternalUserSharing (Phase 3)
+   */
+  async collectExternalUserSharing() {
+    try {
+      console.log('📋 Collecting SPO External User Sharing (PowerShell)...')
+      const script = `
+        @((Get-SPOExternalUser -ErrorAction SilentlyContinue) |
+          Select-Object -First 999 |
+          ForEach-Object {
+            [PSCustomObject]@{
+              UniqueId = $_.UniqueId
+              DisplayName = $_.DisplayName
+              Email = $_.Email
+              InvitedAsGuest = $_.InvitedAsGuest
+              AcceptedAsGuest = $_.AcceptedAsGuest
+              WhenCreated = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const user of result) {
+          this.resources.push({
+            type: 'SPOExternalUserSharing',
+            name: user.DisplayName || user.Email,
+            id: user.UniqueId,
+            configuration: {
+              Identity: user.UniqueId,
+              DisplayName: user.DisplayName || '',
+              Email: user.Email || '',
+              InvitedAsGuest: user.InvitedAsGuest || false,
+              AcceptedAsGuest: user.AcceptedAsGuest || false,
+              WhenCreated: user.WhenCreated || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} external users`)
+      }
+    } catch (error) {
+      this.handleError('collectExternalUserSharing', error)
+    }
+  }
+
+  /**
+   * Collect Hide Default Themes
+   * SPOHideDefaultThemes (Phase 3)
+   */
+  async collectHideDefaultThemesSettings() {
+    try {
+      console.log('📋 Collecting SPO Hide Default Themes (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          HideDefaultThemes = (Get-SPOHideDefaultThemes -ErrorAction SilentlyContinue)
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result !== null) {
+        this.resources.push({
+          type: 'SPOHideDefaultThemes',
+          name: 'HideDefaultThemes',
+          id: 'hide-default-themes',
+          configuration: {
+            Identity: 'hide-default-themes',
+            HideDefaultThemes: result.HideDefaultThemes || false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found hide default themes setting')
+      }
+    } catch (error) {
+      this.handleError('collectHideDefaultThemesSettings', error)
+    }
+  }
+
+  /**
+   * Collect Record Management Settings
+   * SPORecordManagement (Phase 3)
+   */
+  async collectRecordManagementSettings() {
+    try {
+      console.log('📋 Collecting SPO Records Management Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          RecordsManagementEnabled = (Get-SPOTenant -ErrorAction SilentlyContinue).RecordsManagementEnabled
+          ContentTypeHubUrl = (Get-SPOTenant -ErrorAction SilentlyContinue).ContentTypeHubUrl
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPORecordManagement',
+          name: 'RecordsManagement',
+          id: 'records-management',
+          configuration: {
+            Identity: 'records-management',
+            RecordsManagementEnabled: result.RecordsManagementEnabled || false,
+            ContentTypeHubUrl: result.ContentTypeHubUrl || '',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found records management settings')
+      }
+    } catch (error) {
+      this.handleError('collectRecordManagementSettings', error)
+    }
+  }
+
+  /**
+   * Collect Tenant Properties
+   * SPOTenantProperties (Phase 3)
+   */
+  async collectTenantProperties() {
+    try {
+      console.log('📋 Collecting SPO Tenant Properties (PowerShell)...')
+      const script = `
+        $tenant = Get-SPOTenant -ErrorAction SilentlyContinue
+        [PSCustomObject]@{
+          AdminCenterUrl = $tenant.AdminCenterUrl
+          TenantId = $tenant.TenantId
+          TenantInstanceId = $tenant.TenantInstanceId
+          OrganizationName = $tenant.OrganizationName
+          TimeZoneId = $tenant.TimeZoneId
+          LocaleId = $tenant.LocaleId
+          AllowDownloadingNonWebViewableFiles = $tenant.AllowDownloadingNonWebViewableFiles
+          AllowEditing = $tenant.AllowEditing
+          ConditionalAccessPolicy = $tenant.ConditionalAccessPolicy
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOTenantProperties',
+          name: result.OrganizationName || 'TenantProperties',
+          id: result.TenantId,
+          configuration: {
+            Identity: result.TenantId,
+            AdminCenterUrl: result.AdminCenterUrl || '',
+            TenantId: result.TenantId || '',
+            OrganizationName: result.OrganizationName || '',
+            TimeZoneId: result.TimeZoneId || 'UTC',
+            LocaleId: result.LocaleId || '1033',
+            AllowDownloadingNonWebViewableFiles: result.AllowDownloadingNonWebViewableFiles !== false,
+            AllowEditing: result.AllowEditing !== false,
+            ConditionalAccessPolicy: result.ConditionalAccessPolicy || '',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found tenant properties')
+      }
+    } catch (error) {
+      this.handleError('collectTenantProperties', error)
+    }
+  }
+
+  /**
+   * Collect Personal Site Creation Settings
+   * SPOPersonalSiteSettings (Phase 3)
+   */
+  async collectPersonalSiteSettings() {
+    try {
+      console.log('📋 Collecting SPO Personal Site Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          PersonalSiteCreationDisabled = (Get-SPOTenant -ErrorAction SilentlyContinue).PersonalSiteCreationDisabled
+          StorageQuota = (Get-SPOTenant -ErrorAction SilentlyContinue).StorageQuota
+          StorageQuotaWarningLevel = (Get-SPOTenant -ErrorAction SilentlyContinue).StorageQuotaWarningLevel
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOPersonalSiteSettings',
+          name: 'PersonalSiteSettings',
+          id: 'personal-site-settings',
+          configuration: {
+            Identity: 'personal-site-settings',
+            PersonalSiteCreationDisabled: result.PersonalSiteCreationDisabled || false,
+            StorageQuota: result.StorageQuota || 1048576,
+            StorageQuotaWarningLevel: result.StorageQuotaWarningLevel || 943718,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found personal site settings')
+      }
+    } catch (error) {
+      this.handleError('collectPersonalSiteSettings', error)
+    }
+  }
+
+  /**
+   * Collect Office 365 Groups Settings
+   * SPOOffice365GroupsSettings (Phase 3)
+   */
+  async collectOffice365GroupsSettings() {
+    try {
+      console.log('📋 Collecting SPO Office 365 Groups Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          GroupCreationEnabled = (Get-SPOTenant -ErrorAction SilentlyContinue).GroupCreationEnabled
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result !== null) {
+        this.resources.push({
+          type: 'SPOOffice365GroupsSettings',
+          name: 'Office365GroupsSettings',
+          id: 'office365-groups-settings',
+          configuration: {
+            Identity: 'office365-groups-settings',
+            GroupCreationEnabled: result.GroupCreationEnabled !== false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found Office 365 groups settings')
+      }
+    } catch (error) {
+      this.handleError('collectOffice365GroupsSettings', error)
+    }
+  }
+
+  /**
+   * Collect Advanced Sharing Policy
+   * SPOAdvancedSharingPolicy (Phase 3)
+   */
+  async collectAdvancedSharingPolicy() {
+    try {
+      console.log('📋 Collecting SPO Advanced Sharing Policy (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          ExternalSharingPolicy = (Get-SPOTenant -ErrorAction SilentlyContinue).SharingCapability
+          RestrictedDomains = (Get-SPOTenant -ErrorAction SilentlyContinue).RestrictedAccessDomains
+          RequireAnonymousLinksExpireInDays = (Get-SPOTenant -ErrorAction SilentlyContinue).RequireAnonymousLinksExpireInDays
+          FileAnonymousLinkType = (Get-SPOTenant -ErrorAction SilentlyContinue).FileAnonymousLinkType
+          FolderAnonymousLinkType = (Get-SPOTenant -ErrorAction SilentlyContinue).FolderAnonymousLinkType
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOAdvancedSharingPolicy',
+          name: 'AdvancedSharingPolicy',
+          id: 'advanced-sharing-policy',
+          configuration: {
+            Identity: 'advanced-sharing-policy',
+            ExternalSharingPolicy: result.ExternalSharingPolicy || 'ExistingExternalUserSharingOnly',
+            RestrictedDomains: result.RestrictedDomains || '',
+            RequireAnonymousLinksExpireInDays: result.RequireAnonymousLinksExpireInDays || 0,
+            FileAnonymousLinkType: result.FileAnonymousLinkType || 'View',
+            FolderAnonymousLinkType: result.FolderAnonymousLinkType || 'View',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found advanced sharing policy')
+      }
+    } catch (error) {
+      this.handleError('collectAdvancedSharingPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Data Location Settings
+   * SPODataLocationSettings (Phase 3)
+   */
+  async collectDataLocationSettings() {
+    try {
+      console.log('📋 Collecting SPO Data Location Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          GeoLocation = (Get-SPOTenant -ErrorAction SilentlyContinue).GeoLocation
+          GeoMovedSites = @((Get-SPOGeoMovedSites -MoveState Completed -ErrorAction SilentlyContinue) | Measure-Object).Count
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPODataLocationSettings',
+          name: 'DataLocationSettings',
+          id: 'data-location-settings',
+          configuration: {
+            Identity: 'data-location-settings',
+            GeoLocation: result.GeoLocation || 'NAM',
+            GeoMovedSites: result.GeoMovedSites || 0,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found data location settings')
+      }
+    } catch (error) {
+      this.handleError('collectDataLocationSettings', error)
     }
   }
 
