@@ -1358,7 +1358,33 @@ export const M365_SERVICES = {
       coverage: 'from 0% to 52% (28/54) - Core identity foundation',
       implementationPhase: 'Phase 1 - Core identity, users, groups, applications, and roles'
     },
-    note: 'Comprehensive Entra ID backup with 54 unique resource types organized into 3 phases: Phase 1 (core identity), Phase 2 (authentication & conditional access), Phase 3 (advanced governance & lifecycle). Uses hybrid Graph API + PowerShell for complete coverage.'
+    _note_Security_Phase2: {
+      description: 'Phase 2 implementation (2026-07-17): Authentication and conditional access policies - 13 resources (24% coverage, 76% total)',
+      newResources: [
+        'AADAuthenticationMethodPolicy',
+        'AADAuthenticationStrengthPolicy',
+        'AADAuthenticationMethodsPolicy',
+        'AADMFASetting',
+        'AADPasswordPolicy',
+        'AADConditionalAccessPolicy',
+        'AADNamedLocation',
+        'AADSignInRiskPolicy',
+        'AADSecurityDefaults',
+        'AADIdentityProtectionPolicy',
+        'AADTokenIssuancePolicy',
+        'AADTokenLifetimePolicy',
+        'AADClaimsMappingPolicy'
+      ],
+      categories: {
+        'Authentication Policies (5)': ['AADAuthenticationMethodPolicy', 'AADAuthenticationStrengthPolicy', 'AADAuthenticationMethodsPolicy', 'AADMFASetting', 'AADPasswordPolicy'],
+        'Conditional Access (3)': ['AADConditionalAccessPolicy', 'AADNamedLocation', 'AADSignInRiskPolicy'],
+        'Security Baseline (2)': ['AADSecurityDefaults', 'AADIdentityProtectionPolicy'],
+        'Token & Claims Policies (3)': ['AADTokenIssuancePolicy', 'AADTokenLifetimePolicy', 'AADClaimsMappingPolicy']
+      },
+      coverage: 'from 52% (28/54) to 76% (41/54) - Authentication foundation',
+      implementationPhase: 'Phase 2 - Authentication methods, conditional access, security policies'
+    },
+    note: 'Comprehensive Entra ID backup with 54 unique resource types organized into 3 phases: Phase 1 (core identity, 28), Phase 2 (authentication & conditional access, 13), Phase 3 (advanced governance & lifecycle, 13). Uses hybrid Graph API + PowerShell for complete coverage.'
   },
   TenantSettings: {
     displayName: 'Tenant Settings',

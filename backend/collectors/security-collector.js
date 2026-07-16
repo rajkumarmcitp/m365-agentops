@@ -89,16 +89,15 @@ export class SecurityCollector {
       await this.collectAuthorizationPolicy()
       await this.collectPermissionGrantPolicies()
 
-      // Phase 2: Authentication & Conditional Access (27 resources - 61% coverage)
+      // Phase 2: Authentication & Conditional Access (13 resources - 76% coverage)
       console.log('📊 Starting Security Phase 2 collection (authentication & conditional access)...')
 
-      // Authentication Policies (6 resources)
+      // Authentication Policies (5 resources)
       await this.collectAuthenticationMethodsPoliciesPowerShell()
       await this.collectAuthenticationStrengthPoliciesPowerShell()
+      await this.collectAuthenticationMethodsPolicy()
       await this.collectMFASettingsPowerShell()
       await this.collectPasswordPoliciesPowerShell()
-      await this.collectCustomSecurityAttributesPowerShell()
-      await this.collectPIMActivationRequests()
 
       // Conditional Access & Named Locations (3 resources)
       await this.collectConditionalAccessPolicies()
@@ -114,15 +113,7 @@ export class SecurityCollector {
       await this.collectTokenLifetimePolicy()
       await this.collectClaimsMappingPolicies()
 
-      // Cross-Tenant & Multi-Org (2 resources)
-      await this.collectCrossTenantAccessPoliciesPowerShell()
-      await this.collectMultiTenantOrgPolicies()
-
-      // App Management Policies (2 resources)
-      await this.collectAppManagementPolicies()
-      await this.collectHomeRealmDiscoveryPolicy()
-
-      // Phase 3: Advanced Governance & Lifecycle (27 resources - 100% coverage)
+      // Phase 3: Advanced Governance & Lifecycle (13 resources - 100% coverage)
       console.log('📊 Starting Security Phase 3 collection (advanced governance & lifecycle)...')
 
       // Entitlement Management (2 resources)
@@ -139,9 +130,13 @@ export class SecurityCollector {
       await this.collectAccessReviewSettings()
       await this.collectTermsOfUsePowerShell()
 
-      // Remaining specialized resources
+      // Cross-Tenant & Multi-Org (2 resources)
+      await this.collectCrossTenantAccessPoliciesPowerShell()
+      await this.collectMultiTenantOrgPolicies()
+
+      // Advanced Features (3 resources)
       await this.collectCustomSecurityAttributes()
-      await this.collectAllPolicies()
+      await this.collectAppManagementPolicies()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Security backup complete (${executionTime}s, ${this.resources.length} resources)`)
