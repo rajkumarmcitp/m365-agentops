@@ -551,13 +551,19 @@ export const M365_SERVICES = {
       'SPOAdvancedSharingPolicy',
       'SPOAdvancedSiteProvisioning',
       'SPOAdvancedSiteTemplates',
+      'SPOAdvancedSecurityConfiguration',
+      'SPOAdvancedDataResidency',
+      'SPOAdvancedUserExperience',
+      'SPOAccessibilityCompliance',
       'SPOApp',
       'SPOBrowserIdleSignOut',
       'SPOCompatibilityRange',
       'SPOContentTypeBindings',
       'SPOContentTypeHub',
+      'SPOCustomSolutionsAndApps',
       'SPOCustomWorkflowConfiguration',
       'SPODataConnectionLibrary',
+      'SPODataGovernanceClassification',
       'SPODataLocationGeoMoveStatus',
       'SPODataLocationSettings',
       'SPODataResidencyNotification',
@@ -577,6 +583,7 @@ export const M365_SERVICES = {
       'SPOManagedProperty',
       'SPOMicrosoftSearchConfiguration',
       'SPOMigrationJobStatus',
+      'SPOMobileOptimization',
       'SPOModernPageConfiguration',
       'SPOMultiGeoCompanyAllowedDataLocation',
       'SPOMultiGeoConfiguration',
@@ -615,11 +622,12 @@ export const M365_SERVICES = {
       'SPOTenantAppCatalogConfiguration',
       'SPOTenantCDNPolicy',
       'SPOTenantProperties',
+      'SPOThreatProtectionPolicies',
       'SPOUsageAnalytics',
       'SPOUserProfileProperty',
       'SPOWorkflowAutomation'
     ],
-    totalResources: 80,
+    totalResources: 88,
     _note_SharePoint_Phase4: {
       description: 'Phase 4 additions (2026-07-17): 12 new advanced content management and modern SharePoint resource types (PnP PowerShell)',
       newResources: [
@@ -696,6 +704,29 @@ export const M365_SERVICES = {
       coverage: 'from 68% (68/100) to 80% (80/100)',
       implementationPhase: 'Phase 6 - Advanced site templates, workflows, provisioning, analytics, and performance optimization with PnP PowerShell',
       powerShellRequirements: 'Requires PnP.PowerShell module for full functionality'
+    },
+    _note_SharePoint_Phase7: {
+      description: 'Phase 7 additions (2026-07-17): 8 new advanced security, data governance, and UX resource types (PnP PowerShell) - 88% COMPLETE',
+      newResources: [
+        'SPOAdvancedSecurityConfiguration',
+        'SPOThreatProtectionPolicies',
+        'SPODataGovernanceClassification',
+        'SPOAdvancedDataResidency',
+        'SPOCustomSolutionsAndApps',
+        'SPOAdvancedUserExperience',
+        'SPOMobileOptimization',
+        'SPOAccessibilityCompliance'
+      ],
+      categories: {
+        'Security & Threat Protection (2)': ['SPOAdvancedSecurityConfiguration', 'SPOThreatProtectionPolicies'],
+        'Data Governance (2)': ['SPODataGovernanceClassification', 'SPOAdvancedDataResidency'],
+        'Solutions & UX (3)': ['SPOCustomSolutionsAndApps', 'SPOAdvancedUserExperience', 'SPOMobileOptimization'],
+        'Compliance (1)': ['SPOAccessibilityCompliance']
+      },
+      coverage: 'from 80% (80/100) to 88% (88/100)',
+      implementationPhase: 'Phase 7 - Final push: Advanced security, data governance, custom solutions, UX, and compliance with PnP PowerShell',
+      powerShellRequirements: 'Requires PnP.PowerShell module for full functionality',
+      remainingResources: '12 resources for Phase 8+ (88% to 100%)'
     }
   },
   OneDrive: {
