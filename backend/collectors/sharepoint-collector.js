@@ -42,11 +42,26 @@ export class SharePointCollector {
       this.resources = []
       this.errors = []
 
-      // Collect each resource type
+      // Base SharePoint structure collection
+      console.log('📊 Starting SharePoint base structure collection...')
       await this.collectSites()
       await this.collectHubSites()
       await this.collectSiteDesigns()
-      await this.collectBrowserIdleSignOut()
+      await this.collectTenantSettings()
+
+      // Phase 1 - Core governance and access control
+      console.log('📊 Starting SharePoint Phase 1 collection...')
+      await this.collectAccessControlSettings() // SPOAccessControlSettings
+      await this.collectApps() // SPOApp
+      await this.collectBrowserIdleSignOut() // SPOBrowserIdleSignOut
+      await this.collectTenantCDNPolicy() // SPOTenantCDNPolicy
+      await this.collectSiteAuditSettings() // SPOSiteAuditSettings
+      await this.collectUserProfileProperty() // SPOUserProfileProperty
+      await this.collectRetentionPolicy() // SPORetentionPolicy
+      await this.collectMultiGeoConfiguration() // SPOMultiGeoConfiguration
+      await this.collectSharingSettings() // SPOSharingSettings
+
+      // Stub methods for future enhancement
       await this.collectCompatibilityRange()
       await this.collectDataConnectionLibrary()
       await this.collectDataLocationGeoMoveStatus()
@@ -62,8 +77,6 @@ export class SharePointCollector {
       await this.collectOrgAssetsLibrary()
       await this.collectOrgNewsSite()
       await this.collectPersonalSiteCapabilities()
-      await this.collectTenantSettings()
-      await this.collectSharingSettings()
 
       // PowerShell collection - advanced SharePoint components
       console.log('📊 Starting PowerShell-based collection for advanced SharePoint components...')
@@ -462,8 +475,30 @@ export class SharePointCollector {
    */
   async collectBrowserIdleSignOut() {
     try {
-      console.log('📋 Collecting Browser Idle SignOut Settings...')
-      console.log('⚠️ Browser idle signout requires SharePoint Admin Center access')
+      console.log('📋 Collecting Browser Idle SignOut Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          Enabled = (Get-SPOBrowserIdleSignoutSettings -ErrorAction SilentlyContinue).Enabled -eq $true
+          SignOutAfterInactivityInMinutes = (Get-SPOBrowserIdleSignoutSettings -ErrorAction SilentlyContinue).SignOutAfterInactivityInMinutes
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result && typeof result === 'object') {
+        this.resources.push({
+          type: 'SPOBrowserIdleSignOut',
+          name: 'BrowserIdleSignOut',
+          id: 'browser-idle-signout',
+          configuration: {
+            Identity: 'browser-idle-signout',
+            Enabled: result.Enabled || false,
+            SignOutAfterInactivityInMinutes: result.SignOutAfterInactivityInMinutes || 15,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found browser idle sign out settings')
+      }
     } catch (error) {
       this.handleError('collectBrowserIdleSignOut', error)
     }
@@ -527,8 +562,39 @@ export class SharePointCollector {
    */
   async collectExternalUser() {
     try {
-      console.log('📋 Collecting External Users...')
-      console.log('⚠️ External users require SharePoint Admin Center access')
+      console.log('📋 Collecting External Users (PowerShell)...')
+      const script = `
+        @((Get-SPOExternalUser -ErrorAction SilentlyContinue) |
+          Select-Object -First 999 |
+          ForEach-Object {
+            [PSCustomObject]@{
+              UniqueId = $_.UniqueId
+              DisplayName = $_.DisplayName
+              Email = $_.Email
+              InvitedAsGuest = $_.InvitedAsGuest
+              WhenCreated = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const user of result) {
+          this.resources.push({
+            type: 'SPOExternalUser',
+            name: user.DisplayName || user.Email,
+            id: user.UniqueId,
+            configuration: {
+              Identity: user.UniqueId,
+              DisplayName: user.DisplayName || '',
+              Email: user.Email || '',
+              InvitedAsGuest: user.InvitedAsGuest || false,
+              WhenCreated: user.WhenCreated || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} external users`)
+      }
     } catch (error) {
       this.handleError('collectExternalUser', error)
     }
@@ -946,6 +1012,307 @@ export class SharePointCollector {
       }
     } catch (error) {
       this.handleError('collectSearchSettingsPowerShell', error)
+    }
+  }
+
+  // ============================================================
+  // PHASE 1: ADDITIONAL CRITICAL RESOURCE COLLECTORS
+  // ============================================================
+
+  /**
+   * Collect Access Control Settings
+   * SPOAccessControlSettings (Phase 1)
+   */
+  async collectAccessControlSettings() {
+    try {
+      console.log('📋 Collecting SPO Access Control Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          BlockMacClients = (Get-SPOAccessControlSettings -ErrorAction SilentlyContinue).BlockMacClients
+          EmailAttestationRequired = (Get-SPOAccessControlSettings -ErrorAction SilentlyContinue).EmailAttestationRequired
+          EmailAttestationReAuthDays = (Get-SPOAccessControlSettings -ErrorAction SilentlyContinue).EmailAttestationReAuthDays
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOAccessControlSettings',
+          name: 'AccessControlSettings',
+          id: 'access-control-settings',
+          configuration: {
+            Identity: 'access-control-settings',
+            BlockMacClients: result.BlockMacClients || false,
+            EmailAttestationRequired: result.EmailAttestationRequired || false,
+            EmailAttestationReAuthDays: result.EmailAttestationReAuthDays || 0,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found access control settings')
+      }
+    } catch (error) {
+      this.handleError('collectAccessControlSettings', error)
+    }
+  }
+
+  /**
+   * Collect Apps
+   * SPOApp (Phase 1)
+   */
+  async collectApps() {
+    try {
+      console.log('📋 Collecting SPO Apps (PowerShell)...')
+      const script = `
+        @((Get-SPOApp -ErrorAction SilentlyContinue) |
+          Select-Object -First 999 |
+          ForEach-Object {
+            [PSCustomObject]@{
+              AppId = $_.AppId
+              Title = $_.Title
+              Version = $_.Version
+              Status = $_.Status
+              CreatedDate = Get-Date
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const app of result) {
+          this.resources.push({
+            type: 'SPOApp',
+            name: app.Title,
+            id: app.AppId,
+            configuration: {
+              Identity: app.AppId,
+              Title: app.Title || '',
+              Version: app.Version || '',
+              Status: app.Status || 'Unknown',
+              CreatedDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} apps`)
+      }
+    } catch (error) {
+      this.handleError('collectApps', error)
+    }
+  }
+
+  /**
+   * Collect Tenant CDN Policy
+   * SPOTenantCDNPolicy (Phase 1)
+   */
+  async collectTenantCDNPolicy() {
+    try {
+      console.log('📋 Collecting SPO Tenant CDN Policy (PowerShell)...')
+      const script = `
+        @((Get-SPOTenantCdnPolicy -CdnType Public -ErrorAction SilentlyContinue),
+          (Get-SPOTenantCdnPolicy -CdnType Private -ErrorAction SilentlyContinue)) |
+        ForEach-Object {
+          [PSCustomObject]@{
+            CDNType = if ($_ -eq 'Public') { 'Public' } else { 'Private' }
+            IncludeSharedFolders = $_.IncludeSharedFolders
+            CreatedDate = Get-Date
+          }
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'SPOTenantCDNPolicy',
+            name: \`CDNPolicy-\${policy.CDNType}\`,
+            id: \`cdn-\${policy.CDNType.toLowerCase()}\`,
+            configuration: {
+              Identity: \`cdn-\${policy.CDNType.toLowerCase()}\`,
+              CDNType: policy.CDNType || '',
+              IncludeSharedFolders: policy.IncludeSharedFolders || false,
+              CreatedDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} CDN policies`)
+      }
+    } catch (error) {
+      this.handleError('collectTenantCDNPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Site Audit Settings
+   * SPOSiteAuditSettings (Phase 1)
+   */
+  async collectSiteAuditSettings() {
+    try {
+      console.log('📋 Collecting SPO Site Audit Settings (PowerShell)...')
+      const script = `
+        @((Get-SPOSite -Limit All -ErrorAction SilentlyContinue) |
+          Select-Object -First 999 |
+          Where-Object { $_.Url -and -not $_.IsPublic } |
+          ForEach-Object {
+            [PSCustomObject]@{
+              SiteUrl = $_.Url
+              Owner = $_.Owner
+              StorageQuotaMB = $_.StorageQuotaMB
+              StorageUsageMB = $_.StorageUsageMB
+              LockState = $_.LockState
+              CompatibilityLevel = $_.CompatibilityLevel
+              CreatedDate = $_.CreatedDate
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const audit of result) {
+          this.resources.push({
+            type: 'SPOSiteAuditSettings',
+            name: audit.SiteUrl.split('/').pop() || audit.SiteUrl,
+            id: audit.SiteUrl,
+            configuration: {
+              Identity: audit.SiteUrl,
+              SiteUrl: audit.SiteUrl || '',
+              Owner: audit.Owner || '',
+              StorageQuotaMB: audit.StorageQuotaMB || 0,
+              StorageUsageMB: audit.StorageUsageMB || 0,
+              LockState: audit.LockState || 'Unlock',
+              CompatibilityLevel: audit.CompatibilityLevel || 15,
+              CreatedDate: audit.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} site audit settings`)
+      }
+    } catch (error) {
+      this.handleError('collectSiteAuditSettings', error)
+    }
+  }
+
+  /**
+   * Collect User Profile Property
+   * SPOUserProfileProperty (Phase 1)
+   */
+  async collectUserProfileProperty() {
+    try {
+      console.log('📋 Collecting SPO User Profile Properties (PowerShell)...')
+      const script = `
+        @((Get-SPOUserProfileProperty -ErrorAction SilentlyContinue) |
+          Select-Object -First 999 |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Name = $_.Name
+              DisplayName = $_.DisplayName
+              IsUserProperty = $_.IsUserProperty
+              IsSearchable = $_.IsSearchable
+              CreatedDate = Get-Date
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const prop of result) {
+          this.resources.push({
+            type: 'SPOUserProfileProperty',
+            name: prop.DisplayName || prop.Name,
+            id: prop.Name,
+            configuration: {
+              Identity: prop.Name,
+              Name: prop.Name || '',
+              DisplayName: prop.DisplayName || '',
+              IsUserProperty: prop.IsUserProperty || false,
+              IsSearchable: prop.IsSearchable || false,
+              CreatedDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} user profile properties`)
+      }
+    } catch (error) {
+      this.handleError('collectUserProfileProperty', error)
+    }
+  }
+
+  /**
+   * Collect Retention Policy
+   * SPORetentionPolicy (Phase 1)
+   */
+  async collectRetentionPolicy() {
+    try {
+      console.log('📋 Collecting SPO Retention Policies (PowerShell)...')
+      const script = `
+        @((Get-SPORetentionLabel -ErrorAction SilentlyContinue) |
+          Select-Object -First 999 |
+          ForEach-Object {
+            [PSCustomObject]@{
+              DisplayName = $_.DisplayName
+              Name = $_.Name
+              RetentionDays = $_.RetentionDays
+              RetentionTrigger = $_.RetentionTrigger
+              CreatedDate = Get-Date
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'SPORetentionPolicy',
+            name: policy.DisplayName || policy.Name,
+            id: policy.Name,
+            configuration: {
+              Identity: policy.Name,
+              DisplayName: policy.DisplayName || '',
+              Name: policy.Name || '',
+              RetentionDays: policy.RetentionDays || 0,
+              RetentionTrigger: policy.RetentionTrigger || '',
+              CreatedDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} retention policies`)
+      }
+    } catch (error) {
+      this.handleError('collectRetentionPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Multi-Geo Configuration
+   * SPOMultiGeoConfiguration (Phase 1)
+   */
+  async collectMultiGeoConfiguration() {
+    try {
+      console.log('📋 Collecting SPO Multi-Geo Configuration (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          IsMultiGeoEnabled = (Get-SPOMultiGeoConfiguration -ErrorAction SilentlyContinue).IsMultiGeoEnabled
+          ServicePrincipalId = (Get-SPOMultiGeoConfiguration -ErrorAction SilentlyContinue).ServicePrincipalId
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOMultiGeoConfiguration',
+          name: 'MultiGeoConfiguration',
+          id: 'multi-geo-config',
+          configuration: {
+            Identity: 'multi-geo-config',
+            IsMultiGeoEnabled: result.IsMultiGeoEnabled || false,
+            ServicePrincipalId: result.ServicePrincipalId || '',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found multi-geo configuration')
+      }
+    } catch (error) {
+      this.handleError('collectMultiGeoConfiguration', error)
     }
   }
 

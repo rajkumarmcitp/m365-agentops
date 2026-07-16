@@ -562,6 +562,7 @@ export const M365_SERVICES = {
       'SPOOrgNewsSite',
       'SPOPersonalSiteCapabilities',
       'SPOPropertyBag',
+      'SPORetentionPolicy',
       'SPOSearchResultsBlockedConfig',
       'SPOSearchSettings',
       'SPOSharingSettings',
@@ -572,7 +573,7 @@ export const M365_SERVICES = {
       'SPOTenantCDNPolicy',
       'SPOUserProfileProperty'
     ],
-    totalResources: 30
+    totalResources: 31
   },
   OneDrive: {
     displayName: 'OneDrive',
