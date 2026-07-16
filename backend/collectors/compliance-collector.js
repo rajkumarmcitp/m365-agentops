@@ -68,7 +68,7 @@ export class ComplianceCollector {
       // Encryption & Security (1 resource)
       await this.collectMessageEncryption()
 
-      // Phase 2: DLP, Search & Supervision (16 resources)
+      // Phase 2: DLP, Search & Supervision (15 resources - 66% coverage)
       console.log('📊 Starting Compliance Phase 2 collection (DLP, search & supervision)...')
 
       // DLP Policies (2 resources)
@@ -80,11 +80,12 @@ export class ComplianceCollector {
       await this.collectTraditionalSearch()
       await this.collectConversationSearchTopicIndex()
 
-      // Supervision (2 resources)
+      // Supervision & Review (3 resources)
       await this.collectSupervisionPoliciesPowerShell()
       await this.collectSupervisoryReviewPolicyV2()
+      await this.collectRetentionComplianceRule()
 
-      // Case Management (3 resources)
+      // Case Management (2 resources)
       await this.collectEdgeCaseHoldPolicy()
       await this.collectCasePolicyAssociation()
 
@@ -93,11 +94,10 @@ export class ComplianceCollector {
       await this.collectManagedClassification()
       await this.collectManualLabeling()
 
-      // Access & Messaging (2 resources)
-      await this.collectExternalAccessPolicy()
+      // Messaging & Organization (1 resource)
       await this.collectOrganizationalMessage()
 
-      // Phase 3: Records Management & Advanced Governance (15 resources)
+      // Phase 3: Records Management & Advanced Governance (16 resources - 100% coverage)
       console.log('📊 Starting Compliance Phase 3 collection (records & governance)...')
 
       // Records Management (2 resources)

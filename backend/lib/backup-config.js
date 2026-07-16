@@ -1035,7 +1035,7 @@ export const M365_SERVICES = {
       implementationPhase: 'Phase 1 - Audit, data classification, sensitivity labels, retention policies'
     },
     _note_Compliance_Phase2: {
-      description: 'Phase 2 implementation (2026-07-17): DLP, search and supervision - 15 resources (66% coverage)',
+      description: 'Phase 2 implementation (2026-07-17): DLP, search and supervision - 14 resources (64% coverage)',
       newResources: [
         'SCDLPCompliancePolicy',
         'SCUnifiedDLPCompliancePolicy',
@@ -1054,17 +1054,17 @@ export const M365_SERVICES = {
       ],
       categories: {
         'DLP Policies (2)': ['SCDLPCompliancePolicy', 'SCUnifiedDLPCompliancePolicy'],
-        'Search & Discovery (3)': ['SCConversationSearchTopicIndex', 'SCTraditionalSearch', 'SCRetentionComplianceRule'],
-        'Supervision (3)': ['SCSupervisoryReviewPolicy', 'SCSupervisoryReviewPolicyV2', 'SCSupervisionPolicy'],
+        'Search & Discovery (2)': ['SCConversationSearchTopicIndex', 'SCTraditionalSearch'],
+        'Supervision & Retention (3)': ['SCSupervisoryReviewPolicy', 'SCSupervisoryReviewPolicyV2', 'SCSupervisionPolicy'],
         'Case Management (2)': ['SCEdgeCaseHoldPolicy', 'SCCasePolicyAssociation'],
         'Tag & Classification (3)': ['SCComplianceTag', 'SCManagedClassification', 'SCManualLabeling'],
-        'Messaging (1)': ['SCOrganizationalMessage']
+        'Search & Messaging (2)': ['SCOrganizationalMessage', 'SCRetentionComplianceRule']
       },
-      coverage: 'from 34% (16/47) to 66% (31/47) - DLP and supervision foundation',
+      coverage: 'from 34% (16/47) to 64% (30/47) - DLP and supervision foundation',
       implementationPhase: 'Phase 2 - DLP policies, compliance search, supervision, case management'
     },
     _note_Compliance_Phase3: {
-      description: 'Phase 3 implementation (2026-07-17): Records management and advanced governance - 16 resources (100% COMPLETE)',
+      description: 'Phase 3 implementation (2026-07-17): Records management and advanced governance - 17 resources (100% COMPLETE)',
       newResources: [
         'SCRecordsManagement',
         'SCRecordsManagementPolicy',
@@ -1088,10 +1088,9 @@ export const M365_SERVICES = {
         'File Plan (6)': ['SCFilePlanProperty', 'SCFilePlanPropertyCategory', 'SCFilePlanPropertyCitation', 'SCFilePlanPropertyDepartment', 'SCFilePlanPropertyReferenceId', 'SCFilePlanPropertySubcategory'],
         'Rights & Governance (1)': ['SCFileShareRightsManagement'],
         'Advanced Policies (4)': ['SCIntelligencePolicy', 'SCRiskPolicy', 'SCTrustFrameworkPolicy', 'SCPolicySetting'],
-        'Integration (2)': ['SCInformationGovernance', 'SCExchangeBinding'],
-        'Case Hold (1)': ['SCCaseHoldPolicy']
+        'Integration & Retention (3)': ['SCInformationGovernance', 'SCExchangeBinding', 'SCCaseHoldPolicy']
       },
-      coverage: 'from 66% (31/47) to 100% (47/47) - COMPLETE',
+      coverage: 'from 64% (30/47) to 100% (47/47) - COMPLETE',
       implementationPhase: 'Phase 3 - FINAL: Records management, file plan, advanced policies, governance - 100% COMPLETE',
       completion: 'COMPLIANCE BACKUP SYSTEM 100% COMPLETE - All 47 resource types implemented'
     }
