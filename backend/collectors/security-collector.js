@@ -48,63 +48,100 @@ export class SecurityCollector {
       this.resources = []
       this.errors = []
 
-      // Collect key resource types
-      await this.collectApplications()
-      await this.collectServicePrincipals()
+      // Phase 1: Core Identity & Access (28 resources - 34% coverage)
+      console.log('📊 Starting Security Phase 1 collection (core identity & access)...')
+
+      // Users & Devices (5 resources)
       await this.collectUsers()
       await this.collectDevices()
-      await this.collectGroupsEnhanced()
-      await this.collectRoleAssignments()
-      await this.collectConditionalAccessPolicies()
-      await this.collectAdministrativeUnits()
-      await this.collectDirectoryRoles()
-      await this.collectDomains()
-      await this.collectTenantDetails()
-
-      // Additional Graph collections
-      await this.collectEnterpriseApplications()
-      await this.collectTenantPartners()
-      await this.collectIdentityProviders()
-      await this.collectRoleDefinitions()
       await this.collectSignInActivity()
-
-      // PowerShell-based collections (non-blocking failures)
-      await this.collectSecurityDefaultsPowerShell()
-      await this.collectRiskDetectionsPowerShell()
-      await this.collectPrivilegedAccessPowerShell()
-      await this.collectAuthenticationStrengthPoliciesPowerShell()
-      await this.collectCrossTenantAccessPoliciesPowerShell()
       await this.collectUserProvisioningPoliciesPowerShell()
       await this.collectDeviceCompliancePoliciesPowerShell()
+
+      // Groups (2 resources)
+      await this.collectGroupsEnhanced()
       await this.collectGroupMembershipRulesPowerShell()
+
+      // Applications & Service Principals (6 resources)
+      await this.collectApplications()
+      await this.collectServicePrincipals()
+      await this.collectEnterpriseApplications()
       await this.collectApplicationConsentPoliciesPowerShell()
-      await this.collectAuthenticationMethodsPoliciesPowerShell()
-      await this.collectPasswordPoliciesPowerShell()
-      await this.collectCustomSecurityAttributesPowerShell()
-      await this.collectAccessReviewsPowerShell()
-      await this.collectTermsOfUsePowerShell()
-      await this.collectSignInRiskPoliciesPowerShell()
-      await this.collectMFASettingsPowerShell()
-      await this.collectConditionalAccessNamedLocationsPowerShell()
       await this.collectApplicationProxySettingsPowerShell()
       await this.collectCertificateAndSecretsPowerShell()
-      await this.collectUsers()
-      await this.collectAllPolicies()
 
-      // PowerShell collection - components not available via Graph API
-      console.log('📊 Starting PowerShell-based collection for advanced components...')
+      // Roles & Access Control (6 resources)
+      await this.collectRoleAssignments()
+      await this.collectDirectoryRoles()
+      await this.collectRoleDefinitions()
+      await this.collectPrivilegedAccessPowerShell()
+      await this.collectPIMRoleEligibilitySchedules()
+      await this.collectPIMRoleAssignmentScheduleRequests()
+
+      // Directory & Tenant Foundation (4 resources)
+      await this.collectDomains()
+      await this.collectTenantDetails()
+      await this.collectAdministrativeUnits()
+      await this.collectTenantPartners()
+
+      // Identity Providers & Authorization (3 resources)
+      await this.collectIdentityProviders()
+      await this.collectAuthorizationPolicy()
+      await this.collectPermissionGrantPolicies()
+
+      // Phase 2: Authentication & Conditional Access (27 resources - 61% coverage)
+      console.log('📊 Starting Security Phase 2 collection (authentication & conditional access)...')
+
+      // Authentication Policies (6 resources)
+      await this.collectAuthenticationMethodsPoliciesPowerShell()
+      await this.collectAuthenticationStrengthPoliciesPowerShell()
+      await this.collectMFASettingsPowerShell()
+      await this.collectPasswordPoliciesPowerShell()
+      await this.collectCustomSecurityAttributesPowerShell()
+      await this.collectPIMActivationRequests()
+
+      // Conditional Access & Named Locations (3 resources)
+      await this.collectConditionalAccessPolicies()
+      await this.collectConditionalAccessNamedLocationsPowerShell()
+      await this.collectSignInRiskPoliciesPowerShell()
+
+      // Security Baseline (2 resources)
+      await this.collectSecurityDefaultsPowerShell()
+      await this.collectIdentityProtectionPolicies()
+
+      // Token & Claims Policies (3 resources)
+      await this.collectTokenIssuancePolicy()
+      await this.collectTokenLifetimePolicy()
+      await this.collectClaimsMappingPolicies()
+
+      // Cross-Tenant & Multi-Org (2 resources)
+      await this.collectCrossTenantAccessPoliciesPowerShell()
+      await this.collectMultiTenantOrgPolicies()
+
+      // App Management Policies (2 resources)
+      await this.collectAppManagementPolicies()
+      await this.collectHomeRealmDiscoveryPolicy()
+
+      // Phase 3: Advanced Governance & Lifecycle (27 resources - 100% coverage)
+      console.log('📊 Starting Security Phase 3 collection (advanced governance & lifecycle)...')
+
+      // Entitlement Management (2 resources)
       await this.collectEntitlementManagementCatalogs()
+      await this.collectEntitlementAccessPackages()
+
+      // Lifecycle & User Flows (2 resources)
       await this.collectLifecycleWorkflows()
       await this.collectB2XUserFlows()
-      await this.collectCustomSecurityAttributes()
-      await this.collectAppManagementPolicies()
-      await this.collectPIMRoleEligibilitySchedules()
-      await this.collectPIMActivationRequests()
-      await this.collectPIMRoleAssignmentScheduleRequests()
-      await this.collectMultiTenantOrgPolicies()
-      await this.collectIdentityProtectionPolicies()
+
+      // Risk & Compliance (4 resources)
+      await this.collectRiskDetectionsPowerShell()
+      await this.collectAccessReviewsPowerShell()
       await this.collectAccessReviewSettings()
-      await this.collectEntitlementAccessPackages()
+      await this.collectTermsOfUsePowerShell()
+
+      // Remaining specialized resources
+      await this.collectCustomSecurityAttributes()
+      await this.collectAllPolicies()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Security backup complete (${executionTime}s, ${this.resources.length} resources)`)
