@@ -411,9 +411,13 @@ export const M365_SERVICES = {
       'ODPersonalSiteDefaultStorage',
       'ODAccess',
       'ODQuota',
-      'ODRetention'
+      'ODRetention',
+      'ODSharingPolicy',
+      'ODDeviceAccess',
+      'ODSiteCollectionQuota',
+      'ODNotifications'
     ],
-    totalResources: 5
+    totalResources: 9
   },
   Groups: {
     displayName: 'Microsoft 365 Groups',

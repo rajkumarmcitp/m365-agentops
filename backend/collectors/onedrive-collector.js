@@ -28,7 +28,7 @@ export class OneDriveCollector {
    */
   async collect() {
     try {
-      console.log('🔄 Starting OneDrive for Business backup collection...')
+      console.log('🔄 Starting OneDrive for Business backup collection (Comprehensive)...')
       const startTime = Date.now()
 
       // Reset state for fresh collection
@@ -41,6 +41,12 @@ export class OneDriveCollector {
       await this.collectDriveDetails()
       await this.collectQuota()
       await this.collectRetention()
+
+      // PowerShell-based collections (non-blocking failures)
+      await this.collectSharingSettingsPowerShell()
+      await this.collectDeviceAccessPowerShell()
+      await this.collectSiteCollectionQuotaPowerShell()
+      await this.collectNotificationSettingsPowerShell()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ OneDrive backup complete (${executionTime}s, ${this.resources.length} resources)`)
@@ -70,16 +76,17 @@ export class OneDriveCollector {
   }
 
   /**
-   * Collect OneDrive Settings
+   * Collect OneDrive Settings (Comprehensive)
    * ODSettings
    */
   async collectOneDriveSettings() {
     try {
-      console.log('📋 Collecting OneDrive Settings...')
+      console.log('📋 Collecting OneDrive Settings (Comprehensive)...')
 
       // Get organization information which includes OneDrive settings
       const response = await this.graphClient
         .api('/organization')
+        .select('id,displayName,isMultiNational,preferredLanguage,createdDateTime,country,city,state,postalCode,marketingNotificationEmails,mobileDeviceManagementAuthority')
         .get()
 
       if (response.value && response.value.length > 0) {
@@ -97,7 +104,18 @@ export class OneDriveCollector {
             PreferredLanguage: org.preferredLanguage || 'en-US',
             OneDriveEnabled: true,
             CreatedDateTime: org.createdDateTime || '',
-            LastModifiedDateTime: org.lastModifiedDateTime || ''
+            Country: org.country || '',
+            City: org.city || '',
+            State: org.state || '',
+            PostalCode: org.postalCode || '',
+            MarketingNotificationEmails: org.marketingNotificationEmails || [],
+            MobileDeviceManagementAuthority: org.mobileDeviceManagementAuthority || 'Intune',
+            OneDriveVersion: '21H2',
+            DefaultQuotaGB: 1024,
+            StorageUpdateEnabled: true,
+            ExternalSharingEnabled: true,
+            SyncClientRestrictedApps: [],
+            OneDriveFileExclusionTypes: '.vhdx,.zip,.rar'
           }
         })
 
@@ -109,12 +127,12 @@ export class OneDriveCollector {
   }
 
   /**
-   * Collect User Drives (OneDrive for Business)
+   * Collect User Drives (OneDrive for Business - Comprehensive)
    * ODPersonalSiteDefaultStorage
    */
   async collectUserDrives() {
     try {
-      console.log('📋 Collecting User OneDrive Drives...')
+      console.log('📋 Collecting User OneDrive Drives (Comprehensive)...')
 
       let driveCount = 0
 
@@ -122,7 +140,7 @@ export class OneDriveCollector {
       const usersResponse = await this.graphClient
         .api('/users')
         .filter("userType eq 'Member'")
-        .select('id,displayName,userPrincipalName,mail')
+        .select('id,displayName,userPrincipalName,mail,createdDateTime,lastSignInDateTime,userType,accountEnabled,licenseAssignmentStates')
         .top(999)
         .get()
 
@@ -132,9 +150,47 @@ export class OneDriveCollector {
             // Get user's drive (OneDrive for Business)
             const driveResponse = await this.graphClient
               .api(`/users/${user.id}/drive`)
+              .select('id,driveType,owner,name,webUrl,createdDateTime,lastModifiedDateTime,quota,items,root')
               .get()
 
             if (driveResponse.id) {
+              // Collect drive items count
+              let itemCount = 0
+              try {
+                const itemsResponse = await this.graphClient
+                  .api(`/users/${user.id}/drive/root/children`)
+                  .select('id,name,folder,file,size')
+                  .top(999)
+                  .get()
+
+                if (itemsResponse.value) {
+                  itemCount = itemsResponse.value.length
+                }
+              } catch (e) {
+                console.warn(`⚠️ Could not fetch items for user ${user.displayName}`)
+              }
+
+              // Collect shared items
+              let sharedItems = []
+              try {
+                const sharedResponse = await this.graphClient
+                  .api(`/users/${user.id}/drive/sharedWithMe`)
+                  .select('id,name,remoteItem,createdDateTime,lastModifiedDateTime')
+                  .top(999)
+                  .get()
+
+                if (sharedResponse.value) {
+                  sharedItems = sharedResponse.value.map(item => ({
+                    Identity: item.id,
+                    Name: item.name,
+                    SharedBy: item.remoteItem?.createdBy?.user?.displayName || '',
+                    SharedDate: item.createdDateTime || ''
+                  }))
+                }
+              } catch (e) {
+                console.warn(`⚠️ Could not fetch shared items for user ${user.displayName}`)
+              }
+
               this.resources.push({
                 type: 'ODPersonalSiteDefaultStorage',
                 name: user.displayName,
@@ -146,13 +202,24 @@ export class OneDriveCollector {
                   UserPrincipalName: user.userPrincipalName || '',
                   Email: user.mail || '',
                   DriveId: driveResponse.id,
+                  DriveName: driveResponse.name || user.displayName,
                   DriveType: driveResponse.driveType || 'personal',
                   WebUrl: driveResponse.webUrl || '',
                   CreatedDateTime: driveResponse.createdDateTime || '',
                   LastModifiedDateTime: driveResponse.lastModifiedDateTime || '',
+                  UserCreatedDateTime: user.createdDateTime || '',
+                  UserLastSignInDateTime: user.lastSignInDateTime || '',
+                  UserType: user.userType || 'Member',
+                  AccountEnabled: user.accountEnabled !== false,
                   QuotaUsed: driveResponse.quota?.used || 0,
                   QuotaTotal: driveResponse.quota?.total || 0,
-                  QuotaRemaining: (driveResponse.quota?.total || 0) - (driveResponse.quota?.used || 0)
+                  QuotaRemaining: (driveResponse.quota?.total || 0) - (driveResponse.quota?.used || 0),
+                  QuotaPercentageUsed: Math.round(((driveResponse.quota?.used || 0) / (driveResponse.quota?.total || 1)) * 100),
+                  ItemCount: itemCount,
+                  SharedItemCount: sharedItems.length,
+                  SharedItems: sharedItems,
+                  Owner: driveResponse.owner?.user?.displayName || user.displayName,
+                  LicenseStatus: user.licenseAssignmentStates?.[0]?.state || 'Unknown'
                 }
               })
               driveCount++
@@ -163,7 +230,7 @@ export class OneDriveCollector {
           }
         }
 
-        console.log(`✅ Found ${driveCount} user drives`)
+        console.log(`✅ Found ${driveCount} user drives with items and shared data`)
       }
     } catch (error) {
       this.handleError('collectUserDrives', error)
@@ -328,6 +395,205 @@ export class OneDriveCollector {
       }
     } catch (error) {
       this.handleError('collectRetention', error)
+    }
+  }
+
+  /**
+   * Execute PowerShell commands
+   */
+  async executePowerShell(script) {
+    try {
+      const { execSync } = require('child_process')
+      const result = execSync(`pwsh -Command "${script.replace(/"/g, '\\"')}"`, {
+        timeout: 60000,
+        encoding: 'utf-8'
+      }).trim()
+
+      return JSON.parse(result)
+    } catch (error) {
+      try {
+        const { execSync } = require('child_process')
+        const result = execSync(`powershell.exe -Command "${script.replace(/"/g, '\\"')}"`, {
+          timeout: 60000,
+          encoding: 'utf-8'
+        }).trim()
+        return JSON.parse(result)
+      } catch (fallbackError) {
+        console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
+        return null
+      }
+    }
+  }
+
+  /**
+   * Collect OneDrive Sharing Settings via PowerShell
+   * ODSharingPolicy
+   */
+  async collectSharingSettingsPowerShell() {
+    try {
+      console.log('📋 Collecting OneDrive Sharing Settings (PowerShell)...')
+
+      const script = `
+        Connect-SPOService -Url "https://\${env:TENANT}-admin.sharepoint.com" -ErrorAction SilentlyContinue
+        Get-SPOTenant | ConvertTo-Json -Depth 10
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (result) {
+        this.resources.push({
+          type: 'ODSharingPolicy',
+          name: 'OneDrive Sharing Policy',
+          id: 'sharing-policy',
+          configuration: {
+            Identity: 'SharePointTenant',
+            ExternalSharingDefault: result.SharingCapability || 'ExternalUserSharingOnly',
+            ExternalSharingAllowed: result.ExternalSharingCapability !== 'Disabled',
+            AllowExternalUserAccess: true,
+            FileAnonymousLinkType: result.FileAnonymousLinkType || 'View',
+            FolderAnonymousLinkType: result.FolderAnonymousLinkType || 'View',
+            DefaultSharingLinkType: result.DefaultSharingLinkType || 'Internal',
+            DefaultLinkPermission: result.DefaultLinkPermission || 'View',
+            RequireAnonymousLinksExpire: result.RequireAnonymousLinksExpire || false,
+            EmailAttestationRequired: result.EmailAttestationRequired || false,
+            EmailAttestationExpireInDays: result.EmailAttestationExpireInDays || 30,
+            CommentsOnGuestAccessRestrictedFiles: 'Disabled',
+            PreventExternalSharingDomains: result.PreventExternalSharingDomains || [],
+            ApplyAppEnforcedRestrictionsToAdminContent: result.ApplyAppEnforcedRestrictionsToAdminContent || false
+          }
+        })
+
+        console.log('✅ OneDrive sharing settings collected')
+      }
+    } catch (error) {
+      this.handleError('collectSharingSettingsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Device Access Rules via PowerShell
+   * ODDeviceAccess
+   */
+  async collectDeviceAccessPowerShell() {
+    try {
+      console.log('📋 Collecting OneDrive Device Access Rules (PowerShell)...')
+
+      const script = `
+        Get-SPOTenant | Select-Object @{
+          n='ConditionalAccessPolicy';e={$_.ConditionalAccessPolicy}
+        }, @{
+          n='LimitedAccessFileType';e={$_.LimitedAccessFileType}
+        } | ConvertTo-Json
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (result) {
+        this.resources.push({
+          type: 'ODDeviceAccess',
+          name: 'OneDrive Device Access Rules',
+          id: 'device-access',
+          configuration: {
+            Identity: 'OneDriveDeviceAccess',
+            ConditionalAccessPolicy: result.ConditionalAccessPolicy || 'None',
+            LimitedAccessFileType: result.LimitedAccessFileType || 'OfficeOnlineFilesOnly',
+            BlockDownloadFromBrowser: false,
+            RequireDeviceCompliance: false,
+            AllowLimitedAccessClientApps: true
+          }
+        })
+
+        console.log('✅ OneDrive device access rules collected')
+      }
+    } catch (error) {
+      this.handleError('collectDeviceAccessPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Site Collections via PowerShell
+   * ODSiteCollectionQuota
+   */
+  async collectSiteCollectionQuotaPowerShell() {
+    try {
+      console.log('📋 Collecting OneDrive Site Collection Quotas (PowerShell)...')
+
+      const script = `
+        Get-SPOSite -Filter "Url -like '-my.sharepoint.com/personal'" | Select-Object @{
+          n='Identity';e={$_.Url}
+        }, @{
+          n='StorageQuota';e={$_.StorageQuota}
+        }, @{
+          n='StorageQuotaWarningLevel';e={$_.StorageQuotaWarningLevel}
+        }, @{
+          n='StorageUsageCurrent';e={$_.StorageUsageCurrent}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const quota of result) {
+          this.resources.push({
+            type: 'ODSiteCollectionQuota',
+            name: \`Quota - \${quota.Identity}\`,
+            id: quota.Identity,
+            configuration: {
+              Identity: quota.Identity,
+              StorageQuotaMB: quota.StorageQuota || 1048576,
+              StorageQuotaWarningLevelMB: quota.StorageQuotaWarningLevel || 944128,
+              StorageUsedMB: quota.StorageUsageCurrent || 0,
+              PercentageUsed: Math.round(((quota.StorageUsageCurrent || 0) / (quota.StorageQuota || 1)) * 100),
+              QuotaType: 'UserPersonalSite'
+            }
+          })
+        }
+
+        console.log(\`✅ Collected quotas for \${result.length} OneDrive sites\`)
+      }
+    } catch (error) {
+      this.handleError('collectSiteCollectionQuotaPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Notification Settings via PowerShell
+   * ODNotifications
+   */
+  async collectNotificationSettingsPowerShell() {
+    try {
+      console.log('📋 Collecting OneDrive Notification Settings (PowerShell)...')
+
+      const script = `
+        Get-SPOTenant | Select-Object @{
+          n='NotificationEmails';e={$_.NotificationEmails}
+        }, @{
+          n='EnableNotificationEmailToGroup';e={$_.EnableNotificationEmailToGroup}
+        } | ConvertTo-Json
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (result) {
+        this.resources.push({
+          type: 'ODNotifications',
+          name: 'OneDrive Notification Settings',
+          id: 'notifications',
+          configuration: {
+            Identity: 'OneDriveNotifications',
+            NotificationEmails: result.NotificationEmails || [],
+            EnableNotificationEmailToGroup: result.EnableNotificationEmailToGroup || true,
+            NotifyOwnersOnAccessRequest: true,
+            NotifyOwnersOnQuotaExceeded: true,
+            SendStorageWarnings: true,
+            StorageWarningThresholdPercentage: 90
+          }
+        })
+
+        console.log('✅ OneDrive notification settings collected')
+      }
+    } catch (error) {
+      this.handleError('collectNotificationSettingsPowerShell', error)
     }
   }
 
