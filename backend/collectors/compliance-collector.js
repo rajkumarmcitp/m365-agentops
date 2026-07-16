@@ -97,7 +97,7 @@ export class ComplianceCollector {
       // Messaging & Organization (1 resource)
       await this.collectOrganizationalMessage()
 
-      // Phase 3: Records Management & Advanced Governance (16 resources - 100% coverage)
+      // Phase 3: Records Management & Advanced Governance (16 resources - 100% COMPLETE)
       console.log('📊 Starting Compliance Phase 3 collection (records & governance)...')
 
       // Records Management (2 resources)
@@ -121,6 +121,9 @@ export class ComplianceCollector {
 
       // Exchange Integration (1 resource)
       await this.collectExchangeBinding()
+
+      // Case Management (1 resource)
+      await this.collectCasePolicyAssociation()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Compliance backup complete (${executionTime}s, ${this.resources.length} resources)`)
