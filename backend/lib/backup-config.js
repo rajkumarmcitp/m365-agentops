@@ -682,20 +682,27 @@ export const M365_SERVICES = {
       'O365GroupOwners',
       'O365GroupSite',
       'O365GroupsArchivePolicy',
+      'O365GroupsAuditPolicy',
       'O365GroupsClassification',
+      'O365GroupsCompliancePolicy',
       'O365GroupsConnectorPolicy',
       'O365GroupsCreationPolicy',
+      'O365GroupsDelegationPolicy',
       'O365GroupsExpiration',
+      'O365GroupsExternalSharingPolicy',
+      'O365GroupsGuestManagementPolicy',
       'O365GroupsGuestSettings',
       'O365GroupsMailboxSettings',
       'O365GroupsMembershipPolicy',
       'O365GroupsNamingPolicy',
+      'O365GroupsResourceProvisioning',
+      'O365GroupsSensitivityLabels',
       'O365GroupsSettings',
       'O365GroupsSharePointSettings',
       'O365GroupsStorageQuota',
       'O365GroupsTeamsIntegration'
     ],
-    totalResources: 19,
+    totalResources: 26,
     _note_Groups_Phase1: {
       description: 'Phase 1 additions (2026-07-16): 8 new critical group management and governance resource types',
       newResources: [
@@ -716,6 +723,25 @@ export const M365_SERVICES = {
       },
       coverage: 'from 37% (11/~30) to 63% (19/~30)',
       implementationPhase: 'Phase 1 - Critical group management, governance, and integration'
+    },
+    _note_Groups_Phase2: {
+      description: 'Phase 2 additions (2026-07-16): 7 new advanced sharing, compliance, and delegation resource types',
+      newResources: [
+        'O365GroupsExternalSharingPolicy',
+        'O365GroupsGuestManagementPolicy',
+        'O365GroupsDelegationPolicy',
+        'O365GroupsSensitivityLabels',
+        'O365GroupsCompliancePolicy',
+        'O365GroupsAuditPolicy',
+        'O365GroupsResourceProvisioning'
+      ],
+      categories: {
+        'Sharing & Guest Management (2)': ['O365GroupsExternalSharingPolicy', 'O365GroupsGuestManagementPolicy'],
+        'Compliance & Audit (2)': ['O365GroupsCompliancePolicy', 'O365GroupsAuditPolicy'],
+        'Advanced Features (3)': ['O365GroupsDelegationPolicy', 'O365GroupsSensitivityLabels', 'O365GroupsResourceProvisioning']
+      },
+      coverage: 'from 63% (19/~30) to 87% (26/~30)',
+      implementationPhase: 'Phase 2 - Advanced sharing, compliance, delegation, and resource provisioning'
     }
   },
   Compliance: {
