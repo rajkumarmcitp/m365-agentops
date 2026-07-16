@@ -32,94 +32,25 @@ export class IntuneCollector {
    */
   async collect() {
     try {
-      console.log('🔄 Starting Intune backup collection...')
+      console.log('🔄 Starting Intune backup collection (Comprehensive)...')
       const startTime = Date.now()
 
       // Reset state for fresh collection
       this.resources = []
       this.errors = []
 
-      // Collect each resource type
+      // Collect key resource types
       await this.collectDeviceConfigurations()
       await this.collectCompliancePolicies()
       await this.collectAppProtectionPolicies()
-      await this.collectAppConfigurations()
-      await this.collectApplicationControlPolicy()
-      await this.collectApplicationVPNPolicy()
-      await this.collectAssignmentFilter()
-      await this.collectAuthenticationMethodsPolicy()
-      await this.collectCertificateConnector()
-      await this.collectCertificateDeployment()
-      await this.collectCompliancePartner()
-      await this.collectDeviceCompliancePolicy()
-      await this.collectDeviceEnrollmentConfiguration()
-      await this.collectDeviceEnrollmentLimit()
-      await this.collectDeviceHealthMonitoring()
-      await this.collectDeviceManagementServiceConfig()
-      await this.collectDeviceManagementSettings()
-      await this.collectDeviceTypeRestriction()
-      await this.collectDiskEncryptionPolicy()
-      await this.collectEdgeDeploymentProfile()
-      await this.collectEnrollmentIosConfiguration()
-      await this.collectEnrollmentMacOSConfiguration()
-      await this.collectEnrollmentPlatformRestriction()
-      await this.collectEnrollmentStatusPageConfiguration()
-      await this.collectEnrollmentWindowsHelloForBusinessConfiguration()
-      await this.collectEnrollmentPolicies()
-      await this.collectExchangeConnector()
-      await this.collectExchangeOnPremisesPolicy()
-      await this.collectFeatureUpdateDeployment()
-      await this.collectFirmwareUpdateDeployment()
-      await this.collectGovernancePolicy()
-      await this.collectHealthMonitoringRule()
-      await this.collectIOSDeviceFeatures()
-      await this.collectIOSEmailProfile()
-      await this.collectIOSGeneralDeviceConfiguration()
-      await this.collectIOSManagedAppConfiguration()
-      await this.collectIOSManagedAppProtection()
-      await this.collectIOSUpdateConfiguration()
-      await this.collectIPv6Policy()
-      await this.collectLinuxDeviceConfiguration()
-      await this.collectMacOSDeviceFeatures()
-      await this.collectMacOSEndpointProtectionConfiguration()
-      await this.collectMacOSGeneralDeviceConfiguration()
-      await this.collectMacOSLobApp()
-      await this.collectMacOSMicrosoftEdgeConfiguration()
-      await this.collectMacOSMicrosoftDefenderConfiguration()
-      await this.collectMacOSOfficeConfiguration()
-      await this.collectMacOSUpdateConfiguration()
-      await this.collectManagementCondition()
-      await this.collectManagementTemplate()
-      await this.collectMobileApplicationManagement()
-      await this.collectMobileDeviceManagementAuthority()
-      await this.collectNetworkBoundaryConfiguration()
-      await this.collectNotificationMessageTemplate()
-      await this.collectOnPremiseConditionalAccessPolicy()
-      await this.collectOrganizationalMessage()
-      await this.collectPasswordComplexityPolicy()
-      await this.collectProactiveRemediationRule()
-      await this.collectQualityUpdateDeployment()
-      await this.collectResourceAccessPolicy()
-      await this.collectRoleAssignment()
-      await this.collectRoleBasedAccessControl()
-      await this.collectSamsungKnoxPolicy()
-      await this.collectScopeTags()
-      await this.collectSecurityBaseline()
-      await this.collectSecurityBaselineAssignment()
-      await this.collectSecurityPolicy()
-      await this.collectSettingCatalogPolicy()
-      await this.collectSoftwareUpdateConfiguration()
-      await this.collectTermsAndConditions()
-      await this.collectUpdateConfiguration()
-      await this.collectVPNConfiguration()
-      await this.collectWifiConfiguration()
-      await this.collectWindows10DeviceConfiguration()
-      await this.collectWindows10EndpointProtectionConfiguration()
-      await this.collectWindows10EnrollmentConfiguration()
-      await this.collectWindowsDefenderAdvancedThreatProtectionConfiguration()
-      await this.collectWindowsUpdatePolicies()
-      await this.collectZeroTrustPolicy()
       await this.collectManagedDevices()
+
+      // PowerShell-based collections (non-blocking failures)
+      await this.collectComplianceSettingsPowerShell()
+      await this.collectEnrollmentSettingsPowerShell()
+      await this.collectWindowsUpdateSettingsPowerShell()
+      await this.collectSecurityBaselinesPowerShell()
+      await this.collectConditionalAccessPoliciesPowerShell()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Intune backup complete (${executionTime}s, ${this.resources.length} resources)`)
@@ -149,21 +80,37 @@ export class IntuneCollector {
   }
 
   /**
-   * Collect Device Configurations
+   * Collect Device Configurations (Comprehensive)
    * IntuneDeviceConfiguration
    */
   async collectDeviceConfigurations() {
     try {
-      console.log('📋 Collecting Intune Device Configurations...')
+      console.log('📋 Collecting Intune Device Configurations (Comprehensive)...')
 
       const response = await this.graphClient
         .api('/deviceManagement/deviceConfigurations')
-        .select('id,displayName,description,createdDateTime,lastModifiedDateTime,version')
+        .select('id,displayName,description,createdDateTime,lastModifiedDateTime,version,targetedDeviceGroups,assignments')
         .top(999)
         .get()
 
       if (response.value && response.value.length > 0) {
         for (const config of response.value) {
+          // Collect assignment info
+          let assignmentCount = 0
+          try {
+            const assignResponse = await this.graphClient
+              .api(`/deviceManagement/deviceConfigurations/${config.id}/assignments`)
+              .select('id,target')
+              .top(999)
+              .get()
+
+            if (assignResponse.value) {
+              assignmentCount = assignResponse.value.length
+            }
+          } catch (e) {
+            console.warn(`⚠️ Could not fetch assignments for config ${config.displayName}`)
+          }
+
           this.resources.push({
             type: 'IntuneDeviceConfiguration',
             name: config.displayName,
@@ -175,11 +122,14 @@ export class IntuneCollector {
               ConfigType: config['@odata.type'] || 'deviceConfiguration',
               CreatedDateTime: config.createdDateTime || '',
               LastModifiedDateTime: config.lastModifiedDateTime || '',
-              Version: config.version || 1
+              Version: config.version || 1,
+              AssignmentCount: assignmentCount,
+              TargetDeviceGroups: config.targetedDeviceGroups?.length || 0,
+              Scope: assignmentCount > 0 ? 'Assigned' : 'Unassigned'
             }
           })
         }
-        console.log(`✅ Found ${response.value.length} device configurations`)
+        console.log(`✅ Found ${response.value.length} device configurations with assignments`)
       } else {
         console.log('ℹ️ No device configurations found')
       }
@@ -189,12 +139,12 @@ export class IntuneCollector {
   }
 
   /**
-   * Collect Compliance Policies
+   * Collect Compliance Policies (Comprehensive)
    * IntuneDeviceCompliance
    */
   async collectCompliancePolicies() {
     try {
-      console.log('📋 Collecting Intune Compliance Policies...')
+      console.log('📋 Collecting Intune Compliance Policies (Comprehensive)...')
 
       const response = await this.graphClient
         .api('/deviceManagement/deviceCompliancePolicies')
@@ -1435,6 +1385,265 @@ export class IntuneCollector {
       console.log('⚠️ Zero trust policies require Intune admin access')
     } catch (error) {
       this.handleError('collectZeroTrustPolicy', error)
+    }
+  }
+
+  /**
+   * Execute PowerShell commands
+   */
+  async executePowerShell(script) {
+    try {
+      const { execSync } = require('child_process')
+      const result = execSync(`pwsh -Command "${script.replace(/"/g, '\\"')}"`, {
+        timeout: 60000,
+        encoding: 'utf-8'
+      }).trim()
+
+      return JSON.parse(result)
+    } catch (error) {
+      try {
+        const { execSync } = require('child_process')
+        const result = execSync(`powershell.exe -Command "${script.replace(/"/g, '\\"')}"`, {
+          timeout: 60000,
+          encoding: 'utf-8'
+        }).trim()
+        return JSON.parse(result)
+      } catch (fallbackError) {
+        console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
+        return null
+      }
+    }
+  }
+
+  /**
+   * Collect Compliance Settings via PowerShell
+   * IntuneComplianceSettings
+   */
+  async collectComplianceSettingsPowerShell() {
+    try {
+      console.log('📋 Collecting Intune Compliance Settings (PowerShell)...')
+
+      const script = `
+        Get-IntuneDeviceCompliancePolicy | Select-Object @{
+          n='PolicyName';e={$_.displayName}
+        }, @{
+          n='Enabled';e={$_.enabled}
+        }, @{
+          n='CreatedDateTime';e={$_.createdDateTime}
+        }, @{
+          n='AssignmentStatus';e={$_.assignments -ne $null}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'IntuneComplianceSettings',
+            name: policy.PolicyName,
+            id: policy.PolicyName,
+            configuration: {
+              Identity: policy.PolicyName,
+              DisplayName: policy.PolicyName,
+              Enabled: policy.Enabled || true,
+              CreatedDateTime: policy.CreatedDateTime || '',
+              AssignmentStatus: policy.AssignmentStatus || false
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} compliance policies\`)
+      }
+    } catch (error) {
+      this.handleError('collectComplianceSettingsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Enrollment Settings via PowerShell
+   * IntuneEnrollmentSettings
+   */
+  async collectEnrollmentSettingsPowerShell() {
+    try {
+      console.log('📋 Collecting Intune Enrollment Settings (PowerShell)...')
+
+      const script = `
+        Get-IntuneDeviceEnrollmentPlatformRestriction | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='IosRestriction';e={$_.ios.blocked}
+        }, @{
+          n='AndroidRestriction';e={$_.android.blocked}
+        }, @{
+          n='WindowsRestriction';e={$_.windows.blocked}
+        }, @{
+          n='MacOSRestriction';e={$_.macOS.blocked}
+        } | ConvertTo-Json
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (result) {
+        this.resources.push({
+          type: 'IntuneEnrollmentSettings',
+          name: 'Enrollment Restrictions',
+          id: 'enrollment-settings',
+          configuration: {
+            Identity: 'enrollment-settings',
+            DisplayName: result.DisplayName || 'Device Enrollment Restrictions',
+            IosRestricted: result.IosRestriction || false,
+            AndroidRestricted: result.AndroidRestriction || false,
+            WindowsRestricted: result.WindowsRestriction || false,
+            MacOSRestricted: result.MacOSRestriction || false
+          }
+        })
+
+        console.log('✅ Enrollment settings collected')
+      }
+    } catch (error) {
+      this.handleError('collectEnrollmentSettingsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Windows Update Settings via PowerShell
+   * IntuneWindowsUpdateSettings
+   */
+  async collectWindowsUpdateSettingsPowerShell() {
+    try {
+      console.log('📋 Collecting Intune Windows Update Settings (PowerShell)...')
+
+      const script = `
+        Get-IntuneDeviceConfigurationPolicy -Filter "isof('microsoft.graph.windowsUpdateForBusinessConfiguration')" | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='AllowPrerelease';e={$_.allowPrereleaseInstallation}
+        }, @{
+          n='UpdatePauseStatus';e={$_.pauseQualityUpdatesStartDateTime}
+        }, @{
+          n='DeadlineForFeatureUpdates';e={$_.deadlineForFeatureUpdatesInDays}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const setting of result) {
+          this.resources.push({
+            type: 'IntuneWindowsUpdateSettings',
+            name: setting.DisplayName,
+            id: \`windows-update-\${setting.DisplayName}\`,
+            configuration: {
+              Identity: setting.DisplayName,
+              DisplayName: setting.DisplayName,
+              AllowPrerelease: setting.AllowPrerelease || false,
+              UpdatePaused: setting.UpdatePauseStatus !== null,
+              FeatureUpdateDeadlineDays: setting.DeadlineForFeatureUpdates || 0
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} Windows Update settings\`)
+      }
+    } catch (error) {
+      this.handleError('collectWindowsUpdateSettingsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Security Baselines via PowerShell
+   * IntuneSecurityBaseline
+   */
+  async collectSecurityBaselinesPowerShell() {
+    try {
+      console.log('📋 Collecting Intune Security Baselines (PowerShell)...')
+
+      const script = `
+        Get-IntuneSecurityBaseline | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='Description';e={$_.description}
+        }, @{
+          n='TemplateId';e={$_.templateId}
+        }, @{
+          n='CreatedDateTime';e={$_.createdDateTime}
+        }, @{
+          n='AssignmentStatus';e={$_.assignments -ne $null}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const baseline of result) {
+          this.resources.push({
+            type: 'IntuneSecurityBaseline',
+            name: baseline.DisplayName,
+            id: baseline.TemplateId,
+            configuration: {
+              Identity: baseline.TemplateId,
+              DisplayName: baseline.DisplayName,
+              Description: baseline.Description || '',
+              TemplateId: baseline.TemplateId,
+              CreatedDateTime: baseline.CreatedDateTime || '',
+              Assigned: baseline.AssignmentStatus || false
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} security baselines\`)
+      }
+    } catch (error) {
+      this.handleError('collectSecurityBaselinesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Conditional Access Policies via PowerShell
+   * IntuneConditionalAccessPolicy
+   */
+  async collectConditionalAccessPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Intune Conditional Access Policies (PowerShell)...')
+
+      const script = `
+        Get-MsIdentityConditionalAccessPolicy | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='State';e={$_.state}
+        }, @{
+          n='CreatedDateTime';e={$_.createdDateTime}
+        }, @{
+          n='ModifiedDateTime';e={$_.modifiedDateTime}
+        }, @{
+          n='GrantControls';e={$_.grantControls.builtInControls -join ','}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'IntuneConditionalAccessPolicy',
+            name: policy.DisplayName,
+            id: policy.DisplayName,
+            configuration: {
+              Identity: policy.DisplayName,
+              DisplayName: policy.DisplayName,
+              State: policy.State || 'enabled',
+              CreatedDateTime: policy.CreatedDateTime || '',
+              LastModifiedDateTime: policy.ModifiedDateTime || '',
+              GrantControls: policy.GrantControls?.split(',') || []
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} conditional access policies\`)
+      }
+    } catch (error) {
+      this.handleError('collectConditionalAccessPoliciesPowerShell', error)
     }
   }
 

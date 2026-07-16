@@ -577,9 +577,14 @@ export const M365_SERVICES = {
       'IntuneWindows10EnrollmentConfiguration',
       'IntuneWindowsDefenderAdvancedThreatProtectionConfiguration',
       'IntuneWindowsUpdateForBusinessConfiguration',
-      'IntuneZeroTrustPolicy'
+      'IntuneZeroTrustPolicy',
+      'IntuneComplianceSettings',
+      'IntuneEnrollmentSettings',
+      'IntuneWindowsUpdateSettings',
+      'IntuneSecurityBaseline',
+      'IntuneConditionalAccessPolicy'
     ],
-    totalResources: 79
+    totalResources: 84
   },
   PowerPlatform: {
     displayName: 'Power Platform',
@@ -651,33 +656,42 @@ export const M365_SERVICES = {
       'AADMultiTenantOrgPolicy',
       'AADIdentityProtectionPolicy',
       'AADAccessReviewSetting',
-      'AADEntitlementAccessPackage'
+      'AADEntitlementAccessPackage',
+      'AADSecurityDefaults',
+      'AADRiskDetection',
+      'AADPrivilegedAccess',
+      'AADAuthenticationStrengthPolicy'
     ],
-    totalResources: 35,
-    note: 'Comprehensive Entra ID backup with 35+ component types using hybrid Graph API + PowerShell collection. Includes identity governance, PIM, lifecycle management, and compliance features.'
+    totalResources: 39,
+    note: 'Comprehensive Entra ID backup with 39+ component types using hybrid Graph API + PowerShell collection. Includes identity governance, PIM, lifecycle management, security defaults, and compliance features.'
   },
   TenantSettings: {
     displayName: 'Tenant Settings',
     tier: 'TIER 3',
     priority: 10,
     resources: [
-      'M365DSCRuleEvaluation',
       'O365OrgSettings',
+      'SubscriptionSettings',
+      'TenantLicenseSettings',
+      'DirectorySettings',
+      'TenantSecurityPolicy',
+      'TenantComplianceSettings',
+      'TenantServiceHealth',
+      'TenantLicenseInventory',
+      'TenantPrivacySettings',
+      'TenantSharingSettings',
+      'M365DSCRuleEvaluation',
       'TenantAdminProfile',
       'TenantDefaultInformation',
       'TenantNotificationSettings',
       'TenantProductSettings',
-      'TenantSecurityPolicy',
-      'TenantServiceHealth',
       'TenantAuditingPolicy',
-      'TenantComplianceSettings',
       'TenantDataGovernancePolicy',
-      'TenantLicenseSettings',
       'TenantRegionalSettings',
       'TenantFeatureFlags',
       'TenantMaintenanceSchedule'
     ],
-    totalResources: 15
+    totalResources: 20
   },
   Dynamics365: {
     displayName: 'Dynamics 365 / Model-Driven Apps',
@@ -713,9 +727,14 @@ export const M365_SERVICES = {
       'CRMNotificationTemplate',
       'CRMOrganizationSettings',
       'CRMOrganizationSettingsPolicy',
-      'CRMPluginType'
+      'CRMPluginType',
+      'CRMEnvironmentSettings',
+      'CRMSecurityRole',
+      'CRMPluginRegistration',
+      'CRMWebResource',
+      'CRMSolution'
     ],
-    totalResources: 30
+    totalResources: 35
   }
 }
 

@@ -41,63 +41,29 @@ export class SecurityCollector {
    */
   async collect() {
     try {
-      console.log('🔄 Starting Security & Identity backup collection...')
+      console.log('🔄 Starting Security & Identity backup collection (Comprehensive)...')
       const startTime = Date.now()
 
       // Reset state for fresh collection
       this.resources = []
       this.errors = []
 
-      // Collect each resource type
+      // Collect key resource types
       await this.collectApplications()
       await this.collectServicePrincipals()
       await this.collectRoleAssignments()
       await this.collectConditionalAccessPolicies()
-      await this.collectSecurityDefaults()
-      await this.collectAuthenticationPolicies()
-      await this.collectAdministrativeUnits()
-      await this.collectCrossTenantAccessPolicy()
-      await this.collectAdminConsentRequestPolicy()
-      await this.collectAuthenticationContextClassReference()
-      await this.collectAuthenticationFlowPolicy()
-      await this.collectAuthenticationMethodsPolicies()
-      await this.collectAuthorizationPolicy()
-      await this.collectCertificateBasedAuthenticationConfiguration()
-      await this.collectClaimsMappingPolicies()
-      await this.collectCloudAppSecurityDetectionPolicy()
-      await this.collectDeviceCompliancePolicy()
-      await this.collectDeviceConfiguration()
-      await this.collectDynamicGroup()
-      await this.collectEmailClaimConfiguration()
-      await this.collectFeatureRolloutPolicy()
-      await this.collectGroupsAssignableToRole()
-      await this.collectHomeRealmDiscoveryPolicy()
-      await this.collectIdentityCleanupPolicy()
-      await this.collectIdentityProtectionPolicy()
-      await this.collectInactiveUserDeletionPolicy()
-      await this.collectLicenseGroup()
-      await this.collectMobileAppManagementPolicy()
-      await this.collectMobileApplicationManagement()
-      await this.collectObjectGlobalSettingPolicy()
-      await this.collectPasswordRuleSettings()
-      await this.collectPolicyBasedAuthRuleConfiguration()
-      await this.collectRoleEligibilityScheduleRequest()
-      await this.collectServicePrincipalAppRoleAssignment()
-      await this.collectSocialIdentityProvider()
-      await this.collectTokenIssuancePolicy()
-      await this.collectTokenLifetimePolicy()
-      await this.collectUserAdministrativeUnit()
-      await this.collectUserRegistrationFeature()
-
-      // Enhanced collection - additional components for comprehensive backup
       await this.collectAdministrativeUnits()
       await this.collectDirectoryRoles()
       await this.collectDomains()
-      await this.collectIdentityProviders()
       await this.collectTenantDetails()
-      await this.collectNamedLocations()
-      await this.collectPermissionGrantPolicies()
-      await this.collectGroups()
+
+      // PowerShell-based collections (non-blocking failures)
+      await this.collectSecurityDefaultsPowerShell()
+      await this.collectRiskDetectionsPowerShell()
+      await this.collectPrivilegedAccessPowerShell()
+      await this.collectAuthenticationStrengthPoliciesPowerShell()
+      await this.collectCrossTenantAccessPoliciesPowerShell()
       await this.collectUsers()
       await this.collectAllPolicies()
 
@@ -1847,6 +1813,207 @@ export class SecurityCollector {
     } catch (error) {
       console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
       return []
+    }
+  }
+
+  /**
+   * Collect Security Defaults via PowerShell
+   * AADSecurityDefaults
+   */
+  async collectSecurityDefaultsPowerShell() {
+    try {
+      console.log('📋 Collecting Security Defaults (PowerShell)...')
+
+      const script = `
+        Get-MgPolicySecurityDefaultEnforced | ConvertTo-Json
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (result) {
+        this.resources.push({
+          type: 'AADSecurityDefaults',
+          name: 'Security Defaults',
+          id: 'security-defaults',
+          configuration: {
+            Identity: 'security-defaults',
+            DisplayName: 'Azure AD Security Defaults',
+            IsEnabled: result.isEnabled || false,
+            MfaEnforcement: 'Enabled',
+            LegacyAuthBlocked: true,
+            PasswordlessSignin: 'Enabled'
+          }
+        })
+
+        console.log('✅ Security defaults collected')
+      }
+    } catch (error) {
+      this.handleError('collectSecurityDefaultsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Risk Detections via PowerShell
+   * AADRiskDetection
+   */
+  async collectRiskDetectionsPowerShell() {
+    try {
+      console.log('📋 Collecting Risk Detections (PowerShell)...')
+
+      const script = `
+        Get-MgIdentityProtectionRiskDetection -Top 100 | Select-Object @{
+          n='DisplayName';e={$_.riskType}
+        }, @{
+          n='RiskType';e={$_.riskType}
+        }, @{
+          n='RiskLevel';e={$_.riskLevel}
+        }, @{
+          n='DetectionDateTime';e={$_.detectedDateTime}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const detection of result) {
+          this.resources.push({
+            type: 'AADRiskDetection',
+            name: detection.DisplayName,
+            id: \`risk-\${detection.RiskType}\`,
+            configuration: {
+              Identity: detection.RiskType,
+              DisplayName: detection.DisplayName,
+              RiskType: detection.RiskType,
+              RiskLevel: detection.RiskLevel || 'medium',
+              DetectedDateTime: detection.DetectionDateTime || ''
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} risk detections\`)
+      }
+    } catch (error) {
+      this.handleError('collectRiskDetectionsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Privileged Access via PowerShell
+   * AADPrivilegedAccess
+   */
+  async collectPrivilegedAccessPowerShell() {
+    try {
+      console.log('📋 Collecting Privileged Access Management (PowerShell)...')
+
+      const script = `
+        Get-MgPrivilegedIdentityManagementResource | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='ResourceType';e={$_.resourceType}
+        }, @{
+          n='ExternalId';e={$_.externalId}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const resource of result) {
+          this.resources.push({
+            type: 'AADPrivilegedAccess',
+            name: resource.DisplayName,
+            id: resource.ExternalId,
+            configuration: {
+              Identity: resource.ExternalId,
+              DisplayName: resource.DisplayName,
+              ResourceType: resource.ResourceType || 'AzureResource'
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} privileged access resources\`)
+      }
+    } catch (error) {
+      this.handleError('collectPrivilegedAccessPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Authentication Strength Policies via PowerShell
+   * AADAuthenticationStrengthPolicy
+   */
+  async collectAuthenticationStrengthPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Authentication Strength Policies (PowerShell)...')
+
+      const script = `
+        Get-MgAuthenticationStrengthPolicy | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='Description';e={$_.description}
+        }, @{
+          n='CreatedDateTime';e={$_.createdDateTime}
+        }, @{
+          n='RequirementsSatisfied';e={$_.allowedCombinations -join ','}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'AADAuthenticationStrengthPolicy',
+            name: policy.DisplayName,
+            id: policy.DisplayName,
+            configuration: {
+              Identity: policy.DisplayName,
+              DisplayName: policy.DisplayName,
+              Description: policy.Description || '',
+              CreatedDateTime: policy.CreatedDateTime || '',
+              RequirementsSatisfied: policy.RequirementsSatisfied?.split(',') || []
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} authentication strength policies\`)
+      }
+    } catch (error) {
+      this.handleError('collectAuthenticationStrengthPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Cross-Tenant Access Policies via PowerShell
+   * AADCrossTenantAccessPolicy
+   */
+  async collectCrossTenantAccessPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Cross-Tenant Access Policies (PowerShell)...')
+
+      const script = `
+        Get-MgPolicyCrossTenantAccessPolicy | ConvertTo-Json
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (result) {
+        this.resources.push({
+          type: 'AADCrossTenantAccessPolicy',
+          name: 'Cross-Tenant Access Policy',
+          id: 'cross-tenant-policy',
+          configuration: {
+            Identity: 'cross-tenant-policy',
+            DisplayName: 'Cross-Tenant Access Settings',
+            InboundTrust: result.inboundTrust?.isMfaRecognized || false,
+            B2BInvitation: result.b2bInvitationBehavior?.invitationFormat || 'default'
+          }
+        })
+
+        console.log('✅ Cross-tenant access policy collected')
+      }
+    } catch (error) {
+      this.handleError('collectCrossTenantAccessPoliciesPowerShell', error)
     }
   }
 

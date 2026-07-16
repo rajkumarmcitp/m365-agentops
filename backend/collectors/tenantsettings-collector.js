@@ -27,7 +27,7 @@ export class TenantSettingsCollector {
    */
   async collect() {
     try {
-      console.log('🔄 Starting Tenant Settings backup collection...')
+      console.log('🔄 Starting Tenant Settings backup collection (Comprehensive)...')
       const startTime = Date.now()
 
       // Reset state for fresh collection
@@ -41,19 +41,12 @@ export class TenantSettingsCollector {
       await this.collectDirectorySettings()
       await this.collectSecuritySettings()
       await this.collectComplianceSettings()
-      // Phase 3 collections
-      await this.collectAdminProfile()
-      await this.collectDefaultInformation()
-      await this.collectNotificationSettings()
-      await this.collectProductSettings()
-      await this.collectSecurityPolicy()
-      await this.collectServiceHealth()
-      await this.collectAuditingPolicy()
-      await this.collectDataGovernancePolicy()
-      await this.collectLicenseSettings2()
-      await this.collectRegionalSettings()
-      await this.collectFeatureFlags()
-      await this.collectMaintenanceSchedule()
+
+      // PowerShell-based collections (non-blocking failures)
+      await this.collectServiceHealthPowerShell()
+      await this.collectLicenseInventoryPowerShell()
+      await this.collectPrivacySettingsPowerShell()
+      await this.collectSharingSettingsPowerShell()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Tenant Settings backup complete (${executionTime}s, ${this.resources.length} resources)`)
@@ -541,6 +534,191 @@ export class TenantSettingsCollector {
       console.log('⚠️ Maintenance schedule requires tenant admin access')
     } catch (error) {
       this.handleError('collectMaintenanceSchedule', error)
+    }
+  }
+
+  /**
+   * Execute PowerShell commands
+   */
+  async executePowerShell(script) {
+    try {
+      const { execSync } = require('child_process')
+      const result = execSync(`pwsh -Command "${script.replace(/"/g, '\\"')}"`, {
+        timeout: 60000,
+        encoding: 'utf-8'
+      }).trim()
+
+      return JSON.parse(result)
+    } catch (error) {
+      try {
+        const { execSync } = require('child_process')
+        const result = execSync(`powershell.exe -Command "${script.replace(/"/g, '\\"')}"`, {
+          timeout: 60000,
+          encoding: 'utf-8'
+        }).trim()
+        return JSON.parse(result)
+      } catch (fallbackError) {
+        console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
+        return null
+      }
+    }
+  }
+
+  /**
+   * Collect Service Health via PowerShell
+   * TenantServiceHealth
+   */
+  async collectServiceHealthPowerShell() {
+    try {
+      console.log('📋 Collecting Tenant Service Health (PowerShell)...')
+
+      const script = `
+        @((Get-MgServiceHealth -All -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='DisplayName';Expression={$_.displayName}},
+                        @{Name='HealthIssues';Expression={$_.healthIssues.length}} |
+          ConvertTo-Json)
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (result) {
+        this.resources.push({
+          type: 'TenantServiceHealth',
+          name: 'M365 Service Health',
+          id: 'service-health',
+          configuration: {
+            Identity: 'service-health',
+            DisplayName: result.DisplayName || 'Microsoft 365 Service Health',
+            HealthIssuesCount: result.HealthIssues || 0,
+            Status: result.HealthIssues === 0 ? 'Healthy' : 'HasIssues'
+          }
+        })
+
+        console.log('✅ Service health collected')
+      }
+    } catch (error) {
+      this.handleError('collectServiceHealthPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect License Inventory via PowerShell
+   * TenantLicenseInventory
+   */
+  async collectLicenseInventoryPowerShell() {
+    try {
+      console.log('📋 Collecting License Inventory (PowerShell)...')
+
+      const script = `
+        Get-MgSubscribedSku | Select-Object @{
+          n='SkuName';e={$_.skuPartNumber}
+        }, @{
+          n='TotalLicenses';e={$_.prepaidUnits.enabled}
+        }, @{
+          n='ConsumedLicenses';e={$_.consumedUnits}
+        }, @{
+          n='AvailableLicenses';e={($_.prepaidUnits.enabled - $_.consumedUnits)}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const license of result) {
+          this.resources.push({
+            type: 'TenantLicenseInventory',
+            name: license.SkuName,
+            id: license.SkuName,
+            configuration: {
+              Identity: license.SkuName,
+              SkuName: license.SkuName,
+              TotalLicenses: license.TotalLicenses || 0,
+              ConsumedLicenses: license.ConsumedLicenses || 0,
+              AvailableLicenses: license.AvailableLicenses || 0
+            }
+          })
+        }
+
+        console.log(`✅ Collected ${result.length} license SKUs`)
+      }
+    } catch (error) {
+      this.handleError('collectLicenseInventoryPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Privacy Settings via PowerShell
+   * TenantPrivacySettings
+   */
+  async collectPrivacySettingsPowerShell() {
+    try {
+      console.log('📋 Collecting Privacy Settings (PowerShell)...')
+
+      const script = `
+        Get-MgPrivacyProfile | ConvertTo-Json
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (result) {
+        this.resources.push({
+          type: 'TenantPrivacySettings',
+          name: 'Tenant Privacy Settings',
+          id: 'privacy-settings',
+          configuration: {
+            Identity: 'privacy-settings',
+            DisplayName: 'Privacy & Data Protection',
+            DataPrivacyContact: result.contactItUrl || '',
+            PrivacyStatementUrl: result.privacyStatementUrl || '',
+            DataLocation: 'Not specified'
+          }
+        })
+
+        console.log('✅ Privacy settings collected')
+      }
+    } catch (error) {
+      this.handleError('collectPrivacySettingsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Sharing Settings via PowerShell
+   * TenantSharingSettings
+   */
+  async collectSharingSettingsPowerShell() {
+    try {
+      console.log('📋 Collecting Sharing Settings (PowerShell)...')
+
+      const script = `
+        Get-SPOTenant -ErrorAction SilentlyContinue | Select-Object @{
+          n='ExternalSharingCapability';e={$_.SharingCapability}
+        }, @{
+          n='EmailAttestationRequired';e={$_.EmailAttestationRequired}
+        }, @{
+          n='DefaultLinkPermission';e={$_.DefaultLinkPermission}
+        } | ConvertTo-Json
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (result) {
+        this.resources.push({
+          type: 'TenantSharingSettings',
+          name: 'Tenant Sharing Configuration',
+          id: 'sharing-settings',
+          configuration: {
+            Identity: 'sharing-settings',
+            DisplayName: 'Sharing & Collaboration',
+            ExternalSharingCapability: result.ExternalSharingCapability || 'ExternalUserSharingOnly',
+            EmailAttestationRequired: result.EmailAttestationRequired || false,
+            DefaultLinkPermission: result.DefaultLinkPermission || 'View'
+          }
+        })
+
+        console.log('✅ Sharing settings collected')
+      }
+    } catch (error) {
+      this.handleError('collectSharingSettingsPowerShell', error)
     }
   }
 

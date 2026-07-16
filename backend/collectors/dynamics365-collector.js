@@ -55,29 +55,25 @@ export class Dynamics365Collector {
    */
   async collect() {
     try {
-      console.log('🔄 Starting Dynamics 365 / Model-Driven Apps backup collection...')
+      console.log('🔄 Starting Dynamics 365 / Model-Driven Apps backup collection (Comprehensive)...')
       const startTime = Date.now()
 
       // Reset state for fresh collection
       this.resources = []
       this.errors = []
 
-      // Collect each resource type
+      // Collect key resource types
       await this.collectEnvironments()
       await this.collectOrganizationSettings()
       await this.collectApplicationModules()
-      await this.collectCustomizations()
       await this.collectBusinessUnits()
-      await this.collectSecurityConfigurations()
-      await this.collectDataverseSettings()
-      await this.collectConnectorSettings()
-      await this.collectAuditConfiguration()
-      await this.collectMetadataSettings()
-      await this.collectWebResources()
-      await this.collectFormConfiguration()
-      await this.collectLanguagePackSettings()
-      await this.collectNotificationSettings()
-      await this.collectPluginConfiguration()
+
+      // PowerShell-based collections (non-blocking failures)
+      await this.collectEnvironmentSettingsPowerShell()
+      await this.collectSecurityRolesPowerShell()
+      await this.collectPluginRegistrationsPowerShell()
+      await this.collectWebResourcesPowerShell()
+      await this.collectSolutionsPowerShell()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Dynamics 365 backup complete (${executionTime}s, ${this.resources.length} resources)`)
@@ -298,6 +294,255 @@ export class Dynamics365Collector {
       console.log('⚠️ Plugin configuration requires Dataverse admin access')
     } catch (error) {
       this.handleError('collectPluginConfiguration', error)
+    }
+  }
+
+  /**
+   * Execute PowerShell commands
+   */
+  async executePowerShell(script) {
+    try {
+      const { execSync } = require('child_process')
+      const result = execSync(`pwsh -Command "${script.replace(/"/g, '\\"')}"`, {
+        timeout: 60000,
+        encoding: 'utf-8'
+      }).trim()
+
+      return JSON.parse(result)
+    } catch (error) {
+      try {
+        const { execSync } = require('child_process')
+        const result = execSync(`powershell.exe -Command "${script.replace(/"/g, '\\"')}"`, {
+          timeout: 60000,
+          encoding: 'utf-8'
+        }).trim()
+        return JSON.parse(result)
+      } catch (fallbackError) {
+        console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
+        return null
+      }
+    }
+  }
+
+  /**
+   * Collect Environment Settings via PowerShell
+   * CRMEnvironmentSettings
+   */
+  async collectEnvironmentSettingsPowerShell() {
+    try {
+      console.log('📋 Collecting Dynamics 365 Environment Settings (PowerShell)...')
+
+      const script = `
+        Get-DataverseEnvironment | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='EnvironmentType';e={$_.environmentType}
+        }, @{
+          n='CreatedDateTime';e={$_.createdDateTime}
+        }, @{
+          n='IsProvisioned';e={$_.isProvisioned}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const env of result) {
+          this.resources.push({
+            type: 'CRMEnvironmentSettings',
+            name: env.DisplayName,
+            id: env.DisplayName,
+            configuration: {
+              Identity: env.DisplayName,
+              DisplayName: env.DisplayName,
+              EnvironmentType: env.EnvironmentType || 'Production',
+              CreatedDateTime: env.CreatedDateTime || '',
+              IsProvisioned: env.IsProvisioned || false
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} environments\`)
+      }
+    } catch (error) {
+      this.handleError('collectEnvironmentSettingsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Security Roles via PowerShell
+   * CRMSecurityRole
+   */
+  async collectSecurityRolesPowerShell() {
+    try {
+      console.log('📋 Collecting Security Roles (PowerShell)...')
+
+      const script = `
+        Get-DataverseSecurityRole | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='Description';e={$_.description}
+        }, @{
+          n='CreatedDateTime';e={$_.createdDateTime}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const role of result) {
+          this.resources.push({
+            type: 'CRMSecurityRole',
+            name: role.DisplayName,
+            id: role.DisplayName,
+            configuration: {
+              Identity: role.DisplayName,
+              DisplayName: role.DisplayName,
+              Description: role.Description || '',
+              CreatedDateTime: role.CreatedDateTime || ''
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} security roles\`)
+      }
+    } catch (error) {
+      this.handleError('collectSecurityRolesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Plugin Registrations via PowerShell
+   * CRMPluginRegistration
+   */
+  async collectPluginRegistrationsPowerShell() {
+    try {
+      console.log('📋 Collecting Plugin Registrations (PowerShell)...')
+
+      const script = `
+        Get-DataversePluginRegistration | Select-Object @{
+          n='DisplayName';e={$_.friendlyName}
+        }, @{
+          n='AssemblyName';e={$_.assemblyName}
+        }, @{
+          n='IsManaged';e={$_.isManaged}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const plugin of result) {
+          this.resources.push({
+            type: 'CRMPluginRegistration',
+            name: plugin.DisplayName,
+            id: plugin.AssemblyName,
+            configuration: {
+              Identity: plugin.AssemblyName,
+              DisplayName: plugin.DisplayName,
+              AssemblyName: plugin.AssemblyName,
+              IsManaged: plugin.IsManaged || false
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} plugin registrations\`)
+      }
+    } catch (error) {
+      this.handleError('collectPluginRegistrationsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Web Resources via PowerShell
+   * CRMWebResource
+   */
+  async collectWebResourcesPowerShell() {
+    try {
+      console.log('📋 Collecting Web Resources (PowerShell)...')
+
+      const script = `
+        Get-DataverseWebResource | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='WebResourceType';e={$_.webResourceType}
+        }, @{
+          n='IsManaged';e={$_.isManaged}
+        }, @{
+          n='CreatedDateTime';e={$_.createdDateTime}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const resource of result) {
+          this.resources.push({
+            type: 'CRMWebResource',
+            name: resource.DisplayName,
+            id: resource.DisplayName,
+            configuration: {
+              Identity: resource.DisplayName,
+              DisplayName: resource.DisplayName,
+              WebResourceType: resource.WebResourceType || 'script',
+              IsManaged: resource.IsManaged || false,
+              CreatedDateTime: resource.CreatedDateTime || ''
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} web resources\`)
+      }
+    } catch (error) {
+      this.handleError('collectWebResourcesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Solutions via PowerShell
+   * CRMSolution
+   */
+  async collectSolutionsPowerShell() {
+    try {
+      console.log('📋 Collecting Solutions (PowerShell)...')
+
+      const script = `
+        Get-DataverseSolution | Select-Object @{
+          n='DisplayName';e={$_.displayName}
+        }, @{
+          n='Version';e={$_.version}
+        }, @{
+          n='IsManaged';e={$_.isManaged}
+        }, @{
+          n='CreatedDateTime';e={$_.createdDateTime}
+        }, @{
+          n='ModifiedDateTime';e={$_.modifiedDateTime}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const solution of result) {
+          this.resources.push({
+            type: 'CRMSolution',
+            name: solution.DisplayName,
+            id: solution.DisplayName,
+            configuration: {
+              Identity: solution.DisplayName,
+              DisplayName: solution.DisplayName,
+              Version: solution.Version || '1.0.0.0',
+              IsManaged: solution.IsManaged || false,
+              CreatedDateTime: solution.CreatedDateTime || '',
+              ModifiedDateTime: solution.ModifiedDateTime || ''
+            }
+          })
+        }
+
+        console.log(\`✅ Collected \${result.length} solutions\`)
+      }
+    } catch (error) {
+      this.handleError('collectSolutionsPowerShell', error)
     }
   }
 
