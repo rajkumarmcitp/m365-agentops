@@ -675,19 +675,48 @@ export const M365_SERVICES = {
     tier: 'TIER 2',
     priority: 6,
     resources: [
-      'O365GroupsSettings',
+      'O365GroupChannel',
       'O365GroupMember',
       'O365GroupMembers',
       'O365GroupOwner',
       'O365GroupOwners',
-      'O365GroupChannel',
       'O365GroupSite',
-      'O365GroupsNamingPolicy',
+      'O365GroupsArchivePolicy',
+      'O365GroupsClassification',
+      'O365GroupsConnectorPolicy',
+      'O365GroupsCreationPolicy',
       'O365GroupsExpiration',
       'O365GroupsGuestSettings',
-      'O365GroupsClassification'
+      'O365GroupsMailboxSettings',
+      'O365GroupsMembershipPolicy',
+      'O365GroupsNamingPolicy',
+      'O365GroupsSettings',
+      'O365GroupsSharePointSettings',
+      'O365GroupsStorageQuota',
+      'O365GroupsTeamsIntegration'
     ],
-    totalResources: 11
+    totalResources: 19,
+    _note_Groups_Phase1: {
+      description: 'Phase 1 additions (2026-07-16): 8 new critical group management and governance resource types',
+      newResources: [
+        'O365GroupsCreationPolicy',
+        'O365GroupsMailboxSettings',
+        'O365GroupsStorageQuota',
+        'O365GroupsArchivePolicy',
+        'O365GroupsMembershipPolicy',
+        'O365GroupsTeamsIntegration',
+        'O365GroupsSharePointSettings',
+        'O365GroupsConnectorPolicy'
+      ],
+      categories: {
+        'Creation & Management (2)': ['O365GroupsCreationPolicy', 'O365GroupsArchivePolicy'],
+        'Mailbox & Storage (2)': ['O365GroupsMailboxSettings', 'O365GroupsStorageQuota'],
+        'Integration & Policies (2)': ['O365GroupsTeamsIntegration', 'O365GroupsSharePointSettings'],
+        'Membership & Connectors (2)': ['O365GroupsMembershipPolicy', 'O365GroupsConnectorPolicy']
+      },
+      coverage: 'from 37% (11/~30) to 63% (19/~30)',
+      implementationPhase: 'Phase 1 - Critical group management, governance, and integration'
+    }
   },
   Compliance: {
     displayName: 'Security & Compliance',

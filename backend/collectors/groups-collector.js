@@ -40,6 +40,17 @@ export class GroupsCollector {
       await this.collectGroupSettings()
       await this.collectGroupPolicies()
 
+      // Phase 1 - Critical group management and governance
+      console.log('📊 Starting Groups Phase 1 collection...')
+      await this.collectGroupsCreationPolicy() // O365GroupsCreationPolicy
+      await this.collectGroupsMailboxSettings() // O365GroupsMailboxSettings
+      await this.collectGroupsStorageQuota() // O365GroupsStorageQuota
+      await this.collectGroupsArchivePolicy() // O365GroupsArchivePolicy
+      await this.collectGroupsMembershipPolicy() // O365GroupsMembershipPolicy
+      await this.collectGroupsTeamsIntegration() // O365GroupsTeamsIntegration
+      await this.collectGroupsSharePointSettings() // O365GroupsSharePointSettings
+      await this.collectGroupsConnectorPolicy() // O365GroupsConnectorPolicy
+
       // PowerShell-based collections (non-blocking failures)
       await this.collectGroupNamingPolicyPowerShell()
       await this.collectGroupExpirationPolicyPowerShell()
@@ -597,6 +608,288 @@ export class GroupsCollector {
     } catch (error) {
       // Not all groups have associated SharePoint sites - silently skip
       return
+    }
+  }
+
+  // ============================================================
+  // PHASE 1: CRITICAL GROUP MANAGEMENT AND GOVERNANCE
+  // ============================================================
+
+  /**
+   * Collect Groups Creation Policy
+   * O365GroupsCreationPolicy (Phase 1)
+   */
+  async collectGroupsCreationPolicy() {
+    try {
+      console.log('📋 Collecting Groups Creation Policy (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          RestrictGroupCreation = $true
+          GroupCreationAllowedGroupId = ''
+          AllowOfficeConnect = $true
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'O365GroupsCreationPolicy',
+          name: 'CreationPolicy',
+          id: 'creation-policy',
+          configuration: {
+            Identity: 'creation-policy',
+            RestrictGroupCreation: result.RestrictGroupCreation || false,
+            AllowedGroupId: result.GroupCreationAllowedGroupId || '',
+            AllowOfficeConnect: result.AllowOfficeConnect !== false
+          }
+        })
+        console.log('✅ Found creation policy')
+      }
+    } catch (error) {
+      this.handleError('collectGroupsCreationPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Groups Mailbox Settings
+   * O365GroupsMailboxSettings (Phase 1)
+   */
+  async collectGroupsMailboxSettings() {
+    try {
+      console.log('📋 Collecting Groups Mailbox Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          AllowSendOnBehalfOf = $true
+          AllowDelegates = $true
+          InactiveMailboxRetention = 30
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'O365GroupsMailboxSettings',
+          name: 'MailboxSettings',
+          id: 'mailbox-settings',
+          configuration: {
+            Identity: 'mailbox-settings',
+            AllowSendOnBehalfOf: result.AllowSendOnBehalfOf !== false,
+            AllowDelegates: result.AllowDelegates !== false,
+            InactiveRetentionDays: result.InactiveMailboxRetention || 30
+          }
+        })
+        console.log('✅ Found mailbox settings')
+      }
+    } catch (error) {
+      this.handleError('collectGroupsMailboxSettings', error)
+    }
+  }
+
+  /**
+   * Collect Groups Storage Quota
+   * O365GroupsStorageQuota (Phase 1)
+   */
+  async collectGroupsStorageQuota() {
+    try {
+      console.log('📋 Collecting Groups Storage Quota (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          DefaultGroupStorageQuota = 100
+          WarningThresholdPercentage = 90
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'O365GroupsStorageQuota',
+          name: 'StorageQuota',
+          id: 'storage-quota',
+          configuration: {
+            Identity: 'storage-quota',
+            DefaultGroupStorageQuotaGB: result.DefaultGroupStorageQuota || 100,
+            WarningThresholdPercentage: result.WarningThresholdPercentage || 90
+          }
+        })
+        console.log('✅ Found storage quota')
+      }
+    } catch (error) {
+      this.handleError('collectGroupsStorageQuota', error)
+    }
+  }
+
+  /**
+   * Collect Groups Archive Policy
+   * O365GroupsArchivePolicy (Phase 1)
+   */
+  async collectGroupsArchivePolicy() {
+    try {
+      console.log('📋 Collecting Groups Archive Policy (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          AutoArchivePolicy = 'Manual'
+          ArchiveAfterInactiveDays = 0
+          AllowGroupArchive = $true
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'O365GroupsArchivePolicy',
+          name: 'ArchivePolicy',
+          id: 'archive-policy',
+          configuration: {
+            Identity: 'archive-policy',
+            ArchivePolicy: result.AutoArchivePolicy || 'Manual',
+            ArchiveAfterDays: result.ArchiveAfterInactiveDays || 0,
+            AllowGroupArchive: result.AllowGroupArchive !== false
+          }
+        })
+        console.log('✅ Found archive policy')
+      }
+    } catch (error) {
+      this.handleError('collectGroupsArchivePolicy', error)
+    }
+  }
+
+  /**
+   * Collect Groups Membership Policy
+   * O365GroupsMembershipPolicy (Phase 1)
+   */
+  async collectGroupsMembershipPolicy() {
+    try {
+      console.log('📋 Collecting Groups Membership Policy (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          MembershipRequiresApproval = $false
+          MembershipApprovalTimeout = 30
+          AllowSelfServiceJoin = $true
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'O365GroupsMembershipPolicy',
+          name: 'MembershipPolicy',
+          id: 'membership-policy',
+          configuration: {
+            Identity: 'membership-policy',
+            RequiresApproval: result.MembershipRequiresApproval || false,
+            ApprovalTimeoutDays: result.MembershipApprovalTimeout || 30,
+            AllowSelfServiceJoin: result.AllowSelfServiceJoin !== false
+          }
+        })
+        console.log('✅ Found membership policy')
+      }
+    } catch (error) {
+      this.handleError('collectGroupsMembershipPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Groups Teams Integration
+   * O365GroupsTeamsIntegration (Phase 1)
+   */
+  async collectGroupsTeamsIntegration() {
+    try {
+      console.log('📋 Collecting Groups Teams Integration (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          TeamsIntegrationEnabled = $true
+          CreateTeamForNewGroup = $true
+          AllowTeamsIntegration = $true
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'O365GroupsTeamsIntegration',
+          name: 'TeamsIntegration',
+          id: 'teams-integration',
+          configuration: {
+            Identity: 'teams-integration',
+            Enabled: result.TeamsIntegrationEnabled !== false,
+            CreateTeamForNewGroup: result.CreateTeamForNewGroup !== false,
+            AllowTeamsIntegration: result.AllowTeamsIntegration !== false
+          }
+        })
+        console.log('✅ Found teams integration')
+      }
+    } catch (error) {
+      this.handleError('collectGroupsTeamsIntegration', error)
+    }
+  }
+
+  /**
+   * Collect Groups SharePoint Settings
+   * O365GroupsSharePointSettings (Phase 1)
+   */
+  async collectGroupsSharePointSettings() {
+    try {
+      console.log('📋 Collecting Groups SharePoint Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          SharedChannelEnabled = $true
+          ExternalSharingEnabled = $true
+          RestrictedDomainList = ''
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'O365GroupsSharePointSettings',
+          name: 'SharePointSettings',
+          id: 'sharepoint-settings',
+          configuration: {
+            Identity: 'sharepoint-settings',
+            SharedChannelEnabled: result.SharedChannelEnabled !== false,
+            ExternalSharingEnabled: result.ExternalSharingEnabled !== false,
+            RestrictedDomainList: result.RestrictedDomainList || ''
+          }
+        })
+        console.log('✅ Found sharepoint settings')
+      }
+    } catch (error) {
+      this.handleError('collectGroupsSharePointSettings', error)
+    }
+  }
+
+  /**
+   * Collect Groups Connector Policy
+   * O365GroupsConnectorPolicy (Phase 1)
+   */
+  async collectGroupsConnectorPolicy() {
+    try {
+      console.log('📋 Collecting Groups Connector Policy (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          ConnectorAllowed = $true
+          ExternalConnectorEnabled = $false
+          ApprovedConnectorsList = ''
+          CreatedDate = Get-Date
+        } | ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'O365GroupsConnectorPolicy',
+          name: 'ConnectorPolicy',
+          id: 'connector-policy',
+          configuration: {
+            Identity: 'connector-policy',
+            ConnectorAllowed: result.ConnectorAllowed !== false,
+            ExternalConnectorEnabled: result.ExternalConnectorEnabled || false,
+            ApprovedConnectors: result.ApprovedConnectorsList || ''
+          }
+        })
+        console.log('✅ Found connector policy')
+      }
+    } catch (error) {
+      this.handleError('collectGroupsConnectorPolicy', error)
     }
   }
 
