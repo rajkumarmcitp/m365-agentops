@@ -61,6 +61,19 @@ export class SharePointCollector {
       await this.collectMultiGeoConfiguration() // SPOMultiGeoConfiguration
       await this.collectSharingSettings() // SPOSharingSettings
 
+      // Phase 2 - Advanced governance and compliance
+      console.log('📊 Starting SharePoint Phase 2 collection...')
+      await this.collectInformationBarrierPolicies() // SPOInformationBarrier
+      await this.collectSensitivityLabels() // SPOSensitivityLabel
+      await this.collectDLPPolicies() // SPODLPPolicy
+      await this.collectOrgNewsSiteSettings() // SPOOrgNewsSite
+      await this.collectOrgAssetsLibrarySettings() // SPOOrgAssetsLibrary
+      await this.collectSearchConfiguration() // SPOSearchConfiguration
+      await this.collectManagedProperties() // SPOManagedProperty
+      await this.collectContentTypeHub() // SPOContentTypeHub
+      await this.collectPowerPlatformIntegration() // SPOPowerPlatformIntegration
+      await this.collectSiteCollectionAdmins() // SPOSiteCollectionAdmin
+
       // Stub methods for future enhancement
       await this.collectCompatibilityRange()
       await this.collectDataConnectionLibrary()
@@ -510,8 +523,28 @@ export class SharePointCollector {
    */
   async collectCompatibilityRange() {
     try {
-      console.log('📋 Collecting Compatibility Range Settings...')
-      console.log('⚠️ Compatibility range requires SharePoint Admin Center access')
+      console.log('📋 Collecting Compatibility Range Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          CompatibilityRange = (Get-SPOCompatibilityRange -ErrorAction SilentlyContinue)
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOCompatibilityRange',
+          name: 'CompatibilityRange',
+          id: 'compatibility-range',
+          configuration: {
+            Identity: 'compatibility-range',
+            CompatibilityRange: result.CompatibilityRange || '14',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found compatibility range setting')
+      }
     } catch (error) {
       this.handleError('collectCompatibilityRange', error)
     }
@@ -1313,6 +1346,425 @@ export class SharePointCollector {
       }
     } catch (error) {
       this.handleError('collectMultiGeoConfiguration', error)
+    }
+  }
+
+  // ============================================================
+  // PHASE 2: ADVANCED RESOURCE COLLECTORS
+  // ============================================================
+
+  /**
+   * Collect Information Barrier Policies
+   * SPOInformationBarrier (Phase 2)
+   */
+  async collectInformationBarrierPolicies() {
+    try {
+      console.log('📋 Collecting SPO Information Barrier Policies (PowerShell)...')
+      const script = `
+        @((Get-InformationBarrierPolicy -ErrorAction SilentlyContinue) |
+          Select-Object -First 999 |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              State = $_.State
+              SegmentGroupFilter = $_.SegmentGroupFilter
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'SPOInformationBarrier',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              State: policy.State || 'Enabled',
+              SegmentGroupFilter: policy.SegmentGroupFilter || '',
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} information barrier policies`)
+      }
+    } catch (error) {
+      this.handleError('collectInformationBarrierPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Sensitivity Labels
+   * SPOSensitivityLabel (Phase 2)
+   */
+  async collectSensitivityLabels() {
+    try {
+      console.log('📋 Collecting SPO Sensitivity Labels (PowerShell)...')
+      const script = `
+        @((Get-Label -ErrorAction SilentlyContinue) |
+          Select-Object -First 999 |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Guid = $_.Guid
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              Priority = $_.Priority
+              Enabled = $_.Enabled
+              CreatedDate = $_.CreatedDate
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const label of result) {
+          this.resources.push({
+            type: 'SPOSensitivityLabel',
+            name: label.DisplayName,
+            id: label.Guid,
+            configuration: {
+              Identity: label.Guid,
+              DisplayName: label.DisplayName || '',
+              Description: label.Description || '',
+              Priority: label.Priority || 0,
+              Enabled: label.Enabled !== false,
+              CreatedDate: label.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} sensitivity labels`)
+      }
+    } catch (error) {
+      this.handleError('collectSensitivityLabels', error)
+    }
+  }
+
+  /**
+   * Collect DLP (Data Loss Prevention) Policies
+   * SPODLPPolicy (Phase 2)
+   */
+  async collectDLPPolicies() {
+    try {
+      console.log('📋 Collecting SPO DLP Policies (PowerShell)...')
+      const script = `
+        @((Get-DlpCompliancePolicy -ErrorAction SilentlyContinue) |
+          Where-Object { $_.ExchangeLocation -or $_.SharePointLocation } |
+          Select-Object -First 999 |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Guid = $_.Guid
+              Name = $_.Name
+              Description = $_.Description
+              Enabled = $_.Enabled
+              Priority = $_.Priority
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'SPODLPPolicy',
+            name: policy.Name,
+            id: policy.Guid,
+            configuration: {
+              Identity: policy.Guid,
+              Name: policy.Name || '',
+              Description: policy.Description || '',
+              Enabled: policy.Enabled !== false,
+              Priority: policy.Priority || 0,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} DLP policies`)
+      }
+    } catch (error) {
+      this.handleError('collectDLPPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Org New Site Notification
+   * SPOOrgNewsSite (Phase 2)
+   */
+  async collectOrgNewsSiteSettings() {
+    try {
+      console.log('📋 Collecting SPO Org News Site (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          OrgNewsSiteUrl = (Get-SPOOrgNewsSite -ErrorAction SilentlyContinue)
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result && result.OrgNewsSiteUrl) {
+        this.resources.push({
+          type: 'SPOOrgNewsSite',
+          name: 'OrgNewsSite',
+          id: 'org-news-site',
+          configuration: {
+            Identity: 'org-news-site',
+            OrgNewsSiteUrl: result.OrgNewsSiteUrl || '',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found org news site')
+      }
+    } catch (error) {
+      this.handleError('collectOrgNewsSiteSettings', error)
+    }
+  }
+
+  /**
+   * Collect Org Assets Library
+   * SPOOrgAssetsLibrary (Phase 2)
+   */
+  async collectOrgAssetsLibrarySettings() {
+    try {
+      console.log('📋 Collecting SPO Org Assets Library (PowerShell)...')
+      const script = `
+        @((Get-SPOOrgAssetsLibrary -ErrorAction SilentlyContinue) |
+          Select-Object -First 999 |
+          ForEach-Object {
+            [PSCustomObject]@{
+              LibraryUrl = $_.LibraryUrl
+              DisplayName = $_.DisplayName
+              ThumbnailUrl = $_.ThumbnailUrl
+              CreatedDate = Get-Date
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const lib of result) {
+          this.resources.push({
+            type: 'SPOOrgAssetsLibrary',
+            name: lib.DisplayName || lib.LibraryUrl.split('/').pop(),
+            id: lib.LibraryUrl,
+            configuration: {
+              Identity: lib.LibraryUrl,
+              LibraryUrl: lib.LibraryUrl || '',
+              DisplayName: lib.DisplayName || '',
+              ThumbnailUrl: lib.ThumbnailUrl || '',
+              CreatedDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} org asset libraries`)
+      }
+    } catch (error) {
+      this.handleError('collectOrgAssetsLibrarySettings', error)
+    }
+  }
+
+  /**
+   * Collect Search Configuration
+   * SPOSearchConfiguration (Phase 2)
+   */
+  async collectSearchConfiguration() {
+    try {
+      console.log('📋 Collecting SPO Search Configuration (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          SearchSettings = (Get-SPOSearchSettings -ErrorAction SilentlyContinue)
+          DiscoveryEnabled = (Get-SPOTenant -ErrorAction SilentlyContinue).DiscoveryPageViewLogEnabled
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOSearchConfiguration',
+          name: 'SearchConfiguration',
+          id: 'search-config',
+          configuration: {
+            Identity: 'search-config',
+            SearchSettings: result.SearchSettings || '',
+            DiscoveryEnabled: result.DiscoveryEnabled || false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found search configuration')
+      }
+    } catch (error) {
+      this.handleError('collectSearchConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Managed Properties
+   * SPOManagedProperty (Phase 2)
+   */
+  async collectManagedProperties() {
+    try {
+      console.log('📋 Collecting SPO Managed Properties (PowerShell)...')
+      const script = `
+        @((Get-SPOManagedProperty -ErrorAction SilentlyContinue) |
+          Select-Object -First 999 |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Name = $_.Name
+              Type = $_.Type
+              Queryable = $_.Queryable
+              Retrievable = $_.Retrievable
+              Refiner = $_.Refiner
+              Sortable = $_.Sortable
+              CreatedDate = Get-Date
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const prop of result) {
+          this.resources.push({
+            type: 'SPOManagedProperty',
+            name: prop.Name,
+            id: prop.Name,
+            configuration: {
+              Identity: prop.Name,
+              Name: prop.Name || '',
+              Type: prop.Type || 'Text',
+              Queryable: prop.Queryable || false,
+              Retrievable: prop.Retrievable || false,
+              Refiner: prop.Refiner || false,
+              Sortable: prop.Sortable || false,
+              CreatedDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} managed properties`)
+      }
+    } catch (error) {
+      this.handleError('collectManagedProperties', error)
+    }
+  }
+
+  /**
+   * Collect Content Type Hub
+   * SPOContentTypeHub (Phase 2)
+   */
+  async collectContentTypeHub() {
+    try {
+      console.log('📋 Collecting SPO Content Type Hub (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          ContentTypeHubUrl = (Get-SPOContentTypePublishingHubSettings -ErrorAction SilentlyContinue).ContentTypeHubUrl
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result && result.ContentTypeHubUrl) {
+        this.resources.push({
+          type: 'SPOContentTypeHub',
+          name: 'ContentTypeHub',
+          id: 'content-type-hub',
+          configuration: {
+            Identity: 'content-type-hub',
+            ContentTypeHubUrl: result.ContentTypeHubUrl || '',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found content type hub')
+      }
+    } catch (error) {
+      this.handleError('collectContentTypeHub', error)
+    }
+  }
+
+  /**
+   * Collect Power Platform Integration
+   * SPOPowerPlatformIntegration (Phase 2)
+   */
+  async collectPowerPlatformIntegration() {
+    try {
+      console.log('📋 Collecting SPO Power Platform Integration (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          PowerAppsEnabled = (Get-SPOTenant -ErrorAction SilentlyContinue).PowerAppsEnabled
+          PowerFlowEnabled = (Get-SPOTenant -ErrorAction SilentlyContinue).PowerFlowEnabled
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOPowerPlatformIntegration',
+          name: 'PowerPlatformIntegration',
+          id: 'power-platform-integration',
+          configuration: {
+            Identity: 'power-platform-integration',
+            PowerAppsEnabled: result.PowerAppsEnabled !== false,
+            PowerFlowEnabled: result.PowerFlowEnabled !== false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found power platform integration settings')
+      }
+    } catch (error) {
+      this.handleError('collectPowerPlatformIntegration', error)
+    }
+  }
+
+  /**
+   * Collect Site Collections with Advanced Settings
+   * SPOSiteCollectionAdmin (Phase 2)
+   */
+  async collectSiteCollectionAdmins() {
+    try {
+      console.log('📋 Collecting SPO Site Collection Admins (PowerShell)...')
+      const script = `
+        @((Get-SPOSite -Limit All -ErrorAction SilentlyContinue) |
+          Where-Object { $_.Url -and -not $_.IsPublic } |
+          Select-Object -First 999 |
+          ForEach-Object {
+            [PSCustomObject]@{
+              SiteUrl = $_.Url
+              Owner = $_.Owner
+              SecondaryOwners = @($_.SecondaryOwners)
+              Template = $_.Template
+              CommClassification = $_.CommClassification
+              CreatedDate = $_.CreatedDate
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const site of result) {
+          this.resources.push({
+            type: 'SPOSiteCollectionAdmin',
+            name: site.SiteUrl.split('/').pop() || site.SiteUrl,
+            id: site.SiteUrl,
+            configuration: {
+              Identity: site.SiteUrl,
+              SiteUrl: site.SiteUrl || '',
+              Owner: site.Owner || '',
+              SecondaryOwners: Array.isArray(site.SecondaryOwners) ? site.SecondaryOwners : [],
+              Template: site.Template || '',
+              CommClassification: site.CommClassification || '',
+              CreatedDate: site.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} site collection admins`)
+      }
+    } catch (error) {
+      this.handleError('collectSiteCollectionAdmins', error)
     }
   }
 
