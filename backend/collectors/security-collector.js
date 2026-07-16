@@ -101,6 +101,20 @@ export class SecurityCollector {
       await this.collectUsers()
       await this.collectAllPolicies()
 
+      // PowerShell collection - components not available via Graph API
+      console.log('📊 Starting PowerShell-based collection for advanced components...')
+      await this.collectEntitlementManagementCatalogs()
+      await this.collectLifecycleWorkflows()
+      await this.collectB2XUserFlows()
+      await this.collectCustomSecurityAttributes()
+      await this.collectAppManagementPolicies()
+      await this.collectPIMRoleEligibilitySchedules()
+      await this.collectPIMActivationRequests()
+      await this.collectMultiTenantOrgPolicies()
+      await this.collectIdentityProtectionPolicies()
+      await this.collectAccessReviewSettings()
+      await this.collectEntitlementAccessPackages()
+
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Security backup complete (${executionTime}s, ${this.resources.length} resources)`)
 
@@ -1030,7 +1044,6 @@ export class SecurityCollector {
       const response = await this.graphClient
         .api('/directoryRoles')
         .select('id,displayName,description,roleTemplateId')
-        .top(999)
         .get()
 
       if (response.value && response.value.length > 0) {
@@ -1064,7 +1077,7 @@ export class SecurityCollector {
       console.log('📋 Collecting Domains...')
       const response = await this.graphClient
         .api('/domains')
-        .select('id,authenticationType,isDefault,isVerified,createdDateTime')
+        .select('id,authenticationType,isDefault,isVerified')
         .get()
 
       if (response.value && response.value.length > 0) {
@@ -1077,8 +1090,7 @@ export class SecurityCollector {
               Identity: domain.id,
               AuthenticationType: domain.authenticationType || '',
               IsDefault: domain.isDefault || false,
-              IsVerified: domain.isVerified || false,
-              CreatedDateTime: domain.createdDateTime || ''
+              IsVerified: domain.isVerified || false
             }
           })
         }
@@ -1099,19 +1111,18 @@ export class SecurityCollector {
       console.log('📋 Collecting Identity Providers...')
       const response = await this.graphClient
         .api('/identityProviders')
-        .select('id,displayName,clientId,type')
-        .top(999)
+        .select('id,name,type,clientId')
         .get()
 
       if (response.value && response.value.length > 0) {
         for (const provider of response.value) {
           this.resources.push({
             type: 'AADIdentityProvider',
-            name: provider.displayName,
+            name: provider.name || provider.id,
             id: provider.id,
             configuration: {
               Identity: provider.id,
-              DisplayName: provider.displayName || '',
+              Name: provider.name || '',
               Type: provider.type || '',
               ClientId: provider.clientId || ''
             }
@@ -1206,21 +1217,19 @@ export class SecurityCollector {
       console.log('📋 Collecting Permission Grant Policies...')
       const response = await this.graphClient
         .api('/policies/permissionGrantPolicies')
-        .select('id,displayName,description,createdDateTime')
-        .top(999)
+        .select('id,displayName,description')
         .get()
 
       if (response.value && response.value.length > 0) {
         for (const policy of response.value) {
           this.resources.push({
             type: 'AADPermissionGrantPolicy',
-            name: policy.displayName,
+            name: policy.displayName || policy.id,
             id: policy.id,
             configuration: {
               Identity: policy.id,
               DisplayName: policy.displayName || '',
-              Description: policy.description || '',
-              CreatedDateTime: policy.createdDateTime || ''
+              Description: policy.description || ''
             }
           })
         }
@@ -1349,6 +1358,495 @@ export class SecurityCollector {
       }
     } catch (error) {
       this.handleError('collectAllPolicies', error)
+    }
+  }
+
+  // ============================================================
+  // POWERSHELL COLLECTION METHODS - Graph API Unavailable Components
+  // ============================================================
+
+  /**
+   * Collect Entitlement Management Catalogs via PowerShell
+   */
+  async collectEntitlementManagementCatalogs() {
+    try {
+      console.log('📋 Collecting Entitlement Management Catalogs (PowerShell)...')
+
+      const script = `
+        @((Get-MgBetaEntitlementManagementCatalog -All -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='id';Expression={$_.id}},
+                        @{Name='displayName';Expression={$_.displayName}},
+                        @{Name='description';Expression={$_.description}},
+                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
+          ConvertTo-Json -Depth 1)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const catalog of result) {
+          this.resources.push({
+            type: 'AADEntitlementManagementCatalog',
+            name: catalog.displayName || catalog.id,
+            id: catalog.id,
+            configuration: {
+              Identity: catalog.id,
+              DisplayName: catalog.displayName || '',
+              Description: catalog.description || '',
+              CreatedDateTime: catalog.createdDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} entitlement management catalogs`)
+      } else {
+        console.log('ℹ️ No entitlement management catalogs found')
+      }
+    } catch (error) {
+      this.handleError('collectEntitlementManagementCatalogs', error)
+    }
+  }
+
+  /**
+   * Collect Lifecycle Workflows via PowerShell
+   */
+  async collectLifecycleWorkflows() {
+    try {
+      console.log('📋 Collecting Lifecycle Workflows (PowerShell)...')
+
+      const script = `
+        @((Get-MgIdentityGovernanceLifecycleWorkflow -All -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='id';Expression={$_.id}},
+                        @{Name='displayName';Expression={$_.displayName}},
+                        @{Name='description';Expression={$_.description}},
+                        @{Name='enabled';Expression={$_.enabled}},
+                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
+          ConvertTo-Json -Depth 1)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const workflow of result) {
+          this.resources.push({
+            type: 'AADLifecycleWorkflow',
+            name: workflow.displayName || workflow.id,
+            id: workflow.id,
+            configuration: {
+              Identity: workflow.id,
+              DisplayName: workflow.displayName || '',
+              Description: workflow.description || '',
+              Enabled: workflow.enabled || false,
+              CreatedDateTime: workflow.createdDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} lifecycle workflows`)
+      } else {
+        console.log('ℹ️ No lifecycle workflows found')
+      }
+    } catch (error) {
+      this.handleError('collectLifecycleWorkflows', error)
+    }
+  }
+
+  /**
+   * Collect B2X User Flows via PowerShell
+   */
+  async collectB2XUserFlows() {
+    try {
+      console.log('📋 Collecting B2X User Flows (PowerShell)...')
+
+      const script = `
+        @((Get-MgIdentityB2XUserFlow -All -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='id';Expression={$_.id}},
+                        @{Name='displayName';Expression={$_.displayName}},
+                        @{Name='userFlowType';Expression={$_.userFlowType}},
+                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
+          ConvertTo-Json -Depth 1)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const flow of result) {
+          this.resources.push({
+            type: 'AADB2XUserFlow',
+            name: flow.displayName || flow.id,
+            id: flow.id,
+            configuration: {
+              Identity: flow.id,
+              DisplayName: flow.displayName || '',
+              UserFlowType: flow.userFlowType || '',
+              CreatedDateTime: flow.createdDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} B2X user flows`)
+      } else {
+        console.log('ℹ️ No B2X user flows found')
+      }
+    } catch (error) {
+      this.handleError('collectB2XUserFlows', error)
+    }
+  }
+
+  /**
+   * Collect Custom Security Attributes via PowerShell
+   */
+  async collectCustomSecurityAttributes() {
+    try {
+      console.log('📋 Collecting Custom Security Attributes (PowerShell)...')
+
+      const script = `
+        @((Get-MgDirectoryAttributeSet -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='id';Expression={$_.id}},
+                        @{Name='displayName';Expression={$_.displayName}},
+                        @{Name='description';Expression={$_.description}} |
+          ConvertTo-Json -Depth 1)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const attr of result) {
+          this.resources.push({
+            type: 'AADCustomSecurityAttribute',
+            name: attr.displayName || attr.id,
+            id: attr.id,
+            configuration: {
+              Identity: attr.id,
+              DisplayName: attr.displayName || '',
+              Description: attr.description || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} custom security attributes`)
+      } else {
+        console.log('ℹ️ No custom security attributes found')
+      }
+    } catch (error) {
+      this.handleError('collectCustomSecurityAttributes', error)
+    }
+  }
+
+  /**
+   * Collect App Management Policies via PowerShell
+   */
+  async collectAppManagementPolicies() {
+    try {
+      console.log('📋 Collecting App Management Policies (PowerShell)...')
+
+      const script = `
+        @((Get-MgPolicyAppManagementPolicy -All -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='id';Expression={$_.id}},
+                        @{Name='displayName';Expression={$_.displayName}},
+                        @{Name='description';Expression={$_.description}},
+                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
+          ConvertTo-Json -Depth 1)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'AADAppManagementPolicy',
+            name: policy.displayName || policy.id,
+            id: policy.id,
+            configuration: {
+              Identity: policy.id,
+              DisplayName: policy.displayName || '',
+              Description: policy.description || '',
+              CreatedDateTime: policy.createdDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} app management policies`)
+      } else {
+        console.log('ℹ️ No app management policies found')
+      }
+    } catch (error) {
+      this.handleError('collectAppManagementPolicies', error)
+    }
+  }
+
+  /**
+   * Collect PIM Role Eligibility Schedules via PowerShell
+   */
+  async collectPIMRoleEligibilitySchedules() {
+    try {
+      console.log('📋 Collecting PIM Role Eligibility Schedules (PowerShell)...')
+
+      const script = `
+        @((Get-MgRoleManagementDirectoryRoleEligibilitySchedule -All -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='id';Expression={$_.id}},
+                        @{Name='principalId';Expression={$_.principalId}},
+                        @{Name='roleDefinitionId';Expression={$_.roleDefinitionId}},
+                        @{Name='startDateTime';Expression={$_.startDateTime}},
+                        @{Name='endDateTime';Expression={$_.endDateTime}} |
+          ConvertTo-Json -Depth 1)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const schedule of result) {
+          this.resources.push({
+            type: 'AADPIMRoleEligibilitySchedule',
+            name: `${schedule.principalId}-${schedule.roleDefinitionId}`,
+            id: schedule.id,
+            configuration: {
+              Identity: schedule.id,
+              PrincipalId: schedule.principalId || '',
+              RoleDefinitionId: schedule.roleDefinitionId || '',
+              StartDateTime: schedule.startDateTime || '',
+              EndDateTime: schedule.endDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} PIM role eligibility schedules`)
+      } else {
+        console.log('ℹ️ No PIM role eligibility schedules found')
+      }
+    } catch (error) {
+      this.handleError('collectPIMRoleEligibilitySchedules', error)
+    }
+  }
+
+  /**
+   * Collect PIM Activation Requests via PowerShell
+   */
+  async collectPIMActivationRequests() {
+    try {
+      console.log('📋 Collecting PIM Activation Requests (PowerShell)...')
+
+      const script = `
+        @((Get-MgRoleManagementDirectoryRoleAssignmentScheduleRequest -All -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='id';Expression={$_.id}},
+                        @{Name='principalId';Expression={$_.principalId}},
+                        @{Name='roleDefinitionId';Expression={$_.roleDefinitionId}},
+                        @{Name='action';Expression={$_.action}},
+                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
+          ConvertTo-Json -Depth 1)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const request of result) {
+          this.resources.push({
+            type: 'AADPIMActivationRequest',
+            name: `${request.principalId}-${request.action}`,
+            id: request.id,
+            configuration: {
+              Identity: request.id,
+              PrincipalId: request.principalId || '',
+              RoleDefinitionId: request.roleDefinitionId || '',
+              Action: request.action || '',
+              CreatedDateTime: request.createdDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} PIM activation requests`)
+      } else {
+        console.log('ℹ️ No PIM activation requests found')
+      }
+    } catch (error) {
+      this.handleError('collectPIMActivationRequests', error)
+    }
+  }
+
+  /**
+   * Collect Multi-tenant Organization Policies via PowerShell
+   */
+  async collectMultiTenantOrgPolicies() {
+    try {
+      console.log('📋 Collecting Multi-tenant Organization Policies (PowerShell)...')
+
+      const script = `
+        @((Get-MgBetaMultiTenantOrganization -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='id';Expression={$_.id}},
+                        @{Name='displayName';Expression={$_.displayName}},
+                        @{Name='description';Expression={$_.description}},
+                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
+          ConvertTo-Json -Depth 1)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'AADMultiTenantOrgPolicy',
+            name: policy.displayName || policy.id,
+            id: policy.id,
+            configuration: {
+              Identity: policy.id,
+              DisplayName: policy.displayName || '',
+              Description: policy.description || '',
+              CreatedDateTime: policy.createdDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} multi-tenant organization policies`)
+      } else {
+        console.log('ℹ️ No multi-tenant organization policies found')
+      }
+    } catch (error) {
+      this.handleError('collectMultiTenantOrgPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Identity Protection Policies via PowerShell
+   */
+  async collectIdentityProtectionPolicies() {
+    try {
+      console.log('📋 Collecting Identity Protection Policies (PowerShell)...')
+
+      const script = `
+        @((Get-MgIdentityProtectionRiskyUser -All -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='id';Expression={$_.id}},
+                        @{Name='displayName';Expression={$_.displayName}},
+                        @{Name='userPrincipalName';Expression={$_.userPrincipalName}},
+                        @{Name='riskLevel';Expression={$_.riskLevel}},
+                        @{Name='lastUpdatedDateTime';Expression={$_.lastUpdatedDateTime}} |
+          ConvertTo-Json -Depth 1)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'AADIdentityProtectionPolicy',
+            name: policy.displayName || policy.userPrincipalName || policy.id,
+            id: policy.id,
+            configuration: {
+              Identity: policy.id,
+              DisplayName: policy.displayName || '',
+              UserPrincipalName: policy.userPrincipalName || '',
+              RiskLevel: policy.riskLevel || '',
+              LastUpdatedDateTime: policy.lastUpdatedDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} identity protection policies`)
+      } else {
+        console.log('ℹ️ No identity protection policies found')
+      }
+    } catch (error) {
+      this.handleError('collectIdentityProtectionPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Access Review Settings via PowerShell
+   */
+  async collectAccessReviewSettings() {
+    try {
+      console.log('📋 Collecting Access Review Settings (PowerShell)...')
+
+      const script = `
+        @((Get-MgIdentityGovernanceAccessReviewDefinition -All -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='id';Expression={$_.id}},
+                        @{Name='displayName';Expression={$_.displayName}},
+                        @{Name='descriptionForAdmins';Expression={$_.descriptionForAdmins}},
+                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
+          ConvertTo-Json -Depth 1)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const setting of result) {
+          this.resources.push({
+            type: 'AADAccessReviewSetting',
+            name: setting.displayName || setting.id,
+            id: setting.id,
+            configuration: {
+              Identity: setting.id,
+              DisplayName: setting.displayName || '',
+              Description: setting.descriptionForAdmins || '',
+              CreatedDateTime: setting.createdDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} access review settings`)
+      } else {
+        console.log('ℹ️ No access review settings found')
+      }
+    } catch (error) {
+      this.handleError('collectAccessReviewSettings', error)
+    }
+  }
+
+  /**
+   * Collect Entitlement Management Access Packages via PowerShell
+   */
+  async collectEntitlementAccessPackages() {
+    try {
+      console.log('📋 Collecting Entitlement Management Access Packages (PowerShell)...')
+
+      const script = `
+        @((Get-MgBetaEntitlementManagementAccessPackage -All -ErrorAction SilentlyContinue) |
+          Select-Object @{Name='id';Expression={$_.id}},
+                        @{Name='displayName';Expression={$_.displayName}},
+                        @{Name='description';Expression={$_.description}},
+                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
+          ConvertTo-Json -Depth 1)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const pkg of result) {
+          this.resources.push({
+            type: 'AADEntitlementAccessPackage',
+            name: pkg.displayName || pkg.id,
+            id: pkg.id,
+            configuration: {
+              Identity: pkg.id,
+              DisplayName: pkg.displayName || '',
+              Description: pkg.description || '',
+              CreatedDateTime: pkg.createdDateTime || ''
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} entitlement access packages`)
+      } else {
+        console.log('ℹ️ No entitlement access packages found')
+      }
+    } catch (error) {
+      this.handleError('collectEntitlementAccessPackages', error)
+    }
+  }
+
+  /**
+   * Execute PowerShell script safely
+   */
+  async executePowerShell(script) {
+    try {
+      const { exec } = await import('child_process')
+      const { promisify } = await import('util')
+
+      const execAsync = promisify(exec)
+
+      const psCommand = `
+        \$ErrorActionPreference = 'Continue'
+        ${script}
+      `
+
+      // Use pwsh if available, fallback to powershell
+      let command = `pwsh -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
+
+      try {
+        const { stdout } = await execAsync(command, { timeout: 60000 })
+        if (stdout && stdout.trim()) {
+          return JSON.parse(stdout)
+        }
+        return []
+      } catch (psError) {
+        // Fallback to powershell.exe on Windows
+        command = `powershell -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
+        const { stdout } = await execAsync(command, { timeout: 60000 })
+        if (stdout && stdout.trim()) {
+          return JSON.parse(stdout)
+        }
+        return []
+      }
+    } catch (error) {
+      console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
+      return []
     }
   }
 

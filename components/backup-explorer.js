@@ -178,7 +178,7 @@ function renderServiceItem(serviceName, data, latestBackup, resourceCount) {
                     transition:all 0.2s;
                     background:var(--color-background-secondary);
                     border-bottom:1px solid var(--color-border)
-                  " onmouseover="this.style.background='var(--color-background-primary)'" onmouseout="this.style.background='var(--color-background-secondary)'">
+                  ">
                     <i class="ti ti-chevron-right toggle-icon-backup" style="font-size:12px;transition:transform 0.3s ease;transform:rotate(0deg);width:14px;text-align:center"></i>
                     <i class="ti ti-calendar" style="font-size:14px"></i>
                     <span>${new Date(latestBackup.timestamp).toLocaleString()}</span>
@@ -371,7 +371,7 @@ function renderResourceTree(grouped, backupId) {
                     transition:all 0.2s;
                     background:${idx % 2 === 0 ? 'transparent' : 'var(--color-background-primary)'};
                     border-bottom:1px solid var(--color-border)
-                  ">>
+                  ">
                     <input type="checkbox" class="resource-checkbox" data-resource-id="${r.identity || r.name}" data-name="${r.name}" style="cursor:pointer;width:16px;height:16px">
                     <i class="ti ti-file-document" style="font-size:13px;color:var(--color-text-secondary)"></i>
                     <span style="flex:1;color:var(--color-text)">${r.name || r.type}</span>

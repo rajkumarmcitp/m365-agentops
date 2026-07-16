@@ -619,10 +619,21 @@ export const M365_SERVICES = {
       'AADHomeRealmDiscoveryPolicy',
       'AADTokenIssuancePolicy',
       'AADTokenLifetimePolicy',
-      'AADClaimsMappingPolicy'
+      'AADClaimsMappingPolicy',
+      'AADEntitlementManagementCatalog',
+      'AADLifecycleWorkflow',
+      'AADB2XUserFlow',
+      'AADCustomSecurityAttribute',
+      'AADAppManagementPolicy',
+      'AADPIMRoleEligibilitySchedule',
+      'AADPIMActivationRequest',
+      'AADMultiTenantOrgPolicy',
+      'AADIdentityProtectionPolicy',
+      'AADAccessReviewSetting',
+      'AADEntitlementAccessPackage'
     ],
-    totalResources: 24,
-    note: 'Comprehensive Entra ID backup with 24+ component types. Supports Graph API for available components, with PowerShell extension for additional resources.'
+    totalResources: 35,
+    note: 'Comprehensive Entra ID backup with 35+ component types using hybrid Graph API + PowerShell collection. Includes identity governance, PIM, lifecycle management, and compliance features.'
   },
   TenantSettings: {
     displayName: 'Tenant Settings',
