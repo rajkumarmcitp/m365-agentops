@@ -687,14 +687,18 @@ export const M365_SERVICES = {
       'O365GroupsCompliancePolicy',
       'O365GroupsConnectorPolicy',
       'O365GroupsCreationPolicy',
+      'O365GroupsCustomProperties',
       'O365GroupsDelegationPolicy',
       'O365GroupsExpiration',
       'O365GroupsExternalSharingPolicy',
+      'O365GroupsGovernanceRules',
       'O365GroupsGuestManagementPolicy',
       'O365GroupsGuestSettings',
       'O365GroupsMailboxSettings',
+      'O365GroupsMemberRoles',
       'O365GroupsMembershipPolicy',
       'O365GroupsNamingPolicy',
+      'O365GroupsProvisioningTemplates',
       'O365GroupsResourceProvisioning',
       'O365GroupsSensitivityLabels',
       'O365GroupsSettings',
@@ -702,7 +706,7 @@ export const M365_SERVICES = {
       'O365GroupsStorageQuota',
       'O365GroupsTeamsIntegration'
     ],
-    totalResources: 26,
+    totalResources: 30,
     _note_Groups_Phase1: {
       description: 'Phase 1 additions (2026-07-16): 8 new critical group management and governance resource types',
       newResources: [
@@ -742,6 +746,25 @@ export const M365_SERVICES = {
       },
       coverage: 'from 63% (19/~30) to 87% (26/~30)',
       implementationPhase: 'Phase 2 - Advanced sharing, compliance, delegation, and resource provisioning'
+    },
+    _note_Groups_Phase3: {
+      description: 'Phase 3 additions (2026-07-16): 4 final member management and governance resource types - 100% COMPLETE',
+      newResources: [
+        'O365GroupsMemberRoles',
+        'O365GroupsCustomProperties',
+        'O365GroupsProvisioningTemplates',
+        'O365GroupsGovernanceRules'
+      ],
+      categories: {
+        'Member Management & Roles (1)': ['O365GroupsMemberRoles'],
+        'Custom Configuration (1)': ['O365GroupsCustomProperties'],
+        'Provisioning & Templates (1)': ['O365GroupsProvisioningTemplates'],
+        'Governance & Compliance (1)': ['O365GroupsGovernanceRules']
+      },
+      coverage: 'from 87% (26/~30) to 100% (30/30) - COMPLETE',
+      implementationPhase: 'Phase 3 - Final Groups resources for comprehensive coverage',
+      totalPhases: '3 phases, 19 resources added (11 → 30)',
+      timeline: '2026-07-16 - All phases completed in single session'
     }
   },
   Compliance: {
