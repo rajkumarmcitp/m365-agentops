@@ -34,49 +34,24 @@ export class ComplianceCollector {
    */
   async collect() {
     try {
-      console.log('🔄 Starting Security & Compliance Center backup collection...')
+      console.log('🔄 Starting Security & Compliance Center backup collection (Comprehensive)...')
       const startTime = Date.now()
 
       // Reset state for fresh collection
       this.resources = []
       this.errors = []
 
-      // Collect each resource type
+      // Collect key compliance resources
       await this.collectSensitivityLabels()
       await this.collectInformationProtectionPolicies()
-      await this.collectRetentionPolicies()
-      await this.collectDLPPolicies()
       await this.collectDataGovernanceSettings()
-      await this.collectSupervisionPolicies()
-      await this.collectConversationSearchTopicIndex()
-      await this.collectDataClassification()
-      await this.collectEdgeCaseHoldPolicy()
-      await this.collectExchangeBinding()
-      await this.collectFileClassificationConfig()
-      await this.collectFilePlanProperties()
-      await this.collectLabelProperty()
-      await this.collectRetentionEventType()
-      await this.collectSupervisoryReviewPolicyV2()
-      await this.collectTraditionalSearch()
-      await this.collectUnifiedDLPCompliancePolicy()
-      await this.collectCasePolicyAssociation()
-      await this.collectComplianceTag()
-      await this.collectDataClassificationConfig()
-      await this.collectEmailClassificationConfig()
-      await this.collectExternalAccessPolicy()
-      await this.collectFileShareRightsManagement()
-      await this.collectGlobalConfiguration()
-      await this.collectInformationGovernance()
-      await this.collectIntelligencePolicy()
-      await this.collectManagedClassification()
-      await this.collectManualLabeling()
-      await this.collectMessageEncryption()
-      await this.collectOrganizationalMessage()
-      await this.collectPolicySetting()
-      await this.collectRecordsManagement()
-      await this.collectRiskPolicy()
-      await this.collectSensitivityPolicy()
-      await this.collectTrustFrameworkPolicy()
+
+      // PowerShell-based collections (non-blocking failures)
+      await this.collectRetentionPoliciesPowerShell()
+      await this.collectDLPPoliciesPowerShell()
+      await this.collectSupervisionPoliciesPowerShell()
+      await this.collectRecordsManagementPowerShell()
+      await this.collectRetentionLabelsPowerShell()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Compliance backup complete (${executionTime}s, ${this.resources.length} resources)`)
@@ -106,12 +81,12 @@ export class ComplianceCollector {
   }
 
   /**
-   * Collect Sensitivity Labels
+   * Collect Sensitivity Labels (Comprehensive)
    * SCSensitivityLabel
    */
   async collectSensitivityLabels() {
     try {
-      console.log('📋 Collecting Sensitivity Labels...')
+      console.log('📋 Collecting Sensitivity Labels (Comprehensive)...')
 
       const response = await this.graphClient
         .api('/security/informationProtection/sensitivityLabels')
@@ -130,14 +105,22 @@ export class ComplianceCollector {
               Description: label.description || '',
               IsActive: label.isActive || false,
               Parent: label.parent?.id || null,
+              Priority: label.priority || 0,
               Color: label.color || '',
               ContentFormats: label.contentFormats || [],
               Tooltip: label.tooltip || '',
-              CreatedDateTime: label.createdDateTime || ''
+              CreatedDateTime: label.createdDateTime || '',
+              LastModifiedDateTime: label.lastModifiedDateTime || '',
+              EncryptionEnabled: label.sublabels?.length > 0 || false,
+              SublabelCount: label.sublabels?.length || 0,
+              Sublabels: label.sublabels?.map(s => ({
+                Identity: s.id,
+                DisplayName: s.displayName
+              })) || []
             }
           })
         }
-        console.log(`✅ Found ${response.value.length} sensitivity labels`)
+        console.log(`✅ Found ${response.value.length} sensitivity labels with sublabels`)
       } else {
         console.log('ℹ️ No sensitivity labels found')
       }
@@ -620,6 +603,289 @@ export class ComplianceCollector {
    */
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  /**
+   * Execute PowerShell commands
+   */
+  async executePowerShell(script) {
+    try {
+      const { execSync } = require('child_process')
+      const result = execSync(`pwsh -Command "${script.replace(/"/g, '\\"')}"`, {
+        timeout: 60000,
+        encoding: 'utf-8'
+      }).trim()
+
+      return JSON.parse(result)
+    } catch (error) {
+      try {
+        const { execSync } = require('child_process')
+        const result = execSync(`powershell.exe -Command "${script.replace(/"/g, '\\"')}"`, {
+          timeout: 60000,
+          encoding: 'utf-8'
+        }).trim()
+        return JSON.parse(result)
+      } catch (fallbackError) {
+        console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
+        return null
+      }
+    }
+  }
+
+  /**
+   * Collect Retention Policies via PowerShell
+   * SCRetentionCompliancePolicy
+   */
+  async collectRetentionPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Retention Policies (PowerShell)...')
+
+      const script = `
+        Get-RetentionCompliancePolicy | Select-Object @{
+          n='Identity';e={$_.Name}
+        }, @{
+          n='DisplayName';e={$_.Name}
+        }, @{
+          n='Enabled';e={$_.Enabled}
+        }, @{
+          n='ExchangeLocation';e={$_.ExchangeLocation -join ','}
+        }, @{
+          n='SharePointLocation';e={$_.SharePointLocation -join ','}
+        }, @{
+          n='TeamsLocation';e={$_.TeamsLocation -join ','}
+        }, @{
+          n='CreatedDateTime';e={$_.WhenCreated}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'SCRetentionCompliancePolicy',
+            name: policy.DisplayName,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName,
+              Enabled: policy.Enabled,
+              ExchangeLocation: policy.ExchangeLocation?.split(',') || [],
+              SharePointLocation: policy.SharePointLocation?.split(',') || [],
+              TeamsLocation: policy.TeamsLocation?.split(',') || [],
+              CreatedDateTime: policy.CreatedDateTime || ''
+            }
+          })
+        }
+
+        console.log(`✅ Collected ${result.length} retention policies`)
+      }
+    } catch (error) {
+      this.handleError('collectRetentionPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect DLP Policies via PowerShell
+   * SCDLPCompliancePolicy
+   */
+  async collectDLPPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting DLP Policies (PowerShell)...')
+
+      const script = `
+        Get-DLPCompliancePolicy | Select-Object @{
+          n='Identity';e={$_.Name}
+        }, @{
+          n='DisplayName';e={$_.Name}
+        }, @{
+          n='Enabled';e={$_.Enabled}
+        }, @{
+          n='Priority';e={$_.Priority}
+        }, @{
+          n='Comment';e={$_.Comment}
+        }, @{
+          n='CreatedDateTime';e={$_.WhenCreated}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'SCDLPCompliancePolicy',
+            name: policy.DisplayName,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName,
+              Enabled: policy.Enabled,
+              Priority: policy.Priority || 0,
+              Comment: policy.Comment || '',
+              CreatedDateTime: policy.CreatedDateTime || ''
+            }
+          })
+        }
+
+        console.log(`✅ Collected ${result.length} DLP policies`)
+      }
+    } catch (error) {
+      this.handleError('collectDLPPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Supervision Policies via PowerShell
+   * SCSupervisionPolicy
+   */
+  async collectSupervisionPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Supervision Policies (PowerShell)...')
+
+      const script = `
+        Get-SupervisoryReviewPolicyV2 | Select-Object @{
+          n='Identity';e={$_.Name}
+        }, @{
+          n='DisplayName';e={$_.Name}
+        }, @{
+          n='Enabled';e={$_.Enabled}
+        }, @{
+          n='Reviewers';e={$_.ReviewerEmailAddress -join ','}
+        }, @{
+          n='Comment';e={$_.Comment}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'SCSupervisionPolicy',
+            name: policy.DisplayName,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName,
+              Enabled: policy.Enabled,
+              Reviewers: policy.Reviewers?.split(',') || [],
+              Comment: policy.Comment || ''
+            }
+          })
+        }
+
+        console.log(`✅ Collected ${result.length} supervision policies`)
+      }
+    } catch (error) {
+      this.handleError('collectSupervisionPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Records Management Settings via PowerShell
+   * SCRecordsManagementPolicy
+   */
+  async collectRecordsManagementPowerShell() {
+    try {
+      console.log('📋 Collecting Records Management Settings (PowerShell)...')
+
+      const script = `
+        Get-ComplianceTag | Select-Object @{
+          n='Identity';e={$_.Name}
+        }, @{
+          n='DisplayName';e={$_.DisplayName}
+        }, @{
+          n='RetentionAction';e={$_.RetentionAction}
+        }, @{
+          n='RetentionDuration';e={$_.RetentionDuration}
+        }, @{
+          n='IsRecordLabel';e={$_.IsRecordLabel}
+        }, @{
+          n='CreatedDateTime';e={$_.WhenCreated}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const tag of result) {
+          this.resources.push({
+            type: 'SCRecordsManagementPolicy',
+            name: tag.DisplayName,
+            id: tag.Identity,
+            configuration: {
+              Identity: tag.Identity,
+              DisplayName: tag.DisplayName,
+              RetentionAction: tag.RetentionAction || 'Delete',
+              RetentionDuration: tag.RetentionDuration || 0,
+              IsRecordLabel: tag.IsRecordLabel || false,
+              CreatedDateTime: tag.CreatedDateTime || ''
+            }
+          })
+        }
+
+        console.log(`✅ Collected ${result.length} records management tags`)
+      }
+    } catch (error) {
+      this.handleError('collectRecordsManagementPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Retention Labels via PowerShell
+   * SCRetentionLabel
+   */
+  async collectRetentionLabelsPowerShell() {
+    try {
+      console.log('📋 Collecting Retention Labels (PowerShell)...')
+
+      const script = `
+        Get-Label | Select-Object @{
+          n='Identity';e={$_.Name}
+        }, @{
+          n='DisplayName';e={$_.DisplayName}
+        }, @{
+          n='ToolTip';e={$_.ToolTip}
+        }, @{
+          n='Comment';e={$_.Comment}
+        }, @{
+          n='IsActive';e={$_.Settings -like '*IsActive=True*'}
+        }, @{
+          n='Priority';e={$_.Priority}
+        }, @{
+          n='ContentType';e={$_.ContentType}
+        }, @{
+          n='CreatedDateTime';e={$_.WhenCreated}
+        } | ConvertTo-Json -AsArray
+      `
+
+      const result = await this.executePowerShell(script)
+
+      if (Array.isArray(result) && result.length > 0) {
+        for (const label of result) {
+          this.resources.push({
+            type: 'SCRetentionLabel',
+            name: label.DisplayName,
+            id: label.Identity,
+            configuration: {
+              Identity: label.Identity,
+              DisplayName: label.DisplayName,
+              ToolTip: label.ToolTip || '',
+              Comment: label.Comment || '',
+              IsActive: label.IsActive || false,
+              Priority: label.Priority || 0,
+              ContentType: label.ContentType || '',
+              CreatedDateTime: label.CreatedDateTime || ''
+            }
+          })
+        }
+
+        console.log(`✅ Collected ${result.length} retention labels`)
+      }
+    } catch (error) {
+      this.handleError('collectRetentionLabelsPowerShell', error)
+    }
   }
 
   /**

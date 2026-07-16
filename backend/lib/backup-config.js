@@ -425,10 +425,18 @@ export const M365_SERVICES = {
     priority: 6,
     resources: [
       'O365GroupsSettings',
+      'O365GroupMember',
+      'O365GroupMembers',
+      'O365GroupOwner',
+      'O365GroupOwners',
+      'O365GroupChannel',
+      'O365GroupSite',
       'O365GroupsNamingPolicy',
-      'O365GroupsExpiration'
+      'O365GroupsExpiration',
+      'O365GroupsGuestSettings',
+      'O365GroupsClassification'
     ],
-    totalResources: 3
+    totalResources: 11
   },
   Compliance: {
     displayName: 'Security & Compliance',
@@ -478,9 +486,13 @@ export const M365_SERVICES = {
       'SCRecordsManagement',
       'SCRiskPolicy',
       'SCSensitivityPolicy',
-      'SCTrustFrameworkPolicy'
+      'SCTrustFrameworkPolicy',
+      'SCRetentionPolicy',
+      'SCRetentionLabel',
+      'SCRecordsManagementPolicy',
+      'SCSupervisoryReviewPolicy'
     ],
-    totalResources: 50
+    totalResources: 54
   },
   Intune: {
     displayName: 'Intune',
