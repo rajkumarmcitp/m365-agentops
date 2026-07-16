@@ -513,7 +513,7 @@ export const M365_SERVICES = {
       'TeamsUser',
       'TeamsVoiceRoute'
     ],
-    totalResources: 45
+    totalResources: 40
   },
   SharePoint: {
     displayName: 'SharePoint Online',

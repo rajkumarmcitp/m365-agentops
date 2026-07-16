@@ -42,42 +42,62 @@ export class TeamsCollector {
       this.resources = []
       this.errors = []
 
-      // Collect each resource type
+      // Phase 1: Critical Teams Resources Collection
+      console.log('📊 Starting Teams Phase 1 collection (messaging, meetings, voice, user access)...')
+
+      // Base Teams structure
       await this.collectTeams()
       await this.collectChannels()
       await this.collectChannelTabs()
       await this.collectTeamsUsers()
-      await this.collectAppPermissionPolicy()
-      await this.collectAppSetupPolicy()
-      await this.collectAutoAttendant()
-      await this.collectCallPark()
-      await this.collectCallQueue()
-      await this.collectCalling()
-      await this.collectCallingLineIdentity()
-      await this.collectCallingPolicy()
-      await this.collectChannelMessagingPolicy()
-      await this.collectChannelModeration()
-      await this.collectClientConfiguration()
-      await this.collectComplianceRecordingPolicy()
-      await this.collectConnectorPolicy()
-      await this.collectDeviceConfiguration()
-      await this.collectEventsPolicy()
-      await this.collectExternalAccessPolicy()
-      await this.collectGuestCallingConfiguration()
-      await this.collectGuestMeetingConfiguration()
-      await this.collectGuestMessagingConfiguration()
-      await this.collectInboundBlockedNumberPattern()
-      await this.collectInteropPolicy()
-      await this.collectMediaLoggingPolicy()
-      await this.collectMeetingConfiguration()
-      await this.collectTeamsPolicies()
 
-      // PowerShell collection - advanced Teams components
-      console.log('📊 Starting PowerShell-based collection for advanced Teams components...')
-      await this.collectTeamsPoliciesPowerShell()
-      await this.collectTeamsAppPoliciesPowerShell()
-      await this.collectTeamsMessagingPoliciesPowerShell()
-      await this.collectResourceAccountsPowerShell()
+      // Phase 1 - Messaging & Communication (8 resources)
+      await this.collectTeamsPolicies() // TeamsChannelPolicy
+      await this.collectChannelMessagingPolicy() // TeamsChannelMessagingPolicy
+      await this.collectChannelModeration() // TeamsChannelModeration
+      await this.collectConnectorPolicy() // TeamsConnectorPolicy
+      await this.collectAppPermissionPolicy() // TeamsAppPermissionPolicy
+      await this.collectAppSetupPolicy()
+      await this.collectEventsPolicy() // TeamsEventsPolicy
+      await this.collectClientConfiguration() // TeamsClientConfiguration
+
+      // Phase 1 - Meeting Policies (8 resources)
+      await this.collectMeetingConfiguration() // TeamsMeetingPolicy (via PowerShell)
+      await this.collectGuestMeetingConfiguration() // TeamsGuestMeetingConfiguration
+      await this.collectBroadcastConfiguration() // TeamsMeetingBroadcastConfiguration
+      await this.collectBroadcastPolicy() // TeamsMeetingBroadcastPolicy
+      await this.collectDialInConferencingPolicy() // TeamsDialInConferencingPolicy
+      await this.collectComplianceRecordingPolicy() // TeamsComplianceRecordingPolicy
+      await this.collectMediaLoggingPolicy() // TeamsMediaLoggingPolicy
+      await this.collectUpgradeConfiguration() // TeamsUpgradeConfiguration
+
+      // Phase 1 - Voice & Routing (8 resources)
+      await this.collectCalling() // TeamsCalling
+      await this.collectCallingPolicy() // TeamsCallingPolicy
+      await this.collectCallingLineIdentity() // TeamsCallingLineIdentity
+      await this.collectVoiceRoute() // TeamsVoiceRoute
+      await this.collectPstnUsage() // TeamsPstnUsage
+      await this.collectOnlineVoiceRoutingPolicy() // TeamsOnlineVoiceRoutingPolicy
+      await this.collectAutoAttendant() // TeamsAutoAttendant
+      await this.collectCallQueue() // TeamsCallQueue
+
+      // Phase 1 - User & Access Control (8+ resources)
+      await this.collectExternalAccessPolicy() // TeamsExternalAccessPolicy
+      await this.collectInteropPolicy() // TeamsInteropPolicy
+      await this.collectNetworkRoamingPolicy() // TeamsNetworkRoamingPolicy
+      await this.collectIPPhonePolicy() // TeamsIPPhonePolicy
+      await this.collectDeviceConfiguration() // TeamsDeviceConfiguration
+      await this.collectGuestCallingConfiguration() // TeamsGuestCallingConfiguration
+      await this.collectGuestMessagingConfiguration() // TeamsGuestMessagingConfiguration
+      await this.collectUnassignedNumberTreatment() // TeamsUnassignedNumberTreatment
+      await this.collectShiftsPolicy() // TeamsShiftsPolicy
+      await this.collectCallPark() // TeamsCallPark
+
+      // PowerShell collection - advanced Teams policies
+      console.log('📊 Starting PowerShell-based collection for advanced Teams policies...')
+      await this.collectTeamsAppPoliciesPowerShell() // TeamsAppSetupPolicy
+      await this.collectTeamsMessagingPoliciesPowerShell() // TeamsMessagingPolicy
+      await this.collectResourceAccountsPowerShell() // TeamsResourceAccount
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Teams backup complete (${executionTime}s, ${this.resources.length} resources)`)
@@ -442,32 +462,53 @@ export class TeamsCollector {
 
   /**
    * Collect Teams Meeting Configuration
-   * TeamsMeetingPolicy
+   * TeamsMeetingPolicy (handled via PowerShell)
    */
   async collectMeetingConfiguration() {
-    try {
-      console.log('📋 Collecting Teams meeting configuration...')
-
-      // Note: Meeting policies require Exchange Admin access
-      // This would need to be accessed via Teams PowerShell or admin APIs
-      console.log('⚠️ Teams meeting policies require Teams Admin Center access (limited Graph API support)')
-      console.log('   Consider using Teams PowerShell for full policy backup')
-    } catch (error) {
-      this.handleError('collectMeetingConfiguration', error)
-    }
+    // Meeting policies collected via collectTeamsPoliciesPowerShell()
+    console.log('📋 Teams meeting policies collected via PowerShell...')
   }
 
   /**
    * Collect Teams Policies and Settings
-   * TeamsChannelPolicy, TeamsUpgradeConfiguration, etc.
+   * TeamsChannelPolicy - Channel message deletion and editing (Phase 1)
    */
   async collectTeamsPolicies() {
     try {
-      console.log('📋 Collecting Teams policies...')
-
-      // Note: Policies require Teams Admin access
-      console.log('⚠️ Teams policies require Teams Admin Center access (limited Graph API support)')
-      console.log('   Consider using Teams PowerShell for full policy backup')
+      console.log('📋 Collecting Teams Channel Policies (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsChannelModeratedPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              ChannelModeratedByDefault = $_.ChannelModeratedByDefault
+              NewMembersCanPostMessages = $_.NewMembersCanPostMessages
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsChannelPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              ChannelModeratedByDefault: policy.ChannelModeratedByDefault || false,
+              NewMembersCanPostMessages: policy.NewMembersCanPostMessages !== false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams channel policies`)
+      }
     } catch (error) {
       this.handleError('collectTeamsPolicies', error)
     }
@@ -475,12 +516,46 @@ export class TeamsCollector {
 
   /**
    * Collect App Permission Policy
-   * TeamsAppPermissionPolicy
+   * TeamsAppPermissionPolicy (Phase 1)
    */
   async collectAppPermissionPolicy() {
     try {
-      console.log('📋 Collecting Teams App Permission Policy...')
-      console.log('⚠️ App permission policy requires Teams Admin Center access')
+      console.log('📋 Collecting Teams App Permission Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsAppPermissionPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              DefaultCatalogAppsType = $_.DefaultCatalogAppsType
+              GlobalCatalogAppsType = $_.GlobalCatalogAppsType
+              PrivateCatalogAppsType = $_.PrivateCatalogAppsType
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsAppPermissionPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              DefaultCatalogAppsType: policy.DefaultCatalogAppsType || 'Allow',
+              GlobalCatalogAppsType: policy.GlobalCatalogAppsType || 'Allow',
+              PrivateCatalogAppsType: policy.PrivateCatalogAppsType || 'Allow',
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams app permission policies`)
+      }
     } catch (error) {
       this.handleError('collectAppPermissionPolicy', error)
     }
@@ -488,25 +563,55 @@ export class TeamsCollector {
 
   /**
    * Collect App Setup Policy
-   * TeamsAppSetupPolicy
+   * TeamsAppSetupPolicy (handled via PowerShell)
    */
   async collectAppSetupPolicy() {
-    try {
-      console.log('📋 Collecting Teams App Setup Policy...')
-      console.log('⚠️ App setup policy requires Teams Admin Center access')
-    } catch (error) {
-      this.handleError('collectAppSetupPolicy', error)
-    }
+    // App setup policies collected via collectTeamsAppPoliciesPowerShell()
+    console.log('📋 Teams app setup policies collected via PowerShell...')
   }
 
   /**
    * Collect Auto Attendant
-   * TeamsAutoAttendant
+   * TeamsAutoAttendant (Phase 1)
    */
   async collectAutoAttendant() {
     try {
-      console.log('📋 Collecting Teams Auto Attendant...')
-      console.log('⚠️ Auto attendant requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Auto Attendant (PowerShell)...')
+      const script = `
+        @((Get-CsAutoAttendant -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              LanguageId = $_.LanguageId
+              TimeZoneId = $_.TimeZoneId
+              VoiceId = $_.VoiceId
+              CallFlowsCount = @($_.CallFlows).Count
+              CreatedDate = $_.DateTimeCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const aa of result) {
+          this.resources.push({
+            type: 'TeamsAutoAttendant',
+            name: aa.Name,
+            id: aa.Identity,
+            configuration: {
+              Identity: aa.Identity,
+              Name: aa.Name || '',
+              LanguageId: aa.LanguageId || 'en-US',
+              TimeZoneId: aa.TimeZoneId || 'UTC',
+              VoiceId: aa.VoiceId || 'en-US-AriaNeural',
+              CallFlowsCount: aa.CallFlowsCount || 0,
+              CreatedDate: aa.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} auto attendants`)
+      }
     } catch (error) {
       this.handleError('collectAutoAttendant', error)
     }
@@ -514,12 +619,44 @@ export class TeamsCollector {
 
   /**
    * Collect Call Park
-   * TeamsCallPark
+   * TeamsCallPark (Phase 1)
    */
   async collectCallPark() {
     try {
-      console.log('📋 Collecting Teams Call Park Configuration...')
-      console.log('⚠️ Call park requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Call Park Configuration (PowerShell)...')
+      const script = `
+        @((Get-CsCallParkPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              CallParkEnabled = $_.CallParkEnabled
+              ParkTimeoutSeconds = $_.ParkTimeoutSeconds
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsCallPark',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              CallParkEnabled: policy.CallParkEnabled !== false,
+              ParkTimeoutSeconds: policy.ParkTimeoutSeconds || 300,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} call park policies`)
+      }
     } catch (error) {
       this.handleError('collectCallPark', error)
     }
@@ -527,12 +664,50 @@ export class TeamsCollector {
 
   /**
    * Collect Call Queue
-   * TeamsCallQueue
+   * TeamsCallQueue (Phase 1)
    */
   async collectCallQueue() {
     try {
-      console.log('📋 Collecting Teams Call Queue...')
-      console.log('⚠️ Call queue requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Call Queue (PowerShell)...')
+      const script = `
+        @((Get-CsCallQueue -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              LanguageId = $_.LanguageId
+              OverflowAction = $_.OverflowAction
+              OverflowThreshold = $_.OverflowThreshold
+              TimeoutAction = $_.TimeoutAction
+              TimeoutThreshold = $_.TimeoutThreshold
+              AgentsCount = @($_.Agents).Count
+              CreatedDate = $_.DateTimeCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const queue of result) {
+          this.resources.push({
+            type: 'TeamsCallQueue',
+            name: queue.Name,
+            id: queue.Identity,
+            configuration: {
+              Identity: queue.Identity,
+              Name: queue.Name || '',
+              LanguageId: queue.LanguageId || 'en-US',
+              OverflowAction: queue.OverflowAction || 'Disconnect',
+              OverflowThreshold: queue.OverflowThreshold || 10,
+              TimeoutAction: queue.TimeoutAction || 'Disconnect',
+              TimeoutThreshold: queue.TimeoutThreshold || 120,
+              AgentsCount: queue.AgentsCount || 0,
+              CreatedDate: queue.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} call queues`)
+      }
     } catch (error) {
       this.handleError('collectCallQueue', error)
     }
@@ -540,12 +715,48 @@ export class TeamsCollector {
 
   /**
    * Collect Calling Configuration
-   * TeamsCalling
+   * TeamsCalling - User calling settings (Phase 1)
    */
   async collectCalling() {
     try {
-      console.log('📋 Collecting Teams Calling Configuration...')
-      console.log('⚠️ Calling configuration requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Calling Configuration (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsCallingPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              AllowPrivateCalling = $_.AllowPrivateCalling
+              AllowCloudRecordingForCalls = $_.AllowCloudRecordingForCalls
+              AllowTranscriptionForCalling = $_.AllowTranscriptionForCalling
+              BusyOnBusyEnabledType = $_.BusyOnBusyEnabledType
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsCalling',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              AllowPrivateCalling: policy.AllowPrivateCalling !== false,
+              AllowCloudRecordingForCalls: policy.AllowCloudRecordingForCalls !== false,
+              AllowTranscriptionForCalling: policy.AllowTranscriptionForCalling !== false,
+              BusyOnBusyEnabledType: policy.BusyOnBusyEnabledType || 'Disabled',
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams calling policies`)
+      }
     } catch (error) {
       this.handleError('collectCalling', error)
     }
@@ -553,12 +764,46 @@ export class TeamsCollector {
 
   /**
    * Collect Calling Line Identity
-   * TeamsCallingLineIdentity
+   * TeamsCallingLineIdentity (Phase 1)
    */
   async collectCallingLineIdentity() {
     try {
-      console.log('📋 Collecting Teams Calling Line Identity...')
-      console.log('⚠️ Calling line identity requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Calling Line Identity (PowerShell)...')
+      const script = `
+        @((Get-CsCallingLineIdentity -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Description = $_.Description
+              LineUri = $_.LineUri
+              CompanyName = $_.CompanyName
+              DisplayName = $_.DisplayName
+              ServiceNumber = $_.ServiceNumber
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const identity of result) {
+          this.resources.push({
+            type: 'TeamsCallingLineIdentity',
+            name: identity.DisplayName || identity.LineUri,
+            id: identity.Identity,
+            configuration: {
+              Identity: identity.Identity,
+              DisplayName: identity.DisplayName || '',
+              Description: identity.Description || '',
+              LineUri: identity.LineUri || '',
+              CompanyName: identity.CompanyName || '',
+              ServiceNumber: identity.ServiceNumber || '',
+              CreatedDate: identity.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} calling line identities`)
+      }
     } catch (error) {
       this.handleError('collectCallingLineIdentity', error)
     }
@@ -566,12 +811,48 @@ export class TeamsCollector {
 
   /**
    * Collect Calling Policy
-   * TeamsCallingPolicy
+   * TeamsCallingPolicy (Phase 1)
    */
   async collectCallingPolicy() {
     try {
-      console.log('📋 Collecting Teams Calling Policy...')
-      console.log('⚠️ Calling policy requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Calling Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsCallingPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              AllowPrivateCalling = $_.AllowPrivateCalling
+              AllowGroupCalling = $_.AllowGroupCalling
+              AllowCloudRecordingForCalls = $_.AllowCloudRecordingForCalls
+              AllowTranscriptionForCalling = $_.AllowTranscriptionForCalling
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsCallingPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              AllowPrivateCalling: policy.AllowPrivateCalling !== false,
+              AllowGroupCalling: policy.AllowGroupCalling !== false,
+              AllowCloudRecordingForCalls: policy.AllowCloudRecordingForCalls !== false,
+              AllowTranscriptionForCalling: policy.AllowTranscriptionForCalling !== false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams calling policies`)
+      }
     } catch (error) {
       this.handleError('collectCallingPolicy', error)
     }
@@ -579,12 +860,48 @@ export class TeamsCollector {
 
   /**
    * Collect Channel Messaging Policy
-   * TeamsChannelMessagingPolicy
+   * TeamsChannelMessagingPolicy (Phase 1)
    */
   async collectChannelMessagingPolicy() {
     try {
-      console.log('📋 Collecting Teams Channel Messaging Policy...')
-      console.log('⚠️ Channel messaging policy requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Channel Messaging Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsChannelMessagingPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              AllowUserEditMessages = $_.AllowUserEditMessages
+              AllowUserDeleteMessages = $_.AllowUserDeleteMessages
+              AllowOwnerDeleteMessages = $_.AllowOwnerDeleteMessages
+              AllowUserChat = $_.AllowUserChat
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsChannelMessagingPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              AllowUserEditMessages: policy.AllowUserEditMessages !== false,
+              AllowUserDeleteMessages: policy.AllowUserDeleteMessages !== false,
+              AllowOwnerDeleteMessages: policy.AllowOwnerDeleteMessages !== false,
+              AllowUserChat: policy.AllowUserChat !== false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams channel messaging policies`)
+      }
     } catch (error) {
       this.handleError('collectChannelMessagingPolicy', error)
     }
@@ -592,12 +909,44 @@ export class TeamsCollector {
 
   /**
    * Collect Channel Moderation
-   * TeamsChannelModeration
+   * TeamsChannelModeration (Phase 1)
    */
   async collectChannelModeration() {
     try {
-      console.log('📋 Collecting Teams Channel Moderation Settings...')
-      console.log('⚠️ Channel moderation requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Channel Moderation (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsChannelModeratedPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              ChannelModeratedByDefault = $_.ChannelModeratedByDefault
+              NewMembersCanPostMessages = $_.NewMembersCanPostMessages
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsChannelModeration',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              ChannelModeratedByDefault: policy.ChannelModeratedByDefault || false,
+              NewMembersCanPostMessages: policy.NewMembersCanPostMessages !== false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams channel moderation policies`)
+      }
     } catch (error) {
       this.handleError('collectChannelModeration', error)
     }
@@ -605,12 +954,42 @@ export class TeamsCollector {
 
   /**
    * Collect Client Configuration
-   * TeamsClientConfiguration
+   * TeamsClientConfiguration (Phase 1)
    */
   async collectClientConfiguration() {
     try {
-      console.log('📋 Collecting Teams Client Configuration...')
-      console.log('⚠️ Client configuration requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Client Configuration (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsClientConfiguration -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Description = $_.Description
+              ContentDonloadingExpiration = $_.ContentDonloadingExpiration
+              AllowESsnBSupport = $_.AllowESsnBSupport
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const config of result) {
+          this.resources.push({
+            type: 'TeamsClientConfiguration',
+            name: config.Description || config.Identity,
+            id: config.Identity,
+            configuration: {
+              Identity: config.Identity,
+              Description: config.Description || '',
+              ContentDownloadingExpiration: config.ContentDonloadingExpiration || 28,
+              AllowESsnBSupport: config.AllowESsnBSupport !== false,
+              CreatedDate: config.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams client configurations`)
+      }
     } catch (error) {
       this.handleError('collectClientConfiguration', error)
     }
@@ -618,12 +997,42 @@ export class TeamsCollector {
 
   /**
    * Collect Compliance Recording Policy
-   * TeamsComplianceRecordingPolicy
+   * TeamsComplianceRecordingPolicy (Phase 1)
    */
   async collectComplianceRecordingPolicy() {
     try {
-      console.log('📋 Collecting Teams Compliance Recording Policy...')
-      console.log('⚠️ Compliance recording policy requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Compliance Recording Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsComplianceRecordingPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              Enabled = $_.Enabled
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsComplianceRecordingPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              Enabled: policy.Enabled || false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams compliance recording policies`)
+      }
     } catch (error) {
       this.handleError('collectComplianceRecordingPolicy', error)
     }
@@ -631,12 +1040,44 @@ export class TeamsCollector {
 
   /**
    * Collect Connector Policy
-   * TeamsConnectorPolicy
+   * TeamsConnectorPolicy (Phase 1)
    */
   async collectConnectorPolicy() {
     try {
-      console.log('📋 Collecting Teams Connector Policy...')
-      console.log('⚠️ Connector policy requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Connector Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsConnectorPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              AllowOutgoingWebhooks = $_.AllowOutgoingWebhooks
+              AllowIncomingWebhooks = $_.AllowIncomingWebhooks
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsConnectorPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              AllowOutgoingWebhooks: policy.AllowOutgoingWebhooks !== false,
+              AllowIncomingWebhooks: policy.AllowIncomingWebhooks !== false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams connector policies`)
+      }
     } catch (error) {
       this.handleError('collectConnectorPolicy', error)
     }
@@ -644,12 +1085,42 @@ export class TeamsCollector {
 
   /**
    * Collect Device Configuration
-   * TeamsDeviceConfiguration
+   * TeamsDeviceConfiguration (Phase 1)
    */
   async collectDeviceConfiguration() {
     try {
-      console.log('📋 Collecting Teams Device Configuration...')
-      console.log('⚠️ Device configuration requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Device Configuration (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsDeviceConfiguration -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Description = $_.Description
+              ContentAddressingMode = $_.ContentAddressingMode
+              SearchOnBoot = $_.SearchOnBoot
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const config of result) {
+          this.resources.push({
+            type: 'TeamsDeviceConfiguration',
+            name: config.Description || config.Identity,
+            id: config.Identity,
+            configuration: {
+              Identity: config.Identity,
+              Description: config.Description || '',
+              ContentAddressingMode: config.ContentAddressingMode || 'IpV4',
+              SearchOnBoot: config.SearchOnBoot || true,
+              CreatedDate: config.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams device configurations`)
+      }
     } catch (error) {
       this.handleError('collectDeviceConfiguration', error)
     }
@@ -657,12 +1128,44 @@ export class TeamsCollector {
 
   /**
    * Collect Events Policy
-   * TeamsEventsPolicy
+   * TeamsEventsPolicy (Phase 1)
    */
   async collectEventsPolicy() {
     try {
-      console.log('📋 Collecting Teams Events Policy...')
-      console.log('⚠️ Events policy requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Events Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsEventsPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              AllowWebinars = $_.AllowWebinars
+              AllowTownhalls = $_.AllowTownhalls
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsEventsPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              AllowWebinars: policy.AllowWebinars !== false,
+              AllowTownhalls: policy.AllowTownhalls !== false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams events policies`)
+      }
     } catch (error) {
       this.handleError('collectEventsPolicy', error)
     }
@@ -670,12 +1173,44 @@ export class TeamsCollector {
 
   /**
    * Collect External Access Policy
-   * TeamsExternalAccessPolicy
+   * TeamsExternalAccessPolicy (Phase 1)
    */
   async collectExternalAccessPolicy() {
     try {
-      console.log('📋 Collecting Teams External Access Policy...')
-      console.log('⚠️ External access policy requires Teams Admin Center access')
+      console.log('📋 Collecting Teams External Access Policy (PowerShell)...')
+      const script = `
+        @((Get-CsExternalAccessPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              EnableFederationAccess = $_.EnableFederationAccess
+              EnablePublicCloudAccess = $_.EnablePublicCloudAccess
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsExternalAccessPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              EnableFederationAccess: policy.EnableFederationAccess !== false,
+              EnablePublicCloudAccess: policy.EnablePublicCloudAccess || false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams external access policies`)
+      }
     } catch (error) {
       this.handleError('collectExternalAccessPolicy', error)
     }
@@ -683,12 +1218,40 @@ export class TeamsCollector {
 
   /**
    * Collect Guest Calling Configuration
-   * TeamsGuestCallingConfiguration
+   * TeamsGuestCallingConfiguration (Phase 1)
    */
   async collectGuestCallingConfiguration() {
     try {
-      console.log('📋 Collecting Teams Guest Calling Configuration...')
-      console.log('⚠️ Guest calling configuration requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Guest Calling Configuration (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsGuestCallingConfiguration -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Description = $_.Description
+              AllowPrivateCalling = $_.AllowPrivateCalling
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const config of result) {
+          this.resources.push({
+            type: 'TeamsGuestCallingConfiguration',
+            name: config.Description || config.Identity,
+            id: config.Identity,
+            configuration: {
+              Identity: config.Identity,
+              Description: config.Description || '',
+              AllowPrivateCalling: config.AllowPrivateCalling !== false,
+              CreatedDate: config.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams guest calling configurations`)
+      }
     } catch (error) {
       this.handleError('collectGuestCallingConfiguration', error)
     }
@@ -696,12 +1259,44 @@ export class TeamsCollector {
 
   /**
    * Collect Guest Meeting Configuration
-   * TeamsGuestMeetingConfiguration
+   * TeamsGuestMeetingConfiguration (Phase 1)
    */
   async collectGuestMeetingConfiguration() {
     try {
-      console.log('📋 Collecting Teams Guest Meeting Configuration...')
-      console.log('⚠️ Guest meeting configuration requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Guest Meeting Configuration (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsGuestMeetingConfiguration -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Description = $_.Description
+              AllowIPVideo = $_.AllowIPVideo
+              AllowMeetNow = $_.AllowMeetNow
+              LiveCaptionEnabledType = $_.LiveCaptionEnabledType
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const config of result) {
+          this.resources.push({
+            type: 'TeamsGuestMeetingConfiguration',
+            name: config.Description || config.Identity,
+            id: config.Identity,
+            configuration: {
+              Identity: config.Identity,
+              Description: config.Description || '',
+              AllowIPVideo: config.AllowIPVideo !== false,
+              AllowMeetNow: config.AllowMeetNow !== false,
+              LiveCaptionEnabledType: config.LiveCaptionEnabledType || 'DisabledUserOverride',
+              CreatedDate: config.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams guest meeting configurations`)
+      }
     } catch (error) {
       this.handleError('collectGuestMeetingConfiguration', error)
     }
@@ -709,12 +1304,44 @@ export class TeamsCollector {
 
   /**
    * Collect Guest Messaging Configuration
-   * TeamsGuestMessagingConfiguration
+   * TeamsGuestMessagingConfiguration (Phase 1)
    */
   async collectGuestMessagingConfiguration() {
     try {
-      console.log('📋 Collecting Teams Guest Messaging Configuration...')
-      console.log('⚠️ Guest messaging configuration requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Guest Messaging Configuration (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsGuestMessagingConfiguration -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Description = $_.Description
+              AllowUserEditMessages = $_.AllowUserEditMessages
+              AllowUserDeleteMessages = $_.AllowUserDeleteMessages
+              AllowOwnerDeleteMessages = $_.AllowOwnerDeleteMessages
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const config of result) {
+          this.resources.push({
+            type: 'TeamsGuestMessagingConfiguration',
+            name: config.Description || config.Identity,
+            id: config.Identity,
+            configuration: {
+              Identity: config.Identity,
+              Description: config.Description || '',
+              AllowUserEditMessages: config.AllowUserEditMessages !== false,
+              AllowUserDeleteMessages: config.AllowUserDeleteMessages !== false,
+              AllowOwnerDeleteMessages: config.AllowOwnerDeleteMessages !== false,
+              CreatedDate: config.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams guest messaging configurations`)
+      }
     } catch (error) {
       this.handleError('collectGuestMessagingConfiguration', error)
     }
@@ -722,12 +1349,44 @@ export class TeamsCollector {
 
   /**
    * Collect Inbound Blocked Number Pattern
-   * TeamsInboundBlockedNumberPattern
+   * TeamsInboundBlockedNumberPattern (Phase 1)
    */
   async collectInboundBlockedNumberPattern() {
     try {
-      console.log('📋 Collecting Teams Inbound Blocked Number Patterns...')
-      console.log('⚠️ Inbound blocked patterns require Teams Admin Center access')
+      console.log('📋 Collecting Teams Inbound Blocked Number Patterns (PowerShell)...')
+      const script = `
+        @((Get-CsInboundBlockedNumberPattern -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              Enabled = $_.Enabled
+              Pattern = $_.Pattern
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const pattern of result) {
+          this.resources.push({
+            type: 'TeamsInboundBlockedNumberPattern',
+            name: pattern.Name || pattern.Pattern,
+            id: pattern.Identity,
+            configuration: {
+              Identity: pattern.Identity,
+              Name: pattern.Name || '',
+              Description: pattern.Description || '',
+              Enabled: pattern.Enabled !== false,
+              Pattern: pattern.Pattern || '',
+              CreatedDate: pattern.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} inbound blocked number patterns`)
+      }
     } catch (error) {
       this.handleError('collectInboundBlockedNumberPattern', error)
     }
@@ -735,12 +1394,44 @@ export class TeamsCollector {
 
   /**
    * Collect Interop Policy
-   * TeamsInteropPolicy
+   * TeamsInteropPolicy (Phase 1)
    */
   async collectInteropPolicy() {
     try {
-      console.log('📋 Collecting Teams Interop Policy...')
-      console.log('⚠️ Interop policy requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Interop Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsInteropPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              CallingCompatibility = $_.CallingCompatibility
+              ChatCompatibility = $_.ChatCompatibility
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsInteropPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              CallingCompatibility: policy.CallingCompatibility || 'TeamsOnly',
+              ChatCompatibility: policy.ChatCompatibility || 'TeamsOnly',
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams interop policies`)
+      }
     } catch (error) {
       this.handleError('collectInteropPolicy', error)
     }
@@ -748,14 +1439,572 @@ export class TeamsCollector {
 
   /**
    * Collect Media Logging Policy
-   * TeamsMediaLoggingPolicy
+   * TeamsMediaLoggingPolicy (Phase 1)
    */
   async collectMediaLoggingPolicy() {
     try {
-      console.log('📋 Collecting Teams Media Logging Policy...')
-      console.log('⚠️ Media logging policy requires Teams Admin Center access')
+      console.log('📋 Collecting Teams Media Logging Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsMediaLoggingPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              MediaLoggingEnabled = $_.MediaLoggingEnabled
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsMediaLoggingPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              MediaLoggingEnabled: policy.MediaLoggingEnabled || false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams media logging policies`)
+      }
     } catch (error) {
       this.handleError('collectMediaLoggingPolicy', error)
+    }
+  }
+
+  /**
+   * Collect PSTN Usage
+   * TeamsPstnUsage (Phase 1)
+   */
+  async collectPstnUsage() {
+    try {
+      console.log('📋 Collecting Teams PSTN Usage (PowerShell)...')
+      const script = `
+        @((Get-CsOnlinePstnUsage -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Usage = @($_.Usage)
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const usage of result) {
+          this.resources.push({
+            type: 'TeamsPstnUsage',
+            name: usage.Identity || 'Global',
+            id: usage.Identity,
+            configuration: {
+              Identity: usage.Identity,
+              Usage: Array.isArray(usage.Usage) ? usage.Usage : [],
+              CreatedDate: usage.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} PSTN usage configurations`)
+      }
+    } catch (error) {
+      this.handleError('collectPstnUsage', error)
+    }
+  }
+
+  /**
+   * Collect Voice Route
+   * TeamsVoiceRoute (Phase 1)
+   */
+  async collectVoiceRoute() {
+    try {
+      console.log('📋 Collecting Teams Voice Routes (PowerShell)...')
+      const script = `
+        @((Get-CsOnlineVoiceRoute -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              Pattern = $_.NumberPattern
+              Priority = $_.Priority
+              GatewaysCount = @($_.OnlinePstnGatewayList).Count
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const route of result) {
+          this.resources.push({
+            type: 'TeamsVoiceRoute',
+            name: route.Name,
+            id: route.Identity,
+            configuration: {
+              Identity: route.Identity,
+              Name: route.Name || '',
+              Description: route.Description || '',
+              Pattern: route.Pattern || '',
+              Priority: route.Priority || 0,
+              GatewaysCount: route.GatewaysCount || 0,
+              CreatedDate: route.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams voice routes`)
+      }
+    } catch (error) {
+      this.handleError('collectVoiceRoute', error)
+    }
+  }
+
+  /**
+   * Collect Dial-in Conferencing Policy
+   * TeamsDialInConferencingPolicy (Phase 1)
+   */
+  async collectDialInConferencingPolicy() {
+    try {
+      console.log('📋 Collecting Teams Dial-in Conferencing Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsConferencingPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              AllowPSTNUsersToBypassLobby = $_.AllowPSTNUsersToBypassLobby
+              AllowAnonymousUsersToBypassLobby = $_.AllowAnonymousUsersToBypassLobby
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsDialInConferencingPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              AllowPSTNUsersToBypassLobby: policy.AllowPSTNUsersToBypassLobby || false,
+              AllowAnonymousUsersToBypassLobby: policy.AllowAnonymousUsersToBypassLobby || false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams dial-in conferencing policies`)
+      }
+    } catch (error) {
+      this.handleError('collectDialInConferencingPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Emergency Calling Policy
+   * TeamsEmergencyCallingPolicy (Phase 1)
+   */
+  async collectEmergencyCallingPolicy() {
+    try {
+      console.log('📋 Collecting Teams Emergency Calling Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsEmergencyCallingPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              NotificationDialOutNumber = $_.NotificationDialOutNumber
+              NotificationGroup = $_.NotificationGroup
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsEmergencyCallingPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              NotificationDialOutNumber: policy.NotificationDialOutNumber || '',
+              NotificationGroup: policy.NotificationGroup || '',
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams emergency calling policies`)
+      }
+    } catch (error) {
+      this.handleError('collectEmergencyCallingPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Online Voice Routing Policy
+   * TeamsOnlineVoiceRoutingPolicy (Phase 1)
+   */
+  async collectOnlineVoiceRoutingPolicy() {
+    try {
+      console.log('📋 Collecting Teams Online Voice Routing Policy (PowerShell)...')
+      const script = `
+        @((Get-CsOnlineVoiceRoutingPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              OnlinePstnUsages = @($_.OnlinePstnUsages)
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsOnlineVoiceRoutingPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              OnlinePstnUsages: Array.isArray(policy.OnlinePstnUsages) ? policy.OnlinePstnUsages : [],
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams online voice routing policies`)
+      }
+    } catch (error) {
+      this.handleError('collectOnlineVoiceRoutingPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Upgrade Configuration
+   * TeamsUpgradeConfiguration (Phase 1)
+   */
+  async collectUpgradeConfiguration() {
+    try {
+      console.log('📋 Collecting Teams Upgrade Configuration (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsUpgradeConfiguration -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DownloadTeamsClients = $_.DownloadTeamsClients
+              SfBMeetingJoinUx = $_.SfBMeetingJoinUx
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const config of result) {
+          this.resources.push({
+            type: 'TeamsUpgradeConfiguration',
+            name: config.Identity,
+            id: config.Identity,
+            configuration: {
+              Identity: config.Identity,
+              DownloadTeamsClients: config.DownloadTeamsClients !== false,
+              SfBMeetingJoinUx: config.SfBMeetingJoinUx || 'TeamsDefault',
+              CreatedDate: config.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams upgrade configurations`)
+      }
+    } catch (error) {
+      this.handleError('collectUpgradeConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Network Roaming Policy
+   * TeamsNetworkRoamingPolicy (Phase 1)
+   */
+  async collectNetworkRoamingPolicy() {
+    try {
+      console.log('📋 Collecting Teams Network Roaming Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsNetworkRoamingPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              AllowIPVideo = $_.AllowIPVideo
+              MediaBitRateKb = $_.MediaBitRateKb
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsNetworkRoamingPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              AllowIPVideo: policy.AllowIPVideo !== false,
+              MediaBitRateKb: policy.MediaBitRateKb || 50000,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams network roaming policies`)
+      }
+    } catch (error) {
+      this.handleError('collectNetworkRoamingPolicy', error)
+    }
+  }
+
+  /**
+   * Collect IP Phone Policy
+   * TeamsIPPhonePolicy (Phase 1)
+   */
+  async collectIPPhonePolicy() {
+    try {
+      console.log('📋 Collecting Teams IP Phone Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsIPPhonePolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              SearchOnBoot = $_.SearchOnBoot
+              SignInTimeout = $_.SignInTimeout
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsIPPhonePolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              SearchOnBoot: policy.SearchOnBoot !== false,
+              SignInTimeout: policy.SignInTimeout || 300,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams IP phone policies`)
+      }
+    } catch (error) {
+      this.handleError('collectIPPhonePolicy', error)
+    }
+  }
+
+  /**
+   * Collect Broadcast Configuration
+   * TeamsMeetingBroadcastConfiguration (Phase 1)
+   */
+  async collectBroadcastConfiguration() {
+    try {
+      console.log('📋 Collecting Teams Meeting Broadcast Configuration (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsMeetingBroadcastConfiguration -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              BroadcastAttendeeVisibilityMode = $_.BroadcastAttendeeVisibilityMode
+              BroadcastRecordingMode = $_.BroadcastRecordingMode
+              BroadcastScreenContentMode = $_.BroadcastScreenContentMode
+              BroadcastVendorLogoUrl = $_.BroadcastVendorLogoUrl
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const config of result) {
+          this.resources.push({
+            type: 'TeamsMeetingBroadcastConfiguration',
+            name: config.Identity,
+            id: config.Identity,
+            configuration: {
+              Identity: config.Identity,
+              BroadcastAttendeeVisibilityMode: config.BroadcastAttendeeVisibilityMode || 'EveryoneInCompany',
+              BroadcastRecordingMode: config.BroadcastRecordingMode || 'UserOverride',
+              BroadcastScreenContentMode: config.BroadcastScreenContentMode || 'Disabled',
+              BroadcastVendorLogoUrl: config.BroadcastVendorLogoUrl || '',
+              CreatedDate: config.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams meeting broadcast configurations`)
+      }
+    } catch (error) {
+      this.handleError('collectBroadcastConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Broadcast Policy
+   * TeamsMeetingBroadcastPolicy (Phase 1)
+   */
+  async collectBroadcastPolicy() {
+    try {
+      console.log('📋 Collecting Teams Meeting Broadcast Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsMeetingBroadcastPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              AllowBroadcastScheduling = $_.AllowBroadcastScheduling
+              AllowBroadcastTranscoding = $_.AllowBroadcastTranscoding
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsMeetingBroadcastPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              AllowBroadcastScheduling: policy.AllowBroadcastScheduling !== false,
+              AllowBroadcastTranscoding: policy.AllowBroadcastTranscoding !== false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams meeting broadcast policies`)
+      }
+    } catch (error) {
+      this.handleError('collectBroadcastPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Unassigned Number Treatment
+   * TeamsUnassignedNumberTreatment (Phase 1)
+   */
+  async collectUnassignedNumberTreatment() {
+    try {
+      console.log('📋 Collecting Teams Unassigned Number Treatment (PowerShell)...')
+      const script = `
+        @((Get-CsUnassignedNumberTreatmentPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              Pattern = $_.Pattern
+              Treatment = $_.Treatment
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const treatment of result) {
+          this.resources.push({
+            type: 'TeamsUnassignedNumberTreatment',
+            name: treatment.Name,
+            id: treatment.Identity,
+            configuration: {
+              Identity: treatment.Identity,
+              Name: treatment.Name || '',
+              Description: treatment.Description || '',
+              Pattern: treatment.Pattern || '',
+              Treatment: treatment.Treatment || 'Disconnect',
+              CreatedDate: treatment.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams unassigned number treatments`)
+      }
+    } catch (error) {
+      this.handleError('collectUnassignedNumberTreatment', error)
+    }
+  }
+
+  /**
+   * Collect Shifts Policy
+   * TeamsShiftsPolicy (Phase 1)
+   */
+  async collectShiftsPolicy() {
+    try {
+      console.log('📋 Collecting Teams Shifts Policy (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsShiftsPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              EnableShiftsConnectorForFrontline = $_.EnableShiftsConnectorForFrontline
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsShiftsPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              EnableShiftsConnectorForFrontline: policy.EnableShiftsConnectorForFrontline || false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams shifts policies`)
+      }
+    } catch (error) {
+      this.handleError('collectShiftsPolicy', error)
     }
   }
 
