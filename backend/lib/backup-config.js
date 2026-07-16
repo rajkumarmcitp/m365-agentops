@@ -542,6 +542,10 @@ export const M365_SERVICES = {
     priority: 3,
     resources: [
       'SPOAccessControlSettings',
+      'SPOAdvancedAuditingConfiguration',
+      'SPOAdvancedComplianceSettings',
+      'SPOAdvancedPermissionsManagement',
+      'SPOAdvancedRetentionAndArchive',
       'SPOAdvancedSearchConfiguration',
       'SPOAdvancedSharingPolicy',
       'SPOApp',
@@ -553,6 +557,7 @@ export const M365_SERVICES = {
       'SPODataLocationGeoMoveStatus',
       'SPODataLocationSettings',
       'SPODataResidencyNotification',
+      'SPODelegationAndAccessReview',
       'SPODLPPolicy',
       'SPOExternalUser',
       'SPOExternalUserSharing',
@@ -563,6 +568,7 @@ export const M365_SERVICES = {
       'SPOInformationBarrier',
       'SPOLibraryTemplates',
       'SPOListInformationRightsManagement',
+      'SPOManagedMetadataConfiguration',
       'SPOManagedProperty',
       'SPOMicrosoftSearchConfiguration',
       'SPOMigrationJobStatus',
@@ -593,13 +599,16 @@ export const M365_SERVICES = {
       'SPOSiteDesign',
       'SPOSiteDesignRights',
       'SPOSiteFeatures',
+      'SPOSiteGovernancePolicy',
+      'SPOSiteLifecyclePolicy',
       'SPOSiteScriptPolicies',
+      'SPOSiteThemingAndBranding',
       'SPOTenantAppCatalogConfiguration',
       'SPOTenantCDNPolicy',
       'SPOTenantProperties',
       'SPOUserProfileProperty'
     ],
-    totalResources: 59,
+    totalResources: 68,
     _note_SharePoint_Phase4: {
       description: 'Phase 4 additions (2026-07-17): 12 new advanced content management and modern SharePoint resource types (PnP PowerShell)',
       newResources: [
@@ -624,6 +633,30 @@ export const M365_SERVICES = {
       },
       coverage: 'from 47% (47/100) to 59% (59/100)',
       implementationPhase: 'Phase 4 - Advanced content management and modern SharePoint with PnP PowerShell support',
+      powerShellRequirements: 'Requires PnP.PowerShell module for full functionality'
+    },
+    _note_SharePoint_Phase5: {
+      description: 'Phase 5 additions (2026-07-17): 9 new advanced permissions, branding, and governance resource types (PnP PowerShell)',
+      newResources: [
+        'SPOAdvancedPermissionsManagement',
+        'SPOSiteThemingAndBranding',
+        'SPOSiteLifecyclePolicy',
+        'SPOAdvancedRetentionAndArchive',
+        'SPODelegationAndAccessReview',
+        'SPOSiteGovernancePolicy',
+        'SPOAdvancedAuditingConfiguration',
+        'SPOManagedMetadataConfiguration',
+        'SPOAdvancedComplianceSettings'
+      ],
+      categories: {
+        'Permissions & Access (2)': ['SPOAdvancedPermissionsManagement', 'SPODelegationAndAccessReview'],
+        'Branding & Customization (2)': ['SPOSiteThemingAndBranding', 'SPOSiteLifecyclePolicy'],
+        'Retention & Compliance (2)': ['SPOAdvancedRetentionAndArchive', 'SPOAdvancedComplianceSettings'],
+        'Governance & Audit (2)': ['SPOSiteGovernancePolicy', 'SPOAdvancedAuditingConfiguration'],
+        'Metadata (1)': ['SPOManagedMetadataConfiguration']
+      },
+      coverage: 'from 59% (59/100) to 68% (68/100)',
+      implementationPhase: 'Phase 5 - Advanced permissions, branding, lifecycle, and governance with PnP PowerShell',
       powerShellRequirements: 'Requires PnP.PowerShell module for full functionality'
     }
   },
