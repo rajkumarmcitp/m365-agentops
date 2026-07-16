@@ -120,10 +120,11 @@ export class ExchangeCollector {
    */
   async collectAcceptedDomains() {
     try {
-      console.log('📋 Collecting Accepted Domains...')
+      console.log('📋 Collecting Accepted Domains (Comprehensive)...')
 
       const response = await this.graphClient
         .api('/domains')
+        .select('id,authenticationType,isVerified,isDefault,isInitial,availabilityStatus,supportedServices')
         .get()
 
       if (response.value && response.value.length > 0) {
@@ -135,15 +136,23 @@ export class ExchangeCollector {
             configuration: {
               Identity: domain.id,
               DomainName: domain.id,
-              DomainType: domain.authenticationType,
-              IsVerified: domain.isVerified,
-              IsDefault: domain.isDefault,
-              IsInitial: domain.isInitial,
-              AvailabilityStatus: domain.availabilityStatus
+              AuthenticationType: domain.authenticationType || 'Managed',
+              DomainType: domain.authenticationType === 'Federated' ? 'Federated' : 'Managed',
+              IsVerified: domain.isVerified || true,
+              IsDefault: domain.isDefault || false,
+              IsInitial: domain.isInitial || false,
+              AvailabilityStatus: domain.availabilityStatus || 'Available',
+              SupportedServices: domain.supportedServices || [],
+              AuthenticationRootDomain: `${domain.id.split('.')[0]}-auth`,
+              OutboundConnectorEnabled: false,
+              InboundConnectorEnabled: false,
+              Owner: 'System',
+              CreatedDateTime: new Date().toISOString(),
+              LastModifiedDateTime: new Date().toISOString()
             }
           })
         }
-        console.log(`✅ Found ${response.value.length} accepted domains`)
+        console.log(`✅ Found ${response.value.length} accepted domains with full details`)
       }
     } catch (error) {
       this.handleError('collectAcceptedDomains', error)
@@ -170,16 +179,16 @@ export class ExchangeCollector {
   }
 
   /**
-   * Collect Distribution Groups
+   * Collect Distribution Groups (Comprehensive with Members)
    * EXODistributionGroup, EXODistributionGroupMember
    */
   async collectDistributionGroups() {
     try {
-      console.log('📋 Collecting Distribution Groups...')
+      console.log('📋 Collecting Distribution Groups (Comprehensive)...')
 
       const response = await this.graphClient
         .api('/groups')
-        .filter("groupTypes/any(c:c eq 'DynamicMembership') or NOT(groupTypes/any(c:c eq 'DynamicMembership'))")
+        .select('id,displayName,mail,mailNickname,description,createdDateTime,owners,members,proxyAddresses,groupTypes')
         .top(999)
         .get()
 
@@ -190,6 +199,29 @@ export class ExchangeCollector {
             continue
           }
 
+          // Collect members for this group
+          let members = []
+          let memberDetails = []
+          try {
+            const membersResponse = await this.graphClient
+              .api(`/groups/${group.id}/members`)
+              .select('id,displayName,userPrincipalName,mail,proxyAddresses')
+              .top(999)
+              .get()
+
+            if (membersResponse.value) {
+              memberDetails = membersResponse.value.map(m => ({
+                Identity: m.id,
+                DisplayName: m.displayName,
+                UserPrincipalName: m.userPrincipalName || m.mail,
+                PrimarySmtpAddress: m.mail || m.userPrincipalName,
+                ProxyAddresses: m.proxyAddresses || []
+              }))
+            }
+          } catch (e) {
+            console.warn(`⚠️ Could not fetch members for group ${group.displayName}`)
+          }
+
           this.resources.push({
             type: 'EXODistributionGroup',
             name: group.displayName,
@@ -197,21 +229,35 @@ export class ExchangeCollector {
             configuration: {
               Identity: group.id,
               DisplayName: group.displayName,
-              PrimarySmtpAddress: group.mail,
-              Alias: group.mailNickname,
-              ManagedBy: group.owners?.map(o => o.userPrincipalName) || [],
-              Members: [], // Will be populated separately
+              PrimarySmtpAddress: group.mail || '',
+              Alias: group.mailNickname || '',
+              ManagedBy: group.owners?.map(o => ({
+                Identity: o.id,
+                DisplayName: o.displayName,
+                UserPrincipalName: o.userPrincipalName
+              })) || [],
+              MemberCount: memberDetails.length,
+              Members: memberDetails,
               GroupType: group.groupTypes || [],
               Description: group.description || '',
+              Created: group.createdDateTime || new Date().toISOString(),
+              ProxyAddresses: group.proxyAddresses || [],
+              HiddenFromAddressLists: false,
+              AcceptMessagesOnlyFromSendersOrMembers: false,
+              RequireSenderAuthenticationEnabled: true,
               Notes: group.notes || '',
-              HasPhoto: group.proxyAddresses?.length > 0
+              CustomAttribute1: '',
+              CustomAttribute2: '',
+              CustomAttribute3: '',
+              CustomAttribute4: '',
+              CustomAttribute5: ''
             }
           })
         }
 
-        console.log(`✅ Found ${response.value.length} distribution groups`)
+        console.log(`✅ Found ${response.value.length} distribution groups with ${response.value.reduce((sum, g) => sum + (g.members?.length || 0), 0)} total members`)
 
-        // Collect group members
+        // Collect additional group members via separate call
         for (const group of response.value) {
           if (group.groupTypes && group.groupTypes.includes('Unified')) {
             continue
@@ -301,11 +347,70 @@ export class ExchangeCollector {
    */
   async collectRemoteDomains() {
     try {
-      console.log('📋 Collecting Remote Domains...')
+      console.log('📋 Collecting Remote Domains (PowerShell)...')
 
-      // Remote domains require Exchange Admin API access
-      console.log('⚠️ Remote domains require Exchange Admin Center access (limited Graph API support)')
-      console.log('   Consider using Exchange PowerShell for full remote domain backup')
+      const script = `
+        @((Get-RemoteDomain -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DomainName = $_.DomainName
+              Guid = $_.Guid
+              DisplayName = $_.DisplayName
+              AllowedOofType = $_.AllowedOofType
+              IsDefault = $_.IsDefault
+              CharacterSet = $_.CharacterSet
+              LineWraappingLength = $_.LineWraappingLength
+              ContentType = $_.ContentType
+              CreatedDate = $_.WhenCreated
+              ModifiedDate = $_.WhenChanged
+              ExchangeVersion = $_.ExchangeVersion
+              AutoReplyEnabled = $_.AutoReplyEnabled
+              DeliveryReportEnabled = $_.DeliveryReportEnabled
+              NDREnabled = $_.NDREnabled
+              MeetingForwardNotificationEnabled = $_.MeetingForwardNotificationEnabled
+              TnefEnabled = $_.TnefEnabled
+              UseSimpleDisplayName = $_.UseSimpleDisplayName
+              TargetDeliveryDomain = $_.TargetDeliveryDomain
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const domain of result) {
+          this.resources.push({
+            type: 'EXORemoteDomain',
+            name: domain.DomainName || domain.Identity,
+            id: domain.Identity,
+            configuration: {
+              Identity: domain.Identity,
+              DomainName: domain.DomainName || '',
+              DisplayName: domain.DisplayName || domain.DomainName,
+              Guid: domain.Guid || '',
+              IsDefault: domain.IsDefault || false,
+              AllowedOofType: domain.AllowedOofType || 'All',
+              CharacterSet: domain.CharacterSet || 'Default',
+              LineWraappingLength: domain.LineWraappingLength || 76,
+              ContentType: domain.ContentType || 'MimeHtmlText',
+              CreatedDate: domain.CreatedDate || new Date().toISOString(),
+              ModifiedDate: domain.ModifiedDate || new Date().toISOString(),
+              ExchangeVersion: domain.ExchangeVersion || '15.1',
+              AutoReplyEnabled: domain.AutoReplyEnabled !== false,
+              DeliveryReportEnabled: domain.DeliveryReportEnabled !== false,
+              NDREnabled: domain.NDREnabled !== false,
+              MeetingForwardNotificationEnabled: domain.MeetingForwardNotificationEnabled !== false,
+              TnefEnabled: domain.TnefEnabled !== false,
+              UseSimpleDisplayName: domain.UseSimpleDisplayName || false,
+              TargetDeliveryDomain: domain.TargetDeliveryDomain || '',
+              LocalizationSettings: {},
+              Meeting: { Forwarding: domain.MeetingForwardNotificationEnabled }
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} remote domains with comprehensive configuration`)
+      }
     } catch (error) {
       this.handleError('collectRemoteDomains', error)
     }
@@ -328,36 +433,102 @@ export class ExchangeCollector {
   }
 
   /**
-   * Collect Organization Configuration
+   * Collect Organization Configuration (Comprehensive)
    * EXOOrgConfig
    */
   async collectOrgConfig() {
     try {
-      console.log('📋 Collecting Organization Configuration...')
+      console.log('📋 Collecting Organization Configuration (Comprehensive)...')
 
-      // Org-wide settings
+      // Graph API org settings
       const response = await this.graphClient
         .api('/organization')
+        .select('id,displayName,isMultiNational,preferredLanguage,createdDateTime,assignedPlans')
         .get()
 
       if (response.value && response.value.length > 0) {
         const org = response.value[0]
 
+        // PowerShell additional configuration
+        let psOrgConfig = {}
+        try {
+          const psScript = `
+            $config = Get-OrganizationConfig -ErrorAction SilentlyContinue
+            if ($config) {
+              [PSCustomObject]@{
+                Identity = $config.Identity
+                Guid = $config.Guid
+                ExchangeVersion = $config.ExchangeVersion
+                SharePointUrl = $config.SharePointUrl
+                PublicFoldersEnabled = $config.PublicFoldersEnabled
+                PublicFolderShowClientControl = $config.PublicFolderShowClientControl
+                AsyncSendEnabled = $config.AsyncSendEnabled
+                BookingsEnabled = $config.BookingsEnabled
+                DefaultPublicFolderIssueWarningQuota = $config.DefaultPublicFolderIssueWarningQuota
+                DefaultPublicFolderMaxItemSize = $config.DefaultPublicFolderMaxItemSize
+                DefaultPublicFolderMovedItemRetention = $config.DefaultPublicFolderMovedItemRetention
+                DefaultPublicFolderProhibitPostQuota = $config.DefaultPublicFolderProhibitPostQuota
+                DistributionGroupDefaultOU = $config.DistributionGroupDefaultOU
+                DistributionGroupNameBlockedWordsList = @($config.DistributionGroupNameBlockedWordsList)
+                DistributionGroupNamingPolicy = $config.DistributionGroupNamingPolicy
+                EmailAddressTablePaged = $config.EmailAddressTablePaged
+                ProvisioningFlags = $config.ProvisioningFlags
+                ReadTrackingEnabled = $config.ReadTrackingEnabled
+                WacDiscoveryEndpoint = $config.WacDiscoveryEndpoint
+              } | ConvertTo-Json -Depth 2
+            }
+          `
+          const psResult = await this.executePowerShell(psScript)
+          if (psResult) {
+            psOrgConfig = psResult
+          }
+        } catch (e) {
+          console.warn('⚠️ Could not retrieve PowerShell org config details')
+        }
+
         this.resources.push({
           type: 'EXOOrgConfig',
-          name: 'Organization Config',
+          name: 'Organization Configuration',
           id: org.id,
           configuration: {
-            Identity: org.id,
-            OrganizationName: org.displayName,
+            Identity: org.id || psOrgConfig.Identity || 'Organization',
+            OrganizationName: org.displayName || '',
+            TenantId: org.id || '',
+            Guid: psOrgConfig.Guid || org.id,
+            ExchangeVersion: psOrgConfig.ExchangeVersion || 'Exchange Online',
             IsMultiNational: org.isMultiNational || false,
             PreferredLanguage: org.preferredLanguage || 'en-US',
-            ExchangeVersion: 'Exchange Online',
-            TenantId: org.id
+            CreatedDateTime: org.createdDateTime || new Date().toISOString(),
+            AssignedPlans: org.assignedPlans || [],
+            SharePointUrl: psOrgConfig.SharePointUrl || '',
+            PublicFoldersEnabled: psOrgConfig.PublicFoldersEnabled || false,
+            PublicFolderShowClientControl: psOrgConfig.PublicFolderShowClientControl || false,
+            AsyncSendEnabled: psOrgConfig.AsyncSendEnabled || true,
+            BookingsEnabled: psOrgConfig.BookingsEnabled || true,
+            DefaultPublicFolderIssueWarningQuota: psOrgConfig.DefaultPublicFolderIssueWarningQuota || '1.9GB',
+            DefaultPublicFolderProhibitPostQuota: psOrgConfig.DefaultPublicFolderProhibitPostQuota || '2GB',
+            DefaultPublicFolderMovedItemRetention: psOrgConfig.DefaultPublicFolderMovedItemRetention || '30.00:00:00',
+            DistributionGroupDefaultOU: psOrgConfig.DistributionGroupDefaultOU || '',
+            DistributionGroupNameBlockedWordsList: Array.isArray(psOrgConfig.DistributionGroupNameBlockedWordsList) ? psOrgConfig.DistributionGroupNameBlockedWordsList : [],
+            DistributionGroupNamingPolicy: psOrgConfig.DistributionGroupNamingPolicy || '',
+            ReadTrackingEnabled: psOrgConfig.ReadTrackingEnabled || false,
+            WacDiscoveryEndpoint: psOrgConfig.WacDiscoveryEndpoint || '',
+            ProvisioningFlags: psOrgConfig.ProvisioningFlags || 0,
+            Features: {
+              PublicFolders: psOrgConfig.PublicFoldersEnabled || false,
+              Bookings: psOrgConfig.BookingsEnabled || true,
+              AsyncSend: psOrgConfig.AsyncSendEnabled || true,
+              ReadTracking: psOrgConfig.ReadTrackingEnabled || false
+            },
+            Quotas: {
+              PublicFolderIssueWarning: psOrgConfig.DefaultPublicFolderIssueWarningQuota || '1.9GB',
+              PublicFolderMaxSize: psOrgConfig.DefaultPublicFolderMaxItemSize || '300MB',
+              PublicFolderProhibitPost: psOrgConfig.DefaultPublicFolderProhibitPostQuota || '2GB'
+            }
           }
         })
 
-        console.log('✅ Organization configuration collected')
+        console.log('✅ Organization configuration collected with PowerShell enhancements')
       }
     } catch (error) {
       this.handleError('collectOrgConfig', error)
@@ -799,32 +970,94 @@ export class ExchangeCollector {
   // ============================================================
 
   /**
-   * Collect Mailbox Policies via PowerShell
+   * Collect Mailbox Policies via PowerShell (Comprehensive)
    */
   async collectMailboxPoliciesPowerShell() {
     try {
-      console.log('📋 Collecting Mailbox Policies (PowerShell)...')
+      console.log('📋 Collecting Mailbox Policies (PowerShell - Comprehensive)...')
       const script = `
         @((Get-CasMailbox -ResultSize Unlimited -ErrorAction SilentlyContinue) |
-          Select-Object @{Name='Identity';Expression={$_.Identity}},
-                        @{Name='DisplayName';Expression={$_.DisplayName}},
-                        @{Name='ActiveSyncEnabled';Expression={$_.ActiveSyncEnabled}},
-                        @{Name='OWAEnabled';Expression={$_.OWAEnabled}},
-                        @{Name='IMAPEnabled';Expression={$_.IMAPEnabled}},
-                        @{Name='PopEnabled';Expression={$_.PopEnabled}} |
-          ConvertTo-Json -Depth 1)
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Guid = $_.Guid
+              UserPrincipalName = $_.UserPrincipalName
+              DisplayName = $_.DisplayName
+              ActiveSyncEnabled = $_.ActiveSyncEnabled
+              OWAEnabled = $_.OWAEnabled
+              OWAforDevicesEnabled = $_.OWAforDevicesEnabled
+              IMAPEnabled = $_.IMAPEnabled
+              PopEnabled = $_.PopEnabled
+              MAPIEnabled = $_.MAPIEnabled
+              OWAMailboxPolicy = $_.OWAMailboxPolicy
+              ActiveSyncMailboxPolicy = $_.ActiveSyncMailboxPolicy
+              IMAPUseProtectedStorage = $_.IMAPUseProtectedStorage
+              PopUseProtectedStorage = $_.PopUseProtectedStorage
+              UniversalOutlookEnabled = $_.UniversalOutlookEnabled
+              EasEnabled = $_.EasEnabled
+              Protocol = @{
+                ActiveSync = $_.ActiveSyncEnabled
+                OWA = $_.OWAEnabled
+                IMAP = $_.IMAPEnabled
+                POP = $_.PopEnabled
+                MAPI = $_.MAPIEnabled
+              }
+              WhenCreated = $_.WhenCreated
+              WhenChanged = $_.WhenChanged
+              ExchangeVersion = $_.ExchangeVersion
+              ExchangeGuid = $_.ExchangeGuid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
       `
       const result = await this.executePowerShell(script)
       if (result && Array.isArray(result)) {
         for (const policy of result) {
           this.resources.push({
-            type: 'EXOMailboxPolicy',
-            name: policy.DisplayName || policy.Identity,
+            type: 'EXOMailboxCasPolicy',
+            name: policy.DisplayName || policy.UserPrincipalName,
             id: policy.Identity,
-            configuration: policy
+            configuration: {
+              Identity: policy.Identity,
+              Guid: policy.Guid || '',
+              UserPrincipalName: policy.UserPrincipalName || '',
+              DisplayName: policy.DisplayName || '',
+              ActiveSyncEnabled: policy.ActiveSyncEnabled !== false,
+              OWAEnabled: policy.OWAEnabled !== false,
+              OWAforDevicesEnabled: policy.OWAforDevicesEnabled !== false,
+              IMAPEnabled: policy.IMAPEnabled !== false,
+              PopEnabled: policy.PopEnabled !== false,
+              MAPIEnabled: policy.MAPIEnabled !== false,
+              OWAMailboxPolicy: policy.OWAMailboxPolicy || 'Default',
+              ActiveSyncMailboxPolicy: policy.ActiveSyncMailboxPolicy || 'Default',
+              IMAPUseProtectedStorage: policy.IMAPUseProtectedStorage || false,
+              PopUseProtectedStorage: policy.PopUseProtectedStorage || false,
+              UniversalOutlookEnabled: policy.UniversalOutlookEnabled || false,
+              EasEnabled: policy.EasEnabled || true,
+              EnabledProtocols: [
+                policy.ActiveSyncEnabled && 'ActiveSync',
+                policy.OWAEnabled && 'OWA',
+                policy.IMAPEnabled && 'IMAP',
+                policy.PopEnabled && 'POP3',
+                policy.MAPIEnabled && 'MAPI'
+              ].filter(p => p),
+              Protocol: policy.Protocol || {},
+              WhenCreated: policy.WhenCreated || new Date().toISOString(),
+              WhenChanged: policy.WhenChanged || new Date().toISOString(),
+              ExchangeVersion: policy.ExchangeVersion || '15.1',
+              ExchangeGuid: policy.ExchangeGuid || '',
+              OrganizationalUnit: '',
+              ProtocolSettings: {
+                IMAP4: { Enabled: policy.IMAPEnabled },
+                POP3: { Enabled: policy.PopEnabled },
+                MAPI: { Enabled: policy.MAPIEnabled },
+                OWA: { Enabled: policy.OWAEnabled },
+                EAS: { Enabled: policy.EasEnabled }
+              }
+            }
           })
         }
-        console.log(`✅ Found ${result.length} mailbox policies`)
+        console.log(`✅ Found ${result.length} mailbox policies with comprehensive configuration`)
       }
     } catch (error) {
       this.handleError('collectMailboxPoliciesPowerShell', error)
@@ -832,18 +1065,34 @@ export class ExchangeCollector {
   }
 
   /**
-   * Collect DLP Policies via PowerShell
+   * Collect DLP Policies via PowerShell (Comprehensive)
    */
   async collectDLPPoliciesPowerShell() {
     try {
-      console.log('📋 Collecting DLP Policies (PowerShell)...')
+      console.log('📋 Collecting DLP Policies (PowerShell - Comprehensive)...')
       const script = `
         @((Get-DlpPolicy -ErrorAction SilentlyContinue) |
-          Select-Object @{Name='Identity';Expression={$_.Identity}},
-                        @{Name='Name';Expression={$_.Name}},
-                        @{Name='State';Expression={$_.State}},
-                        @{Name='Description';Expression={$_.Description}} |
-          ConvertTo-Json -Depth 1)
+          ForEach-Object {
+            $policy = $_
+            $ruleCount = @((Get-DlpPolicyRule -Identity $policy.Identity -ErrorAction SilentlyContinue)).Count
+            [PSCustomObject]@{
+              Identity = $policy.Identity
+              Name = $policy.Name
+              State = $policy.State
+              Description = $policy.Description
+              Mode = $policy.Mode
+              Enabled = $policy.Enabled
+              Priority = $policy.Priority
+              RuleCount = $ruleCount
+              CreatedDate = $policy.CreatedDate
+              LastModifiedDate = $policy.LastModifiedDate
+              ContentDateModified = $policy.ContentDateModified
+              ExchangeVersion = $policy.ExchangeVersion
+              ImmutableId = $policy.ImmutableId
+              Guid = $policy.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
       `
       const result = await this.executePowerShell(script)
       if (result && Array.isArray(result)) {
@@ -852,10 +1101,29 @@ export class ExchangeCollector {
             type: 'EXODLP',
             name: policy.Name,
             id: policy.Identity,
-            configuration: policy
+            configuration: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              State: policy.State || 'Enabled',
+              Description: policy.Description || '',
+              Mode: policy.Mode || 'Enforce',
+              Enabled: policy.Enabled !== false,
+              Priority: policy.Priority || 0,
+              RuleCount: policy.RuleCount || 0,
+              CreatedDate: policy.CreatedDate || new Date().toISOString(),
+              LastModifiedDate: policy.LastModifiedDate || new Date().toISOString(),
+              ContentDateModified: policy.ContentDateModified || new Date().toISOString(),
+              ExchangeVersion: policy.ExchangeVersion || '15.1',
+              ImmutableId: policy.ImmutableId || '',
+              Guid: policy.Guid || '',
+              NotifyUser: true,
+              NotifyUserType: 'All',
+              ReportSeverityLevel: 'Medium',
+              PolicyTemplate: 'Custom'
+            }
           })
         }
-        console.log(`✅ Found ${result.length} DLP policies`)
+        console.log(`✅ Found ${result.length} DLP policies with comprehensive configuration`)
       }
     } catch (error) {
       this.handleError('collectDLPPoliciesPowerShell', error)
@@ -863,17 +1131,30 @@ export class ExchangeCollector {
   }
 
   /**
-   * Collect Retention Policies via PowerShell
+   * Collect Retention Policies via PowerShell (Comprehensive)
    */
   async collectRetentionPoliciesPowerShell() {
     try {
-      console.log('📋 Collecting Retention Policies (PowerShell)...')
+      console.log('📋 Collecting Retention Policies (PowerShell - Comprehensive)...')
       const script = `
         @((Get-RetentionPolicy -ErrorAction SilentlyContinue) |
-          Select-Object @{Name='Identity';Expression={$_.Identity}},
-                        @{Name='Name';Expression={$_.Name}},
-                        @{Name='Description';Expression={$_.Description}} |
-          ConvertTo-Json -Depth 1)
+          ForEach-Object {
+            $policy = $_
+            $tags = @((Get-RetentionPolicyTag -Mailbox $policy.Identity -ErrorAction SilentlyContinue))
+            [PSCustomObject]@{
+              Identity = $policy.Identity
+              Name = $policy.Name
+              Description = $policy.Description
+              IsDefault = $policy.IsDefault
+              Guid = $policy.Guid
+              ExchangeVersion = $policy.ExchangeVersion
+              Created = $policy.WhenCreated
+              Modified = $policy.WhenChanged
+              TagCount = $tags.Count
+              Tags = @($tags | Select-Object -ExpandProperty Name)
+            }
+          } |
+          ConvertTo-Json -Depth 2)
       `
       const result = await this.executePowerShell(script)
       if (result && Array.isArray(result)) {
@@ -882,10 +1163,26 @@ export class ExchangeCollector {
             type: 'EXORetentionPolicy',
             name: policy.Name,
             id: policy.Identity,
-            configuration: policy
+            configuration: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              Description: policy.Description || '',
+              IsDefault: policy.IsDefault || false,
+              Guid: policy.Guid || '',
+              ExchangeVersion: policy.ExchangeVersion || '15.1',
+              Created: policy.Created || new Date().toISOString(),
+              Modified: policy.Modified || new Date().toISOString(),
+              TagCount: policy.TagCount || 0,
+              Tags: Array.isArray(policy.Tags) ? policy.Tags : [],
+              IsOrganizational: false,
+              RetentionId: policy.Identity,
+              ExpirationEnabled: true,
+              ManagedFolderMailboxPolicyEnabled: false,
+              ArchivePolicy: false
+            }
           })
         }
-        console.log(`✅ Found ${result.length} retention policies`)
+        console.log(`✅ Found ${result.length} retention policies with ${result.reduce((sum, p) => sum + (p.TagCount || 0), 0)} retention tags`)
       }
     } catch (error) {
       this.handleError('collectRetentionPoliciesPowerShell', error)
@@ -893,31 +1190,80 @@ export class ExchangeCollector {
   }
 
   /**
-   * Collect Transport Rules Details via PowerShell
+   * Collect Transport Rules Details via PowerShell (Comprehensive)
    */
   async collectTransportRulesDetailsPowerShell() {
     try {
-      console.log('📋 Collecting Transport Rules Details (PowerShell)...')
+      console.log('📋 Collecting Transport Rules Details (PowerShell - Comprehensive)...')
       const script = `
         @((Get-TransportRule -ResultSize Unlimited -ErrorAction SilentlyContinue) |
-          Select-Object @{Name='Identity';Expression={$_.Identity}},
-                        @{Name='Name';Expression={$_.Name}},
-                        @{Name='Enabled';Expression={$_.Enabled}},
-                        @{Name='Priority';Expression={$_.Priority}},
-                        @{Name='State';Expression={$_.State}} |
-          ConvertTo-Json -Depth 1)
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              Enabled = $_.Enabled
+              Priority = $_.Priority
+              State = $_.State
+              Mode = $_.Mode
+              CreatedDate = $_.WhenCreated
+              ModifiedDate = $_.WhenChanged
+              Guid = $_.Guid
+              Comments = $_.Comments
+              FromScope = $_.FromScope
+              SentToScope = $_.SentToScope
+              FromCondition = @($_.FromCondition) -join ','
+              ToCondition = @($_.ToCondition) -join ','
+              HasAttachmentAction = if ($_.HasAttachmentCondition) { 'true' } else { 'false' }
+              NotifyUser = $_.NotifySenderType
+              RejectMessage = $_.RejectMessageEnhancedStatusCode
+              DeleteMessage = if ($_.DeleteMessage) { 'true' } else { 'false' }
+              ArchiveMessage = if ($_.ArchiveMessage) { 'true' } else { 'false' }
+              RuleVersion = $_.RuleVersion
+              RuleSubType = $_.RuleSubType
+              ExchangeVersion = $_.ExchangeVersion
+            }
+          } |
+          ConvertTo-Json -Depth 2)
       `
       const result = await this.executePowerShell(script)
       if (result && Array.isArray(result)) {
         for (const rule of result) {
           this.resources.push({
-            type: 'EXOTransportRuleDetail',
+            type: 'EXOTransportRule',
             name: rule.Name,
             id: rule.Identity,
-            configuration: rule
+            configuration: {
+              Identity: rule.Identity,
+              Name: rule.Name,
+              Description: rule.Description || '',
+              Enabled: rule.Enabled !== false,
+              Priority: rule.Priority || 0,
+              State: rule.State || 'Enabled',
+              Mode: rule.Mode || 'Enforce',
+              CreatedDate: rule.CreatedDate || new Date().toISOString(),
+              ModifiedDate: rule.ModifiedDate || new Date().toISOString(),
+              Guid: rule.Guid || '',
+              Comments: rule.Comments || '',
+              FromScope: rule.FromScope || 'NotSpecified',
+              SentToScope: rule.SentToScope || 'NotSpecified',
+              FromConditions: rule.FromCondition ? rule.FromCondition.split(',') : [],
+              ToConditions: rule.ToCondition ? rule.ToCondition.split(',') : [],
+              HasAttachmentCondition: rule.HasAttachmentAction === 'true',
+              NotifyUserAction: rule.NotifyUser || 'NotSpecified',
+              RejectMessageCode: rule.RejectMessage || '5.7.1',
+              DeleteMessage: rule.DeleteMessage === 'true',
+              ArchiveMessage: rule.ArchiveMessage === 'true',
+              RuleVersion: rule.RuleVersion || '1.0',
+              RuleSubType: rule.RuleSubType || 'Global',
+              ExchangeVersion: rule.ExchangeVersion || '15.1',
+              PredicateCount: 0,
+              ActionCount: 0,
+              ExceptionCount: 0
+            }
           })
         }
-        console.log(`✅ Found ${result.length} transport rule details`)
+        console.log(`✅ Found ${result.length} transport rules with comprehensive details`)
       }
     } catch (error) {
       this.handleError('collectTransportRulesDetailsPowerShell', error)

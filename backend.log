@@ -19,7 +19,7 @@
 ✅ Agent Scheduler initialized
 
 📅 Nightly validations scheduled for 17/7/2026, 2:00:00 am
-⏰ Time until next run: 1122 minutes
+⏰ Time until next run: 1090 minutes
 ✅ Nightly validation scheduler initialized
 ✓ Azure credentials configured - using real Graph API
 ℹ️ SharePoint backup list not configured - using in-memory storage
@@ -71,7 +71,7 @@
 📅 Starting initial sync of announcements (7-day window)...
 
 🔄 ═══════════════════════════════════════════════════════
-📅 Starting announcement sync at 2026-07-16T01:48:13.701Z
+📅 Starting announcement sync at 2026-07-16T02:20:18.531Z
 🔄 ═══════════════════════════════════════════════════════
 🔄 Message Center sync job started (hourly)
 ✅ Investigation tables initialized
@@ -94,22 +94,22 @@
 ✓ "Change Announcements" list already exists
 ✓ "Change Announcement Tasks" list already exists
 ✅ SharePoint setup complete
-📅 Filtered to 16 announcements from last 7 days
 ❌ Failed to initialize setup config list: Requested site could not be found
 ⚠️ Graph Client initialization failed: Requested site could not be found
 ⚠️ Will use simulated data for endpoints
+📅 Filtered to 16 announcements from last 7 days
+   └─ Configured 9 columns for ZT-Validations
+   └─ List already exists: ZT-Exceptions
+✅ ZT-Exceptions: 185c7d87-80b0-4a6e-83cb-f309300667b6
    📌 Cached Change Announcements: e2c2e08f-774f-4c36-b319-55617e511305
    📋 Using list ID: e2c2e08f-774f-4c36-b319-55617e511305
 📥 Fetching existing announcements from SharePoint (max 1000)...
-   └─ Configured 9 columns for ZT-Validations
 📋 Found 249 existing items in SharePoint list
    First item Title: MC1419802|Microsoft Teams: New layout for sharing content in Teams events|Microsoft Teams|normal
 📊 Announcements to sync: 16
 📋 Already in SharePoint: 155
    Existing IDs: MC1419802, MC1419801, MC1419800
-✓ Sync complete: Added 0 new | Skipped 16 (duplicates) | Total processed at 2026-07-16T01:48:15.202Z
-   └─ List already exists: ZT-Exceptions
-✅ ZT-Exceptions: 185c7d87-80b0-4a6e-83cb-f309300667b6
+✓ Sync complete: Added 0 new | Skipped 16 (duplicates) | Total processed at 2026-07-16T02:20:20.235Z
    └─ Configured 13 columns for ZT-Exceptions
    └─ List already exists: ZT-AuditLogs
 ✅ ZT-AuditLogs: 5ee40691-ac67-42e3-b8f8-c2ce32da4ba9
@@ -132,11 +132,6 @@ SHAREPOINT_ZT_COMPLIANCE_LIST_ID=c23036a5-1af0-4c23-b0c4-3b57f24450ee
 
 ✓ Verifying SharePoint lists...
    ✓ ZT-Validations: Accessible
-🔄 Starting backup: Security
-✅ Backup record stored in memory: 2026-07-16-Security-498772
-📦 Collecting Security configurations...
-🔄 Starting Security & Identity backup collection...
-📋 Collecting Azure AD Applications...
    ✓ ZT-Exceptions: Accessible
    ✓ ZT-AuditLogs: Accessible
    ✓ ZT-RiskScores: Accessible
@@ -149,374 +144,2154 @@ SHAREPOINT_ZT_COMPLIANCE_LIST_ID=c23036a5-1af0-4c23-b0c4-3b57f24450ee
    • ZT-RiskScores - Risk assessment data
    • ZT-Compliance - Framework compliance metrics
 ✅ Audit logs will now be saved to SharePoint automatically
-✅ Found 9 applications with detailed configuration
-📋 Collecting Azure AD Service Principals...
-✅ Found 100 service principals with detailed configuration
-📋 Collecting Azure AD Role Assignments...
-❌ collectRoleAssignments: Resource not found for the segment 'directoryRoleAssignments'.
-📋 Collecting Conditional Access Policies...
-✅ Found 14 conditional access policies
-📋 Collecting Security Defaults Settings...
-✅ Security defaults settings collected
-📋 Collecting Authentication Policies...
-✅ Authentication policies collected
-📋 Collecting Administrative Units...
-❌ collectAdministrativeUnits: Resource not found for the segment 'administrativeUnits'.
-📋 Collecting Cross-Tenant Access Policy...
-✅ Cross-tenant access policy collected
-📋 Collecting Admin Consent Request Policy...
-⚠️ Admin consent request policy requires Azure AD admin access
-📋 Collecting Authentication Context Class Reference...
-⚠️ Authentication context requires Azure AD admin access
-📋 Collecting Authentication Flow Policy...
-⚠️ Authentication flow policy requires Azure AD admin access
-📋 Collecting Authentication Methods Policies...
-⚠️ Authentication methods policies require Azure AD admin access
-📋 Collecting Authorization Policy...
-⚠️ Authorization policy requires Azure AD admin access
-📋 Collecting Certificate-Based Authentication Configuration...
-⚠️ Certificate-based authentication requires Azure AD admin access
-📋 Collecting Claims Mapping Policies...
-⚠️ Claims mapping policies require Azure AD admin access
-📋 Collecting Cloud App Security Detection Policy...
-⚠️ Cloud app security detection policy requires Azure AD admin access
-📋 Collecting Device Compliance Policy...
-⚠️ Device compliance policy requires Azure AD admin access
-📋 Collecting Device Configuration...
-⚠️ Device configuration requires Azure AD admin access
-📋 Collecting Dynamic Groups...
-📋 Collecting Email Claim Configuration...
-⚠️ Email claim configuration requires Azure AD admin access
-📋 Collecting Feature Rollout Policy...
-⚠️ Feature rollout policy requires Azure AD admin access
-📋 Collecting Groups Assignable to Role...
-📋 Collecting Home Realm Discovery Policy...
-⚠️ Home realm discovery policy requires Azure AD admin access
-📋 Collecting Identity Cleanup Policy...
-⚠️ Identity cleanup policy requires Azure AD admin access
-📋 Collecting Identity Protection Policy...
-⚠️ Identity protection policy requires Azure AD admin access
-📋 Collecting Inactive User Deletion Policy...
-⚠️ Inactive user deletion policy requires Azure AD admin access
-📋 Collecting License Groups...
-⚠️ License groups require Azure AD admin access
-📋 Collecting Mobile App Management Policy...
-⚠️ Mobile app management policy requires Azure AD admin access
-📋 Collecting Mobile Application Management...
-⚠️ Mobile application management requires Azure AD admin access
-📋 Collecting Object Global Setting Policy...
-⚠️ Object global setting policy requires Azure AD admin access
-📋 Collecting Password Rule Settings...
-⚠️ Password rule settings require Azure AD admin access
-📋 Collecting Policy-Based Auth Rule Configuration...
-⚠️ Policy-based auth rule configuration requires Azure AD admin access
-📋 Collecting Role Eligibility Schedule Request...
-⚠️ Role eligibility schedule request requires Azure AD admin access
-📋 Collecting Service Principal App Role Assignment...
-⚠️ Service principal app role assignment requires Azure AD admin access
-📋 Collecting Social Identity Provider...
-⚠️ Social identity provider requires Azure AD admin access
-📋 Collecting Token Issuance Policy...
-⚠️ Token issuance policy requires Azure AD admin access
-📋 Collecting Token Lifetime Policy...
-⚠️ Token lifetime policy requires Azure AD admin access
-📋 Collecting User Administrative Unit...
-❌ collectUserAdministrativeUnit: Resource not found for the segment 'administrativeUnits'.
-📋 Collecting User Registration Feature...
-⚠️ User registration feature requires Azure AD admin access
-📋 Collecting Administrative Units...
-❌ collectAdministrativeUnits: Resource not found for the segment 'administrativeUnits'.
-📋 Collecting Directory Roles...
-✅ Found 10 directory roles
-📋 Collecting Domains...
-✅ Found 2 domains
-📋 Collecting Identity Providers...
-❌ collectIdentityProviders: The application does not have any of the required application permissions (IdentityProvider.Read.All, IdentityProvider.ReadWrite.All) to access the resource. 
-📋 Collecting Tenant Details...
-✅ Found 1 tenant detail(s)
-📋 Collecting Named Locations...
-ℹ️ No named locations found
-📋 Collecting Permission Grant Policies...
-✅ Found 14 permission grant policies
-📋 Collecting Groups...
-✅ Found 52 groups
-📋 Collecting Users (Summary)...
-✅ Found 15 users (summary only)
-📋 Collecting Additional Policies...
-⚠️ Could not collect from /policies/homeRealmDiscoveryPolicies
-⚠️ Could not collect from /policies/tokenIssuancePolicies
-⚠️ Could not collect from /policies/tokenLifetimePolicies
-⚠️ Could not collect from /policies/claimsMappingPolicies
-📊 Starting PowerShell-based collection for advanced components...
-📋 Collecting Entitlement Management Catalogs (PowerShell)...
+📡 Bearer token detected in request
+📋 Determining role for user: a9430520-42e0-4be6-9e0e-8d711b062ea5
+✓ Bearer token validated for authenticated request
+✓ User is member of 13 groups: 759a2e72-72b8-4416-8833-ff157d53a206, cfd90836-667e-4f80-b325-064439da062f, 36e1ecd7-f54c-4d34-b41f-0991efe0dd40, 6426d00c-62fa-433c-896c-87c94fe1dd94, b8e07f4a-fa8a-4935-b5a2-3a2ba890536a, 091aee9d-21c8-4177-ac5c-7f3b3c88ceac, 444a74d6-5b3c-4684-8f10-ed726e9d557a, 99f66318-45df-4ba3-b1b0-96a1c0614296, 16f9b80f-f6e7-4f66-9ba5-80d121284df0, 74df478e-a359-448a-9340-7d6a2f14ebd8, 65eca76c-bcb4-464b-b408-e7dfa75355d2, 4b87f912-2811-474b-8a01-692036be503b, 4fe74ac1-bf65-4290-9833-8f90fd0c4caf
+✓ User is SUPER ADMIN
+✓ Role determination complete: super
+[Service Health] Fetching messages (skip=0, top=100) from SharePoint list 1cf87003-50ce-4881-8783-21a6572fb117...
+[Service Health] Graph API error (undefined): $skip is not supported on this API. Only URLs returned by the API can be used to page.
+📋 Loading Zero Trust results from SharePoint lists (primary database)...
+🔍 CIS Validator: Starting comprehensive validation...
+📡 Fetching Message Center messages from Graph API...
+Fetching managed devices...
+Fetching users...
+📡 Fetching privileged accounts from Azure AD...
+📊 Fetching secure score from Graph API...
+ℹ️ SharePoint lists are empty, falling back to snapshot...
+📦 Returning latest snapshot from disk: snapshot-2026-07-16.json
+⚠️ Group Creation Restriction validation failed: Resource not found for the segment 'settings'.
+⚠️ Device Enrollment Restrictions validation failed: Resource not found for the segment 'deviceEnrollmentPlatformRestrictionsConfiguration'.
+⚠️ Allow Limited Access validation failed: Resource not found for the segment 'dataLossPreventionPolicies'.
+⚠️ Security Defaults validation failed: Resource not found for the segment 'identitySecurityDefaultEnforcementPolicy'.
+⚠️ DLP Policies validation failed: Resource not found for the segment 'datalossprevention'.
+⚠️ External Sharing validation failed: Resource not found for the segment 'tenant'.
+⚠️ Collaboration Invitation Restriction validation failed: Resource not found for the segment 'externalIdentitiesPolicy'.
+⚠️ Password Hash Sync validation failed: Resource not found for the segment 'onPremisesSyncContainers'.
+⚠️ Forwarding Rules validation failed: Resource not found for the segment 'forwardingPolicy'.
+⚠️ Mailbox Audit Retention validation failed: Resource not found for the segment 'audit'.
+⚠️ Group Creation validation failed: Resource not found for the segment 'directorySettingTemplates'.
+⚠️ DLP for Collaboration validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ SharePoint Terms Acceptance validation failed: Caller does not have required permissions for this API
+⚠️ Audit Log Search validation failed: Resource not found for the segment 'audit'.
+⚠️ SharePoint Modern Auth validation failed: Caller does not have required permissions for this API
+⚠️ Exchange Spam Policies validation failed: Resource not found for the segment 'emailThreatSubmissionPolicies'.
+⚠️ Restrict External Sharing validation failed: Resource not found for the segment 'policy'.
+⚠️ DLP for Teams validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ DLP Policies Enabled validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ Sensitivity Labels validation failed: Resource not found for the segment 'policy'.
+⚠️ Mail Flow Rules validation failed: Resource not found for the segment 'transportRules'.
+⚠️ Mailbox Delegation Auditing validation failed: Resource not found for the segment 'audit'.
+⚠️ Fabric Guest Access validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Python/R Sharing validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Mailbox Auditing validation failed: Resource not found for the segment 'audit'.
+⚠️ MFA for PowerShell validation failed: Resource not found for the segment 'authenticationMethods'.
+⚠️ Fabric External Invitations validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Shared Bookings Pages validation failed: Resource not found for the segment 'appsManagement'.
+⚠️ Fabric Sensitivity Labels validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Emergency Access Accounts validation failed: Invalid filter clause: Syntax error: character '"' is not valid at position 8 in 'mail eq "emergencyaccess*"'.
+⚠️ Fabric ResourceKey Authentication validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Service Principal Provisioning validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Shareable Links validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric External Data Sharing validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Client Access validation failed: Resource not found for the segment 'clientAccessPolicy'.
+⚠️ Third-Party Storage Services validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ Fabric Publish to Web validation failed: Resource not found for the segment 'powerBi'.
+⚠️ External User Expiration validation failed: Caller does not have required permissions for this API
+⚠️ Fabric Guest Content Access validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Meeting Transcripts validation failed: Requested API is not supported in application-only context
+⚠️ Fabric Service Principal API Access validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Service Principal Workspace Creation validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Comprehensive Attachment Filtering validation failed: Resource not found for the segment 'securitySettings'.
+⚠️ Priority Accounts Strict Protection validation failed: Resource not found for the segment 'priorityAccounts'.
+⚠️ Teams External File Sharing validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Connection Filter Safe List validation failed: Resource not found for the segment 'securitySettings'.
+⚠️ Teams Trial Tenants validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Defender for Cloud Apps validation failed: Resource not found for the segment 'cloudAppSecurityPolicies'.
+⚠️ SharePoint Infected Files validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ Teams External Domain Restriction validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Teams Email Channel Address validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Q&A Not Available validation failed: Requested API is not supported in application-only context
+⚠️ Live Captions validation failed: Requested API is not supported in application-only context
+⚠️ Teams External Initiate Conversations validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Teams Report Security Concerns validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Teams Live Events Restricted validation failed: Requested API is not supported in application-only context
+⚠️ Recording Notifications validation failed: Requested API is not supported in application-only context
+⚠️ E2E Encryption validation failed: Requested API is not supported in application-only context
+⚠️ Meeting Organizer Only validation failed: Requested API is not supported in application-only context
+⚠️ AIR Remediation validation failed: Resource not found for the segment 'automationRules'.
+⚠️ Teams App Permission Policies validation failed: Resource not found for the segment 'appCatalog'.
+⚠️ Teams Unmanaged Users Communication validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Prevent Dial-Out validation failed: Requested API is not supported in application-only context
+⚠️ Legacy Authentication validation failed: Resource not found for the segment 'authenticationMethods'.
+⚠️ Prevent Anonymous Users validation failed: Requested API is not supported in application-only context
+⚠️ Device list fetch failed: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: 6c88fe31-c0de-c2fc-5ab9-f1ae46ed7da1 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceFE/StatelessDeviceFEService/deviceManagement/managedDevices?api-version=2025-07-09&$top=999\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ Defender for Endpoint validation failed: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: c2bce988-e838-5a6d-5954-0de7f97a052f - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceFE/StatelessDeviceFEService/deviceManagement/managedDevices?api-version=2025-07-09&$top=999\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ External Calendar Sharing validation failed: Caller does not have required permissions for this API
+⚠️ Privileged Role Admin Approval validation failed: {"ErrorCode":"CultureNotFoundException","Message":"Culture is not supported.\r\nParameter name: name\r\n* is an invalid culture identifier.","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[],"TypeAnnotation":null}
+⚠️ Zero-Hour Auto Purge validation failed: Requested API is not supported in application-only context
+⚠️ Restrict Unmanaged Devices validation failed: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: 178f27a4-09f0-7941-5941-61e03597fa07 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceConfiguration_2606/StatelessDeviceConfigurationFEService/deviceManagement/deviceCompliancePolicies?api-version=2022-06-13\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ Privileged Role Assignment JIT validation failed: {"ErrorCode":"CultureNotFoundException","Message":"Culture is not supported.\r\nParameter name: name\r\n* is an invalid culture identifier.","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[],"TypeAnnotation":null}
+⚠️ Global Admin Approval validation failed: {"ErrorCode":"CultureNotFoundException","Message":"Culture is not supported.\r\nParameter name: name\r\n* is an invalid culture identifier.","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[],"TypeAnnotation":null}
+⚠️ Device Compliance validation failed: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: 2e0bc5ae-4321-1385-1bd4-82c9694de7bb - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceConfiguration_2606/StatelessDeviceConfigurationFEService/deviceManagement/deviceCompliancePolicies?api-version=2022-06-13\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+✓ Found 15 users
+⚠️ Risk data not available: Parsing OData Select and Expand failed: Could not find a property named 'userRiskLevel' on type 'microsoft.graph.riskyUser'.
+✅ Privileged accounts: 7 accounts, 0 at risk
+✗ Devices API error: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: 430f4585-af75-596d-cd9f-046eec72a511 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceFE/StatelessDeviceFEService/deviceManagement/managedDevices?api-version=2025-07-09\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+📊 Sample SKU structure: {
+  "accountName": "NassTech",
+  "accountId": "b9cc8284-05ed-452f-877a-970779430dcb",
+  "appliesTo": "User",
+  "capabilityStatus": "Suspended",
+  "consumedUnits": 5,
+  "id": "b9cc8284-05ed-452f-877a-970779430dcb_b05e124f-c7cc-45a0-a6aa-8cf78c946968",
+  "skuId": "b05e124f-c7cc-45a0-a6aa-8cf78c946968",
+  "skuPartNumber": "EMSPREMIUM",
+  "subscriptionIds": [
+    "6cef0959-1f32-4fbb-974c-fa93f17e6338"
+  ],
+  "prepaidUnits": {
+    "enabled": 0,
+    "suspended": 25,
+    "warning": 0,
+    "lockedOut": 
+⏭️  Excluding free/trial license: EMSPREMIUM (prepaid: 0, isFree: false)
+⏭️  Excluding free/trial license: FLOW_FREE (prepaid: 10000, isFree: true)
+⏭️  Excluding free/trial license: ENTERPRISEPREMIUM_NOPSTNCONF (prepaid: 0, isFree: false)
+⏭️  Excluding free/trial license: SPE_E3 (prepaid: 0, isFree: false)
+✓ Found 0 PAID license SKUs (excluding free/trial)
+📊 License totals (paid only): 0 total, 0 consumed, 0 available
+⚠️ Safe Links validation failed: {"error":"Resource doesn\u0027t exist for the tenant. ActivityId: c0cc8bd1-a96d-4b36-0293-c95b501b0cf4. Learn more: https://docs.microsoft.com/en-us/graph/api/resources/service-communications-api-overview?view=graph-rest-beta\u0026preserve-view=true."}
+⚠️ Safe Attachments validation failed: {"error":"Resource doesn\u0027t exist for the tenant. ActivityId: 1ea30dee-9155-ad92-7bbd-f7077845dc88. Learn more: https://docs.microsoft.com/en-us/graph/api/resources/service-communications-api-overview?view=graph-rest-beta\u0026preserve-view=true."}
+⚠️ Safe Attachments for SPO/Teams validation failed: {"error":"Resource doesn\u0027t exist for the tenant. ActivityId: ff5a3fea-c568-d56c-83ad-d83167e7c706. Learn more: https://docs.microsoft.com/en-us/graph/api/resources/service-communications-api-overview?view=graph-rest-beta\u0026preserve-view=true."}
+⚠️ Per-User MFA Disabled validation failed: Resource not found for segment 'authenticationMethodsPolicy/authenticationMethodConfigurations'.
+⚠️ SSPR Enabled validation failed: Resource not found for segment 'authenticationMethodsPolicy/authenticationMethodConfigurations'.
+❌ Failed to get setup config: Requested site could not be found
+✓ Message Center: 100 messages found
+📡 Fetching Service Health from Graph API...
+✓ Service Health: 74 issues found
+✓ Secure score: 115.21/273
+⚠️ Privileged Role Access Reviews validation failed: Attempted to perform an unauthorized operation.
+⚠️ Guest Access Reviews validation failed: Attempted to perform an unauthorized operation.
+🔄 Starting backup: ExchangeOnline
+✅ Backup record stored in memory: 2026-07-16-ExchangeOnline-643730
+📦 Collecting ExchangeOnline configurations...
+🔄 Starting Exchange Online backup collection...
+📋 Collecting Accepted Domains (Comprehensive)...
+✅ Found 2 accepted domains with full details
+📋 Collecting Address Book Policies...
+⚠️ Address book policies require Exchange Admin Center access
+📋 Collecting Address Lists...
+⚠️ Address lists require Exchange Admin Center access
+📋 Collecting CAS Mailbox Configuration...
+⚠️ CAS mailbox requires Exchange Admin Center access
+📋 Collecting Mail Connectors...
+⚠️ Mail connectors require Exchange Admin Center access (limited Graph API support)
+   Consider using Exchange PowerShell for full connector backup
+📋 Collecting Data Classifications...
+⚠️ Data classifications require Exchange Admin Center access
+📋 Collecting Distribution Groups (Comprehensive)...
+✅ Found 52 distribution groups with 0 total members
+  └─ mbx-shareupdate-full: 2 members
+  └─ M365 E3 Licensed Users: 4 members
+  └─ AZURE_GROUP_ADMINS: 1 members
+  └─ AZURE_GROUP_MANAGERS: 1 members
+  └─ mbx-raj.dur3-full: 2 members
+  └─ mbx-raj.dur-full: 2 members
+  └─ M365-Super-Admins: 1 members
+  └─ BreakGlass: 3 members
+  └─ AZURE_GROUP_SUPER_ADMINS: 1 members
+  └─ mbx-raj.dur2-full: 2 members
+  └─ Test for Audit Logs: 1 members
+  └─ DL Creation: 2 members
+  └─ mbx-ibrahimshared1-full: 2 members
+📋 Collecting Email Address Policies...
+⚠️ Email address policies require Exchange Admin Center access
+📋 Collecting External MX Records...
+✅ Found 2 external MX records
+📋 Collecting Global Address List...
+✅ Global address list collected
+📋 Collecting Hosted Connection Filter Policy...
+⚠️ Hosted connection filter policy requires Exchange Admin Center access
+📋 Collecting Hosted Content Filter Policy...
+⚠️ Hosted content filter policy requires Exchange Admin Center access
+📋 Collecting Journal Rules...
+⚠️ Journal rules require Exchange Admin Center access
+📋 Collecting Mailbox Audit Bypass...
+⚠️ Mailbox audit bypass requires Exchange Admin Center access
+📋 Collecting Mailbox AutoReply Configuration...
+⚠️ Mailbox autoreply requires Exchange Admin Center access
+📋 Collecting Mailbox Calendar Folders...
+⚠️ Mailbox calendar folders require Exchange Admin Center access
+📋 Collecting Mail Contacts...
+✅ Found 1 mail contacts
+📋 Collecting Mailbox Plans...
+⚠️ Mailbox plans require Exchange Admin Center access
+📋 Collecting Mailbox Search Configuration...
+⚠️ Mailbox search requires Exchange Admin Center access
+📋 Collecting Managed Folders...
+⚠️ Managed folders require Exchange Admin Center access
+📋 Collecting Message Classifications...
+⚠️ Message classifications require Exchange Admin Center access
+📋 Collecting Organization Configuration (Comprehensive)...
 ⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
         $ErrorActionPreference = 'Continue'
         
-        @((Get-MgBetaEntitlementManagementCatalog -All -ErrorAction SilentlyContinue) |
-          Select-Object @{Name='id';Expression={$_.id}},
-                        @{Name='displayName';Expression={$_.displayName}},
-                        @{Name='description';Expression={$_.description}},
-                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
-          ConvertTo-Json -Depth 1)
+            $config = Get-OrganizationConfig -ErrorAction SilentlyContinue
+            if ($config) {
+              [PSCustomObject]@{
+                Identity = $config.Identity
+                Guid = $config.Guid
+                ExchangeVersion = $config.ExchangeVersion
+                SharePointUrl = $config.SharePointUrl
+                PublicFoldersEnabled = $config.PublicFoldersEnabled
+                PublicFolderShowClientControl = $config.PublicFolderShowClientControl
+                AsyncSendEnabled = $config.AsyncSendEnabled
+                BookingsEnabled = $config.BookingsEnabled
+                DefaultPublicFolderIssueWarningQuota = $config.DefaultPublicFolderIssueWarningQuota
+                DefaultPublicFolderMaxItemSize = $config.DefaultPublicFolderMaxItemSize
+                DefaultPublicFolderMovedItemRetention = $config.DefaultPublicFolderMovedItemRetention
+                DefaultPublicFolderProhibitPostQuota = $config.DefaultPublicFolderProhibitPostQuota
+                DistributionGroupDefaultOU = $config.DistributionGroupDefaultOU
+                DistributionGroupNameBlockedWordsList = @($config.DistributionGroupNameBlockedWordsList)
+                DistributionGroupNamingPolicy = $config.DistributionGroupNamingPolicy
+                EmailAddressTablePaged = $config.EmailAddressTablePaged
+                ProvisioningFlags = $config.ProvisioningFlags
+                ReadTrackingEnabled = $config.ReadTrackingEnabled
+                WacDiscoveryEndpoint = $config.WacDiscoveryEndpoint
+              } | ConvertTo-Json -Depth 2
+            }
+          
+      "
+/bin/sh: powershell: command not found
+
+✅ Organization configuration collected with PowerShell enhancements
+📋 Collecting Recipient Permissions...
+⚠️ Recipient permissions require Exchange Admin Center access
+📋 Collecting Remote Domains (PowerShell)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-RemoteDomain -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DomainName = $_.DomainName
+              Guid = $_.Guid
+              DisplayName = $_.DisplayName
+              AllowedOofType = $_.AllowedOofType
+              IsDefault = $_.IsDefault
+              CharacterSet = $_.CharacterSet
+              LineWraappingLength = $_.LineWraappingLength
+              ContentType = $_.ContentType
+              CreatedDate = $_.WhenCreated
+              ModifiedDate = $_.WhenChanged
+              ExchangeVersion = $_.ExchangeVersion
+              AutoReplyEnabled = $_.AutoReplyEnabled
+              DeliveryReportEnabled = $_.DeliveryReportEnabled
+              NDREnabled = $_.NDREnabled
+              MeetingForwardNotificationEnabled = $_.MeetingForwardNotificationEnabled
+              TnefEnabled = $_.TnefEnabled
+              UseSimpleDisplayName = $_.UseSimpleDisplayName
+              TargetDeliveryDomain = $_.TargetDeliveryDomain
+            }
+          } |
+          ConvertTo-Json -Depth 2)
       
       "
 /bin/sh: powershell: command not found
 
-✅ Found 0 entitlement management catalogs
-📋 Collecting Lifecycle Workflows (PowerShell)...
-✅ Found 0 lifecycle workflows
-📋 Collecting B2X User Flows (PowerShell)...
-✅ Found 0 B2X user flows
-📋 Collecting Custom Security Attributes (PowerShell)...
-✅ Found 0 custom security attributes
-📋 Collecting App Management Policies (PowerShell)...
-✅ Found 0 app management policies
-📋 Collecting PIM Role Eligibility Schedules (PowerShell)...
-✅ Found 0 PIM role eligibility schedules
-📋 Collecting PIM Activation Requests (PowerShell)...
-✅ Found 0 PIM activation requests
-📋 Collecting Multi-tenant Organization Policies (PowerShell)...
+✅ Found 0 remote domains with comprehensive configuration
+📋 Collecting Role Assignment Policies...
+⚠️ Role assignment policies require Exchange Admin Center access
+📋 Collecting Safe Links Policy...
+⚠️ Safe links policy requires Exchange Admin Center access
+📋 Collecting Send Connectors...
+⚠️ Send connectors require Exchange Admin Center access
+📋 Collecting Sharing Policy...
+⚠️ Sharing policy requires Exchange Admin Center access
+📋 Collecting SMTP Server Settings...
+⚠️ SMTP server settings require Exchange Admin Center access
+📋 Collecting Transport Configuration...
+⚠️ Transport configuration requires Exchange Admin Center access
+📋 Collecting Transport Rules...
+⚠️ Transport rules require Exchange Admin Center access (limited Graph API support)
+   Consider using Exchange PowerShell for full transport rule backup
+📋 Collecting Unified/Microsoft 365 Groups...
+✅ Found 26 unified groups
+📊 Starting PowerShell-based collection for advanced Exchange components...
+📋 Collecting Mailbox Policies (PowerShell - Comprehensive)...
 ⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
         $ErrorActionPreference = 'Continue'
         
-        @((Get-MgBetaMultiTenantOrganization -ErrorAction SilentlyContinue) |
-          Select-Object @{Name='id';Expression={$_.id}},
-                        @{Name='displayName';Expression={$_.displayName}},
-                        @{Name='description';Expression={$_.description}},
-                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
-          ConvertTo-Json -Depth 1)
+        @((Get-CasMailbox -ResultSize Unlimited -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Guid = $_.Guid
+              UserPrincipalName = $_.UserPrincipalName
+              DisplayName = $_.DisplayName
+              ActiveSyncEnabled = $_.ActiveSyncEnabled
+              OWAEnabled = $_.OWAEnabled
+              OWAforDevicesEnabled = $_.OWAforDevicesEnabled
+              IMAPEnabled = $_.IMAPEnabled
+              PopEnabled = $_.PopEnabled
+              MAPIEnabled = $_.MAPIEnabled
+              OWAMailboxPolicy = $_.OWAMailboxPolicy
+              ActiveSyncMailboxPolicy = $_.ActiveSyncMailboxPolicy
+              IMAPUseProtectedStorage = $_.IMAPUseProtectedStorage
+              PopUseProtectedStorage = $_.PopUseProtectedStorage
+              UniversalOutlookEnabled = $_.UniversalOutlookEnabled
+              EasEnabled = $_.EasEnabled
+              Protocol = @{
+                ActiveSync = $_.ActiveSyncEnabled
+                OWA = $_.OWAEnabled
+                IMAP = $_.IMAPEnabled
+                POP = $_.PopEnabled
+                MAPI = $_.MAPIEnabled
+              }
+              WhenCreated = $_.WhenCreated
+              WhenChanged = $_.WhenChanged
+              ExchangeVersion = $_.ExchangeVersion
+              ExchangeGuid = $_.ExchangeGuid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
       
       "
 /bin/sh: powershell: command not found
 
-✅ Found 0 multi-tenant organization policies
-📋 Collecting Identity Protection Policies (PowerShell)...
+✅ Found 0 mailbox policies with comprehensive configuration
+📋 Collecting DLP Policies (PowerShell - Comprehensive)...
 ⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
         $ErrorActionPreference = 'Continue'
         
-        @((Get-MgIdentityProtectionRiskyUser -All -ErrorAction SilentlyContinue) |
-          Select-Object @{Name='id';Expression={$_.id}},
-                        @{Name='displayName';Expression={$_.displayName}},
-                        @{Name='userPrincipalName';Expression={$_.userPrincipalName}},
-                        @{Name='riskLevel';Expression={$_.riskLevel}},
-                        @{Name='lastUpdatedDateTime';Expression={$_.lastUpdatedDateTime}} |
-          ConvertTo-Json -Depth 1)
+        @((Get-DlpPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            $policy = $_
+            $ruleCount = @((Get-DlpPolicyRule -Identity $policy.Identity -ErrorAction SilentlyContinue)).Count
+            [PSCustomObject]@{
+              Identity = $policy.Identity
+              Name = $policy.Name
+              State = $policy.State
+              Description = $policy.Description
+              Mode = $policy.Mode
+              Enabled = $policy.Enabled
+              Priority = $policy.Priority
+              RuleCount = $ruleCount
+              CreatedDate = $policy.CreatedDate
+              LastModifiedDate = $policy.LastModifiedDate
+              ContentDateModified = $policy.ContentDateModified
+              ExchangeVersion = $policy.ExchangeVersion
+              ImmutableId = $policy.ImmutableId
+              Guid = $policy.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
       
       "
 /bin/sh: powershell: command not found
 
-✅ Found 0 identity protection policies
-📋 Collecting Access Review Settings (PowerShell)...
-✅ Found 0 access review settings
-📋 Collecting Entitlement Management Access Packages (PowerShell)...
+✅ Found 0 DLP policies with comprehensive configuration
+📋 Collecting Retention Policies (PowerShell - Comprehensive)...
 ⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
         $ErrorActionPreference = 'Continue'
         
-        @((Get-MgBetaEntitlementManagementAccessPackage -All -ErrorAction SilentlyContinue) |
-          Select-Object @{Name='id';Expression={$_.id}},
-                        @{Name='displayName';Expression={$_.displayName}},
-                        @{Name='description';Expression={$_.description}},
-                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
-          ConvertTo-Json -Depth 1)
+        @((Get-RetentionPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            $policy = $_
+            $tags = @((Get-RetentionPolicyTag -Mailbox $policy.Identity -ErrorAction SilentlyContinue))
+            [PSCustomObject]@{
+              Identity = $policy.Identity
+              Name = $policy.Name
+              Description = $policy.Description
+              IsDefault = $policy.IsDefault
+              Guid = $policy.Guid
+              ExchangeVersion = $policy.ExchangeVersion
+              Created = $policy.WhenCreated
+              Modified = $policy.WhenChanged
+              TagCount = $tags.Count
+              Tags = @($tags | Select-Object -ExpandProperty Name)
+            }
+          } |
+          ConvertTo-Json -Depth 2)
       
       "
 /bin/sh: powershell: command not found
 
-✅ Found 0 entitlement access packages
-✅ Security backup complete (74s, 220 resources)
-⚠️ 5 errors during collection
-⚠️ Collection had 5 errors, but 220 resources collected
-💾 Saving 220 resources...
+✅ Found 0 retention policies with 0 retention tags
+📋 Collecting Transport Rules Details (PowerShell - Comprehensive)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-TransportRule -ResultSize Unlimited -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              Enabled = $_.Enabled
+              Priority = $_.Priority
+              State = $_.State
+              Mode = $_.Mode
+              CreatedDate = $_.WhenCreated
+              ModifiedDate = $_.WhenChanged
+              Guid = $_.Guid
+              Comments = $_.Comments
+              FromScope = $_.FromScope
+              SentToScope = $_.SentToScope
+              FromCondition = @($_.FromCondition) -join ','
+              ToCondition = @($_.ToCondition) -join ','
+              HasAttachmentAction = if ($_.HasAttachmentCondition) { 'true' } else { 'false' }
+              NotifyUser = $_.NotifySenderType
+              RejectMessage = $_.RejectMessageEnhancedStatusCode
+              DeleteMessage = if ($_.DeleteMessage) { 'true' } else { 'false' }
+              ArchiveMessage = if ($_.ArchiveMessage) { 'true' } else { 'false' }
+              RuleVersion = $_.RuleVersion
+              RuleSubType = $_.RuleSubType
+              ExchangeVersion = $_.ExchangeVersion
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 transport rules with comprehensive details
+✅ Exchange backup complete (16s, 59 resources)
+💾 Saving 59 resources...
 ✅ Backup status updated: Completed
-✅ Backup completed: Security (74s)
-🔄 Starting backup: Security
-✅ Backup record stored in memory: 2026-07-16-Security-783664
-📦 Collecting Security configurations...
-🔄 Starting Security & Identity backup collection...
-📋 Collecting Azure AD Applications...
-✅ Found 9 applications with detailed configuration
-📋 Collecting Azure AD Service Principals...
-✅ Found 100 service principals with detailed configuration
-📋 Collecting Azure AD Role Assignments...
-❌ collectRoleAssignments: Resource not found for the segment 'directoryRoleAssignments'.
-📋 Collecting Conditional Access Policies...
-✅ Found 14 conditional access policies
-📋 Collecting Security Defaults Settings...
-✅ Security defaults settings collected
-📋 Collecting Authentication Policies...
-✅ Authentication policies collected
-📋 Collecting Administrative Units...
-❌ collectAdministrativeUnits: Resource not found for the segment 'administrativeUnits'.
-📋 Collecting Cross-Tenant Access Policy...
-✅ Cross-tenant access policy collected
-📋 Collecting Admin Consent Request Policy...
-⚠️ Admin consent request policy requires Azure AD admin access
-📋 Collecting Authentication Context Class Reference...
-⚠️ Authentication context requires Azure AD admin access
-📋 Collecting Authentication Flow Policy...
-⚠️ Authentication flow policy requires Azure AD admin access
-📋 Collecting Authentication Methods Policies...
-⚠️ Authentication methods policies require Azure AD admin access
-📋 Collecting Authorization Policy...
-⚠️ Authorization policy requires Azure AD admin access
-📋 Collecting Certificate-Based Authentication Configuration...
-⚠️ Certificate-based authentication requires Azure AD admin access
-📋 Collecting Claims Mapping Policies...
-⚠️ Claims mapping policies require Azure AD admin access
-📋 Collecting Cloud App Security Detection Policy...
-⚠️ Cloud app security detection policy requires Azure AD admin access
-📋 Collecting Device Compliance Policy...
-⚠️ Device compliance policy requires Azure AD admin access
-📋 Collecting Device Configuration...
-⚠️ Device configuration requires Azure AD admin access
-📋 Collecting Dynamic Groups...
-📋 Collecting Email Claim Configuration...
-⚠️ Email claim configuration requires Azure AD admin access
-📋 Collecting Feature Rollout Policy...
-⚠️ Feature rollout policy requires Azure AD admin access
-📋 Collecting Groups Assignable to Role...
-📋 Collecting Home Realm Discovery Policy...
-⚠️ Home realm discovery policy requires Azure AD admin access
-📋 Collecting Identity Cleanup Policy...
-⚠️ Identity cleanup policy requires Azure AD admin access
-📋 Collecting Identity Protection Policy...
-⚠️ Identity protection policy requires Azure AD admin access
-📋 Collecting Inactive User Deletion Policy...
-⚠️ Inactive user deletion policy requires Azure AD admin access
-📋 Collecting License Groups...
-⚠️ License groups require Azure AD admin access
-📋 Collecting Mobile App Management Policy...
-⚠️ Mobile app management policy requires Azure AD admin access
-📋 Collecting Mobile Application Management...
-⚠️ Mobile application management requires Azure AD admin access
-📋 Collecting Object Global Setting Policy...
-⚠️ Object global setting policy requires Azure AD admin access
-📋 Collecting Password Rule Settings...
-⚠️ Password rule settings require Azure AD admin access
-📋 Collecting Policy-Based Auth Rule Configuration...
-⚠️ Policy-based auth rule configuration requires Azure AD admin access
-📋 Collecting Role Eligibility Schedule Request...
-⚠️ Role eligibility schedule request requires Azure AD admin access
-📋 Collecting Service Principal App Role Assignment...
-⚠️ Service principal app role assignment requires Azure AD admin access
-📋 Collecting Social Identity Provider...
-⚠️ Social identity provider requires Azure AD admin access
-📋 Collecting Token Issuance Policy...
-⚠️ Token issuance policy requires Azure AD admin access
-📋 Collecting Token Lifetime Policy...
-⚠️ Token lifetime policy requires Azure AD admin access
-📋 Collecting User Administrative Unit...
-❌ collectUserAdministrativeUnit: Resource not found for the segment 'administrativeUnits'.
-📋 Collecting User Registration Feature...
-⚠️ User registration feature requires Azure AD admin access
-📋 Collecting Administrative Units...
-❌ collectAdministrativeUnits: Resource not found for the segment 'administrativeUnits'.
-📋 Collecting Directory Roles...
-✅ Found 10 directory roles
-📋 Collecting Domains...
-✅ Found 2 domains
-📋 Collecting Identity Providers...
-❌ collectIdentityProviders: The application does not have any of the required application permissions (IdentityProvider.Read.All, IdentityProvider.ReadWrite.All) to access the resource. 
-📋 Collecting Tenant Details...
-✅ Found 1 tenant detail(s)
-📋 Collecting Named Locations...
-ℹ️ No named locations found
-📋 Collecting Permission Grant Policies...
-✅ Found 14 permission grant policies
-📋 Collecting Groups...
-✅ Found 52 groups
-📋 Collecting Users (Summary)...
-✅ Found 15 users (summary only)
-📋 Collecting Additional Policies...
-⚠️ Could not collect from /policies/homeRealmDiscoveryPolicies
-⚠️ Could not collect from /policies/tokenIssuancePolicies
-⚠️ Could not collect from /policies/tokenLifetimePolicies
-⚠️ Could not collect from /policies/claimsMappingPolicies
-📊 Starting PowerShell-based collection for advanced components...
-📋 Collecting Entitlement Management Catalogs (PowerShell)...
+✅ Backup completed: ExchangeOnline (16s)
+🔄 Starting backup: ExchangeOnline
+✅ Backup record stored in memory: 2026-07-16-ExchangeOnline-662079
+📦 Collecting ExchangeOnline configurations...
+🔄 Starting Exchange Online backup collection...
+📋 Collecting Accepted Domains (Comprehensive)...
+✅ Found 2 accepted domains with full details
+📋 Collecting Address Book Policies...
+⚠️ Address book policies require Exchange Admin Center access
+📋 Collecting Address Lists...
+⚠️ Address lists require Exchange Admin Center access
+📋 Collecting CAS Mailbox Configuration...
+⚠️ CAS mailbox requires Exchange Admin Center access
+📋 Collecting Mail Connectors...
+⚠️ Mail connectors require Exchange Admin Center access (limited Graph API support)
+   Consider using Exchange PowerShell for full connector backup
+📋 Collecting Data Classifications...
+⚠️ Data classifications require Exchange Admin Center access
+📋 Collecting Distribution Groups (Comprehensive)...
+✅ Found 52 distribution groups with 0 total members
+  └─ mbx-shareupdate-full: 2 members
+  └─ M365 E3 Licensed Users: 4 members
+  └─ AZURE_GROUP_ADMINS: 1 members
+  └─ AZURE_GROUP_MANAGERS: 1 members
+  └─ mbx-raj.dur3-full: 2 members
+  └─ mbx-raj.dur-full: 2 members
+  └─ M365-Super-Admins: 1 members
+  └─ BreakGlass: 3 members
+  └─ AZURE_GROUP_SUPER_ADMINS: 1 members
+  └─ mbx-raj.dur2-full: 2 members
+  └─ Test for Audit Logs: 1 members
+  └─ DL Creation: 2 members
+  └─ mbx-ibrahimshared1-full: 2 members
+📋 Collecting Email Address Policies...
+⚠️ Email address policies require Exchange Admin Center access
+📋 Collecting External MX Records...
+✅ Found 2 external MX records
+📋 Collecting Global Address List...
+✅ Global address list collected
+📋 Collecting Hosted Connection Filter Policy...
+⚠️ Hosted connection filter policy requires Exchange Admin Center access
+📋 Collecting Hosted Content Filter Policy...
+⚠️ Hosted content filter policy requires Exchange Admin Center access
+📋 Collecting Journal Rules...
+⚠️ Journal rules require Exchange Admin Center access
+📋 Collecting Mailbox Audit Bypass...
+⚠️ Mailbox audit bypass requires Exchange Admin Center access
+📋 Collecting Mailbox AutoReply Configuration...
+⚠️ Mailbox autoreply requires Exchange Admin Center access
+📋 Collecting Mailbox Calendar Folders...
+⚠️ Mailbox calendar folders require Exchange Admin Center access
+📋 Collecting Mail Contacts...
+✅ Found 1 mail contacts
+📋 Collecting Mailbox Plans...
+⚠️ Mailbox plans require Exchange Admin Center access
+📋 Collecting Mailbox Search Configuration...
+⚠️ Mailbox search requires Exchange Admin Center access
+📋 Collecting Managed Folders...
+⚠️ Managed folders require Exchange Admin Center access
+📋 Collecting Message Classifications...
+⚠️ Message classifications require Exchange Admin Center access
+📋 Collecting Organization Configuration (Comprehensive)...
 ⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
         $ErrorActionPreference = 'Continue'
         
-        @((Get-MgBetaEntitlementManagementCatalog -All -ErrorAction SilentlyContinue) |
-          Select-Object @{Name='id';Expression={$_.id}},
-                        @{Name='displayName';Expression={$_.displayName}},
-                        @{Name='description';Expression={$_.description}},
-                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
-          ConvertTo-Json -Depth 1)
+            $config = Get-OrganizationConfig -ErrorAction SilentlyContinue
+            if ($config) {
+              [PSCustomObject]@{
+                Identity = $config.Identity
+                Guid = $config.Guid
+                ExchangeVersion = $config.ExchangeVersion
+                SharePointUrl = $config.SharePointUrl
+                PublicFoldersEnabled = $config.PublicFoldersEnabled
+                PublicFolderShowClientControl = $config.PublicFolderShowClientControl
+                AsyncSendEnabled = $config.AsyncSendEnabled
+                BookingsEnabled = $config.BookingsEnabled
+                DefaultPublicFolderIssueWarningQuota = $config.DefaultPublicFolderIssueWarningQuota
+                DefaultPublicFolderMaxItemSize = $config.DefaultPublicFolderMaxItemSize
+                DefaultPublicFolderMovedItemRetention = $config.DefaultPublicFolderMovedItemRetention
+                DefaultPublicFolderProhibitPostQuota = $config.DefaultPublicFolderProhibitPostQuota
+                DistributionGroupDefaultOU = $config.DistributionGroupDefaultOU
+                DistributionGroupNameBlockedWordsList = @($config.DistributionGroupNameBlockedWordsList)
+                DistributionGroupNamingPolicy = $config.DistributionGroupNamingPolicy
+                EmailAddressTablePaged = $config.EmailAddressTablePaged
+                ProvisioningFlags = $config.ProvisioningFlags
+                ReadTrackingEnabled = $config.ReadTrackingEnabled
+                WacDiscoveryEndpoint = $config.WacDiscoveryEndpoint
+              } | ConvertTo-Json -Depth 2
+            }
+          
+      "
+/bin/sh: powershell: command not found
+
+✅ Organization configuration collected with PowerShell enhancements
+📋 Collecting Recipient Permissions...
+⚠️ Recipient permissions require Exchange Admin Center access
+📋 Collecting Remote Domains (PowerShell)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-RemoteDomain -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DomainName = $_.DomainName
+              Guid = $_.Guid
+              DisplayName = $_.DisplayName
+              AllowedOofType = $_.AllowedOofType
+              IsDefault = $_.IsDefault
+              CharacterSet = $_.CharacterSet
+              LineWraappingLength = $_.LineWraappingLength
+              ContentType = $_.ContentType
+              CreatedDate = $_.WhenCreated
+              ModifiedDate = $_.WhenChanged
+              ExchangeVersion = $_.ExchangeVersion
+              AutoReplyEnabled = $_.AutoReplyEnabled
+              DeliveryReportEnabled = $_.DeliveryReportEnabled
+              NDREnabled = $_.NDREnabled
+              MeetingForwardNotificationEnabled = $_.MeetingForwardNotificationEnabled
+              TnefEnabled = $_.TnefEnabled
+              UseSimpleDisplayName = $_.UseSimpleDisplayName
+              TargetDeliveryDomain = $_.TargetDeliveryDomain
+            }
+          } |
+          ConvertTo-Json -Depth 2)
       
       "
 /bin/sh: powershell: command not found
 
-✅ Found 0 entitlement management catalogs
-📋 Collecting Lifecycle Workflows (PowerShell)...
-✅ Found 0 lifecycle workflows
-📋 Collecting B2X User Flows (PowerShell)...
-✅ Found 0 B2X user flows
-📋 Collecting Custom Security Attributes (PowerShell)...
-✅ Found 0 custom security attributes
-📋 Collecting App Management Policies (PowerShell)...
-✅ Found 0 app management policies
-📋 Collecting PIM Role Eligibility Schedules (PowerShell)...
-✅ Found 0 PIM role eligibility schedules
-📋 Collecting PIM Activation Requests (PowerShell)...
-✅ Found 0 PIM activation requests
-📋 Collecting Multi-tenant Organization Policies (PowerShell)...
+✅ Found 0 remote domains with comprehensive configuration
+📋 Collecting Role Assignment Policies...
+⚠️ Role assignment policies require Exchange Admin Center access
+📋 Collecting Safe Links Policy...
+⚠️ Safe links policy requires Exchange Admin Center access
+📋 Collecting Send Connectors...
+⚠️ Send connectors require Exchange Admin Center access
+📋 Collecting Sharing Policy...
+⚠️ Sharing policy requires Exchange Admin Center access
+📋 Collecting SMTP Server Settings...
+⚠️ SMTP server settings require Exchange Admin Center access
+📋 Collecting Transport Configuration...
+⚠️ Transport configuration requires Exchange Admin Center access
+📋 Collecting Transport Rules...
+⚠️ Transport rules require Exchange Admin Center access (limited Graph API support)
+   Consider using Exchange PowerShell for full transport rule backup
+📋 Collecting Unified/Microsoft 365 Groups...
+✅ Found 26 unified groups
+📊 Starting PowerShell-based collection for advanced Exchange components...
+📋 Collecting Mailbox Policies (PowerShell - Comprehensive)...
 ⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
         $ErrorActionPreference = 'Continue'
         
-        @((Get-MgBetaMultiTenantOrganization -ErrorAction SilentlyContinue) |
-          Select-Object @{Name='id';Expression={$_.id}},
-                        @{Name='displayName';Expression={$_.displayName}},
-                        @{Name='description';Expression={$_.description}},
-                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
-          ConvertTo-Json -Depth 1)
+        @((Get-CasMailbox -ResultSize Unlimited -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Guid = $_.Guid
+              UserPrincipalName = $_.UserPrincipalName
+              DisplayName = $_.DisplayName
+              ActiveSyncEnabled = $_.ActiveSyncEnabled
+              OWAEnabled = $_.OWAEnabled
+              OWAforDevicesEnabled = $_.OWAforDevicesEnabled
+              IMAPEnabled = $_.IMAPEnabled
+              PopEnabled = $_.PopEnabled
+              MAPIEnabled = $_.MAPIEnabled
+              OWAMailboxPolicy = $_.OWAMailboxPolicy
+              ActiveSyncMailboxPolicy = $_.ActiveSyncMailboxPolicy
+              IMAPUseProtectedStorage = $_.IMAPUseProtectedStorage
+              PopUseProtectedStorage = $_.PopUseProtectedStorage
+              UniversalOutlookEnabled = $_.UniversalOutlookEnabled
+              EasEnabled = $_.EasEnabled
+              Protocol = @{
+                ActiveSync = $_.ActiveSyncEnabled
+                OWA = $_.OWAEnabled
+                IMAP = $_.IMAPEnabled
+                POP = $_.PopEnabled
+                MAPI = $_.MAPIEnabled
+              }
+              WhenCreated = $_.WhenCreated
+              WhenChanged = $_.WhenChanged
+              ExchangeVersion = $_.ExchangeVersion
+              ExchangeGuid = $_.ExchangeGuid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
       
       "
 /bin/sh: powershell: command not found
 
-✅ Found 0 multi-tenant organization policies
-📋 Collecting Identity Protection Policies (PowerShell)...
+✅ Found 0 mailbox policies with comprehensive configuration
+📋 Collecting DLP Policies (PowerShell - Comprehensive)...
 ⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
         $ErrorActionPreference = 'Continue'
         
-        @((Get-MgIdentityProtectionRiskyUser -All -ErrorAction SilentlyContinue) |
-          Select-Object @{Name='id';Expression={$_.id}},
-                        @{Name='displayName';Expression={$_.displayName}},
-                        @{Name='userPrincipalName';Expression={$_.userPrincipalName}},
-                        @{Name='riskLevel';Expression={$_.riskLevel}},
-                        @{Name='lastUpdatedDateTime';Expression={$_.lastUpdatedDateTime}} |
-          ConvertTo-Json -Depth 1)
+        @((Get-DlpPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            $policy = $_
+            $ruleCount = @((Get-DlpPolicyRule -Identity $policy.Identity -ErrorAction SilentlyContinue)).Count
+            [PSCustomObject]@{
+              Identity = $policy.Identity
+              Name = $policy.Name
+              State = $policy.State
+              Description = $policy.Description
+              Mode = $policy.Mode
+              Enabled = $policy.Enabled
+              Priority = $policy.Priority
+              RuleCount = $ruleCount
+              CreatedDate = $policy.CreatedDate
+              LastModifiedDate = $policy.LastModifiedDate
+              ContentDateModified = $policy.ContentDateModified
+              ExchangeVersion = $policy.ExchangeVersion
+              ImmutableId = $policy.ImmutableId
+              Guid = $policy.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
       
       "
 /bin/sh: powershell: command not found
 
-✅ Found 0 identity protection policies
-📋 Collecting Access Review Settings (PowerShell)...
-✅ Found 0 access review settings
-📋 Collecting Entitlement Management Access Packages (PowerShell)...
+✅ Found 0 DLP policies with comprehensive configuration
+📋 Collecting Retention Policies (PowerShell - Comprehensive)...
 ⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
         $ErrorActionPreference = 'Continue'
         
-        @((Get-MgBetaEntitlementManagementAccessPackage -All -ErrorAction SilentlyContinue) |
-          Select-Object @{Name='id';Expression={$_.id}},
-                        @{Name='displayName';Expression={$_.displayName}},
-                        @{Name='description';Expression={$_.description}},
-                        @{Name='createdDateTime';Expression={$_.createdDateTime}} |
-          ConvertTo-Json -Depth 1)
+        @((Get-RetentionPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            $policy = $_
+            $tags = @((Get-RetentionPolicyTag -Mailbox $policy.Identity -ErrorAction SilentlyContinue))
+            [PSCustomObject]@{
+              Identity = $policy.Identity
+              Name = $policy.Name
+              Description = $policy.Description
+              IsDefault = $policy.IsDefault
+              Guid = $policy.Guid
+              ExchangeVersion = $policy.ExchangeVersion
+              Created = $policy.WhenCreated
+              Modified = $policy.WhenChanged
+              TagCount = $tags.Count
+              Tags = @($tags | Select-Object -ExpandProperty Name)
+            }
+          } |
+          ConvertTo-Json -Depth 2)
       
       "
 /bin/sh: powershell: command not found
 
-✅ Found 0 entitlement access packages
-✅ Security backup complete (75s, 220 resources)
-⚠️ 5 errors during collection
-⚠️ Collection had 5 errors, but 220 resources collected
-💾 Saving 220 resources...
+✅ Found 0 retention policies with 0 retention tags
+📋 Collecting Transport Rules Details (PowerShell - Comprehensive)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-TransportRule -ResultSize Unlimited -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              Enabled = $_.Enabled
+              Priority = $_.Priority
+              State = $_.State
+              Mode = $_.Mode
+              CreatedDate = $_.WhenCreated
+              ModifiedDate = $_.WhenChanged
+              Guid = $_.Guid
+              Comments = $_.Comments
+              FromScope = $_.FromScope
+              SentToScope = $_.SentToScope
+              FromCondition = @($_.FromCondition) -join ','
+              ToCondition = @($_.ToCondition) -join ','
+              HasAttachmentAction = if ($_.HasAttachmentCondition) { 'true' } else { 'false' }
+              NotifyUser = $_.NotifySenderType
+              RejectMessage = $_.RejectMessageEnhancedStatusCode
+              DeleteMessage = if ($_.DeleteMessage) { 'true' } else { 'false' }
+              ArchiveMessage = if ($_.ArchiveMessage) { 'true' } else { 'false' }
+              RuleVersion = $_.RuleVersion
+              RuleSubType = $_.RuleSubType
+              ExchangeVersion = $_.ExchangeVersion
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 transport rules with comprehensive details
+✅ Exchange backup complete (15s, 59 resources)
+💾 Saving 59 resources...
 ✅ Backup status updated: Completed
-✅ Backup completed: Security (75s)
+✅ Backup completed: ExchangeOnline (15s)
+⚠️ Emergency Access Monitoring validation failed: fetch failed
+🔧 Executing PowerShell for control 1.1.1 (7 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.1.1: success
+📊 Using PowerShell output for 1.1.1: All administrative accounts are cloud-only
+🔧 Executing PowerShell for control 1.1.3 (12 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.1.3: success
+📊 Using PowerShell output for 1.1.3: 3 Global Admins (compliant)
+🔧 Executing PowerShell for control 1.1.4 (11 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.1.4: success
+📊 Using PowerShell output for 1.1.4: Validation status unclear
+🔧 Executing PowerShell for control 1.2.1 (9 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.2.1: success
+📊 Using PowerShell output for 1.2.1: 20 public groups found - should be restricted
+🔧 Executing PowerShell for control 1.2.2 (12 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.2.2: success
+📊 Using PowerShell output for 1.2.2: All shared mailboxes have sign-in disabled
+🔧 Executing PowerShell for control 1.3.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.1: success
+📊 Using PowerShell output for 1.3.1: Validation status unclear
+🔧 Executing PowerShell for control 1.3.2 (9 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.2: success
+📊 Using PowerShell output for 1.3.2: Validation passed
+🔧 Executing PowerShell for control 1.3.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.3: failed
+⚠️ PowerShell command failed - using Graph API for 1.3.3
+🔧 Executing PowerShell for control 1.3.4 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.4: failed
+⚠️ PowerShell command failed - using Graph API for 1.3.4
+🔧 Executing PowerShell for control 1.3.5 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.5: failed
+⚠️ PowerShell command failed - using Graph API for 1.3.5
+🔧 Executing PowerShell for control 1.3.6 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.6: failed
+⚠️ PowerShell command failed - using Graph API for 1.3.6
+🔧 Executing PowerShell for control 1.3.7 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.7: success
+📊 Using PowerShell output for 1.3.7: Validation status unclear
+🔧 Executing PowerShell for control 1.3.9 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.9: failed
+⚠️ PowerShell command failed - using Graph API for 1.3.9
+🔧 Executing PowerShell for control 2.1.1 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.1: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.1
+🔧 Executing PowerShell for control 2.1.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.2: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.2
+🔧 Executing PowerShell for control 2.1.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.3: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.3
+🔧 Executing PowerShell for control 2.1.4 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.4: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.4
+🔧 Executing PowerShell for control 2.1.5 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.5: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.5
+🔧 Executing PowerShell for control 2.1.6 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.6: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.6
+🔧 Executing PowerShell for control 2.1.7 (3 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.7: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.7
+🔧 Executing PowerShell for control 2.1.8 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.8: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.8
+🔧 Executing PowerShell for control 2.1.9 (7 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.9: success
+📊 Using PowerShell output for 2.1.9: No validation output available
+🔧 Executing PowerShell for control 2.1.10 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.10: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.10
+🔧 Executing PowerShell for control 2.1.11 (11 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.11: success
+📊 Using PowerShell output for 2.1.11: No validation output available
+🔧 Executing PowerShell for control 2.1.12 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.12: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.12
+🔧 Executing PowerShell for control 2.1.13 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+📡 Bearer token detected in request
+📋 Determining role for user: a9430520-42e0-4be6-9e0e-8d711b062ea5
+✓ Bearer token validated for authenticated request
+✓ User is member of 13 groups: 759a2e72-72b8-4416-8833-ff157d53a206, cfd90836-667e-4f80-b325-064439da062f, 36e1ecd7-f54c-4d34-b41f-0991efe0dd40, 6426d00c-62fa-433c-896c-87c94fe1dd94, b8e07f4a-fa8a-4935-b5a2-3a2ba890536a, 091aee9d-21c8-4177-ac5c-7f3b3c88ceac, 444a74d6-5b3c-4684-8f10-ed726e9d557a, 99f66318-45df-4ba3-b1b0-96a1c0614296, 16f9b80f-f6e7-4f66-9ba5-80d121284df0, 74df478e-a359-448a-9340-7d6a2f14ebd8, 65eca76c-bcb4-464b-b408-e7dfa75355d2, 4b87f912-2811-474b-8a01-692036be503b, 4fe74ac1-bf65-4290-9833-8f90fd0c4caf
+✓ User is SUPER ADMIN
+✓ Role determination complete: super
+[Service Health] Fetching messages (skip=0, top=100) from SharePoint list 1cf87003-50ce-4881-8783-21a6572fb117...
+[Service Health] Graph API error (undefined): $skip is not supported on this API. Only URLs returned by the API can be used to page.
+Fetching managed devices...
+📡 Fetching Message Center messages from Graph API...
+Fetching users...
+📊 Fetching secure score from Graph API...
+📋 Loading Zero Trust results from SharePoint lists (primary database)...
+🔍 CIS Validator: Starting comprehensive validation...
+📡 Fetching privileged accounts from Azure AD...
+⚠️ External Sharing validation failed: Resource not found for the segment 'tenant'.
+⚠️ Security Defaults validation failed: Resource not found for the segment 'identitySecurityDefaultEnforcementPolicy'.
+⚠️ DLP Policies validation failed: Resource not found for the segment 'datalossprevention'.
+⚠️ Exchange Spam Policies validation failed: Resource not found for the segment 'emailThreatSubmissionPolicies'.
+⚠️ Group Creation validation failed: Resource not found for the segment 'directorySettingTemplates'.
+⚠️ Device Enrollment Restrictions validation failed: Resource not found for the segment 'deviceEnrollmentPlatformRestrictionsConfiguration'.
+⚠️ Collaboration Invitation Restriction validation failed: Resource not found for the segment 'externalIdentitiesPolicy'.
+⚠️ Group Creation Restriction validation failed: Resource not found for the segment 'settings'.
+⚠️ Password Hash Sync validation failed: Resource not found for the segment 'onPremisesSyncContainers'.
+⚠️ DLP Policies Enabled validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ DLP for Teams validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ Restrict External Sharing validation failed: Resource not found for the segment 'policy'.
+⚠️ Allow Limited Access validation failed: Resource not found for the segment 'dataLossPreventionPolicies'.
+⚠️ Client Access validation failed: Resource not found for the segment 'clientAccessPolicy'.
+⚠️ Mail Flow Rules validation failed: Resource not found for the segment 'transportRules'.
+⚠️ Emergency Access Accounts validation failed: Invalid filter clause: Syntax error: character '"' is not valid at position 8 in 'mail eq "emergencyaccess*"'.
+⚠️ Audit Log Search validation failed: Resource not found for the segment 'audit'.
+⚠️ MFA for PowerShell validation failed: Resource not found for the segment 'authenticationMethods'.
+⚠️ Mailbox Auditing validation failed: Resource not found for the segment 'audit'.
+⚠️ DLP for Collaboration validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ Legacy Authentication validation failed: Resource not found for the segment 'authenticationMethods'.
+⚠️ Sensitivity Labels validation failed: Resource not found for the segment 'policy'.
+⚠️ Mailbox Delegation Auditing validation failed: Resource not found for the segment 'audit'.
+⚠️ Forwarding Rules validation failed: Resource not found for the segment 'forwardingPolicy'.
+⚠️ Mailbox Audit Retention validation failed: Resource not found for the segment 'audit'.
+⚠️ SharePoint Modern Auth validation failed: Caller does not have required permissions for this API
+ℹ️ SharePoint lists are empty, falling back to snapshot...
+📦 Returning latest snapshot from disk: snapshot-2026-07-16.json
+⚠️ Third-Party Storage Services validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ Fabric Shareable Links validation failed: Resource not found for the segment 'powerBi'.
+⚠️ External User Expiration validation failed: Caller does not have required permissions for this API
+⚠️ Fabric Sensitivity Labels validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Publish to Web validation failed: Resource not found for the segment 'powerBi'.
+⚠️ SharePoint Terms Acceptance validation failed: Caller does not have required permissions for this API
+⚠️ Fabric External Invitations validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Guest Content Access validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric ResourceKey Authentication validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Service Principal Workspace Creation validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Connection Filter Safe List validation failed: Resource not found for the segment 'securitySettings'.
+⚠️ Fabric Guest Access validation failed: Resource not found for the segment 'powerBi'.
+✓ Found 15 users
+⚠️ Teams Email Channel Address validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Defender for Cloud Apps validation failed: Resource not found for the segment 'cloudAppSecurityPolicies'.
+⚠️ Teams Unmanaged Users Communication validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Teams Trial Tenants validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Priority Accounts Strict Protection validation failed: Resource not found for the segment 'priorityAccounts'.
+⚠️ Teams External Initiate Conversations validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Teams Report Security Concerns validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Fabric Python/R Sharing validation failed: Resource not found for the segment 'powerBi'.
+⚠️ External Calendar Sharing validation failed: Caller does not have required permissions for this API
+⚠️ Shared Bookings Pages validation failed: Resource not found for the segment 'appsManagement'.
+⚠️ Fabric External Data Sharing validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Fabric Service Principal Provisioning validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Comprehensive Attachment Filtering validation failed: Resource not found for the segment 'securitySettings'.
+⚠️ AIR Remediation validation failed: Resource not found for the segment 'automationRules'.
+⚠️ Fabric Service Principal API Access validation failed: Resource not found for the segment 'powerBi'.
+⚠️ Prevent Dial-Out validation failed: Requested API is not supported in application-only context
+⚠️ Teams External Domain Restriction validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ Teams Live Events Restricted validation failed: Requested API is not supported in application-only context
+⚠️ Live Captions validation failed: Requested API is not supported in application-only context
+📊 Sample SKU structure: {
+  "accountName": "NassTech",
+  "accountId": "b9cc8284-05ed-452f-877a-970779430dcb",
+  "appliesTo": "User",
+  "capabilityStatus": "Suspended",
+  "consumedUnits": 5,
+  "id": "b9cc8284-05ed-452f-877a-970779430dcb_b05e124f-c7cc-45a0-a6aa-8cf78c946968",
+  "skuId": "b05e124f-c7cc-45a0-a6aa-8cf78c946968",
+  "skuPartNumber": "EMSPREMIUM",
+  "subscriptionIds": [
+    "6cef0959-1f32-4fbb-974c-fa93f17e6338"
+  ],
+  "prepaidUnits": {
+    "enabled": 0,
+    "suspended": 25,
+    "warning": 0,
+    "lockedOut": 
+⏭️  Excluding free/trial license: EMSPREMIUM (prepaid: 0, isFree: false)
+⏭️  Excluding free/trial license: FLOW_FREE (prepaid: 10000, isFree: true)
+⏭️  Excluding free/trial license: ENTERPRISEPREMIUM_NOPSTNCONF (prepaid: 0, isFree: false)
+⏭️  Excluding free/trial license: SPE_E3 (prepaid: 0, isFree: false)
+✓ Found 0 PAID license SKUs (excluding free/trial)
+📊 License totals (paid only): 0 total, 0 consumed, 0 available
+⚠️ Q&A Not Available validation failed: Requested API is not supported in application-only context
+⚠️ Teams App Permission Policies validation failed: Resource not found for the segment 'appCatalog'.
+⚠️ Teams External File Sharing validation failed: Resource not found for the segment 'teamsSettings'.
+⚠️ SharePoint Infected Files validation failed: Resource not found for the segment 'dataSecurity'.
+⚠️ E2E Encryption validation failed: Requested API is not supported in application-only context
+⚠️ Meeting Organizer Only validation failed: Requested API is not supported in application-only context
+⚠️ Defender for Endpoint validation failed: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: 4a04dee9-c1cc-2d70-5b6b-ed92d7802c08 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceFE/StatelessDeviceFEService/deviceManagement/managedDevices?api-version=2025-07-09&$top=999\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+✗ Devices API error: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: 9bbf29bd-d95c-98c4-8856-a2ddf9921cc7 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceFE/StatelessDeviceFEService/deviceManagement/managedDevices?api-version=2025-07-09\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ Recording Notifications validation failed: Requested API is not supported in application-only context
+⚠️ Safe Attachments validation failed: {"error":"Resource doesn\u0027t exist for the tenant. ActivityId: 57f3227d-4acb-9b5f-83fb-4006a7eade24. Learn more: https://docs.microsoft.com/en-us/graph/api/resources/service-communications-api-overview?view=graph-rest-beta\u0026preserve-view=true."}
+⚠️ Device list fetch failed: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: 3755fa69-0a1d-43f9-8f3e-1ae506e40840 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceFE/StatelessDeviceFEService/deviceManagement/managedDevices?api-version=2025-07-09&$top=999\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ Meeting Transcripts validation failed: Requested API is not supported in application-only context
+⚠️ Privileged Role Admin Approval validation failed: {"ErrorCode":"CultureNotFoundException","Message":"Culture is not supported.\r\nParameter name: name\r\n* is an invalid culture identifier.","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[],"TypeAnnotation":null}
+⚠️ Device Compliance validation failed: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: 0a05095c-40f6-6a3f-1a88-1d36ddf245a7 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceConfiguration_2606/StatelessDeviceConfigurationFEService/deviceManagement/deviceCompliancePolicies?api-version=2022-06-13\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ Privileged Role Assignment JIT validation failed: {"ErrorCode":"CultureNotFoundException","Message":"Culture is not supported.\r\nParameter name: name\r\n* is an invalid culture identifier.","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[],"TypeAnnotation":null}
+⚠️ Restrict Unmanaged Devices validation failed: {"ErrorCode":"Forbidden","Message":"{\r\n  \"_version\": 3,\r\n  \"Message\": \"An error has occurred - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Activity ID: ef0cef20-f87d-efa5-03d1-88f046f57373 - Url: https://proxy.amsuin01.manage.microsoft.com/DeviceConfiguration_2606/StatelessDeviceConfigurationFEService/deviceManagement/deviceCompliancePolicies?api-version=2022-06-13\",\r\n  \"CustomApiErrorPhrase\": \"\",\r\n  \"RetryAfter\": null,\r\n  \"ErrorSourceService\": \"\",\r\n  \"HttpHeaders\": \"{\\\"WWW-Authenticate\\\":\\\"Bearer\\\"}\"\r\n}","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[]}
+⚠️ Safe Links validation failed: {"error":"Resource doesn\u0027t exist for the tenant. ActivityId: b903235c-c910-9412-31bb-979c8dd20119. Learn more: https://docs.microsoft.com/en-us/graph/api/resources/service-communications-api-overview?view=graph-rest-beta\u0026preserve-view=true."}
+⚠️ Safe Attachments for SPO/Teams validation failed: {"error":"Resource doesn\u0027t exist for the tenant. ActivityId: 08dea59b-6e0c-4e91-3d5a-1924e48aeebc. Learn more: https://docs.microsoft.com/en-us/graph/api/resources/service-communications-api-overview?view=graph-rest-beta\u0026preserve-view=true."}
+⚠️ Risk data not available: Parsing OData Select and Expand failed: Could not find a property named 'userRiskLevel' on type 'microsoft.graph.riskyUser'.
+✅ Privileged accounts: 7 accounts, 0 at risk
+⚠️ Global Admin Approval validation failed: {"ErrorCode":"CultureNotFoundException","Message":"Culture is not supported.\r\nParameter name: name\r\n* is an invalid culture identifier.","Target":null,"Details":null,"InnerError":null,"InstanceAnnotations":[],"TypeAnnotation":null}
+❌ Failed to get setup config: Requested site could not be found
+✓ Message Center: 100 messages found
+📡 Fetching Service Health from Graph API...
+⚠️ Prevent Anonymous Users validation failed: Requested API is not supported in application-only context
+⚠️ Zero-Hour Auto Purge validation failed: Requested API is not supported in application-only context
+⚠️ Per-User MFA Disabled validation failed: Resource not found for segment 'authenticationMethodsPolicy/authenticationMethodConfigurations'.
+✓ Service Health: 74 issues found
+✓ PowerShell execution complete for 2.1.13: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.13
+🔧 Executing PowerShell for control 2.1.14 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ Secure score: 115.21/273
+⚠️ Privileged Role Access Reviews validation failed: Attempted to perform an unauthorized operation.
+⚠️ Guest Access Reviews validation failed: Attempted to perform an unauthorized operation.
+⚠️ SSPR Enabled validation failed: Resource not found for segment 'authenticationMethodsPolicy/authenticationMethodConfigurations'.
+✓ PowerShell execution complete for 2.1.14: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.14
+🔧 Executing PowerShell for control 2.1.15 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+🚀 [audit] Agent executing...
+✅ [audit] Agent completed in 0ms
+   Alerts: 0
+🔗 Starting correlation analysis...
+📊 Analyzing 0 alerts
+ℹ️ Not enough alerts for correlation
 🚀 [execution] Agent executing...
-✅ [execution] Agent completed in 1ms
+✅ [execution] Agent completed in 0ms
    Alerts: 0
 🚀 [approval] Agent executing...
 ✅ [approval] Agent completed in 0ms
    Alerts: 0
+🚀 [security] Agent executing...
+✓ PowerShell execution complete for 2.1.15: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.15
+🔧 Executing PowerShell for control 2.4.1 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ Request failed: Your tenant is not licensed for this feature.. Retrying in 1000ms... (Attempt 1/3)
+⚠️ Request failed: Your tenant is not licensed for this feature.. Retrying in 2000ms... (Attempt 2/3)
+✓ PowerShell execution complete for 2.4.1: failed
+⚠️ PowerShell command failed - using Graph API for 2.4.1
+🔧 Executing PowerShell for control 2.4.2 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ Request failed: Your tenant is not licensed for this feature.. Retrying in 4000ms... (Attempt 3/3)
+🔄 Starting backup: ExchangeOnline
+✅ Backup record stored in memory: 2026-07-16-ExchangeOnline-603604
+📦 Collecting ExchangeOnline configurations...
+🔄 Starting Exchange Online backup collection...
+📋 Collecting Accepted Domains (Comprehensive)...
+✅ Found 2 accepted domains with full details
+📋 Collecting Address Book Policies...
+⚠️ Address book policies require Exchange Admin Center access
+📋 Collecting Address Lists...
+⚠️ Address lists require Exchange Admin Center access
+📋 Collecting CAS Mailbox Configuration...
+⚠️ CAS mailbox requires Exchange Admin Center access
+📋 Collecting Mail Connectors...
+⚠️ Mail connectors require Exchange Admin Center access (limited Graph API support)
+   Consider using Exchange PowerShell for full connector backup
+📋 Collecting Data Classifications...
+⚠️ Data classifications require Exchange Admin Center access
+📋 Collecting Distribution Groups (Comprehensive)...
+✓ PowerShell execution complete for 2.4.2: failed
+⚠️ PowerShell command failed - using Graph API for 2.4.2
+🔧 Executing PowerShell for control 2.4.4 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.4.4: failed
+⚠️ PowerShell command failed - using Graph API for 2.4.4
+🔧 Executing PowerShell for control 3.1.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+❌ Request failed after retries: https://graph.microsoft.com/v1.0/identityProtection/riskyUsers?$top=50 Your tenant is not licensed for this feature.
+Security Agent: Using realistic demo data (Graph API unavailable)
+✅ [security] Agent completed in 8470ms
+   Alerts: 1
+✅ Found 52 distribution groups with 0 total members
+  └─ mbx-shareupdate-full: 2 members
+  └─ M365 E3 Licensed Users: 4 members
+  └─ AZURE_GROUP_ADMINS: 1 members
+  └─ AZURE_GROUP_MANAGERS: 1 members
+✓ PowerShell execution complete for 3.1.1: failed
+⚠️ PowerShell command failed - using Graph API for 3.1.1
+🔧 Executing PowerShell for control 3.2.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+  └─ mbx-raj.dur3-full: 2 members
+  └─ mbx-raj.dur-full: 2 members
+  └─ M365-Super-Admins: 1 members
+  └─ BreakGlass: 3 members
+  └─ AZURE_GROUP_SUPER_ADMINS: 1 members
+  └─ mbx-raj.dur2-full: 2 members
+  └─ Test for Audit Logs: 1 members
+✓ PowerShell execution complete for 3.2.1: failed
+⚠️ PowerShell command failed - using Graph API for 3.2.1
+🔧 Executing PowerShell for control 3.2.2 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+  └─ DL Creation: 2 members
+  └─ mbx-ibrahimshared1-full: 2 members
+📋 Collecting Email Address Policies...
+⚠️ Email address policies require Exchange Admin Center access
+📋 Collecting External MX Records...
+✅ Found 2 external MX records
+📋 Collecting Global Address List...
+✅ Global address list collected
+📋 Collecting Hosted Connection Filter Policy...
+⚠️ Hosted connection filter policy requires Exchange Admin Center access
+📋 Collecting Hosted Content Filter Policy...
+⚠️ Hosted content filter policy requires Exchange Admin Center access
+📋 Collecting Journal Rules...
+⚠️ Journal rules require Exchange Admin Center access
+📋 Collecting Mailbox Audit Bypass...
+⚠️ Mailbox audit bypass requires Exchange Admin Center access
+📋 Collecting Mailbox AutoReply Configuration...
+⚠️ Mailbox autoreply requires Exchange Admin Center access
+📋 Collecting Mailbox Calendar Folders...
+⚠️ Mailbox calendar folders require Exchange Admin Center access
+📋 Collecting Mail Contacts...
+✅ Found 1 mail contacts
+📋 Collecting Mailbox Plans...
+⚠️ Mailbox plans require Exchange Admin Center access
+📋 Collecting Mailbox Search Configuration...
+⚠️ Mailbox search requires Exchange Admin Center access
+📋 Collecting Managed Folders...
+⚠️ Managed folders require Exchange Admin Center access
+📋 Collecting Message Classifications...
+⚠️ Message classifications require Exchange Admin Center access
+📋 Collecting Organization Configuration (Comprehensive)...
+✓ PowerShell execution complete for 3.2.2: success
+📊 Using PowerShell output for 3.2.2: No validation output available
+🔧 Executing PowerShell for control 3.2.3 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+            $config = Get-OrganizationConfig -ErrorAction SilentlyContinue
+            if ($config) {
+              [PSCustomObject]@{
+                Identity = $config.Identity
+                Guid = $config.Guid
+                ExchangeVersion = $config.ExchangeVersion
+                SharePointUrl = $config.SharePointUrl
+                PublicFoldersEnabled = $config.PublicFoldersEnabled
+                PublicFolderShowClientControl = $config.PublicFolderShowClientControl
+                AsyncSendEnabled = $config.AsyncSendEnabled
+                BookingsEnabled = $config.BookingsEnabled
+                DefaultPublicFolderIssueWarningQuota = $config.DefaultPublicFolderIssueWarningQuota
+                DefaultPublicFolderMaxItemSize = $config.DefaultPublicFolderMaxItemSize
+                DefaultPublicFolderMovedItemRetention = $config.DefaultPublicFolderMovedItemRetention
+                DefaultPublicFolderProhibitPostQuota = $config.DefaultPublicFolderProhibitPostQuota
+                DistributionGroupDefaultOU = $config.DistributionGroupDefaultOU
+                DistributionGroupNameBlockedWordsList = @($config.DistributionGroupNameBlockedWordsList)
+                DistributionGroupNamingPolicy = $config.DistributionGroupNamingPolicy
+                EmailAddressTablePaged = $config.EmailAddressTablePaged
+                ProvisioningFlags = $config.ProvisioningFlags
+                ReadTrackingEnabled = $config.ReadTrackingEnabled
+                WacDiscoveryEndpoint = $config.WacDiscoveryEndpoint
+              } | ConvertTo-Json -Depth 2
+            }
+          
+      "
+/bin/sh: powershell: command not found
+
+✅ Organization configuration collected with PowerShell enhancements
+📋 Collecting Recipient Permissions...
+⚠️ Recipient permissions require Exchange Admin Center access
+📋 Collecting Remote Domains (PowerShell)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-RemoteDomain -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DomainName = $_.DomainName
+              Guid = $_.Guid
+              DisplayName = $_.DisplayName
+              AllowedOofType = $_.AllowedOofType
+              IsDefault = $_.IsDefault
+              CharacterSet = $_.CharacterSet
+              LineWraappingLength = $_.LineWraappingLength
+              ContentType = $_.ContentType
+              CreatedDate = $_.WhenCreated
+              ModifiedDate = $_.WhenChanged
+              ExchangeVersion = $_.ExchangeVersion
+              AutoReplyEnabled = $_.AutoReplyEnabled
+              DeliveryReportEnabled = $_.DeliveryReportEnabled
+              NDREnabled = $_.NDREnabled
+              MeetingForwardNotificationEnabled = $_.MeetingForwardNotificationEnabled
+              TnefEnabled = $_.TnefEnabled
+              UseSimpleDisplayName = $_.UseSimpleDisplayName
+              TargetDeliveryDomain = $_.TargetDeliveryDomain
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 remote domains with comprehensive configuration
+📋 Collecting Role Assignment Policies...
+⚠️ Role assignment policies require Exchange Admin Center access
+📋 Collecting Safe Links Policy...
+⚠️ Safe links policy requires Exchange Admin Center access
+📋 Collecting Send Connectors...
+⚠️ Send connectors require Exchange Admin Center access
+📋 Collecting Sharing Policy...
+⚠️ Sharing policy requires Exchange Admin Center access
+📋 Collecting SMTP Server Settings...
+⚠️ SMTP server settings require Exchange Admin Center access
+📋 Collecting Transport Configuration...
+⚠️ Transport configuration requires Exchange Admin Center access
+📋 Collecting Transport Rules...
+⚠️ Transport rules require Exchange Admin Center access (limited Graph API support)
+   Consider using Exchange PowerShell for full transport rule backup
+📋 Collecting Unified/Microsoft 365 Groups...
+✅ Found 26 unified groups
+📊 Starting PowerShell-based collection for advanced Exchange components...
+📋 Collecting Mailbox Policies (PowerShell - Comprehensive)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-CasMailbox -ResultSize Unlimited -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Guid = $_.Guid
+              UserPrincipalName = $_.UserPrincipalName
+              DisplayName = $_.DisplayName
+              ActiveSyncEnabled = $_.ActiveSyncEnabled
+              OWAEnabled = $_.OWAEnabled
+              OWAforDevicesEnabled = $_.OWAforDevicesEnabled
+              IMAPEnabled = $_.IMAPEnabled
+              PopEnabled = $_.PopEnabled
+              MAPIEnabled = $_.MAPIEnabled
+              OWAMailboxPolicy = $_.OWAMailboxPolicy
+              ActiveSyncMailboxPolicy = $_.ActiveSyncMailboxPolicy
+              IMAPUseProtectedStorage = $_.IMAPUseProtectedStorage
+              PopUseProtectedStorage = $_.PopUseProtectedStorage
+              UniversalOutlookEnabled = $_.UniversalOutlookEnabled
+              EasEnabled = $_.EasEnabled
+              Protocol = @{
+                ActiveSync = $_.ActiveSyncEnabled
+                OWA = $_.OWAEnabled
+                IMAP = $_.IMAPEnabled
+                POP = $_.PopEnabled
+                MAPI = $_.MAPIEnabled
+              }
+              WhenCreated = $_.WhenCreated
+              WhenChanged = $_.WhenChanged
+              ExchangeVersion = $_.ExchangeVersion
+              ExchangeGuid = $_.ExchangeGuid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 mailbox policies with comprehensive configuration
+📋 Collecting DLP Policies (PowerShell - Comprehensive)...
+✓ PowerShell execution complete for 3.2.3: success
+📊 Using PowerShell output for 3.2.3: No validation output available
+🔧 Executing PowerShell for control 3.3.1 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-DlpPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            $policy = $_
+            $ruleCount = @((Get-DlpPolicyRule -Identity $policy.Identity -ErrorAction SilentlyContinue)).Count
+            [PSCustomObject]@{
+              Identity = $policy.Identity
+              Name = $policy.Name
+              State = $policy.State
+              Description = $policy.Description
+              Mode = $policy.Mode
+              Enabled = $policy.Enabled
+              Priority = $policy.Priority
+              RuleCount = $ruleCount
+              CreatedDate = $policy.CreatedDate
+              LastModifiedDate = $policy.LastModifiedDate
+              ContentDateModified = $policy.ContentDateModified
+              ExchangeVersion = $policy.ExchangeVersion
+              ImmutableId = $policy.ImmutableId
+              Guid = $policy.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 DLP policies with comprehensive configuration
+📋 Collecting Retention Policies (PowerShell - Comprehensive)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-RetentionPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            $policy = $_
+            $tags = @((Get-RetentionPolicyTag -Mailbox $policy.Identity -ErrorAction SilentlyContinue))
+            [PSCustomObject]@{
+              Identity = $policy.Identity
+              Name = $policy.Name
+              Description = $policy.Description
+              IsDefault = $policy.IsDefault
+              Guid = $policy.Guid
+              ExchangeVersion = $policy.ExchangeVersion
+              Created = $policy.WhenCreated
+              Modified = $policy.WhenChanged
+              TagCount = $tags.Count
+              Tags = @($tags | Select-Object -ExpandProperty Name)
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 retention policies with 0 retention tags
+📋 Collecting Transport Rules Details (PowerShell - Comprehensive)...
+✓ PowerShell execution complete for 3.3.1: failed
+⚠️ PowerShell command failed - using Graph API for 3.3.1
+🔧 Executing PowerShell for control 4.1 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-TransportRule -ResultSize Unlimited -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              Enabled = $_.Enabled
+              Priority = $_.Priority
+              State = $_.State
+              Mode = $_.Mode
+              CreatedDate = $_.WhenCreated
+              ModifiedDate = $_.WhenChanged
+              Guid = $_.Guid
+              Comments = $_.Comments
+              FromScope = $_.FromScope
+              SentToScope = $_.SentToScope
+              FromCondition = @($_.FromCondition) -join ','
+              ToCondition = @($_.ToCondition) -join ','
+              HasAttachmentAction = if ($_.HasAttachmentCondition) { 'true' } else { 'false' }
+              NotifyUser = $_.NotifySenderType
+              RejectMessage = $_.RejectMessageEnhancedStatusCode
+              DeleteMessage = if ($_.DeleteMessage) { 'true' } else { 'false' }
+              ArchiveMessage = if ($_.ArchiveMessage) { 'true' } else { 'false' }
+              RuleVersion = $_.RuleVersion
+              RuleSubType = $_.RuleSubType
+              ExchangeVersion = $_.ExchangeVersion
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 transport rules with comprehensive details
+✅ Exchange backup complete (15s, 59 resources)
+💾 Saving 59 resources...
+✅ Backup status updated: Completed
+✅ Backup completed: ExchangeOnline (15s)
+✓ PowerShell execution complete for 4.1: failed
+⚠️ PowerShell command failed - using Graph API for 4.1
+🔧 Executing PowerShell for control 4.2 (10 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 4.2: failed
+⚠️ PowerShell command failed - using Graph API for 4.2
+🔧 Executing PowerShell for control 5.1.2.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.2.1: failed
+⚠️ PowerShell command failed - using Graph API for 5.1.2.1
+🔧 Executing PowerShell for control 5.1.2.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.2.2: success
+📊 Using PowerShell output for 5.1.2.2: Validation passed
+🔧 Executing PowerShell for control 5.1.2.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.2.3: success
+📊 Using PowerShell output for 5.1.2.3: Validation passed
+🔧 Executing PowerShell for control 5.1.3.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.3.1: failed
+⚠️ PowerShell command failed - using Graph API for 5.1.3.1
+🔧 Executing PowerShell for control 5.1.3.4 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.3.4: failed
+⚠️ PowerShell command failed - using Graph API for 5.1.3.4
+🔧 Executing PowerShell for control 5.1.4.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.4.1: failed
+⚠️ PowerShell command failed - using Graph API for 5.1.4.1
+🔧 Executing PowerShell for control 5.1.4.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.4.2: failed
+⚠️ PowerShell command failed - using Graph API for 5.1.4.2
+🔧 Executing PowerShell for control 5.1.4.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.4.3: failed
+⚠️ PowerShell command failed - using Graph API for 5.1.4.3
+🔧 Executing PowerShell for control 5.1.4.4 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.4.4: failed
+⚠️ PowerShell command failed - using Graph API for 5.1.4.4
+🔧 Executing PowerShell for control 5.1.4.5 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.4.5: failed
+⚠️ PowerShell command failed - using Graph API for 5.1.4.5
+🔧 Executing PowerShell for control 5.1.4.6 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.4.6: failed
+⚠️ PowerShell command failed - using Graph API for 5.1.4.6
+🔧 Executing PowerShell for control 5.1.5.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.5.1: success
+📊 Using PowerShell output for 5.1.5.1: Validation status unclear
+🔧 Executing PowerShell for control 5.1.5.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.5.2: success
+📊 Using PowerShell output for 5.1.5.2: Validation passed
+🔧 Executing PowerShell for control 5.1.5.3 (4 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.5.3: success
+📊 Using PowerShell output for 5.1.5.3: No validation output available
+🔧 Executing PowerShell for control 5.1.6.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.6.2: success
+📊 Using PowerShell output for 5.1.6.2: Validation status unclear
+🔧 Executing PowerShell for control 5.1.6.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ Emergency Access Monitoring validation failed: fetch failed
+🔧 Executing PowerShell for control 1.1.1 (7 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.6.3: success
+📊 Using PowerShell output for 5.1.6.3: Validation status unclear
+🔧 Executing PowerShell for control 5.1.8.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.1.1: success
+📊 Using PowerShell output for 1.1.1: All administrative accounts are cloud-only
+🔧 Executing PowerShell for control 1.1.3 (12 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.1.8.1: failed
+⚠️ PowerShell command failed - using Graph API for 5.1.8.1
+🔧 Executing PowerShell for control 5.2.2.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.2.1: failed
+⚠️ PowerShell command failed - using Graph API for 5.2.2.1
+🔧 Executing PowerShell for control 5.2.3.2 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.1.3: success
+📊 Using PowerShell output for 1.1.3: 3 Global Admins (compliant)
+🔧 Executing PowerShell for control 1.1.4 (11 commands)
+🔐 Using app-only auth (5 auth commands)
+🔄 Starting backup: ExchangeOnline
+✅ Backup record stored in memory: 2026-07-16-ExchangeOnline-672301
+📦 Collecting ExchangeOnline configurations...
+🔄 Starting Exchange Online backup collection...
+📋 Collecting Accepted Domains (Comprehensive)...
+✅ Found 2 accepted domains with full details
+📋 Collecting Address Book Policies...
+⚠️ Address book policies require Exchange Admin Center access
+📋 Collecting Address Lists...
+⚠️ Address lists require Exchange Admin Center access
+📋 Collecting CAS Mailbox Configuration...
+⚠️ CAS mailbox requires Exchange Admin Center access
+📋 Collecting Mail Connectors...
+⚠️ Mail connectors require Exchange Admin Center access (limited Graph API support)
+   Consider using Exchange PowerShell for full connector backup
+📋 Collecting Data Classifications...
+⚠️ Data classifications require Exchange Admin Center access
+📋 Collecting Distribution Groups (Comprehensive)...
+✓ PowerShell execution complete for 5.2.3.2: success
+📊 Using PowerShell output for 5.2.3.2: No validation output available
+🔧 Executing PowerShell for control 5.2.3.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.3: success
+📊 Using PowerShell output for 5.2.3.3: No validation output available
+🔧 Executing PowerShell for control 5.2.3.4 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.1.4: success
+📊 Using PowerShell output for 1.1.4: Validation status unclear
+🔧 Executing PowerShell for control 1.2.1 (9 commands)
+🔐 Using app-only auth (5 auth commands)
+✅ Found 52 distribution groups with 0 total members
+  └─ mbx-shareupdate-full: 2 members
+  └─ M365 E3 Licensed Users: 4 members
+  └─ AZURE_GROUP_ADMINS: 1 members
+  └─ AZURE_GROUP_MANAGERS: 1 members
+  └─ mbx-raj.dur3-full: 2 members
+  └─ mbx-raj.dur-full: 2 members
+  └─ M365-Super-Admins: 1 members
+  └─ BreakGlass: 3 members
+  └─ AZURE_GROUP_SUPER_ADMINS: 1 members
+  └─ mbx-raj.dur2-full: 2 members
+  └─ Test for Audit Logs: 1 members
+✓ PowerShell execution complete for 5.2.3.4: success
+📊 Using PowerShell output for 5.2.3.4: Validation failed
+🔧 Executing PowerShell for control 5.2.3.5 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.2.1: success
+📊 Using PowerShell output for 1.2.1: 20 public groups found - should be restricted
+🔧 Executing PowerShell for control 1.2.2 (12 commands)
+🔐 Using app-only auth (5 auth commands)
+  └─ DL Creation: 2 members
+  └─ mbx-ibrahimshared1-full: 2 members
+📋 Collecting Email Address Policies...
+⚠️ Email address policies require Exchange Admin Center access
+📋 Collecting External MX Records...
+✅ Found 2 external MX records
+📋 Collecting Global Address List...
+✅ Global address list collected
+📋 Collecting Hosted Connection Filter Policy...
+⚠️ Hosted connection filter policy requires Exchange Admin Center access
+📋 Collecting Hosted Content Filter Policy...
+⚠️ Hosted content filter policy requires Exchange Admin Center access
+📋 Collecting Journal Rules...
+⚠️ Journal rules require Exchange Admin Center access
+📋 Collecting Mailbox Audit Bypass...
+⚠️ Mailbox audit bypass requires Exchange Admin Center access
+📋 Collecting Mailbox AutoReply Configuration...
+⚠️ Mailbox autoreply requires Exchange Admin Center access
+📋 Collecting Mailbox Calendar Folders...
+⚠️ Mailbox calendar folders require Exchange Admin Center access
+📋 Collecting Mail Contacts...
+✅ Found 1 mail contacts
+📋 Collecting Mailbox Plans...
+⚠️ Mailbox plans require Exchange Admin Center access
+📋 Collecting Mailbox Search Configuration...
+⚠️ Mailbox search requires Exchange Admin Center access
+📋 Collecting Managed Folders...
+⚠️ Managed folders require Exchange Admin Center access
+📋 Collecting Message Classifications...
+⚠️ Message classifications require Exchange Admin Center access
+📋 Collecting Organization Configuration (Comprehensive)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+            $config = Get-OrganizationConfig -ErrorAction SilentlyContinue
+            if ($config) {
+              [PSCustomObject]@{
+                Identity = $config.Identity
+                Guid = $config.Guid
+                ExchangeVersion = $config.ExchangeVersion
+                SharePointUrl = $config.SharePointUrl
+                PublicFoldersEnabled = $config.PublicFoldersEnabled
+                PublicFolderShowClientControl = $config.PublicFolderShowClientControl
+                AsyncSendEnabled = $config.AsyncSendEnabled
+                BookingsEnabled = $config.BookingsEnabled
+                DefaultPublicFolderIssueWarningQuota = $config.DefaultPublicFolderIssueWarningQuota
+                DefaultPublicFolderMaxItemSize = $config.DefaultPublicFolderMaxItemSize
+                DefaultPublicFolderMovedItemRetention = $config.DefaultPublicFolderMovedItemRetention
+                DefaultPublicFolderProhibitPostQuota = $config.DefaultPublicFolderProhibitPostQuota
+                DistributionGroupDefaultOU = $config.DistributionGroupDefaultOU
+                DistributionGroupNameBlockedWordsList = @($config.DistributionGroupNameBlockedWordsList)
+                DistributionGroupNamingPolicy = $config.DistributionGroupNamingPolicy
+                EmailAddressTablePaged = $config.EmailAddressTablePaged
+                ProvisioningFlags = $config.ProvisioningFlags
+                ReadTrackingEnabled = $config.ReadTrackingEnabled
+                WacDiscoveryEndpoint = $config.WacDiscoveryEndpoint
+              } | ConvertTo-Json -Depth 2
+            }
+          
+      "
+/bin/sh: powershell: command not found
+
+✅ Organization configuration collected with PowerShell enhancements
+📋 Collecting Recipient Permissions...
+⚠️ Recipient permissions require Exchange Admin Center access
+📋 Collecting Remote Domains (PowerShell)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-RemoteDomain -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DomainName = $_.DomainName
+              Guid = $_.Guid
+              DisplayName = $_.DisplayName
+              AllowedOofType = $_.AllowedOofType
+              IsDefault = $_.IsDefault
+              CharacterSet = $_.CharacterSet
+              LineWraappingLength = $_.LineWraappingLength
+              ContentType = $_.ContentType
+              CreatedDate = $_.WhenCreated
+              ModifiedDate = $_.WhenChanged
+              ExchangeVersion = $_.ExchangeVersion
+              AutoReplyEnabled = $_.AutoReplyEnabled
+              DeliveryReportEnabled = $_.DeliveryReportEnabled
+              NDREnabled = $_.NDREnabled
+              MeetingForwardNotificationEnabled = $_.MeetingForwardNotificationEnabled
+              TnefEnabled = $_.TnefEnabled
+              UseSimpleDisplayName = $_.UseSimpleDisplayName
+              TargetDeliveryDomain = $_.TargetDeliveryDomain
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 remote domains with comprehensive configuration
+📋 Collecting Role Assignment Policies...
+⚠️ Role assignment policies require Exchange Admin Center access
+📋 Collecting Safe Links Policy...
+⚠️ Safe links policy requires Exchange Admin Center access
+📋 Collecting Send Connectors...
+⚠️ Send connectors require Exchange Admin Center access
+📋 Collecting Sharing Policy...
+⚠️ Sharing policy requires Exchange Admin Center access
+📋 Collecting SMTP Server Settings...
+⚠️ SMTP server settings require Exchange Admin Center access
+📋 Collecting Transport Configuration...
+⚠️ Transport configuration requires Exchange Admin Center access
+📋 Collecting Transport Rules...
+⚠️ Transport rules require Exchange Admin Center access (limited Graph API support)
+   Consider using Exchange PowerShell for full transport rule backup
+📋 Collecting Unified/Microsoft 365 Groups...
+✅ Found 26 unified groups
+📊 Starting PowerShell-based collection for advanced Exchange components...
+📋 Collecting Mailbox Policies (PowerShell - Comprehensive)...
+✓ PowerShell execution complete for 1.2.2: success
+📊 Using PowerShell output for 1.2.2: All shared mailboxes have sign-in disabled
+🔧 Executing PowerShell for control 1.3.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.5: success
+📊 Using PowerShell output for 5.2.3.5: Validation passed
+🔧 Executing PowerShell for control 5.2.3.6 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-CasMailbox -ResultSize Unlimited -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Guid = $_.Guid
+              UserPrincipalName = $_.UserPrincipalName
+              DisplayName = $_.DisplayName
+              ActiveSyncEnabled = $_.ActiveSyncEnabled
+              OWAEnabled = $_.OWAEnabled
+              OWAforDevicesEnabled = $_.OWAforDevicesEnabled
+              IMAPEnabled = $_.IMAPEnabled
+              PopEnabled = $_.PopEnabled
+              MAPIEnabled = $_.MAPIEnabled
+              OWAMailboxPolicy = $_.OWAMailboxPolicy
+              ActiveSyncMailboxPolicy = $_.ActiveSyncMailboxPolicy
+              IMAPUseProtectedStorage = $_.IMAPUseProtectedStorage
+              PopUseProtectedStorage = $_.PopUseProtectedStorage
+              UniversalOutlookEnabled = $_.UniversalOutlookEnabled
+              EasEnabled = $_.EasEnabled
+              Protocol = @{
+                ActiveSync = $_.ActiveSyncEnabled
+                OWA = $_.OWAEnabled
+                IMAP = $_.IMAPEnabled
+                POP = $_.PopEnabled
+                MAPI = $_.MAPIEnabled
+              }
+              WhenCreated = $_.WhenCreated
+              WhenChanged = $_.WhenChanged
+              ExchangeVersion = $_.ExchangeVersion
+              ExchangeGuid = $_.ExchangeGuid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 mailbox policies with comprehensive configuration
+📋 Collecting DLP Policies (PowerShell - Comprehensive)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-DlpPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            $policy = $_
+            $ruleCount = @((Get-DlpPolicyRule -Identity $policy.Identity -ErrorAction SilentlyContinue)).Count
+            [PSCustomObject]@{
+              Identity = $policy.Identity
+              Name = $policy.Name
+              State = $policy.State
+              Description = $policy.Description
+              Mode = $policy.Mode
+              Enabled = $policy.Enabled
+              Priority = $policy.Priority
+              RuleCount = $ruleCount
+              CreatedDate = $policy.CreatedDate
+              LastModifiedDate = $policy.LastModifiedDate
+              ContentDateModified = $policy.ContentDateModified
+              ExchangeVersion = $policy.ExchangeVersion
+              ImmutableId = $policy.ImmutableId
+              Guid = $policy.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 DLP policies with comprehensive configuration
+📋 Collecting Retention Policies (PowerShell - Comprehensive)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-RetentionPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            $policy = $_
+            $tags = @((Get-RetentionPolicyTag -Mailbox $policy.Identity -ErrorAction SilentlyContinue))
+            [PSCustomObject]@{
+              Identity = $policy.Identity
+              Name = $policy.Name
+              Description = $policy.Description
+              IsDefault = $policy.IsDefault
+              Guid = $policy.Guid
+              ExchangeVersion = $policy.ExchangeVersion
+              Created = $policy.WhenCreated
+              Modified = $policy.WhenChanged
+              TagCount = $tags.Count
+              Tags = @($tags | Select-Object -ExpandProperty Name)
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 retention policies with 0 retention tags
+📋 Collecting Transport Rules Details (PowerShell - Comprehensive)...
+✓ PowerShell execution complete for 5.2.3.6: success
+📊 Using PowerShell output for 5.2.3.6: Validation status unclear
+🔧 Executing PowerShell for control 5.2.3.7 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-TransportRule -ResultSize Unlimited -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              Enabled = $_.Enabled
+              Priority = $_.Priority
+              State = $_.State
+              Mode = $_.Mode
+              CreatedDate = $_.WhenCreated
+              ModifiedDate = $_.WhenChanged
+              Guid = $_.Guid
+              Comments = $_.Comments
+              FromScope = $_.FromScope
+              SentToScope = $_.SentToScope
+              FromCondition = @($_.FromCondition) -join ','
+              ToCondition = @($_.ToCondition) -join ','
+              HasAttachmentAction = if ($_.HasAttachmentCondition) { 'true' } else { 'false' }
+              NotifyUser = $_.NotifySenderType
+              RejectMessage = $_.RejectMessageEnhancedStatusCode
+              DeleteMessage = if ($_.DeleteMessage) { 'true' } else { 'false' }
+              ArchiveMessage = if ($_.ArchiveMessage) { 'true' } else { 'false' }
+              RuleVersion = $_.RuleVersion
+              RuleSubType = $_.RuleSubType
+              ExchangeVersion = $_.ExchangeVersion
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 transport rules with comprehensive details
+✅ Exchange backup complete (15s, 59 resources)
+💾 Saving 59 resources...
+✅ Backup status updated: Completed
+✅ Backup completed: ExchangeOnline (15s)
+✓ PowerShell execution complete for 1.3.1: success
+📊 Using PowerShell output for 1.3.1: Validation status unclear
+🔧 Executing PowerShell for control 1.3.2 (9 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.7: success
+📊 Using PowerShell output for 5.2.3.7: Validation passed
+🔧 Executing PowerShell for control 5.2.3.8 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.2: success
+📊 Using PowerShell output for 1.3.2: Validation passed
+🔧 Executing PowerShell for control 1.3.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.8: failed
+⚠️ PowerShell command failed - using Graph API for 5.2.3.8
+🔧 Executing PowerShell for control 5.2.3.9 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.3: failed
+⚠️ PowerShell command failed - using Graph API for 1.3.3
+🔧 Executing PowerShell for control 1.3.4 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.9: failed
+⚠️ PowerShell command failed - using Graph API for 5.2.3.9
+🔧 Executing PowerShell for control 5.2.3.10 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.4: failed
+⚠️ PowerShell command failed - using Graph API for 1.3.4
+🔧 Executing PowerShell for control 1.3.5 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.3.10: failed
+⚠️ PowerShell command failed - using Graph API for 5.2.3.10
+🔧 Executing PowerShell for control 5.2.4 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.5: failed
+⚠️ PowerShell command failed - using Graph API for 1.3.5
+🔧 Executing PowerShell for control 1.3.6 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.2.4: failed
+⚠️ PowerShell command failed - using Graph API for 5.2.4
+🔧 Executing PowerShell for control 5.3.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.6: failed
+⚠️ PowerShell command failed - using Graph API for 1.3.6
+🔧 Executing PowerShell for control 1.3.7 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 5.3.1: failed
+⚠️ PowerShell command failed - using Graph API for 5.3.1
+🔧 Executing PowerShell for control 6.1.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.1.1: failed
+⚠️ PowerShell command failed - using Graph API for 6.1.1
+🔧 Executing PowerShell for control 6.1.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 1.3.7: success
+📊 Using PowerShell output for 1.3.7: Validation status unclear
+🔧 Executing PowerShell for control 1.3.9 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+🔄 Starting backup: ExchangeOnline
+✅ Backup record stored in memory: 2026-07-16-ExchangeOnline-707315
+📦 Collecting ExchangeOnline configurations...
+🔄 Starting Exchange Online backup collection...
+📋 Collecting Accepted Domains (Comprehensive)...
+✅ Found 2 accepted domains with full details
+📋 Collecting Address Book Policies...
+⚠️ Address book policies require Exchange Admin Center access
+📋 Collecting Address Lists...
+⚠️ Address lists require Exchange Admin Center access
+📋 Collecting CAS Mailbox Configuration...
+⚠️ CAS mailbox requires Exchange Admin Center access
+📋 Collecting Mail Connectors...
+⚠️ Mail connectors require Exchange Admin Center access (limited Graph API support)
+   Consider using Exchange PowerShell for full connector backup
+📋 Collecting Data Classifications...
+⚠️ Data classifications require Exchange Admin Center access
+📋 Collecting Distribution Groups (Comprehensive)...
+✓ PowerShell execution complete for 1.3.9: failed
+⚠️ PowerShell command failed - using Graph API for 1.3.9
+🔧 Executing PowerShell for control 2.1.1 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.1.2: failed
+⚠️ PowerShell command failed - using Graph API for 6.1.2
+🔧 Executing PowerShell for control 6.1.3 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.1: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.1
+🔧 Executing PowerShell for control 2.1.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.1.3: success
+📊 Using PowerShell output for 6.1.3: No validation output available
+🔧 Executing PowerShell for control 6.2.1 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✅ Found 52 distribution groups with 0 total members
+  └─ mbx-shareupdate-full: 2 members
+  └─ M365 E3 Licensed Users: 4 members
+✓ PowerShell execution complete for 2.1.2: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.2
+🔧 Executing PowerShell for control 2.1.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+  └─ AZURE_GROUP_ADMINS: 1 members
+  └─ AZURE_GROUP_MANAGERS: 1 members
+  └─ mbx-raj.dur3-full: 2 members
+  └─ mbx-raj.dur-full: 2 members
+✓ PowerShell execution complete for 6.2.1: failed
+⚠️ PowerShell command failed - using Graph API for 6.2.1
+🔧 Executing PowerShell for control 6.2.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+  └─ M365-Super-Admins: 1 members
+  └─ BreakGlass: 3 members
+  └─ AZURE_GROUP_SUPER_ADMINS: 1 members
+  └─ mbx-raj.dur2-full: 2 members
+✓ PowerShell execution complete for 2.1.3: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.3
+🔧 Executing PowerShell for control 2.1.4 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+  └─ Test for Audit Logs: 1 members
+✓ PowerShell execution complete for 6.2.2: failed
+⚠️ PowerShell command failed - using Graph API for 6.2.2
+🔧 Executing PowerShell for control 6.2.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+  └─ DL Creation: 2 members
+  └─ mbx-ibrahimshared1-full: 2 members
+📋 Collecting Email Address Policies...
+⚠️ Email address policies require Exchange Admin Center access
+📋 Collecting External MX Records...
+✅ Found 2 external MX records
+📋 Collecting Global Address List...
+✅ Global address list collected
+📋 Collecting Hosted Connection Filter Policy...
+⚠️ Hosted connection filter policy requires Exchange Admin Center access
+📋 Collecting Hosted Content Filter Policy...
+⚠️ Hosted content filter policy requires Exchange Admin Center access
+📋 Collecting Journal Rules...
+⚠️ Journal rules require Exchange Admin Center access
+📋 Collecting Mailbox Audit Bypass...
+⚠️ Mailbox audit bypass requires Exchange Admin Center access
+📋 Collecting Mailbox AutoReply Configuration...
+⚠️ Mailbox autoreply requires Exchange Admin Center access
+📋 Collecting Mailbox Calendar Folders...
+⚠️ Mailbox calendar folders require Exchange Admin Center access
+📋 Collecting Mail Contacts...
+✅ Found 1 mail contacts
+📋 Collecting Mailbox Plans...
+⚠️ Mailbox plans require Exchange Admin Center access
+📋 Collecting Mailbox Search Configuration...
+⚠️ Mailbox search requires Exchange Admin Center access
+📋 Collecting Managed Folders...
+⚠️ Managed folders require Exchange Admin Center access
+📋 Collecting Message Classifications...
+⚠️ Message classifications require Exchange Admin Center access
+📋 Collecting Organization Configuration (Comprehensive)...
+✓ PowerShell execution complete for 2.1.4: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.4
+🔧 Executing PowerShell for control 2.1.5 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+            $config = Get-OrganizationConfig -ErrorAction SilentlyContinue
+            if ($config) {
+              [PSCustomObject]@{
+                Identity = $config.Identity
+                Guid = $config.Guid
+                ExchangeVersion = $config.ExchangeVersion
+                SharePointUrl = $config.SharePointUrl
+                PublicFoldersEnabled = $config.PublicFoldersEnabled
+                PublicFolderShowClientControl = $config.PublicFolderShowClientControl
+                AsyncSendEnabled = $config.AsyncSendEnabled
+                BookingsEnabled = $config.BookingsEnabled
+                DefaultPublicFolderIssueWarningQuota = $config.DefaultPublicFolderIssueWarningQuota
+                DefaultPublicFolderMaxItemSize = $config.DefaultPublicFolderMaxItemSize
+                DefaultPublicFolderMovedItemRetention = $config.DefaultPublicFolderMovedItemRetention
+                DefaultPublicFolderProhibitPostQuota = $config.DefaultPublicFolderProhibitPostQuota
+                DistributionGroupDefaultOU = $config.DistributionGroupDefaultOU
+                DistributionGroupNameBlockedWordsList = @($config.DistributionGroupNameBlockedWordsList)
+                DistributionGroupNamingPolicy = $config.DistributionGroupNamingPolicy
+                EmailAddressTablePaged = $config.EmailAddressTablePaged
+                ProvisioningFlags = $config.ProvisioningFlags
+                ReadTrackingEnabled = $config.ReadTrackingEnabled
+                WacDiscoveryEndpoint = $config.WacDiscoveryEndpoint
+              } | ConvertTo-Json -Depth 2
+            }
+          
+      "
+/bin/sh: powershell: command not found
+
+✅ Organization configuration collected with PowerShell enhancements
+📋 Collecting Recipient Permissions...
+⚠️ Recipient permissions require Exchange Admin Center access
+📋 Collecting Remote Domains (PowerShell)...
+✓ PowerShell execution complete for 6.2.3: failed
+⚠️ PowerShell command failed - using Graph API for 6.2.3
+🔧 Executing PowerShell for control 6.3.1 (3 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-RemoteDomain -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DomainName = $_.DomainName
+              Guid = $_.Guid
+              DisplayName = $_.DisplayName
+              AllowedOofType = $_.AllowedOofType
+              IsDefault = $_.IsDefault
+              CharacterSet = $_.CharacterSet
+              LineWraappingLength = $_.LineWraappingLength
+              ContentType = $_.ContentType
+              CreatedDate = $_.WhenCreated
+              ModifiedDate = $_.WhenChanged
+              ExchangeVersion = $_.ExchangeVersion
+              AutoReplyEnabled = $_.AutoReplyEnabled
+              DeliveryReportEnabled = $_.DeliveryReportEnabled
+              NDREnabled = $_.NDREnabled
+              MeetingForwardNotificationEnabled = $_.MeetingForwardNotificationEnabled
+              TnefEnabled = $_.TnefEnabled
+              UseSimpleDisplayName = $_.UseSimpleDisplayName
+              TargetDeliveryDomain = $_.TargetDeliveryDomain
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 remote domains with comprehensive configuration
+📋 Collecting Role Assignment Policies...
+⚠️ Role assignment policies require Exchange Admin Center access
+📋 Collecting Safe Links Policy...
+⚠️ Safe links policy requires Exchange Admin Center access
+📋 Collecting Send Connectors...
+⚠️ Send connectors require Exchange Admin Center access
+📋 Collecting Sharing Policy...
+⚠️ Sharing policy requires Exchange Admin Center access
+📋 Collecting SMTP Server Settings...
+⚠️ SMTP server settings require Exchange Admin Center access
+📋 Collecting Transport Configuration...
+⚠️ Transport configuration requires Exchange Admin Center access
+📋 Collecting Transport Rules...
+⚠️ Transport rules require Exchange Admin Center access (limited Graph API support)
+   Consider using Exchange PowerShell for full transport rule backup
+📋 Collecting Unified/Microsoft 365 Groups...
+✅ Found 26 unified groups
+📊 Starting PowerShell-based collection for advanced Exchange components...
+📋 Collecting Mailbox Policies (PowerShell - Comprehensive)...
+✓ PowerShell execution complete for 2.1.5: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.5
+🔧 Executing PowerShell for control 2.1.6 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-CasMailbox -ResultSize Unlimited -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Guid = $_.Guid
+              UserPrincipalName = $_.UserPrincipalName
+              DisplayName = $_.DisplayName
+              ActiveSyncEnabled = $_.ActiveSyncEnabled
+              OWAEnabled = $_.OWAEnabled
+              OWAforDevicesEnabled = $_.OWAforDevicesEnabled
+              IMAPEnabled = $_.IMAPEnabled
+              PopEnabled = $_.PopEnabled
+              MAPIEnabled = $_.MAPIEnabled
+              OWAMailboxPolicy = $_.OWAMailboxPolicy
+              ActiveSyncMailboxPolicy = $_.ActiveSyncMailboxPolicy
+              IMAPUseProtectedStorage = $_.IMAPUseProtectedStorage
+              PopUseProtectedStorage = $_.PopUseProtectedStorage
+              UniversalOutlookEnabled = $_.UniversalOutlookEnabled
+              EasEnabled = $_.EasEnabled
+              Protocol = @{
+                ActiveSync = $_.ActiveSyncEnabled
+                OWA = $_.OWAEnabled
+                IMAP = $_.IMAPEnabled
+                POP = $_.PopEnabled
+                MAPI = $_.MAPIEnabled
+              }
+              WhenCreated = $_.WhenCreated
+              WhenChanged = $_.WhenChanged
+              ExchangeVersion = $_.ExchangeVersion
+              ExchangeGuid = $_.ExchangeGuid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 mailbox policies with comprehensive configuration
+📋 Collecting DLP Policies (PowerShell - Comprehensive)...
+✓ PowerShell execution complete for 6.3.1: success
+📊 Using PowerShell output for 6.3.1: No validation output available
+🔧 Executing PowerShell for control 6.3.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-DlpPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            $policy = $_
+            $ruleCount = @((Get-DlpPolicyRule -Identity $policy.Identity -ErrorAction SilentlyContinue)).Count
+            [PSCustomObject]@{
+              Identity = $policy.Identity
+              Name = $policy.Name
+              State = $policy.State
+              Description = $policy.Description
+              Mode = $policy.Mode
+              Enabled = $policy.Enabled
+              Priority = $policy.Priority
+              RuleCount = $ruleCount
+              CreatedDate = $policy.CreatedDate
+              LastModifiedDate = $policy.LastModifiedDate
+              ContentDateModified = $policy.ContentDateModified
+              ExchangeVersion = $policy.ExchangeVersion
+              ImmutableId = $policy.ImmutableId
+              Guid = $policy.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 DLP policies with comprehensive configuration
+📋 Collecting Retention Policies (PowerShell - Comprehensive)...
+✓ PowerShell execution complete for 2.1.6: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.6
+🔧 Executing PowerShell for control 2.1.7 (3 commands)
+🔐 Using app-only auth (5 auth commands)
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-RetentionPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            $policy = $_
+            $tags = @((Get-RetentionPolicyTag -Mailbox $policy.Identity -ErrorAction SilentlyContinue))
+            [PSCustomObject]@{
+              Identity = $policy.Identity
+              Name = $policy.Name
+              Description = $policy.Description
+              IsDefault = $policy.IsDefault
+              Guid = $policy.Guid
+              ExchangeVersion = $policy.ExchangeVersion
+              Created = $policy.WhenCreated
+              Modified = $policy.WhenChanged
+              TagCount = $tags.Count
+              Tags = @($tags | Select-Object -ExpandProperty Name)
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 retention policies with 0 retention tags
+📋 Collecting Transport Rules Details (PowerShell - Comprehensive)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-TransportRule -ResultSize Unlimited -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              Enabled = $_.Enabled
+              Priority = $_.Priority
+              State = $_.State
+              Mode = $_.Mode
+              CreatedDate = $_.WhenCreated
+              ModifiedDate = $_.WhenChanged
+              Guid = $_.Guid
+              Comments = $_.Comments
+              FromScope = $_.FromScope
+              SentToScope = $_.SentToScope
+              FromCondition = @($_.FromCondition) -join ','
+              ToCondition = @($_.ToCondition) -join ','
+              HasAttachmentAction = if ($_.HasAttachmentCondition) { 'true' } else { 'false' }
+              NotifyUser = $_.NotifySenderType
+              RejectMessage = $_.RejectMessageEnhancedStatusCode
+              DeleteMessage = if ($_.DeleteMessage) { 'true' } else { 'false' }
+              ArchiveMessage = if ($_.ArchiveMessage) { 'true' } else { 'false' }
+              RuleVersion = $_.RuleVersion
+              RuleSubType = $_.RuleSubType
+              ExchangeVersion = $_.ExchangeVersion
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ Found 0 transport rules with comprehensive details
+✅ Exchange backup complete (15s, 59 resources)
+💾 Saving 59 resources...
+✅ Backup status updated: Completed
+✅ Backup completed: ExchangeOnline (15s)
+✓ PowerShell execution complete for 6.3.2: failed
+⚠️ PowerShell command failed - using Graph API for 6.3.2
+🔧 Executing PowerShell for control 6.5.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.7: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.7
+🔧 Executing PowerShell for control 2.1.8 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.5.1: failed
+⚠️ PowerShell command failed - using Graph API for 6.5.1
+🔧 Executing PowerShell for control 6.5.2 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.8: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.8
+🔧 Executing PowerShell for control 2.1.9 (7 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.5.2: failed
+⚠️ PowerShell command failed - using Graph API for 6.5.2
+🔧 Executing PowerShell for control 6.5.3 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.9: success
+📊 Using PowerShell output for 2.1.9: No validation output available
+🔧 Executing PowerShell for control 2.1.10 (2 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.5.3: failed
+⚠️ PowerShell command failed - using Graph API for 6.5.3
+🔧 Executing PowerShell for control 6.5.4 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.10: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.10
+🔧 Executing PowerShell for control 2.1.11 (11 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.5.4: failed
+⚠️ PowerShell command failed - using Graph API for 6.5.4
+🔧 Executing PowerShell for control 6.5.5 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.11: success
+📊 Using PowerShell output for 2.1.11: No validation output available
+🔧 Executing PowerShell for control 2.1.12 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 6.5.5: failed
+⚠️ PowerShell command failed - using Graph API for 6.5.5
+🔧 Executing PowerShell for control 7.2.1 (1 commands)
+🔐 Using app-only auth (5 auth commands)
+✓ PowerShell execution complete for 2.1.12: failed
+⚠️ PowerShell command failed - using Graph API for 2.1.12
+🔧 Executing PowerShell for control 2.1.13 (1 commands)
+🔐 Using app-only auth (5 auth commands)
