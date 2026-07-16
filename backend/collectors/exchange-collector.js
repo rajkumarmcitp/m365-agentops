@@ -48,14 +48,16 @@ export class ExchangeCollector {
 
       // Collect each resource type
       await this.collectAcceptedDomains()
+      await this.collectActiveSyncDeviceAccessRules()
+      await this.collectActiveSyncPolicies()
       await this.collectAddressBookPolicies()
       await this.collectAddressLists()
       await this.collectApplicationAccessPolicy()
-      await this.collectActiveSyncDeviceAccessRules()
       await this.collectAuthenticationPolicies()
       await this.collectAuthenticationPolicyAssignments()
       await this.collectAvailabilityAddressSpace()
       await this.collectAvailabilityConfig()
+      await this.collectCASMailboxPolicies()
       await this.collectCASMailboxSettings()
       await this.collectCalendarProcessing()
       await this.collectCasMailbox()
@@ -64,6 +66,8 @@ export class ExchangeCollector {
       await this.collectDataAtRestEncryptionPolicyAssignments()
       await this.collectDataClassifications()
       await this.collectDataEncryptionPolicy()
+      await this.collectDkimSigningConfig()
+      await this.collectDistributionGroupMembers()
       await this.collectDistributionGroups()
       await this.collectDynamicDistributionGroups()
       await this.collectEmailAddressPolicies()
@@ -72,9 +76,11 @@ export class ExchangeCollector {
       await this.collectExternalMX()
       await this.collectFocusedInbox()
       await this.collectGlobalAddressList()
+      await this.collectGroupPolicies()
       await this.collectGroupSettings()
       await this.collectHostedConnectionFilterPolicy()
       await this.collectHostedContentFilterPolicy()
+      await this.collectHostedContentFilterRules()
       await this.collectInboxRules()
       await this.collectIntraOrganizationConnector()
       await this.collectJournalRules()
@@ -85,29 +91,38 @@ export class ExchangeCollector {
       await this.collectMailboxContacts()
       await this.collectMailboxFolderPermissions()
       await this.collectMailboxIRMAccess()
+      await this.collectMailboxMoveRequests()
       await this.collectMailboxPermissions()
       await this.collectMailboxPlans()
       await this.collectMailboxSearch()
+      await this.collectMalwareFilterPolicies()
       await this.collectManagedFolders()
-      await this.collectManagementRoles()
       await this.collectManagementRoleAssignments()
       await this.collectManagementRoleEntries()
+      await this.collectManagementRoles()
       await this.collectManagementScopes()
       await this.collectMessageClassifications()
       await this.collectMigration()
       await this.collectMigrationEndpoints()
+      await this.collectMigrationUsers()
       await this.collectOfflineAddressBook()
       await this.collectOnPremisesOrganization()
       await this.collectOrgConfig()
       await this.collectOrganizationRelationship()
+      await this.collectOWAPolicies()
       await this.collectPartnerApplication()
+      await this.collectPhishFilterPolicies()
       await this.collectPhishSimOverrideRules()
       await this.collectPlace()
       await this.collectPolicyTipConfig()
       await this.collectQuarantinePolicy()
       await this.collectRecipientPermissions()
       await this.collectRemoteDomains()
+      await this.collectRemoteDomainPolicies()
+      await this.collectRetentionComplianceTags()
+      await this.collectRetentionPolicyTags()
       await this.collectRoleAssignmentPolicies()
+      await this.collectRoleGroupMembers()
       await this.collectSafeLinksPolicy()
       await this.collectSecOpsOverrideRules()
       await this.collectSendConnectors()
@@ -3480,6 +3495,752 @@ export class ExchangeCollector {
       }
     } catch (error) {
       this.handleError('collectTenantAllowBlockListSpoofItems', error)
+    }
+  }
+
+  /**
+   * Collect Active Sync Policies
+   * EXOActiveSyncPolicy (Phase 3)
+   */
+  async collectActiveSyncPolicies() {
+    try {
+      console.log('📋 Collecting Active Sync Policies (Phase 3)...')
+      const script = `
+        @((Get-MobileDeviceMailboxPolicy -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              AllowApplePushNotifications = $_.AllowApplePushNotifications
+              AllowMicrosoftPushNotifications = $_.AllowMicrosoftPushNotifications
+              AllowGooglePushNotifications = $_.AllowGooglePushNotifications
+              AllowHTMLEmail = $_.AllowHTMLEmail
+              AllowPOPIMAPEmail = $_.AllowPOPIMAPEmail
+              RequireDevicePasswordOnResumeSession = $_.RequireDevicePasswordOnResumeSession
+              MaxDevicePasswordFailedAttempts = $_.MaxDevicePasswordFailedAttempts
+              MinDevicePasswordLength = $_.MinDevicePasswordLength
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXOActiveSyncPolicy',
+            name: policy.Name,
+            id: policy.Identity,
+            properties: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              AllowApplePushNotifications: policy.AllowApplePushNotifications,
+              AllowMicrosoftPushNotifications: policy.AllowMicrosoftPushNotifications,
+              AllowGooglePushNotifications: policy.AllowGooglePushNotifications,
+              AllowHTMLEmail: policy.AllowHTMLEmail,
+              AllowPOPIMAPEmail: policy.AllowPOPIMAPEmail,
+              RequireDevicePasswordOnResumeSession: policy.RequireDevicePasswordOnResumeSession,
+              MaxDevicePasswordFailedAttempts: policy.MaxDevicePasswordFailedAttempts,
+              MinDevicePasswordLength: policy.MinDevicePasswordLength,
+              Guid: policy.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Active Sync policies`)
+      }
+    } catch (error) {
+      this.handleError('collectActiveSyncPolicies', error)
+    }
+  }
+
+  /**
+   * Collect CAS Mailbox Policies
+   * EXOCASMailboxPolicy (Phase 3)
+   */
+  async collectCASMailboxPolicies() {
+    try {
+      console.log('📋 Collecting CAS Mailbox Policies (Phase 3)...')
+      const script = `
+        @((Get-OWAMailboxPolicy -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              ActionForUnknownFileAndMIMETypes = $_.ActionForUnknownFileAndMIMETypes
+              ActiveSyncIntegrationEnabled = $_.ActiveSyncIntegrationEnabled
+              AllAddressListsEnabled = $_.AllAddressListsEnabled
+              AllowCopyContactsToDeviceAddressBook = $_.AllowCopyContactsToDeviceAddressBook
+              AllowedFileTypes = @($_.AllowedFileTypes) -join ','
+              BlockedFileTypes = @($_.BlockedFileTypes) -join ','
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXOCASMailboxPolicy',
+            name: policy.Name,
+            id: policy.Identity,
+            properties: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              ActionForUnknownFileAndMIMETypes: policy.ActionForUnknownFileAndMIMETypes,
+              ActiveSyncIntegrationEnabled: policy.ActiveSyncIntegrationEnabled,
+              AllAddressListsEnabled: policy.AllAddressListsEnabled,
+              AllowCopyContactsToDeviceAddressBook: policy.AllowCopyContactsToDeviceAddressBook,
+              AllowedFileTypes: policy.AllowedFileTypes ? policy.AllowedFileTypes.split(',') : [],
+              BlockedFileTypes: policy.BlockedFileTypes ? policy.BlockedFileTypes.split(',') : [],
+              Guid: policy.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} CAS mailbox policies`)
+      }
+    } catch (error) {
+      this.handleError('collectCASMailboxPolicies', error)
+    }
+  }
+
+  /**
+   * Collect DKIM Signing Configuration
+   * EXODkimSigningConfig (Phase 3)
+   */
+  async collectDkimSigningConfig() {
+    try {
+      console.log('📋 Collecting DKIM Signing Configuration (Phase 3)...')
+      const script = `
+        @((Get-DkimSigningConfig -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Domain = $_.Domain
+              Enabled = $_.Enabled
+              Status = $_.Status
+              Selector1PublicKey = if ($_.Selector1PublicKey) { 'Present' } else { 'Not Set' }
+              Selector2PublicKey = if ($_.Selector2PublicKey) { 'Present' } else { 'Not Set' }
+              LastCheckedTime = $_.LastCheckedTime
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const config of result) {
+          this.resources.push({
+            type: 'EXODkimSigningConfig',
+            name: config.Domain,
+            id: config.Identity,
+            properties: {
+              Identity: config.Identity,
+              Domain: config.Domain,
+              Enabled: config.Enabled,
+              Status: config.Status,
+              Selector1PublicKey: config.Selector1PublicKey,
+              Selector2PublicKey: config.Selector2PublicKey,
+              LastCheckedTime: config.LastCheckedTime,
+              Guid: config.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} DKIM signing configurations`)
+      }
+    } catch (error) {
+      this.handleError('collectDkimSigningConfig', error)
+    }
+  }
+
+  /**
+   * Collect Distribution Group Members
+   * EXODistributionGroupMember (Phase 3)
+   */
+  async collectDistributionGroupMembers() {
+    try {
+      console.log('📋 Collecting Distribution Group Members (Phase 3)...')
+      const script = `
+        @((Get-DistributionGroup -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            $group = $_
+            @((Get-DistributionGroupMember -Identity $group.Identity -ResultSize Unlimited -ErrorAction Continue) |
+              ForEach-Object {
+                [PSCustomObject]@{
+                  GroupIdentity = $group.Identity
+                  GroupName = $group.DisplayName
+                  MemberIdentity = $_.Identity
+                  MemberName = $_.DisplayName
+                  RecipientType = $_.RecipientType
+                  Guid = $_.Guid
+                }
+              })
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const member of result) {
+          this.resources.push({
+            type: 'EXODistributionGroupMember',
+            name: \`\${member.GroupName}:\${member.MemberName}\`,
+            id: \`\${member.GroupIdentity}:\${member.MemberIdentity}\`,
+            properties: {
+              GroupIdentity: member.GroupIdentity,
+              GroupName: member.GroupName,
+              MemberIdentity: member.MemberIdentity,
+              MemberName: member.MemberName,
+              RecipientType: member.RecipientType,
+              Guid: member.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} distribution group members`)
+      }
+    } catch (error) {
+      this.handleError('collectDistributionGroupMembers', error)
+    }
+  }
+
+  /**
+   * Collect Group Policies
+   * EXOGroupPolicy (Phase 3)
+   */
+  async collectGroupPolicies() {
+    try {
+      console.log('📋 Collecting Group Policies (Phase 3)...')
+      const script = `
+        @((Get-UnifiedGroupPolicy -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              AllowExternalSenders = $_.AllowExternalSenders
+              AllowGuestUsers = $_.AllowGuestUsers
+              ClassificationList = @($_.ClassificationList) -join ','
+              DefaultClassification = $_.DefaultClassification
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXOGroupPolicy',
+            name: policy.Name,
+            id: policy.Identity,
+            properties: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              AllowExternalSenders: policy.AllowExternalSenders,
+              AllowGuestUsers: policy.AllowGuestUsers,
+              ClassificationList: policy.ClassificationList ? policy.ClassificationList.split(',') : [],
+              DefaultClassification: policy.DefaultClassification,
+              Guid: policy.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} group policies`)
+      }
+    } catch (error) {
+      this.handleError('collectGroupPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Hosted Content Filter Rules
+   * EXOHostedContentFilterRule (Phase 3)
+   */
+  async collectHostedContentFilterRules() {
+    try {
+      console.log('📋 Collecting Hosted Content Filter Rules (Phase 3)...')
+      const script = `
+        @((Get-HostedContentFilterRule -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Enabled = $_.Enabled
+              Priority = $_.Priority
+              HostedContentFilterPolicy = $_.HostedContentFilterPolicy
+              RecipientDomains = @($_.RecipientDomains) -join ','
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const rule of result) {
+          this.resources.push({
+            type: 'EXOHostedContentFilterRule',
+            name: rule.Name,
+            id: rule.Identity,
+            properties: {
+              Identity: rule.Identity,
+              Name: rule.Name,
+              Enabled: rule.Enabled,
+              Priority: rule.Priority,
+              HostedContentFilterPolicy: rule.HostedContentFilterPolicy,
+              RecipientDomains: rule.RecipientDomains ? rule.RecipientDomains.split(',') : [],
+              Guid: rule.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} hosted content filter rules`)
+      }
+    } catch (error) {
+      this.handleError('collectHostedContentFilterRules', error)
+    }
+  }
+
+  /**
+   * Collect Mailbox Move Requests
+   * EXOMailboxMoveRequest (Phase 3)
+   */
+  async collectMailboxMoveRequests() {
+    try {
+      console.log('📋 Collecting Mailbox Move Requests (Phase 3)...')
+      const script = `
+        @((Get-MoveRequest -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Status = $_.Status
+              SourceDatabase = $_.SourceDatabase
+              TargetDatabase = $_.TargetDatabase
+              PercentComplete = $_.PercentComplete
+              RequestedForUser = $_.RequestedForUser
+              CreationTime = $_.CreationTime
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const request of result) {
+          this.resources.push({
+            type: 'EXOMailboxMoveRequest',
+            name: request.DisplayName,
+            id: request.Identity,
+            properties: {
+              Identity: request.Identity,
+              DisplayName: request.DisplayName,
+              Status: request.Status,
+              SourceDatabase: request.SourceDatabase,
+              TargetDatabase: request.TargetDatabase,
+              PercentComplete: request.PercentComplete,
+              RequestedForUser: request.RequestedForUser,
+              CreationTime: request.CreationTime,
+              Guid: request.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} mailbox move requests`)
+      }
+    } catch (error) {
+      this.handleError('collectMailboxMoveRequests', error)
+    }
+  }
+
+  /**
+   * Collect Malware Filter Policies
+   * EXOMalwareFilterPolicy (Phase 3)
+   */
+  async collectMalwareFilterPolicies() {
+    try {
+      console.log('📋 Collecting Malware Filter Policies (Phase 3)...')
+      const script = `
+        @((Get-MalwareFilterPolicy -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              EnableExternalSenderAdminNotifications = $_.EnableExternalSenderAdminNotifications
+              EnableInternalSenderAdminNotifications = $_.EnableInternalSenderAdminNotifications
+              EnableFileFilter = $_.EnableFileFilter
+              ZapEnabled = $_.ZapEnabled
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXOMalwareFilterPolicy',
+            name: policy.Name,
+            id: policy.Identity,
+            properties: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              EnableExternalSenderAdminNotifications: policy.EnableExternalSenderAdminNotifications,
+              EnableInternalSenderAdminNotifications: policy.EnableInternalSenderAdminNotifications,
+              EnableFileFilter: policy.EnableFileFilter,
+              ZapEnabled: policy.ZapEnabled,
+              Guid: policy.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} malware filter policies`)
+      }
+    } catch (error) {
+      this.handleError('collectMalwareFilterPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Migration Users
+   * EXOMigrationUser (Phase 3)
+   */
+  async collectMigrationUsers() {
+    try {
+      console.log('📋 Collecting Migration Users (Phase 3)...')
+      const script = `
+        @((Get-MigrationUserStatistics -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              BatchId = $_.BatchId
+              Status = $_.Status
+              SkippedItemCount = $_.SkippedItemCount
+              SyncedItemCount = $_.SyncedItemCount
+              PercentageComplete = $_.PercentageComplete
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const user of result) {
+          this.resources.push({
+            type: 'EXOMigrationUser',
+            name: user.Identity,
+            id: \`\${user.BatchId}:\${user.Identity}\`,
+            properties: {
+              Identity: user.Identity,
+              BatchId: user.BatchId,
+              Status: user.Status,
+              SkippedItemCount: user.SkippedItemCount,
+              SyncedItemCount: user.SyncedItemCount,
+              PercentageComplete: user.PercentageComplete,
+              Guid: user.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} migration users`)
+      }
+    } catch (error) {
+      this.handleError('collectMigrationUsers', error)
+    }
+  }
+
+  /**
+   * Collect OWA Policies
+   * EXOOWAPolicy (Phase 3)
+   */
+  async collectOWAPolicies() {
+    try {
+      console.log('📋 Collecting OWA Policies (Phase 3)...')
+      const script = `
+        @((Get-OWAMailboxPolicy -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              ActiveSyncIntegrationEnabled = $_.ActiveSyncIntegrationEnabled
+              ActionForUnknownFileAndMIMETypes = $_.ActionForUnknownFileAndMIMETypes
+              AllowedFileTypes = @($_.AllowedFileTypes) -join ','
+              BlockedFileTypes = @($_.BlockedFileTypes) -join ','
+              OutlookBetaToggleEnabled = $_.OutlookBetaToggleEnabled
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXOOWAPolicy',
+            name: policy.Name,
+            id: policy.Identity,
+            properties: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              ActiveSyncIntegrationEnabled: policy.ActiveSyncIntegrationEnabled,
+              ActionForUnknownFileAndMIMETypes: policy.ActionForUnknownFileAndMIMETypes,
+              AllowedFileTypes: policy.AllowedFileTypes ? policy.AllowedFileTypes.split(',') : [],
+              BlockedFileTypes: policy.BlockedFileTypes ? policy.BlockedFileTypes.split(',') : [],
+              OutlookBetaToggleEnabled: policy.OutlookBetaToggleEnabled,
+              Guid: policy.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} OWA policies`)
+      }
+    } catch (error) {
+      this.handleError('collectOWAPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Phish Filter Policies
+   * EXOPhishFilterPolicy (Phase 3)
+   */
+  async collectPhishFilterPolicies() {
+    try {
+      console.log('📋 Collecting Phish Filter Policies (Phase 3)...')
+      const script = `
+        @((Get-PhishFilterPolicy -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Enabled = $_.Enabled
+              IntraOrgProtectionMode = $_.IntraOrgProtectionMode
+              AuthenticationFailAction = $_.AuthenticationFailAction
+              ImplicitEmailTrustsEnabled = $_.ImplicitEmailTrustsEnabled
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXOPhishFilterPolicy',
+            name: policy.Name,
+            id: policy.Identity,
+            properties: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              Enabled: policy.Enabled,
+              IntraOrgProtectionMode: policy.IntraOrgProtectionMode,
+              AuthenticationFailAction: policy.AuthenticationFailAction,
+              ImplicitEmailTrustsEnabled: policy.ImplicitEmailTrustsEnabled,
+              Guid: policy.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} phish filter policies`)
+      }
+    } catch (error) {
+      this.handleError('collectPhishFilterPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Remote Domain Policies
+   * EXORemoteDomainPolicy (Phase 3)
+   */
+  async collectRemoteDomainPolicies() {
+    try {
+      console.log('📋 Collecting Remote Domain Policies (Phase 3)...')
+      const script = `
+        @((Get-RemoteDomain -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              DomainName = $_.DomainName
+              ContentType = $_.ContentType
+              AllowedOOFType = $_.AllowedOOFType
+              AutoReplyEnabled = $_.AutoReplyEnabled
+              DeliveryReportEnabled = $_.DeliveryReportEnabled
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXORemoteDomainPolicy',
+            name: policy.DomainName,
+            id: policy.Identity,
+            properties: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              DomainName: policy.DomainName,
+              ContentType: policy.ContentType,
+              AllowedOOFType: policy.AllowedOOFType,
+              AutoReplyEnabled: policy.AutoReplyEnabled,
+              DeliveryReportEnabled: policy.DeliveryReportEnabled,
+              Guid: policy.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} remote domain policies`)
+      }
+    } catch (error) {
+      this.handleError('collectRemoteDomainPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Retention Compliance Tags
+   * EXORetentionComplianceTag (Phase 3)
+   */
+  async collectRetentionComplianceTags() {
+    try {
+      console.log('📋 Collecting Retention Compliance Tags (Phase 3)...')
+      const script = `
+        @((Get-ComplianceTag -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              RetentionEnabled = $_.RetentionEnabled
+              RetentionType = $_.RetentionType
+              RetentionDuration = $_.RetentionDuration
+              Description = $_.Description
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const tag of result) {
+          this.resources.push({
+            type: 'EXORetentionComplianceTag',
+            name: tag.Name,
+            id: tag.Identity,
+            properties: {
+              Identity: tag.Identity,
+              Name: tag.Name,
+              RetentionEnabled: tag.RetentionEnabled,
+              RetentionType: tag.RetentionType,
+              RetentionDuration: tag.RetentionDuration,
+              Description: tag.Description,
+              Guid: tag.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} retention compliance tags`)
+      }
+    } catch (error) {
+      this.handleError('collectRetentionComplianceTags', error)
+    }
+  }
+
+  /**
+   * Collect Retention Policy Tags
+   * EXORetentionPolicyTag (Phase 3)
+   */
+  async collectRetentionPolicyTags() {
+    try {
+      console.log('📋 Collecting Retention Policy Tags (Phase 3)...')
+      const script = `
+        @((Get-RetentionPolicyTag -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              Type = $_.Type
+              RetentionAction = $_.RetentionAction
+              RetentionDays = $_.RetentionDays
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const tag of result) {
+          this.resources.push({
+            type: 'EXORetentionPolicyTag',
+            name: tag.Name,
+            id: tag.Identity,
+            properties: {
+              Identity: tag.Identity,
+              Name: tag.Name,
+              Description: tag.Description,
+              Type: tag.Type,
+              RetentionAction: tag.RetentionAction,
+              RetentionDays: tag.RetentionDays,
+              Guid: tag.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} retention policy tags`)
+      }
+    } catch (error) {
+      this.handleError('collectRetentionPolicyTags', error)
+    }
+  }
+
+  /**
+   * Collect Role Group Members
+   * EXORoleGroupMember (Phase 3)
+   */
+  async collectRoleGroupMembers() {
+    try {
+      console.log('📋 Collecting Role Group Members (Phase 3)...')
+      const script = `
+        @((Get-RoleGroup -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            $rg = $_
+            @((Get-RoleGroupMember -Identity $rg.Identity -ErrorAction Continue) |
+              ForEach-Object {
+                [PSCustomObject]@{
+                  RoleGroupIdentity = $rg.Identity
+                  RoleGroupName = $rg.Name
+                  MemberIdentity = $_.Identity
+                  MemberName = $_.DisplayName
+                  MemberType = $_.RecipientType
+                  Guid = $_.Guid
+                }
+              })
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const member of result) {
+          this.resources.push({
+            type: 'EXORoleGroupMember',
+            name: \`\${member.RoleGroupName}:\${member.MemberName}\`,
+            id: \`\${member.RoleGroupIdentity}:\${member.MemberIdentity}\`,
+            properties: {
+              RoleGroupIdentity: member.RoleGroupIdentity,
+              RoleGroupName: member.RoleGroupName,
+              MemberIdentity: member.MemberIdentity,
+              MemberName: member.MemberName,
+              MemberType: member.MemberType,
+              Guid: member.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} role group members`)
+      }
+    } catch (error) {
+      this.handleError('collectRoleGroupMembers', error)
     }
   }
 
