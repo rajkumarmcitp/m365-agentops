@@ -35,14 +35,26 @@ export class OneDriveCollector {
       this.resources = []
       this.errors = []
 
-      // Collect each resource type
+      // Base OneDrive collections
+      console.log('📊 Starting OneDrive base collection...')
       await this.collectOneDriveSettings()
       await this.collectUserDrives()
       await this.collectDriveDetails()
       await this.collectQuota()
       await this.collectRetention()
 
+      // Phase 1 - Critical personal site and storage management
+      console.log('📊 Starting OneDrive Phase 1 collection...')
+      await this.collectPersonalSiteCreation() // ODPersonalSiteCreation
+      await this.collectStorageQuotaPolicy() // ODStorageQuotaPolicy
+      await this.collectSyncClientSettings() // ODSyncClientSettings
+      await this.collectExternalSharingPolicy() // ODExternalSharingPolicy
+      await this.collectOneDriveRetentionPolicy() // ODRetentionPolicy
+      await this.collectAccessAndCompliance() // ODAccessAndCompliance
+      await this.collectMobileManagementPolicy() // ODMobileManagementPolicy
+
       // PowerShell-based collections (non-blocking failures)
+      console.log('📊 Starting PowerShell-based OneDrive collections...')
       await this.collectSharingSettingsPowerShell()
       await this.collectDeviceAccessPowerShell()
       await this.collectSiteCollectionQuotaPowerShell()
@@ -594,6 +606,257 @@ export class OneDriveCollector {
       }
     } catch (error) {
       this.handleError('collectNotificationSettingsPowerShell', error)
+    }
+  }
+
+  // ============================================================
+  // PHASE 1: PERSONAL SITE AND STORAGE MANAGEMENT COLLECTORS
+  // ============================================================
+
+  /**
+   * Collect Personal Site Creation Settings
+   * ODPersonalSiteCreation (Phase 1)
+   */
+  async collectPersonalSiteCreation() {
+    try {
+      console.log('📋 Collecting OneDrive Personal Site Creation (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          PersonalSiteCreationDisabled = (Get-SPOTenant -ErrorAction SilentlyContinue).PersonalSiteCreationDisabled
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result !== null) {
+        this.resources.push({
+          type: 'ODPersonalSiteCreation',
+          name: 'PersonalSiteCreation',
+          id: 'personal-site-creation',
+          configuration: {
+            Identity: 'personal-site-creation',
+            PersonalSiteCreationDisabled: result.PersonalSiteCreationDisabled || false,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found personal site creation settings')
+      }
+    } catch (error) {
+      this.handleError('collectPersonalSiteCreation', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Storage Quota Policy
+   * ODStorageQuotaPolicy (Phase 1)
+   */
+  async collectStorageQuotaPolicy() {
+    try {
+      console.log('📋 Collecting OneDrive Storage Quota Policy (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          StorageQuota = (Get-SPOTenant -ErrorAction SilentlyContinue).StorageQuota
+          StorageQuotaWarningLevel = (Get-SPOTenant -ErrorAction SilentlyContinue).StorageQuotaWarningLevel
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODStorageQuotaPolicy',
+          name: 'StorageQuotaPolicy',
+          id: 'storage-quota-policy',
+          configuration: {
+            Identity: 'storage-quota-policy',
+            StorageQuota: result.StorageQuota || 1048576,
+            StorageQuotaWarningLevel: result.StorageQuotaWarningLevel || 943718,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found storage quota policy')
+      }
+    } catch (error) {
+      this.handleError('collectStorageQuotaPolicy', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Sync Client Settings
+   * ODSyncClientSettings (Phase 1)
+   */
+  async collectSyncClientSettings() {
+    try {
+      console.log('📋 Collecting OneDrive Sync Client Settings (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          SyncClientVersion = (Get-SPOTenant -ErrorAction SilentlyContinue).SyncClientVersion
+          OneDriveSyncClientRestrictedApps = @((Get-SPOTenant -ErrorAction SilentlyContinue).OneDriveSyncClientRestrictedApps)
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODSyncClientSettings',
+          name: 'SyncClientSettings',
+          id: 'sync-client-settings',
+          configuration: {
+            Identity: 'sync-client-settings',
+            SyncClientVersion: result.SyncClientVersion || 'Latest',
+            RestrictedApps: Array.isArray(result.OneDriveSyncClientRestrictedApps) ? result.OneDriveSyncClientRestrictedApps : [],
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found sync client settings')
+      }
+    } catch (error) {
+      this.handleError('collectSyncClientSettings', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive External Sharing Policy
+   * ODExternalSharingPolicy (Phase 1)
+   */
+  async collectExternalSharingPolicy() {
+    try {
+      console.log('📋 Collecting OneDrive External Sharing Policy (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          OneDriveExternalSharingCapability = (Get-SPOTenant -ErrorAction SilentlyContinue).OneDriveExternalSharingCapability
+          ExternalSharingDomainRestricted = (Get-SPOTenant -ErrorAction SilentlyContinue).SharingDomainRestrictionMode
+          RequireAnonymousLinksExpireInDays = (Get-SPOTenant -ErrorAction SilentlyContinue).RequireAnonymousLinksExpireInDays
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODExternalSharingPolicy',
+          name: 'ExternalSharingPolicy',
+          id: 'external-sharing-policy',
+          configuration: {
+            Identity: 'external-sharing-policy',
+            SharingCapability: result.OneDriveExternalSharingCapability || 'ExistingExternalUserSharingOnly',
+            DomainRestrictionMode: result.ExternalSharingDomainRestricted || 'None',
+            AnonymousLinkExpiration: result.RequireAnonymousLinksExpireInDays || 0,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found external sharing policy')
+      }
+    } catch (error) {
+      this.handleError('collectExternalSharingPolicy', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Retention Policy
+   * ODRetentionPolicy (Phase 1)
+   */
+  async collectOneDriveRetentionPolicy() {
+    try {
+      console.log('📋 Collecting OneDrive Retention Policy (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          OrphanedPersonalSitesRetentionPeriod = (Get-SPOTenant -ErrorAction SilentlyContinue).OrphanedPersonalSitesRetentionPeriod
+          DelayDeletedSiteDays = (Get-SPOTenant -ErrorAction SilentlyContinue).DeletedSiteRetentionPeriod
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODRetentionPolicy',
+          name: 'OneDriveRetentionPolicy',
+          id: 'onedrive-retention-policy',
+          configuration: {
+            Identity: 'onedrive-retention-policy',
+            OrphanedPersonalSitesRetentionPeriod: result.OrphanedPersonalSitesRetentionPeriod || 93,
+            DeletedSiteRetentionPeriod: result.DelayDeletedSiteDays || 93,
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found OneDrive retention policy')
+      }
+    } catch (error) {
+      this.handleError('collectOneDriveRetentionPolicy', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Access and Compliance Settings
+   * ODAccessAndCompliance (Phase 1)
+   */
+  async collectAccessAndCompliance() {
+    try {
+      console.log('📋 Collecting OneDrive Access & Compliance (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          AllowDownloadingNonWebViewableFiles = (Get-SPOTenant -ErrorAction SilentlyContinue).AllowDownloadingNonWebViewableFiles
+          AllowEditing = (Get-SPOTenant -ErrorAction SilentlyContinue).AllowEditing
+          ConditionalAccessPolicy = (Get-SPOTenant -ErrorAction SilentlyContinue).ConditionalAccessPolicy
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODAccessAndCompliance',
+          name: 'AccessAndCompliance',
+          id: 'access-and-compliance',
+          configuration: {
+            Identity: 'access-and-compliance',
+            AllowDownloadingNonWebViewableFiles: result.AllowDownloadingNonWebViewableFiles !== false,
+            AllowEditing: result.AllowEditing !== false,
+            ConditionalAccessPolicy: result.ConditionalAccessPolicy || 'Default',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found access and compliance settings')
+      }
+    } catch (error) {
+      this.handleError('collectAccessAndCompliance', error)
+    }
+  }
+
+  /**
+   * Collect OneDrive Mobile Management Policy
+   * ODMobileManagementPolicy (Phase 1)
+   */
+  async collectMobileManagementPolicy() {
+    try {
+      console.log('📋 Collecting OneDrive Mobile Management Policy (PowerShell)...')
+      const script = `
+        [PSCustomObject]@{
+          OneDriveMobileAppSync = (Get-SPOTenant -ErrorAction SilentlyContinue).OneDriveMobileAppSync
+          MobileDeviceManagementAuthority = (Get-SPOTenant -ErrorAction SilentlyContinue).MobileDeviceManagementAuthority
+          CreatedDate = Get-Date
+        } |
+        ConvertTo-Json -Depth 2
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'ODMobileManagementPolicy',
+          name: 'MobileManagementPolicy',
+          id: 'mobile-management-policy',
+          configuration: {
+            Identity: 'mobile-management-policy',
+            MobileAppSync: result.OneDriveMobileAppSync !== false,
+            MDMAuthority: result.MobileDeviceManagementAuthority || 'Intune',
+            CreatedDate: new Date().toISOString()
+          }
+        })
+        console.log('✅ Found mobile management policy')
+      }
+    } catch (error) {
+      this.handleError('collectMobileManagementPolicy', error)
     }
   }
 

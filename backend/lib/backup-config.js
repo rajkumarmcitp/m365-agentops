@@ -594,17 +594,23 @@ export const M365_SERVICES = {
     tier: 'TIER 2',
     priority: 5,
     resources: [
-      'ODSettings',
-      'ODPersonalSiteDefaultStorage',
+      'ODAccessAndCompliance',
       'ODAccess',
+      'ODDeviceAccess',
+      'ODExternalSharingPolicy',
+      'ODMobileManagementPolicy',
+      'ODNotifications',
+      'ODPersonalSiteCreation',
+      'ODPersonalSiteDefaultStorage',
       'ODQuota',
       'ODRetention',
+      'ODSettings',
       'ODSharingPolicy',
-      'ODDeviceAccess',
       'ODSiteCollectionQuota',
-      'ODNotifications'
+      'ODStorageQuotaPolicy',
+      'ODSyncClientSettings'
     ],
-    totalResources: 9
+    totalResources: 15
   },
   Groups: {
     displayName: 'Microsoft 365 Groups',
