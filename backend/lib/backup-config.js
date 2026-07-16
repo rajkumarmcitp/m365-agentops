@@ -597,14 +597,32 @@ export const M365_SERVICES = {
     priority: 8,
     resources: [
       'AADApplication',
+      'AADApplicationExtensionProperty',
+      'AADApplicationOwner',
+      'AADApplicationPreAuthorizedPermission',
       'AADAuthenticationMethodPolicy',
+      'AADAuthenticationStrengthPolicy',
+      'AADAdministrativeUnit',
+      'AADRoleDefinition',
+      'AADDomain',
+      'AADIdentityProvider',
+      'AADAuthorizationPolicy',
+      'AADTenantDetails',
+      'AADNamedLocation',
+      'AADPermissionGrantPolicy',
       'AADConditionalAccessPolicy',
       'AADCrossTenantAccessPolicy',
       'AADSecurityDefaults',
-      'AADServicePrincipal'
+      'AADServicePrincipal',
+      'AADGroup',
+      'AADUser',
+      'AADHomeRealmDiscoveryPolicy',
+      'AADTokenIssuancePolicy',
+      'AADTokenLifetimePolicy',
+      'AADClaimsMappingPolicy'
     ],
-    totalResources: 6,
-    note: 'Captures available Entra ID components in your tenant. Other components may be available via PowerShell or additional permissions.'
+    totalResources: 24,
+    note: 'Comprehensive Entra ID backup with 24+ component types. Supports Graph API for available components, with PowerShell extension for additional resources.'
   },
   TenantSettings: {
     displayName: 'Tenant Settings',
