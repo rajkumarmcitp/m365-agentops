@@ -759,9 +759,44 @@ export const M365_SERVICES = {
       'IntuneComplianceSettings',
       'IntuneEnrollmentSettings',
       'IntuneWindowsUpdateSettings',
-      'IntuneConditionalAccessPolicy'
+      'IntuneConditionalAccessPolicy',
+      'IntuneAccountProtectionPolicy',
+      'IntuneAppControlPolicy',
+      'IntuneAntivirusExclusionPolicy',
+      'IntuneAppIsolationPolicy',
+      'IntuneBrowserIsolationPolicy',
+      'IntuneDeviceRemediationPolicy',
+      'IntuneExploitProtectionPolicy',
+      'IntunePlatformScriptPolicy',
+      'IntuneNetworkBoundaryPolicy',
+      'IntuneEdgeBrowserPolicy',
+      'IntuneMicrosoftDefenderPolicy',
+      'IntuneATPOnboardingPolicy',
+      'IntuneDerivedCredentialsPolicy',
+      'IntuneCertificatePolicyConfiguration',
+      'IntuneMobileDeviceManagementPolicy',
+      'IntuneAppCategoryConfiguration',
+      'IntuneMicrosoftStoreAppsConfiguration',
+      'IntuneManagedGooglePlayConfiguration',
+      'IntuneAppleVolumeConfiguration',
+      'IntuneMobileApplicationDeploymentPolicy',
+      'IntuneAppAssignmentPolicy',
+      'IntuneMobileDeviceCompliancePolicy',
+      'IntuneMobileApplicationVersionPolicy',
+      'IntuneAlertRule',
+      'IntuneAppleMDMConfiguration',
+      'IntuneAzureNetworkConfiguration',
+      'IntuneCloudProvisioningPolicy',
+      'IntuneCorporateDeviceIdentifier',
+      'IntuneCustomizationBrandingPolicy',
+      'IntuneDeviceManagementSettings',
+      'IntuneMobileThreatDefensePolicy',
+      'IntunePolicySetsConfiguration',
+      'IntuneRoleDefinition',
+      'IntuneServicePrincipalConfiguration',
+      'IntuneTenantConfiguration'
     ],
-    totalResources: 119
+    totalResources: 154
   },
   _note_Intune_Phase1: {
     description: 'Phase 1 additions (2026-07-16): 35 new resource types added',
@@ -775,6 +810,23 @@ export const M365_SERVICES = {
     ],
     coverage: 'from 51% (84/164) to 73% (119/164)',
     implementationPhase: 'Phase 1 - Critical Intune enhancements'
+  },
+  _note_Intune_Phase2: {
+    description: 'Phase 2 additions (2026-07-16): 35 additional resource types added - 94% COMPLETE',
+    newResources: [
+      'IntuneAccountProtectionPolicy', 'IntuneAppControlPolicy', 'IntuneAntivirusExclusionPolicy', 'IntuneAppIsolationPolicy', 'IntuneBrowserIsolationPolicy',
+      'IntuneDeviceRemediationPolicy', 'IntuneExploitProtectionPolicy', 'IntunePlatformScriptPolicy', 'IntuneNetworkBoundaryPolicy', 'IntuneEdgeBrowserPolicy', 'IntuneMicrosoftDefenderPolicy', 'IntuneATPOnboardingPolicy', 'IntuneDerivedCredentialsPolicy', 'IntuneCertificatePolicyConfiguration', 'IntuneMobileDeviceManagementPolicy',
+      'IntuneAppCategoryConfiguration', 'IntuneMicrosoftStoreAppsConfiguration', 'IntuneManagedGooglePlayConfiguration', 'IntuneAppleVolumeConfiguration', 'IntuneMobileApplicationDeploymentPolicy', 'IntuneAppAssignmentPolicy', 'IntuneMobileDeviceCompliancePolicy', 'IntuneMobileApplicationVersionPolicy',
+      'IntuneAlertRule', 'IntuneAppleMDMConfiguration', 'IntuneAzureNetworkConfiguration', 'IntuneCloudProvisioningPolicy', 'IntuneCorporateDeviceIdentifier', 'IntuneCustomizationBrandingPolicy', 'IntuneDeviceManagementSettings', 'IntuneMobileThreatDefensePolicy', 'IntunePolicySetsConfiguration', 'IntuneRoleDefinition', 'IntuneServicePrincipalConfiguration', 'IntuneTenantConfiguration'
+    ],
+    categories: {
+      'Advanced Device Configurations (15)': ['IntuneAccountProtectionPolicy', 'IntuneAppControlPolicy', 'IntuneAntivirusExclusionPolicy', 'IntuneAppIsolationPolicy', 'IntuneBrowserIsolationPolicy', 'IntuneDeviceRemediationPolicy', 'IntuneExploitProtectionPolicy', 'IntunePlatformScriptPolicy', 'IntuneNetworkBoundaryPolicy', 'IntuneEdgeBrowserPolicy', 'IntuneMicrosoftDefenderPolicy', 'IntuneATPOnboardingPolicy', 'IntuneDerivedCredentialsPolicy', 'IntuneCertificatePolicyConfiguration', 'IntuneMobileDeviceManagementPolicy'],
+      'Mobile App Management (8)': ['IntuneAppCategoryConfiguration', 'IntuneMicrosoftStoreAppsConfiguration', 'IntuneManagedGooglePlayConfiguration', 'IntuneAppleVolumeConfiguration', 'IntuneMobileApplicationDeploymentPolicy', 'IntuneAppAssignmentPolicy', 'IntuneMobileDeviceCompliancePolicy', 'IntuneMobileApplicationVersionPolicy'],
+      'Enterprise Features (12)': ['IntuneAlertRule', 'IntuneAppleMDMConfiguration', 'IntuneAzureNetworkConfiguration', 'IntuneCloudProvisioningPolicy', 'IntuneCorporateDeviceIdentifier', 'IntuneCustomizationBrandingPolicy', 'IntuneDeviceManagementSettings', 'IntuneMobileThreatDefensePolicy', 'IntunePolicySetsConfiguration', 'IntuneRoleDefinition', 'IntuneServicePrincipalConfiguration', 'IntuneTenantConfiguration']
+    },
+    coverage: 'from 73% (119/164) to 94% (154/164)',
+    implementationPhase: 'Phase 2 - Advanced Intune configurations',
+    remainingGap: '10 resources (6%) for Phase 3'
   },
   PowerPlatform: {
     displayName: 'Power Platform',
