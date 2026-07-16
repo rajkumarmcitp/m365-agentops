@@ -50,32 +50,57 @@ export class ExchangeCollector {
       await this.collectAcceptedDomains()
       await this.collectAddressBookPolicies()
       await this.collectAddressLists()
+      await this.collectApplicationAccessPolicy()
+      await this.collectAuthenticationPolicies()
+      await this.collectAvailabilityAddressSpace()
+      await this.collectAvailabilityConfig()
+      await this.collectCalendarProcessing()
       await this.collectCasMailbox()
       await this.collectConnectors()
+      await this.collectDataAtRestEncryptionPolicies()
       await this.collectDataClassifications()
       await this.collectDistributionGroups()
+      await this.collectDynamicDistributionGroups()
       await this.collectEmailAddressPolicies()
       await this.collectExternalMX()
+      await this.collectFocusedInbox()
       await this.collectGlobalAddressList()
+      await this.collectGroupSettings()
       await this.collectHostedConnectionFilterPolicy()
       await this.collectHostedContentFilterPolicy()
+      await this.collectIntraOrganizationConnector()
       await this.collectJournalRules()
       await this.collectMailboxAuditBypass()
       await this.collectMailboxAutoReply()
+      await this.collectMailboxCalendarConfiguration()
       await this.collectMailboxCalendarFolders()
       await this.collectMailboxContacts()
+      await this.collectMailboxFolderPermissions()
+      await this.collectMailboxIRMAccess()
+      await this.collectMailboxPermissions()
       await this.collectMailboxPlans()
       await this.collectMailboxSearch()
       await this.collectManagedFolders()
       await this.collectMessageClassifications()
+      await this.collectMigration()
+      await this.collectMigrationEndpoints()
+      await this.collectOfflineAddressBook()
+      await this.collectOnPremisesOrganization()
       await this.collectOrgConfig()
+      await this.collectOrganizationRelationship()
+      await this.collectPartnerApplication()
+      await this.collectPlace()
+      await this.collectQuarantinePolicy()
       await this.collectRecipientPermissions()
       await this.collectRemoteDomains()
       await this.collectRoleAssignmentPolicies()
       await this.collectSafeLinksPolicy()
       await this.collectSendConnectors()
+      await this.collectServicePrincipal()
       await this.collectSharingPolicy()
+      await this.collectSharedMailbox()
       await this.collectSmtpServerSettings()
+      await this.collectTenantAllowBlockList()
       await this.collectTransportConfig()
       await this.collectTransportRules()
       await this.collectUnifiedGroups()
@@ -1417,6 +1442,1235 @@ export class ExchangeCollector {
       }
     } catch (error) {
       this.handleError('collectTransportRulesDetailsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Application Access Policies
+   * EXOApplicationAccessPolicy (Phase 1)
+   */
+  async collectApplicationAccessPolicy() {
+    try {
+      console.log('📋 Collecting Application Access Policies (Phase 1)...')
+      const script = `
+        @((Get-ApplicationAccessPolicy -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              AccessRight = $_.AccessRight
+              AppId = $_.AppId
+              PolicyScopeName = $_.PolicyScopeName
+              ScopeName = $_.ScopeName
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXOApplicationAccessPolicy',
+            name: policy.Name || policy.AppId,
+            id: policy.Identity || policy.AppId,
+            properties: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              Description: policy.Description,
+              AccessRight: policy.AccessRight,
+              AppId: policy.AppId,
+              PolicyScopeName: policy.PolicyScopeName,
+              ScopeName: policy.ScopeName,
+              Guid: policy.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} application access policies`)
+      }
+    } catch (error) {
+      this.handleError('collectApplicationAccessPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Authentication Policies
+   * EXOAuthenticationPolicy & EXOAuthenticationPolicyAssignment (Phase 1)
+   */
+  async collectAuthenticationPolicies() {
+    try {
+      console.log('📋 Collecting Authentication Policies (Phase 1)...')
+      const script = `
+        @((Get-AuthenticationPolicy -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              AllowBasicAuthActiveSync = $_.AllowBasicAuthActiveSync
+              AllowBasicAuthImap = $_.AllowBasicAuthImap
+              AllowBasicAuthOfflineAddressBook = $_.AllowBasicAuthOfflineAddressBook
+              AllowBasicAuthOutlook = $_.AllowBasicAuthOutlook
+              AllowBasicAuthPop = $_.AllowBasicAuthPop
+              AllowBasicAuthReportingWebServices = $_.AllowBasicAuthReportingWebServices
+              AllowBasicAuthSmtp = $_.AllowBasicAuthSmtp
+              AllowBasicAuthWebServices = $_.AllowBasicAuthWebServices
+              AllowBasicAuthAutodiscover = $_.AllowBasicAuthAutodiscover
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXOAuthenticationPolicy',
+            name: policy.Name,
+            id: policy.Identity,
+            properties: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              Description: policy.Description,
+              AllowBasicAuthProtocols: {
+                ActiveSync: policy.AllowBasicAuthActiveSync,
+                Imap: policy.AllowBasicAuthImap,
+                Pop: policy.AllowBasicAuthPop,
+                Smtp: policy.AllowBasicAuthSmtp,
+                Outlook: policy.AllowBasicAuthOutlook,
+                OfflineAddressBook: policy.AllowBasicAuthOfflineAddressBook,
+                WebServices: policy.AllowBasicAuthWebServices,
+                ReportingWebServices: policy.AllowBasicAuthReportingWebServices,
+                Autodiscover: policy.AllowBasicAuthAutodiscover
+              },
+              Guid: policy.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} authentication policies`)
+      }
+    } catch (error) {
+      this.handleError('collectAuthenticationPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Availability Address Spaces
+   * EXOAvailabilityAddressSpace (Phase 1)
+   */
+  async collectAvailabilityAddressSpace() {
+    try {
+      console.log('📋 Collecting Availability Address Spaces (Phase 1)...')
+      const script = `
+        @((Get-AvailabilityAddressSpace -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              ForestName = $_.ForestName
+              AccessMethod = $_.AccessMethod
+              UseServiceAccount = $_.UseServiceAccount
+              TargetAutodiscoverEpr = $_.TargetAutodiscoverEpr
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const space of result) {
+          this.resources.push({
+            type: 'EXOAvailabilityAddressSpace',
+            name: space.Name || space.ForestName,
+            id: space.Identity,
+            properties: {
+              Identity: space.Identity,
+              Name: space.Name,
+              ForestName: space.ForestName,
+              AccessMethod: space.AccessMethod,
+              UseServiceAccount: space.UseServiceAccount,
+              TargetAutodiscoverEpr: space.TargetAutodiscoverEpr,
+              Guid: space.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} availability address spaces`)
+      }
+    } catch (error) {
+      this.handleError('collectAvailabilityAddressSpace', error)
+    }
+  }
+
+  /**
+   * Collect Availability Configuration
+   * EXOAvailabilityConfig (Phase 1)
+   */
+  async collectAvailabilityConfig() {
+    try {
+      console.log('📋 Collecting Availability Configuration (Phase 1)...')
+      const script = `
+        @((Get-AvailabilityConfig -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              OrgWideAccount = $_.OrgWideAccount
+              RemoteInteropServicePort = $_.RemoteInteropServicePort
+              DeletedItemRetention = $_.DeletedItemRetention
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const config of result) {
+          this.resources.push({
+            type: 'EXOAvailabilityConfig',
+            name: 'Organization Availability Configuration',
+            id: config.Identity,
+            properties: {
+              Identity: config.Identity,
+              OrgWideAccount: config.OrgWideAccount,
+              RemoteInteropServicePort: config.RemoteInteropServicePort,
+              DeletedItemRetention: config.DeletedItemRetention,
+              Guid: config.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found availability configuration`)
+      }
+    } catch (error) {
+      this.handleError('collectAvailabilityConfig', error)
+    }
+  }
+
+  /**
+   * Collect Calendar Processing
+   * EXOCalendarProcessing (Phase 1)
+   */
+  async collectCalendarProcessing() {
+    try {
+      console.log('📋 Collecting Calendar Processing Configuration (Phase 1)...')
+      const script = `
+        @((Get-CalendarProcessing -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              AutomateProcessing = $_.AutomateProcessing
+              AllowConflictMeetings = $_.AllowConflictMeetings
+              AllowRecurringMeetings = $_.AllowRecurringMeetings
+              EnforceSchedulingHorizonLimit = $_.EnforceSchedulingHorizonLimit
+              SchedulingHorizonInDays = $_.SchedulingHorizonInDays
+              ConflictPercentageAllowed = $_.ConflictPercentageAllowed
+              MaximumConflictInstances = $_.MaximumConflictInstances
+              RemovePrivateProperty = $_.RemovePrivateProperty
+              RemoveSubject = $_.RemoveSubject
+              DeleteSubject = $_.DeleteSubject
+              DeleteComments = $_.DeleteComments
+              DeleteNonCalendarItems = $_.DeleteNonCalendarItems
+              DeleteAttachments = $_.DeleteAttachments
+              AddOrganizerToSubject = $_.AddOrganizerToSubject
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const config of result) {
+          this.resources.push({
+            type: 'EXOCalendarProcessing',
+            name: config.Name || config.Identity,
+            id: config.Identity,
+            properties: {
+              Identity: config.Identity,
+              Name: config.Name,
+              AutomateProcessing: config.AutomateProcessing,
+              AllowConflictMeetings: config.AllowConflictMeetings,
+              AllowRecurringMeetings: config.AllowRecurringMeetings,
+              EnforceSchedulingHorizonLimit: config.EnforceSchedulingHorizonLimit,
+              SchedulingHorizonInDays: config.SchedulingHorizonInDays,
+              ConflictPercentageAllowed: config.ConflictPercentageAllowed,
+              MaximumConflictInstances: config.MaximumConflictInstances,
+              RemovePrivateProperty: config.RemovePrivateProperty,
+              RemoveSubject: config.RemoveSubject,
+              DeleteSubject: config.DeleteSubject,
+              DeleteComments: config.DeleteComments,
+              DeleteNonCalendarItems: config.DeleteNonCalendarItems,
+              DeleteAttachments: config.DeleteAttachments,
+              AddOrganizerToSubject: config.AddOrganizerToSubject,
+              Guid: config.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} calendar processing configurations`)
+      }
+    } catch (error) {
+      this.handleError('collectCalendarProcessing', error)
+    }
+  }
+
+  /**
+   * Collect Data At Rest Encryption Policies
+   * EXODataAtRestEncryptionPolicy & EXODataAtRestEncryptionPolicyAssignment (Phase 1)
+   */
+  async collectDataAtRestEncryptionPolicies() {
+    try {
+      console.log('📋 Collecting Data At Rest Encryption Policies (Phase 1)...')
+      const script = `
+        @((Get-DataEncryptionPolicy -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              Description = $_.Description
+              Name = $_.Name
+              Enabled = $_.Enabled
+              KeyVaultKeyUri = $_.KeyVaultKeyUri
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXODataAtRestEncryptionPolicy',
+            name: policy.Name,
+            id: policy.Identity,
+            properties: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              Description: policy.Description,
+              Enabled: policy.Enabled,
+              KeyVaultKeyUri: policy.KeyVaultKeyUri,
+              Guid: policy.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} data at rest encryption policies`)
+      }
+    } catch (error) {
+      this.handleError('collectDataAtRestEncryptionPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Dynamic Distribution Groups
+   * EXODynamicDistributionGroup (Phase 1)
+   */
+  async collectDynamicDistributionGroups() {
+    try {
+      console.log('📋 Collecting Dynamic Distribution Groups (Phase 1)...')
+      const script = `
+        @((Get-DynamicDistributionGroup -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              RecipientFilter = $_.RecipientFilter
+              RecipientContainer = $_.RecipientContainer
+              ManagedBy = $_.ManagedBy
+              Members = (@($_ | Get-DynamicDistributionGroupMember -ErrorAction SilentlyContinue) | Measure-Object).Count
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const group of result) {
+          this.resources.push({
+            type: 'EXODynamicDistributionGroup',
+            name: group.DisplayName || group.Name,
+            id: group.Identity,
+            properties: {
+              Identity: group.Identity,
+              Name: group.Name,
+              DisplayName: group.DisplayName,
+              Description: group.Description,
+              RecipientFilter: group.RecipientFilter,
+              RecipientContainer: group.RecipientContainer,
+              ManagedBy: group.ManagedBy,
+              MemberCount: group.Members,
+              Guid: group.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} dynamic distribution groups`)
+      }
+    } catch (error) {
+      this.handleError('collectDynamicDistributionGroups', error)
+    }
+  }
+
+  /**
+   * Collect Focused Inbox Settings
+   * EXOFocusedInbox (Phase 1)
+   */
+  async collectFocusedInbox() {
+    try {
+      console.log('📋 Collecting Focused Inbox Settings (Phase 1)...')
+      const script = `
+        @((Get-FocusedInboxSettings -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              FocusedInboxOn = $_.FocusedInboxOn
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const setting of result) {
+          this.resources.push({
+            type: 'EXOFocusedInbox',
+            name: setting.Name || setting.Identity,
+            id: setting.Identity,
+            properties: {
+              Identity: setting.Identity,
+              Name: setting.Name,
+              FocusedInboxOn: setting.FocusedInboxOn,
+              Guid: setting.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} focused inbox settings`)
+      }
+    } catch (error) {
+      this.handleError('collectFocusedInbox', error)
+    }
+  }
+
+  /**
+   * Collect Group Settings
+   * EXOGroupSettings (Phase 1)
+   */
+  async collectGroupSettings() {
+    try {
+      console.log('📋 Collecting Group Settings (Phase 1)...')
+      const script = `
+        @((Get-UnifiedGroup -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.DisplayName
+              Description = $_.Description
+              Classification = $_.Classification
+              AccessType = $_.AccessType
+              IsPublic = $_.IsPublic
+              PreferredLanguage = $_.PreferredLanguage
+              Guid = $_.ExternalDirectoryObjectId
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const setting of result) {
+          this.resources.push({
+            type: 'EXOGroupSettings',
+            name: setting.Name,
+            id: setting.Identity,
+            properties: {
+              Identity: setting.Identity,
+              Name: setting.Name,
+              Description: setting.Description,
+              Classification: setting.Classification,
+              AccessType: setting.AccessType,
+              IsPublic: setting.IsPublic,
+              PreferredLanguage: setting.PreferredLanguage,
+              Guid: setting.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} group settings`)
+      }
+    } catch (error) {
+      this.handleError('collectGroupSettings', error)
+    }
+  }
+
+  /**
+   * Collect Intra Organization Connector
+   * EXOIntraOrganizationConnector (Phase 1)
+   */
+  async collectIntraOrganizationConnector() {
+    try {
+      console.log('📋 Collecting Intra Organization Connectors (Phase 1)...')
+      const script = `
+        @((Get-IntraOrganizationConnector -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              TargetAddressDomains = @($_.TargetAddressDomains) -join ','
+              TargetSharingEpr = $_.TargetSharingEpr
+              TargetOrgGuid = $_.TargetOrgGuid
+              Enabled = $_.Enabled
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const connector of result) {
+          this.resources.push({
+            type: 'EXOIntraOrganizationConnector',
+            name: connector.Name,
+            id: connector.Identity,
+            properties: {
+              Identity: connector.Identity,
+              Name: connector.Name,
+              TargetAddressDomains: connector.TargetAddressDomains ? connector.TargetAddressDomains.split(',') : [],
+              TargetSharingEpr: connector.TargetSharingEpr,
+              TargetOrgGuid: connector.TargetOrgGuid,
+              Enabled: connector.Enabled,
+              Guid: connector.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} intra organization connectors`)
+      }
+    } catch (error) {
+      this.handleError('collectIntraOrganizationConnector', error)
+    }
+  }
+
+  /**
+   * Collect Mailbox Calendar Configuration
+   * EXOMailboxCalendarConfiguration (Phase 1)
+   */
+  async collectMailboxCalendarConfiguration() {
+    try {
+      console.log('📋 Collecting Mailbox Calendar Configuration (Phase 1)...')
+      const script = `
+        @((Get-MailboxCalendarConfiguration -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              AutomateProcessing = $_.AutomateProcessing
+              AllowConflictMeetings = $_.AllowConflictMeetings
+              AllowRecurringMeetings = $_.AllowRecurringMeetings
+              RemoveOldMeetingMessages = $_.RemoveOldMeetingMessages
+              RemovePrivateProperty = $_.RemovePrivateProperty
+              RemoveSubject = $_.RemoveSubject
+              DeleteSubject = $_.DeleteSubject
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const config of result) {
+          this.resources.push({
+            type: 'EXOMailboxCalendarConfiguration',
+            name: config.Identity,
+            id: config.Identity,
+            properties: {
+              Identity: config.Identity,
+              AutomateProcessing: config.AutomateProcessing,
+              AllowConflictMeetings: config.AllowConflictMeetings,
+              AllowRecurringMeetings: config.AllowRecurringMeetings,
+              RemoveOldMeetingMessages: config.RemoveOldMeetingMessages,
+              RemovePrivateProperty: config.RemovePrivateProperty,
+              RemoveSubject: config.RemoveSubject,
+              DeleteSubject: config.DeleteSubject,
+              Guid: config.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} mailbox calendar configurations`)
+      }
+    } catch (error) {
+      this.handleError('collectMailboxCalendarConfiguration', error)
+    }
+  }
+
+  /**
+   * Collect Mailbox Folder Permissions
+   * EXOMailboxFolderPermissions (Phase 1)
+   */
+  async collectMailboxFolderPermissions() {
+    try {
+      console.log('📋 Collecting Mailbox Folder Permissions (Phase 1)...')
+      const script = `
+        @((Get-MailboxFolderPermission -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              User = $_.User
+              AccessRights = @($_.AccessRights) -join ','
+              SharingPermissionFlags = $_.SharingPermissionFlags
+              Guid = $_.ExternalDirectoryObjectId
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const perm of result) {
+          this.resources.push({
+            type: 'EXOMailboxFolderPermission',
+            name: perm.Identity,
+            id: perm.Identity,
+            properties: {
+              Identity: perm.Identity,
+              User: perm.User,
+              AccessRights: perm.AccessRights ? perm.AccessRights.split(',') : [],
+              SharingPermissionFlags: perm.SharingPermissionFlags,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} mailbox folder permissions`)
+      }
+    } catch (error) {
+      this.handleError('collectMailboxFolderPermissions', error)
+    }
+  }
+
+  /**
+   * Collect Mailbox IRM Access
+   * EXOMailboxIRMAccess (Phase 1)
+   */
+  async collectMailboxIRMAccess() {
+    try {
+      console.log('📋 Collecting Mailbox IRM Access (Phase 1)...')
+      const script = `
+        @((Get-IRMConfiguration -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              InternalLicensingEnabled = $_.InternalLicensingEnabled
+              ExternalLicensingEnabled = $_.ExternalLicensingEnabled
+              AzureRMSLicensingEnabled = $_.AzureRMSLicensingEnabled
+              RMSOnlineLicensingEnabled = $_.RMSOnlineLicensingEnabled
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const irm of result) {
+          this.resources.push({
+            type: 'EXOMailboxIRMAccess',
+            name: irm.Identity || 'IRM Configuration',
+            id: irm.Identity,
+            properties: {
+              Identity: irm.Identity,
+              InternalLicensingEnabled: irm.InternalLicensingEnabled,
+              ExternalLicensingEnabled: irm.ExternalLicensingEnabled,
+              AzureRMSLicensingEnabled: irm.AzureRMSLicensingEnabled,
+              RMSOnlineLicensingEnabled: irm.RMSOnlineLicensingEnabled,
+              Guid: irm.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found IRM access configuration`)
+      }
+    } catch (error) {
+      this.handleError('collectMailboxIRMAccess', error)
+    }
+  }
+
+  /**
+   * Collect Mailbox Permissions
+   * EXOMailboxPermission (Phase 1)
+   */
+  async collectMailboxPermissions() {
+    try {
+      console.log('📋 Collecting Mailbox Permissions (Phase 1)...')
+      const script = `
+        @((Get-Mailbox -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            $mbox = $_
+            @((Get-MailboxPermission -Identity $mbox.Identity -ErrorAction Continue) |
+              ForEach-Object {
+                [PSCustomObject]@{
+                  Mailbox = $mbox.DisplayName
+                  User = $_.User
+                  AccessRights = @($_.AccessRights) -join ','
+                  IsInherited = $_.IsInherited
+                  Guid = $_.ExternalDirectoryObjectId
+                }
+              })
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const perm of result) {
+          this.resources.push({
+            type: 'EXOMailboxPermission',
+            name: perm.Mailbox,
+            id: \`\${perm.Mailbox}-\${perm.User}\`,
+            properties: {
+              Mailbox: perm.Mailbox,
+              User: perm.User,
+              AccessRights: perm.AccessRights ? perm.AccessRights.split(',') : [],
+              IsInherited: perm.IsInherited,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} mailbox permissions`)
+      }
+    } catch (error) {
+      this.handleError('collectMailboxPermissions', error)
+    }
+  }
+
+  /**
+   * Collect Migration
+   * EXOMigration (Phase 1)
+   */
+  async collectMigration() {
+    try {
+      console.log('📋 Collecting Migrations (Phase 1)...')
+      const script = `
+        @((Get-MigrationBatch -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              MigrationType = $_.MigrationType
+              Status = $_.Status
+              TotalCount = $_.TotalCount
+              CompletedCount = $_.CompletedCount
+              StoppedCount = $_.StoppedCount
+              FailedCount = $_.FailedCount
+              StartedTime = $_.StartedTime
+              CompletionTime = $_.CompletionTime
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const migration of result) {
+          this.resources.push({
+            type: 'EXOMigration',
+            name: migration.Identity,
+            id: migration.Identity,
+            properties: {
+              Identity: migration.Identity,
+              MigrationType: migration.MigrationType,
+              Status: migration.Status,
+              TotalCount: migration.TotalCount,
+              CompletedCount: migration.CompletedCount,
+              StoppedCount: migration.StoppedCount,
+              FailedCount: migration.FailedCount,
+              StartedTime: migration.StartedTime,
+              CompletionTime: migration.CompletionTime,
+              Guid: migration.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} migrations`)
+      }
+    } catch (error) {
+      this.handleError('collectMigration', error)
+    }
+  }
+
+  /**
+   * Collect Migration Endpoints
+   * EXOMigrationEndpoint (Phase 1)
+   */
+  async collectMigrationEndpoints() {
+    try {
+      console.log('📋 Collecting Migration Endpoints (Phase 1)...')
+      const script = `
+        @((Get-MigrationEndpoint -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              EndpointType = $_.EndpointType
+              RemoteServer = $_.RemoteServer
+              Port = $_.Port
+              ConnectionSettings = $_.ConnectionSettings
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const endpoint of result) {
+          this.resources.push({
+            type: 'EXOMigrationEndpoint',
+            name: endpoint.Name,
+            id: endpoint.Identity,
+            properties: {
+              Identity: endpoint.Identity,
+              Name: endpoint.Name,
+              EndpointType: endpoint.EndpointType,
+              RemoteServer: endpoint.RemoteServer,
+              Port: endpoint.Port,
+              ConnectionSettings: endpoint.ConnectionSettings,
+              Guid: endpoint.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} migration endpoints`)
+      }
+    } catch (error) {
+      this.handleError('collectMigrationEndpoints', error)
+    }
+  }
+
+  /**
+   * Collect Offline Address Book
+   * EXOOfflineAddressBook (Phase 1)
+   */
+  async collectOfflineAddressBook() {
+    try {
+      console.log('📋 Collecting Offline Address Books (Phase 1)...')
+      const script = `
+        @((Get-OfflineAddressBook -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              DisplayName = $_.DisplayName
+              AddressLists = @($_.AddressLists) -join ','
+              Versions = @($_.Versions) -join ','
+              IsDefault = $_.IsDefault
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const oab of result) {
+          this.resources.push({
+            type: 'EXOOfflineAddressBook',
+            name: oab.DisplayName || oab.Name,
+            id: oab.Identity,
+            properties: {
+              Identity: oab.Identity,
+              Name: oab.Name,
+              DisplayName: oab.DisplayName,
+              AddressLists: oab.AddressLists ? oab.AddressLists.split(',') : [],
+              Versions: oab.Versions ? oab.Versions.split(',') : [],
+              IsDefault: oab.IsDefault,
+              Guid: oab.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} offline address books`)
+      }
+    } catch (error) {
+      this.handleError('collectOfflineAddressBook', error)
+    }
+  }
+
+  /**
+   * Collect On Premises Organization
+   * EXOOnPremisesOrganization (Phase 1)
+   */
+  async collectOnPremisesOrganization() {
+    try {
+      console.log('📋 Collecting On Premises Organizations (Phase 1)...')
+      const script = `
+        @((Get-OnPremisesOrganization -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              OrganizationName = $_.OrganizationName
+              HybridDomains = @($_.HybridDomains) -join ','
+              PublicFolderServers = @($_.PublicFolderServers) -join ','
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const org of result) {
+          this.resources.push({
+            type: 'EXOOnPremisesOrganization',
+            name: org.OrganizationName || org.Name,
+            id: org.Identity,
+            properties: {
+              Identity: org.Identity,
+              Name: org.Name,
+              OrganizationName: org.OrganizationName,
+              HybridDomains: org.HybridDomains ? org.HybridDomains.split(',') : [],
+              PublicFolderServers: org.PublicFolderServers ? org.PublicFolderServers.split(',') : [],
+              Guid: org.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} on premises organizations`)
+      }
+    } catch (error) {
+      this.handleError('collectOnPremisesOrganization', error)
+    }
+  }
+
+  /**
+   * Collect Organization Relationship
+   * EXOOrganizationRelationship (Phase 1)
+   */
+  async collectOrganizationRelationship() {
+    try {
+      console.log('📋 Collecting Organization Relationships (Phase 1)...')
+      const script = `
+        @((Get-OrganizationRelationship -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              DomainNames = @($_.DomainNames) -join ','
+              FreeBusyAccessEnabled = $_.FreeBusyAccessEnabled
+              FreeBusyAccessLevel = $_.FreeBusyAccessLevel
+              MailboxMoveEnabled = $_.MailboxMoveEnabled
+              DeliveryReportEnabled = $_.DeliveryReportEnabled
+              TargetAutodiscoverEpr = $_.TargetAutodiscoverEpr
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const rel of result) {
+          this.resources.push({
+            type: 'EXOOrganizationRelationship',
+            name: rel.Name,
+            id: rel.Identity,
+            properties: {
+              Identity: rel.Identity,
+              Name: rel.Name,
+              DomainNames: rel.DomainNames ? rel.DomainNames.split(',') : [],
+              FreeBusyAccessEnabled: rel.FreeBusyAccessEnabled,
+              FreeBusyAccessLevel: rel.FreeBusyAccessLevel,
+              MailboxMoveEnabled: rel.MailboxMoveEnabled,
+              DeliveryReportEnabled: rel.DeliveryReportEnabled,
+              TargetAutodiscoverEpr: rel.TargetAutodiscoverEpr,
+              Guid: rel.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} organization relationships`)
+      }
+    } catch (error) {
+      this.handleError('collectOrganizationRelationship', error)
+    }
+  }
+
+  /**
+   * Collect Partner Application
+   * EXOPartnerApplication (Phase 1)
+   */
+  async collectPartnerApplication() {
+    try {
+      console.log('📋 Collecting Partner Applications (Phase 1)...')
+      const script = `
+        @((Get-PartnerApplication -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              ApplicationId = $_.ApplicationId
+              Enabled = $_.Enabled
+              AcceptSecurityIdentifierInformation = $_.AcceptSecurityIdentifierInformation
+              LinkedAccount = $_.LinkedAccount
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const app of result) {
+          this.resources.push({
+            type: 'EXOPartnerApplication',
+            name: app.Name,
+            id: app.Identity,
+            properties: {
+              Identity: app.Identity,
+              Name: app.Name,
+              ApplicationId: app.ApplicationId,
+              Enabled: app.Enabled,
+              AcceptSecurityIdentifierInformation: app.AcceptSecurityIdentifierInformation,
+              LinkedAccount: app.LinkedAccount,
+              Guid: app.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} partner applications`)
+      }
+    } catch (error) {
+      this.handleError('collectPartnerApplication', error)
+    }
+  }
+
+  /**
+   * Collect Place
+   * EXOPlace (Phase 1)
+   */
+  async collectPlace() {
+    try {
+      console.log('📋 Collecting Places (Phase 1)...')
+      const script = `
+        @((Get-Place -ResultSize Unlimited -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Capability = @($_.Capability) -join ','
+              IsDefault = $_.IsDefault
+              PlaceId = $_.PlaceId
+              AudioDeviceName = $_.AudioDeviceName
+              VideoDeviceName = $_.VideoDeviceName
+              Guid = $_.ExternalDirectoryObjectId
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const place of result) {
+          this.resources.push({
+            type: 'EXOPlace',
+            name: place.DisplayName,
+            id: place.Identity,
+            properties: {
+              Identity: place.Identity,
+              DisplayName: place.DisplayName,
+              Capability: place.Capability ? place.Capability.split(',') : [],
+              IsDefault: place.IsDefault,
+              PlaceId: place.PlaceId,
+              AudioDeviceName: place.AudioDeviceName,
+              VideoDeviceName: place.VideoDeviceName,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} places`)
+      }
+    } catch (error) {
+      this.handleError('collectPlace', error)
+    }
+  }
+
+  /**
+   * Collect Quarantine Policy
+   * EXOQuarantinePolicy (Phase 1)
+   */
+  async collectQuarantinePolicy() {
+    try {
+      console.log('📋 Collecting Quarantine Policies (Phase 1)...')
+      const script = `
+        @((Get-QuarantinePolicy -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              ESNEnabled = $_.ESNEnabled
+              EndUserSpamNotificationLanguage = $_.EndUserSpamNotificationLanguage
+              MultiLanguageCustomDisclaimer = $_.MultiLanguageCustomDisclaimer
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'EXOQuarantinePolicy',
+            name: policy.Name,
+            id: policy.Identity,
+            properties: {
+              Identity: policy.Identity,
+              Name: policy.Name,
+              ESNEnabled: policy.ESNEnabled,
+              EndUserSpamNotificationLanguage: policy.EndUserSpamNotificationLanguage,
+              MultiLanguageCustomDisclaimer: policy.MultiLanguageCustomDisclaimer,
+              Guid: policy.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} quarantine policies`)
+      }
+    } catch (error) {
+      this.handleError('collectQuarantinePolicy', error)
+    }
+  }
+
+  /**
+   * Collect Service Principal
+   * EXOServicePrincipal (Phase 1)
+   */
+  async collectServicePrincipal() {
+    try {
+      console.log('📋 Collecting Service Principals (Phase 1)...')
+      const script = `
+        @((Get-ServicePrincipal -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              Name = $_.Name
+              AppId = $_.AppId
+              TenantId = $_.TenantId
+              ObjectId = $_.ObjectId
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const sp of result) {
+          this.resources.push({
+            type: 'EXOServicePrincipal',
+            name: sp.Name,
+            id: sp.Identity,
+            properties: {
+              Identity: sp.Identity,
+              Name: sp.Name,
+              AppId: sp.AppId,
+              TenantId: sp.TenantId,
+              ObjectId: sp.ObjectId,
+              Guid: sp.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} service principals`)
+      }
+    } catch (error) {
+      this.handleError('collectServicePrincipal', error)
+    }
+  }
+
+  /**
+   * Collect Shared Mailbox
+   * EXOSharedMailbox (Phase 1)
+   */
+  async collectSharedMailbox() {
+    try {
+      console.log('📋 Collecting Shared Mailboxes (Phase 1)...')
+      const script = `
+        @((Get-Mailbox -ResultSize Unlimited -PublicFolder:$false -ErrorAction Continue) |
+          Where-Object { $_.RecipientTypeDetails -eq 'SharedMailbox' } |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              PrimarySmtpAddress = $_.PrimarySmtpAddress
+              Owner = $_.ManagedBy
+              WhenCreated = $_.WhenCreated
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const mbox of result) {
+          this.resources.push({
+            type: 'EXOSharedMailbox',
+            name: mbox.DisplayName,
+            id: mbox.Identity,
+            properties: {
+              Identity: mbox.Identity,
+              DisplayName: mbox.DisplayName,
+              PrimarySmtpAddress: mbox.PrimarySmtpAddress,
+              Owner: mbox.Owner,
+              WhenCreated: mbox.WhenCreated,
+              Guid: mbox.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} shared mailboxes`)
+      }
+    } catch (error) {
+      this.handleError('collectSharedMailbox', error)
+    }
+  }
+
+  /**
+   * Collect Tenant Allow Block List
+   * EXOTenantAllowBlockListItems (Phase 1)
+   */
+  async collectTenantAllowBlockList() {
+    try {
+      console.log('📋 Collecting Tenant Allow Block Lists (Phase 1)...')
+      const script = `
+        @((Get-TenantAllowBlockListItems -ErrorAction Continue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              ListType = $_.ListType
+              Entries = @($_.Entries) -join ','
+              ExpirationDate = $_.ExpirationDate
+              Notes = $_.Notes
+              Guid = $_.Guid
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const item of result) {
+          this.resources.push({
+            type: 'EXOTenantAllowBlockList',
+            name: item.ListType,
+            id: item.Identity,
+            properties: {
+              Identity: item.Identity,
+              ListType: item.ListType,
+              Entries: item.Entries ? item.Entries.split(',') : [],
+              ExpirationDate: item.ExpirationDate,
+              Notes: item.Notes,
+              Guid: item.Guid,
+              ExportDate: new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} tenant allow block list items`)
+      }
+    } catch (error) {
+      this.handleError('collectTenantAllowBlockList', error)
     }
   }
 
