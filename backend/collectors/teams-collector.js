@@ -72,6 +72,13 @@ export class TeamsCollector {
       await this.collectMeetingConfiguration()
       await this.collectTeamsPolicies()
 
+      // PowerShell collection - advanced Teams components
+      console.log('📊 Starting PowerShell-based collection for advanced Teams components...')
+      await this.collectTeamsPoliciesPowerShell()
+      await this.collectTeamsAppPoliciesPowerShell()
+      await this.collectTeamsMessagingPoliciesPowerShell()
+      await this.collectResourceAccountsPowerShell()
+
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Teams backup complete (${executionTime}s, ${this.resources.length} resources)`)
 
@@ -100,20 +107,44 @@ export class TeamsCollector {
   }
 
   /**
-   * Collect Teams
+   * Collect Teams (Comprehensive with Details)
    * TeamsTeam
    */
   async collectTeams() {
     try {
-      console.log('📋 Collecting Teams...')
+      console.log('📋 Collecting Teams (Comprehensive)...')
 
       const response = await this.graphClient
         .api('/teams')
+        .select('id,displayName,description,visibility,mailNickname,isArchived,classification,webUrl,createdDateTime,internalId,specialization,templateId,memberSettings,messagingSettings,discoverySettings,guestSettings,funSettings,resourceBehaviorOptions')
         .top(999)
         .get()
 
       if (response.value && response.value.length > 0) {
         for (const team of response.value) {
+          // Collect members for this team
+          let members = []
+          let memberDetails = []
+          try {
+            const membersResponse = await this.graphClient
+              .api(`/teams/${team.id}/members`)
+              .select('id,displayName,userPrincipalName,email,roles')
+              .top(999)
+              .get()
+
+            if (membersResponse.value) {
+              memberDetails = membersResponse.value.map(m => ({
+                Identity: m.id,
+                DisplayName: m.displayName,
+                UserPrincipalName: m.userPrincipalName || m.email,
+                Email: m.email || '',
+                Roles: m.roles || []
+              }))
+            }
+          } catch (e) {
+            console.warn(`⚠️ Could not fetch members for team ${team.displayName}`)
+          }
+
           this.resources.push({
             type: 'TeamsTeam',
             name: team.displayName,
@@ -127,13 +158,48 @@ export class TeamsCollector {
               IsArchived: team.isArchived || false,
               Classification: team.classification || '',
               SPSiteUrl: team.webUrl || '',
-              Channels: [], // Will be populated separately
-              Members: team.members?.length || 0,
-              Owners: team.owners?.map(o => o.userPrincipalName) || []
+              CreatedDateTime: team.createdDateTime || new Date().toISOString(),
+              InternalId: team.internalId || team.id,
+              Specialization: team.specialization || 'None',
+              TemplateId: team.templateId || '',
+              MemberCount: memberDetails.length,
+              Members: memberDetails,
+              Channels: [],
+              OwnerCount: memberDetails.filter(m => m.Roles?.includes('owner')).length,
+              Owners: memberDetails.filter(m => m.Roles?.includes('owner')),
+              MemberSettings: {
+                AllowCreateUpdateChannels: team.memberSettings?.allowCreateUpdateChannels ?? true,
+                AllowDeleteChannels: team.memberSettings?.allowDeleteChannels ?? true,
+                AllowAddRemoveApps: team.memberSettings?.allowAddRemoveApps ?? true,
+                AllowCreateUpdateRemoveTabs: team.memberSettings?.allowCreateUpdateRemoveTabs ?? true,
+                AllowCreateUpdateRemoveConnectors: team.memberSettings?.allowCreateUpdateRemoveConnectors ?? true
+              },
+              MessagingSettings: {
+                AllowUserEditMessages: team.messagingSettings?.allowUserEditMessages ?? true,
+                AllowUserDeleteMessages: team.messagingSettings?.allowUserDeleteMessages ?? true,
+                AllowOwnerDeleteMessages: team.messagingSettings?.allowOwnerDeleteMessages ?? true,
+                AllowTeamMentions: team.messagingSettings?.allowTeamMentions ?? true,
+                AllowChannelMentions: team.messagingSettings?.allowChannelMentions ?? true,
+                AllowUserGiphySearch: team.messagingSettings?.allowUserGiphySearch ?? true
+              },
+              GuestSettings: {
+                AllowCreateUpdateChannels: team.guestSettings?.allowCreateUpdateChannels ?? false,
+                AllowDeleteChannels: team.guestSettings?.allowDeleteChannels ?? false
+              },
+              FunSettings: {
+                AllowGiphy: team.funSettings?.allowGiphy ?? true,
+                GiphyContentRating: team.funSettings?.giphyContentRating || 'Moderate',
+                AllowStickersAndMemes: team.funSettings?.allowStickersAndMemes ?? true,
+                AllowCustomMemes: team.funSettings?.allowCustomMemes ?? true
+              },
+              DiscoverySettings: {
+                ShowInTeamsSearchAndSuggestions: team.discoverySettings?.showInTeamsSearchAndSuggestions ?? true
+              },
+              ResourceBehaviorOptions: team.resourceBehaviorOptions || []
             }
           })
         }
-        console.log(`✅ Found ${response.value.length} teams`)
+        console.log(`✅ Found ${response.value.length} teams with comprehensive details`)
 
         // Collect channels for each team
         for (const team of response.value) {
@@ -146,12 +212,13 @@ export class TeamsCollector {
   }
 
   /**
-   * Collect channels for a specific team
+   * Collect channels for a specific team (Comprehensive)
    */
   async collectTeamChannels(teamId, teamName) {
     try {
       const channelResponse = await this.graphClient
         .api(`/teams/${teamId}/channels`)
+        .select('id,displayName,description,isFavoriteByDefault,email,webUrl,createdDateTime,membershipType,moderationSettings')
         .top(999)
         .get()
 
@@ -165,14 +232,61 @@ export class TeamsCollector {
           teamResource.configuration.Channels = channelResponse.value.map(c => ({
             id: c.id,
             displayName: c.displayName,
-            description: c.description
+            description: c.description,
+            membershipType: c.membershipType || 'standard',
+            email: c.email
           }))
         }
 
         console.log(`  └─ ${teamName}: ${channelResponse.value.length} channels`)
 
-        // Collect individual channels
+        // Collect individual channels with detailed information
         for (const channel of channelResponse.value) {
+          // Collect channel members
+          let channelMembers = []
+          try {
+            const membersResponse = await this.graphClient
+              .api(`/teams/${teamId}/channels/${channel.id}/members`)
+              .select('id,displayName,userPrincipalName,email,roles')
+              .top(999)
+              .get()
+
+            if (membersResponse.value) {
+              channelMembers = membersResponse.value.map(m => ({
+                Identity: m.id,
+                DisplayName: m.displayName,
+                UserPrincipalName: m.userPrincipalName || m.email,
+                Email: m.email || '',
+                Roles: m.roles || []
+              }))
+            }
+          } catch (e) {
+            console.warn(`⚠️ Could not fetch members for channel ${channel.displayName}`)
+          }
+
+          // Collect channel tabs
+          let channelTabs = []
+          try {
+            const tabsResponse = await this.graphClient
+              .api(`/teams/${teamId}/channels/${channel.id}/tabs`)
+              .select('id,displayName,name,webUrl,configuration,teamsApp')
+              .top(999)
+              .get()
+
+            if (tabsResponse.value) {
+              channelTabs = tabsResponse.value.map(t => ({
+                Identity: t.id,
+                DisplayName: t.displayName || t.name,
+                Name: t.name,
+                WebUrl: t.webUrl || '',
+                AppId: t.teamsApp?.id || '',
+                AppName: t.teamsApp?.displayName || ''
+              }))
+            }
+          } catch (e) {
+            console.warn(`⚠️ Could not fetch tabs for channel ${channel.displayName}`)
+          }
+
           this.resources.push({
             type: 'TeamsChannel',
             name: channel.displayName,
@@ -186,7 +300,18 @@ export class TeamsCollector {
               IsFavoriteByDefault: channel.isFavoriteByDefault || false,
               Email: channel.email || '',
               WebUrl: channel.webUrl || '',
-              CreatedDateTime: channel.createdDateTime || ''
+              CreatedDateTime: channel.createdDateTime || new Date().toISOString(),
+              MembershipType: channel.membershipType || 'standard',
+              MemberCount: channelMembers.length,
+              Members: channelMembers,
+              TabCount: channelTabs.length,
+              Tabs: channelTabs,
+              ModerationSettings: {
+                UserNewMessageRestriction: channel.moderationSettings?.userNewMessageRestriction || 'everyone',
+                ReplyRestriction: channel.moderationSettings?.replyRestriction || 'everyone',
+                AllowNewMessageFromBots: channel.moderationSettings?.allowNewMessageFromBots ?? true,
+                AllowNewMessageFromConnectors: channel.moderationSettings?.allowNewMessageFromConnectors ?? true
+              }
             }
           })
         }
@@ -666,6 +791,295 @@ export class TeamsCollector {
    */
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  // ============================================================
+  // POWERSHELL COLLECTION METHODS - Advanced Teams Components
+  // ============================================================
+
+  /**
+   * Collect Teams Policies via PowerShell
+   */
+  async collectTeamsPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Teams Policies (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsMeetingPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              AllowMeetingChat = $_.AllowMeetingChat
+              AllowChannelMeetingScheduling = $_.AllowChannelMeetingScheduling
+              AllowPrivateMeetingScheduling = $_.AllowPrivateMeetingScheduling
+              AllowUserToStartRecordingTranscription = $_.AllowUserToStartRecordingTranscription
+              AllowRecordingStorageOutsideRegion = $_.AllowRecordingStorageOutsideRegion
+              EnforceRecordingRestrictions = $_.EnforceRecordingRestrictions
+              AllowTranscription = $_.AllowTranscription
+              MediaBitRateKb = $_.MediaBitRateKb
+              AudioProcessing = $_.AudioProcessing
+              VideoProcessing = $_.VideoProcessing
+              ScreenSharingMode = $_.ScreenSharingMode
+              AllowIPVideo = $_.AllowIPVideo
+              AllowPSTNUsersToBypassLobby = $_.AllowPSTNUsersToBypassLobby
+              AllowAnonymousUsersToStartMeeting = $_.AllowAnonymousUsersToStartMeeting
+              AutoAdmittedUsers = $_.AutoAdmittedUsers
+              AllowCloudRecording = $_.AllowCloudRecording
+              AllowOutlookAddIn = $_.AllowOutlookAddIn
+              AllowPowerPointSharing = $_.AllowPowerPointSharing
+              AllowParticipantGiveRequestControl = $_.AllowParticipantGiveRequestControl
+              AllowNDIStreaming = $_.AllowNDIStreaming
+              AllowWhiteboard = $_.AllowWhiteboard
+              AllowSharedNotes = $_.AllowSharedNotes
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsMeetingPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              AllowMeetingChat: policy.AllowMeetingChat || 'Enabled',
+              AllowChannelMeetingScheduling: policy.AllowChannelMeetingScheduling !== false,
+              AllowPrivateMeetingScheduling: policy.AllowPrivateMeetingScheduling !== false,
+              AllowUserToStartRecordingTranscription: policy.AllowUserToStartRecordingTranscription !== false,
+              AllowRecordingStorageOutsideRegion: policy.AllowRecordingStorageOutsideRegion || false,
+              EnforceRecordingRestrictions: policy.EnforceRecordingRestrictions || false,
+              AllowTranscription: policy.AllowTranscription || true,
+              MediaBitRateKb: policy.MediaBitRateKb || 50000,
+              AudioProcessing: policy.AudioProcessing || 'Default',
+              VideoProcessing: policy.VideoProcessing || 'Default',
+              ScreenSharingMode: policy.ScreenSharingMode || 'EntireScreen',
+              AllowIPVideo: policy.AllowIPVideo !== false,
+              AllowPSTNUsersToBypassLobby: policy.AllowPSTNUsersToBypassLobby || false,
+              AllowAnonymousUsersToStartMeeting: policy.AllowAnonymousUsersToStartMeeting || false,
+              AutoAdmittedUsers: policy.AutoAdmittedUsers || 'EveryoneInCompany',
+              AllowCloudRecording: policy.AllowCloudRecording !== false,
+              AllowOutlookAddIn: policy.AllowOutlookAddIn !== false,
+              AllowPowerPointSharing: policy.AllowPowerPointSharing !== false,
+              AllowParticipantGiveRequestControl: policy.AllowParticipantGiveRequestControl !== false,
+              AllowNDIStreaming: policy.AllowNDIStreaming || false,
+              AllowWhiteboard: policy.AllowWhiteboard || 'Enabled',
+              AllowSharedNotes: policy.AllowSharedNotes !== false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams meeting policies`)
+      }
+    } catch (error) {
+      this.handleError('collectTeamsPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Teams App Policies via PowerShell
+   */
+  async collectTeamsAppPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Teams App Policies (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsAppSetupPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              AllowSideLoading = $_.AllowSideLoading
+              AllowUserPinning = $_.AllowUserPinning
+              PinnedAppBarApps = @($_.PinnedAppBarApps)
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsAppPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              AllowSideLoading: policy.AllowSideLoading !== false,
+              AllowUserPinning: policy.AllowUserPinning !== false,
+              PinnedAppBarApps: Array.isArray(policy.PinnedAppBarApps) ? policy.PinnedAppBarApps : [],
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams app policies`)
+      }
+    } catch (error) {
+      this.handleError('collectTeamsAppPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Teams Messaging Policies via PowerShell
+   */
+  async collectTeamsMessagingPoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Teams Messaging Policies (PowerShell)...')
+      const script = `
+        @((Get-CsTeamsMessagingPolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              Description = $_.Description
+              AllowMemes = $_.AllowMemes
+              AllowGiphy = $_.AllowGiphy
+              GiphyRatingType = $_.GiphyRatingType
+              AllowStickers = $_.AllowStickers
+              AllowUserChat = $_.AllowUserChat
+              AllowUserEditMessages = $_.AllowUserEditMessages
+              AllowUserDeleteMessages = $_.AllowUserDeleteMessages
+              AllowOwnerDeleteMessages = $_.AllowOwnerDeleteMessages
+              AllowUserTranslation = $_.AllowUserTranslation
+              AllowImmersiveReader = $_.AllowImmersiveReader
+              AllowUserVoiceMessages = $_.AllowUserVoiceMessages
+              AllowPriorityMessages = $_.AllowPriorityMessages
+              AllowChannelMentions = $_.AllowChannelMentions
+              AllowTeamMentions = $_.AllowTeamMentions
+              AllowSystemMessages = $_.AllowSystemMessages
+              AllowUserChatHistory = $_.AllowUserChatHistory
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'TeamsMessagingPolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              AllowMemes: policy.AllowMemes !== false,
+              AllowGiphy: policy.AllowGiphy !== false,
+              GiphyRatingType: policy.GiphyRatingType || 'Moderate',
+              AllowStickers: policy.AllowStickers !== false,
+              AllowUserChat: policy.AllowUserChat !== false,
+              AllowUserEditMessages: policy.AllowUserEditMessages !== false,
+              AllowUserDeleteMessages: policy.AllowUserDeleteMessages !== false,
+              AllowOwnerDeleteMessages: policy.AllowOwnerDeleteMessages !== false,
+              AllowUserTranslation: policy.AllowUserTranslation || false,
+              AllowImmersiveReader: policy.AllowImmersiveReader !== false,
+              AllowUserVoiceMessages: policy.AllowUserVoiceMessages !== false,
+              AllowPriorityMessages: policy.AllowPriorityMessages !== false,
+              AllowChannelMentions: policy.AllowChannelMentions !== false,
+              AllowTeamMentions: policy.AllowTeamMentions !== false,
+              AllowSystemMessages: policy.AllowSystemMessages !== false,
+              AllowUserChatHistory: policy.AllowUserChatHistory !== false,
+              CreatedDate: policy.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} Teams messaging policies`)
+      }
+    } catch (error) {
+      this.handleError('collectTeamsMessagingPoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Resource Accounts via PowerShell
+   */
+  async collectResourceAccountsPowerShell() {
+    try {
+      console.log('📋 Collecting Resource Accounts (PowerShell)...')
+      const script = `
+        @((Get-CsOnlineApplicationInstance -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Identity
+              DisplayName = $_.DisplayName
+              UserPrincipalName = $_.UserPrincipalName
+              ApplicationId = $_.ApplicationId
+              ApplicationInstanceId = $_.ApplicationInstanceId
+              ObjectId = $_.ObjectId
+              CreatedDate = $_.WhenCreated
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const account of result) {
+          this.resources.push({
+            type: 'TeamsResourceAccount',
+            name: account.DisplayName || account.UserPrincipalName,
+            id: account.Identity,
+            configuration: {
+              Identity: account.Identity,
+              DisplayName: account.DisplayName || '',
+              UserPrincipalName: account.UserPrincipalName || '',
+              ApplicationId: account.ApplicationId || '',
+              ApplicationInstanceId: account.ApplicationInstanceId || '',
+              ObjectId: account.ObjectId || '',
+              CreatedDate: account.CreatedDate || new Date().toISOString()
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} resource accounts`)
+      }
+    } catch (error) {
+      this.handleError('collectResourceAccountsPowerShell', error)
+    }
+  }
+
+  /**
+   * Execute PowerShell script safely
+   */
+  async executePowerShell(script) {
+    try {
+      const { exec } = await import('child_process')
+      const { promisify } = await import('util')
+
+      const execAsync = promisify(exec)
+
+      const psCommand = `
+        \$ErrorActionPreference = 'Continue'
+        ${script}
+      `
+
+      let command = `pwsh -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
+
+      try {
+        const { stdout } = await execAsync(command, { timeout: 60000 })
+        if (stdout && stdout.trim()) {
+          return JSON.parse(stdout)
+        }
+        return []
+      } catch (psError) {
+        command = `powershell -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
+        const { stdout } = await execAsync(command, { timeout: 60000 })
+        if (stdout && stdout.trim()) {
+          return JSON.parse(stdout)
+        }
+        return []
+      }
+    } catch (error) {
+      console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
+      return []
+    }
   }
 
   /**
