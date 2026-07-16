@@ -19,7 +19,7 @@
 ✅ Agent Scheduler initialized
 
 📅 Nightly validations scheduled for 17/7/2026, 2:00:00 am
-⏰ Time until next run: 1059 minutes
+⏰ Time until next run: 1053 minutes
 ✅ Nightly validation scheduler initialized
 ✓ Azure credentials configured - using real Graph API
 ℹ️ SharePoint backup list not configured - using in-memory storage
@@ -71,7 +71,7 @@
 📅 Starting initial sync of announcements (7-day window)...
 
 🔄 ═══════════════════════════════════════════════════════
-📅 Starting announcement sync at 2026-07-16T02:50:58.811Z
+📅 Starting announcement sync at 2026-07-16T02:56:33.834Z
 🔄 ═══════════════════════════════════════════════════════
 🔄 Message Center sync job started (hourly)
 ✅ Investigation tables initialized
@@ -101,15 +101,15 @@
    📌 Cached Change Announcements: e2c2e08f-774f-4c36-b319-55617e511305
    📋 Using list ID: e2c2e08f-774f-4c36-b319-55617e511305
 📥 Fetching existing announcements from SharePoint (max 1000)...
-   └─ Configured 9 columns for ZT-Validations
-   └─ List already exists: ZT-Exceptions
-✅ ZT-Exceptions: 185c7d87-80b0-4a6e-83cb-f309300667b6
 📋 Found 249 existing items in SharePoint list
    First item Title: MC1419802|Microsoft Teams: New layout for sharing content in Teams events|Microsoft Teams|normal
 📊 Announcements to sync: 16
 📋 Already in SharePoint: 155
    Existing IDs: MC1419802, MC1419801, MC1419800
-✓ Sync complete: Added 0 new | Skipped 16 (duplicates) | Total processed at 2026-07-16T02:51:00.200Z
+✓ Sync complete: Added 0 new | Skipped 16 (duplicates) | Total processed at 2026-07-16T02:56:35.320Z
+   └─ Configured 9 columns for ZT-Validations
+   └─ List already exists: ZT-Exceptions
+✅ ZT-Exceptions: 185c7d87-80b0-4a6e-83cb-f309300667b6
    └─ Configured 13 columns for ZT-Exceptions
    └─ List already exists: ZT-AuditLogs
 ✅ ZT-AuditLogs: 5ee40691-ac67-42e3-b8f8-c2ce32da4ba9
@@ -133,7 +133,51 @@ SHAREPOINT_ZT_COMPLIANCE_LIST_ID=c23036a5-1af0-4c23-b0c4-3b57f24450ee
 ✓ Verifying SharePoint lists...
    ✓ ZT-Validations: Accessible
    ✓ ZT-Exceptions: Accessible
+🔄 Starting backup: SharePoint
+✅ Backup record stored in memory: 2026-07-16-SharePoint-599797
+📦 Collecting SharePoint configurations...
+🔄 Starting SharePoint Online backup collection...
+📋 Collecting SharePoint sites (Comprehensive)...
+❌ collectSites: Parsing OData Select and Expand failed: Could not find a property named 'quota' on type 'microsoft.graph.site'.
+📋 Collecting SharePoint Hub Sites (Comprehensive)...
    ✓ ZT-AuditLogs: Accessible
+⚠️ Hub sites limited availability via Graph API
+📋 Collecting SharePoint site designs...
+⚠️ Site designs require SharePoint Admin API access (limited Graph API support)
+   Consider using SharePoint Online Management Shell for full site design backup
+📋 Collecting Browser Idle SignOut Settings...
+⚠️ Browser idle signout requires SharePoint Admin Center access
+📋 Collecting Compatibility Range Settings...
+⚠️ Compatibility range requires SharePoint Admin Center access
+📋 Collecting Data Connection Library...
+⚠️ Data connection library requires SharePoint Admin Center access
+📋 Collecting Data Location Geo Move Status...
+⚠️ Data location geo move requires SharePoint Admin Center access
+📋 Collecting Data Residency Notifications...
+⚠️ Data residency notification requires SharePoint Admin Center access
+📋 Collecting External Users...
+⚠️ External users require SharePoint Admin Center access
+📋 Collecting File Version Expiration Report Library...
+⚠️ File version expiration requires SharePoint Admin Center access
+📋 Collecting Hide Default Themes Settings...
+⚠️ Theme settings require SharePoint Admin Center access
+📋 Collecting Home Site URL...
+❌ collectHomeSiteUrl: Cannot enumerate sites
+📋 Collecting Information Barrier Settings...
+⚠️ Information barriers require SharePoint Admin Center access
+📋 Collecting List Information Rights Management...
+⚠️ List IRM requires SharePoint Admin Center access
+📋 Collecting Migration Job Status...
+⚠️ Migration jobs require SharePoint Admin Center access
+📋 Collecting Multi-Geo Company Allowed Data Locations...
+⚠️ Multi-geo settings require SharePoint Admin Center access
+📋 Collecting Organization Assets Library...
+⚠️ Org assets require SharePoint Admin Center access
+📋 Collecting Organization News Site...
+⚠️ Org news site requires SharePoint Admin Center access
+📋 Collecting Personal Site Capabilities...
+⚠️ Personal site capabilities require SharePoint Admin Center access
+📋 Collecting SharePoint tenant settings...
    ✓ ZT-RiskScores: Accessible
    ✓ ZT-Compliance: Accessible
 ✅ All SharePoint lists initialized successfully
@@ -144,107 +188,56 @@ SHAREPOINT_ZT_COMPLIANCE_LIST_ID=c23036a5-1af0-4c23-b0c4-3b57f24450ee
    • ZT-RiskScores - Risk assessment data
    • ZT-Compliance - Framework compliance metrics
 ✅ Audit logs will now be saved to SharePoint automatically
-🔄 Starting backup: Teams
-✅ Backup record stored in memory: 2026-07-16-Teams-264950
-📦 Collecting Teams configurations...
-🔄 Starting Teams backup collection...
-📋 Collecting Teams (Comprehensive)...
-⚠️ Could not fetch members for team Nas-Tech
-⚠️ Could not fetch members for team IT Team
-⚠️ Could not fetch members for team HR
-✅ Found 3 teams with comprehensive details
-❌ collectTeamChannels(Nas-Tech): Parsing OData Select and Expand failed: Could not find a property named 'moderationSettings' on type 'microsoft.graph.channel'.
-❌ collectTeamChannels(IT Team): Parsing OData Select and Expand failed: Could not find a property named 'moderationSettings' on type 'microsoft.graph.channel'.
-❌ collectTeamChannels(HR): Parsing OData Select and Expand failed: Could not find a property named 'moderationSettings' on type 'microsoft.graph.channel'.
-📋 Teams channels already collected with teams
-📋 Collecting Teams channel tabs...
-✅ Found 0 channel tabs
-📋 Collecting Teams users...
-✅ Found 11 teams users
-📋 Collecting Teams App Permission Policy...
-⚠️ App permission policy requires Teams Admin Center access
-📋 Collecting Teams App Setup Policy...
-⚠️ App setup policy requires Teams Admin Center access
-📋 Collecting Teams Auto Attendant...
-⚠️ Auto attendant requires Teams Admin Center access
-📋 Collecting Teams Call Park Configuration...
-⚠️ Call park requires Teams Admin Center access
-📋 Collecting Teams Call Queue...
-⚠️ Call queue requires Teams Admin Center access
-📋 Collecting Teams Calling Configuration...
-⚠️ Calling configuration requires Teams Admin Center access
-📋 Collecting Teams Calling Line Identity...
-⚠️ Calling line identity requires Teams Admin Center access
-📋 Collecting Teams Calling Policy...
-⚠️ Calling policy requires Teams Admin Center access
-📋 Collecting Teams Channel Messaging Policy...
-⚠️ Channel messaging policy requires Teams Admin Center access
-📋 Collecting Teams Channel Moderation Settings...
-⚠️ Channel moderation requires Teams Admin Center access
-📋 Collecting Teams Client Configuration...
-⚠️ Client configuration requires Teams Admin Center access
-📋 Collecting Teams Compliance Recording Policy...
-⚠️ Compliance recording policy requires Teams Admin Center access
-📋 Collecting Teams Connector Policy...
-⚠️ Connector policy requires Teams Admin Center access
-📋 Collecting Teams Device Configuration...
-⚠️ Device configuration requires Teams Admin Center access
-📋 Collecting Teams Events Policy...
-⚠️ Events policy requires Teams Admin Center access
-📋 Collecting Teams External Access Policy...
-⚠️ External access policy requires Teams Admin Center access
-📋 Collecting Teams Guest Calling Configuration...
-⚠️ Guest calling configuration requires Teams Admin Center access
-📋 Collecting Teams Guest Meeting Configuration...
-⚠️ Guest meeting configuration requires Teams Admin Center access
-📋 Collecting Teams Guest Messaging Configuration...
-⚠️ Guest messaging configuration requires Teams Admin Center access
-📋 Collecting Teams Inbound Blocked Number Patterns...
-⚠️ Inbound blocked patterns require Teams Admin Center access
-📋 Collecting Teams Interop Policy...
-⚠️ Interop policy requires Teams Admin Center access
-📋 Collecting Teams Media Logging Policy...
-⚠️ Media logging policy requires Teams Admin Center access
-📋 Collecting Teams meeting configuration...
-⚠️ Teams meeting policies require Teams Admin Center access (limited Graph API support)
-   Consider using Teams PowerShell for full policy backup
-📋 Collecting Teams policies...
-⚠️ Teams policies require Teams Admin Center access (limited Graph API support)
-   Consider using Teams PowerShell for full policy backup
-📊 Starting PowerShell-based collection for advanced Teams components...
-📋 Collecting Teams Policies (PowerShell)...
+✅ Tenant settings collected
+📋 Collecting SharePoint sharing settings...
+⚠️ Sharing settings require SharePoint Admin Center access (limited Graph API support)
+   Consider using SharePoint Online Management Shell for full sharing policy backup
+📊 Starting PowerShell-based collection for advanced SharePoint components...
+📋 Collecting Sharing Settings (PowerShell)...
 ⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
         $ErrorActionPreference = 'Continue'
         
-        @((Get-CsTeamsMeetingPolicy -ErrorAction SilentlyContinue) |
+        $settings = Get-SPOTenant -ErrorAction SilentlyContinue
+        if ($settings) {
+          [PSCustomObject]@{
+            Identity = $settings.Url
+            ExternalSharingDefault = $settings.SharingCapability
+            ExternalSharingAllowed = $settings.RequireAcceptingAccountMatchInvitationEmail
+            AllowExternalUserAccess = $settings.SharingDomainRestrictionMode
+            PreventExternalSharingDomains = @($settings.SPOSharePointDomainBlackList)
+            PreventExternalSharingDomainWhitelist = @($settings.SPOSharePointDomainWhiteList)
+            AllowGroomingToAssertByDefault = $settings.AllowGroomingToAssertByDefault
+            EmailAttestationRequired = $settings.EmailAttestationRequired
+            EmailAttestationExpireInDays = $settings.EmailAttestationExpireInDays
+            ApplyAppEnforcedRestrictionsToAdminContent = $settings.ApplyAppEnforcedRestrictionsToAdminContent
+            FileAnonymousLinkType = $settings.FileAnonymousLinkType
+            FolderAnonymousLinkType = $settings.FolderAnonymousLinkType
+            EnableAnonymousLinkExpiration = $settings.EnableAnonymousLinkExpiration
+            AnonymousLinkExpirationDays = $settings.AnonymousLinkExpirationDays
+            CommentsOnGuestAccessRestrictedFiles = $settings.CommentsOnGuestAccessRestrictedFiles
+            DefaultSharingLinkType = $settings.DefaultSharingLinkType
+            DefaultLinkPermission = $settings.DefaultLinkPermission
+            RequireAnonymousLinksExpire = $settings.RequireAnonymousLinksExpire
+            AnonymousLinkExpirationRestricted = $settings.AnonymousLinkExpirationRestricted
+          } | ConvertTo-Json -Depth 2
+        }
+      
+      "
+/bin/sh: powershell: command not found
+
+📋 Collecting Site Policies (PowerShell)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        @((Get-SPOSitePolicy -ErrorAction SilentlyContinue) |
           ForEach-Object {
             [PSCustomObject]@{
-              Identity = $_.Identity
-              DisplayName = $_.DisplayName
+              Identity = $_.Name
+              DisplayName = $_.Name
               Description = $_.Description
-              AllowMeetingChat = $_.AllowMeetingChat
-              AllowChannelMeetingScheduling = $_.AllowChannelMeetingScheduling
-              AllowPrivateMeetingScheduling = $_.AllowPrivateMeetingScheduling
-              AllowUserToStartRecordingTranscription = $_.AllowUserToStartRecordingTranscription
-              AllowRecordingStorageOutsideRegion = $_.AllowRecordingStorageOutsideRegion
-              EnforceRecordingRestrictions = $_.EnforceRecordingRestrictions
-              AllowTranscription = $_.AllowTranscription
-              MediaBitRateKb = $_.MediaBitRateKb
-              AudioProcessing = $_.AudioProcessing
-              VideoProcessing = $_.VideoProcessing
-              ScreenSharingMode = $_.ScreenSharingMode
-              AllowIPVideo = $_.AllowIPVideo
-              AllowPSTNUsersToBypassLobby = $_.AllowPSTNUsersToBypassLobby
-              AllowAnonymousUsersToStartMeeting = $_.AllowAnonymousUsersToStartMeeting
-              AutoAdmittedUsers = $_.AutoAdmittedUsers
-              AllowCloudRecording = $_.AllowCloudRecording
-              AllowOutlookAddIn = $_.AllowOutlookAddIn
-              AllowPowerPointSharing = $_.AllowPowerPointSharing
-              AllowParticipantGiveRequestControl = $_.AllowParticipantGiveRequestControl
-              AllowNDIStreaming = $_.AllowNDIStreaming
-              AllowWhiteboard = $_.AllowWhiteboard
-              AllowSharedNotes = $_.AllowSharedNotes
-              CreatedDate = $_.WhenCreated
+              CreatedDate = $_.CreatedDate
+              LastModifiedDate = $_.LastModifiedDate
+              Disabled = $_.Disabled
             }
           } |
           ConvertTo-Json -Depth 2)
@@ -252,21 +245,19 @@ SHAREPOINT_ZT_COMPLIANCE_LIST_ID=c23036a5-1af0-4c23-b0c4-3b57f24450ee
       "
 /bin/sh: powershell: command not found
 
-✅ Found 0 Teams meeting policies
-📋 Collecting Teams App Policies (PowerShell)...
+📋 Collecting External User Access (PowerShell)...
 ⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
         $ErrorActionPreference = 'Continue'
         
-        @((Get-CsTeamsAppSetupPolicy -ErrorAction SilentlyContinue) |
+        @((Get-SPOExternalUser -ErrorAction SilentlyContinue -ResultSize 1000) |
           ForEach-Object {
             [PSCustomObject]@{
-              Identity = $_.Identity
+              Identity = $_.RecipientTypeDetails
               DisplayName = $_.DisplayName
-              Description = $_.Description
-              AllowSideLoading = $_.AllowSideLoading
-              AllowUserPinning = $_.AllowUserPinning
-              PinnedAppBarApps = @($_.PinnedAppBarApps)
+              Email = $_.Email
               CreatedDate = $_.WhenCreated
+              LastActivity = $_.LastActivity
+              ExternalUserState = $_.ExternalUserState
             }
           } |
           ConvertTo-Json -Depth 2)
@@ -274,47 +265,43 @@ SHAREPOINT_ZT_COMPLIANCE_LIST_ID=c23036a5-1af0-4c23-b0c4-3b57f24450ee
       "
 /bin/sh: powershell: command not found
 
-✅ Found 0 Teams app policies
-📋 Collecting Teams Messaging Policies (PowerShell)...
+📋 Collecting Records Management Settings (PowerShell)...
 ⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
         $ErrorActionPreference = 'Continue'
         
-        @((Get-CsTeamsMessagingPolicy -ErrorAction SilentlyContinue) |
-          ForEach-Object {
-            [PSCustomObject]@{
-              Identity = $_.Identity
-              DisplayName = $_.DisplayName
-              Description = $_.Description
-              AllowMemes = $_.AllowMemes
-              AllowGiphy = $_.AllowGiphy
-              GiphyRatingType = $_.GiphyRatingType
-              AllowStickers = $_.AllowStickers
-              AllowUserChat = $_.AllowUserChat
-              AllowUserEditMessages = $_.AllowUserEditMessages
-              AllowUserDeleteMessages = $_.AllowUserDeleteMessages
-              AllowOwnerDeleteMessages = $_.AllowOwnerDeleteMessages
-              AllowUserTranslation = $_.AllowUserTranslation
-              AllowImmersiveReader = $_.AllowImmersiveReader
-              AllowUserVoiceMessages = $_.AllowUserVoiceMessages
-              AllowPriorityMessages = $_.AllowPriorityMessages
-              AllowChannelMentions = $_.AllowChannelMentions
-              AllowTeamMentions = $_.AllowTeamMentions
-              AllowSystemMessages = $_.AllowSystemMessages
-              AllowUserChatHistory = $_.AllowUserChatHistory
-              CreatedDate = $_.WhenCreated
-            }
-          } |
-          ConvertTo-Json -Depth 2)
+        $settings = Get-SPOTenant -ErrorAction SilentlyContinue
+        if ($settings) {
+          [PSCustomObject]@{
+            DisplayRecordsManagement = $settings.DisplayStartASiteOption
+            EnableAutoExpirationVersionTrim = $settings.EnableAutoExpirationVersionTrim
+            RetentionEnabled = $true
+            ContentTypeHubUrl = $settings.ContentTypeHubUrl
+          } | ConvertTo-Json -Depth 2
+        }
       
       "
 /bin/sh: powershell: command not found
 
-✅ Found 0 Teams messaging policies
-📋 Collecting Resource Accounts (PowerShell)...
-✅ Found 0 resource accounts
-✅ Teams backup complete (14s, 14 resources)
-⚠️ 3 errors during collection
-⚠️ Collection had 3 errors, but 14 resources collected
-💾 Saving 14 resources...
+📋 Collecting Search Settings (PowerShell)...
+⚠️ PowerShell execution failed: Command failed: powershell -NoProfile -Command "
+        $ErrorActionPreference = 'Continue'
+        
+        $settings = Get-SPOSearchSettings -ErrorAction SilentlyContinue
+        if ($settings) {
+          [PSCustomObject]@{
+            SearchScope = $settings.SearchScope
+            PreferredSearchResultSourceID = $settings.PreferredSearchResultSourceID
+            BrowsingDirectoryDepth = $settings.BrowsingDirectoryDepth
+            SearchQueryToolTipText = $settings.SearchQueryToolTipText
+          } | ConvertTo-Json -Depth 2
+        }
+      
+      "
+/bin/sh: powershell: command not found
+
+✅ SharePoint backup complete (5s, 1 resources)
+⚠️ 2 errors during collection
+⚠️ Collection had 2 errors, but 1 resources collected
+💾 Saving 1 resources...
 ✅ Backup status updated: Completed
-✅ Backup completed: Teams (14s)
+✅ Backup completed: SharePoint (5s)

@@ -65,6 +65,14 @@ export class SharePointCollector {
       await this.collectTenantSettings()
       await this.collectSharingSettings()
 
+      // PowerShell collection - advanced SharePoint components
+      console.log('📊 Starting PowerShell-based collection for advanced SharePoint components...')
+      await this.collectSharingSettingsPowerShell()
+      await this.collectSitePoliciesPowerShell()
+      await this.collectExternalUserAccessPowerShell()
+      await this.collectRecordsManagementPowerShell()
+      await this.collectSearchSettingsPowerShell()
+
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ SharePoint backup complete (${executionTime}s, ${this.resources.length} resources)`)
 
@@ -93,21 +101,67 @@ export class SharePointCollector {
   }
 
   /**
-   * Collect SharePoint Sites
+   * Collect SharePoint Sites (Comprehensive)
    * SPOSite
    */
   async collectSites() {
     try {
-      console.log('📋 Collecting SharePoint sites...')
+      console.log('📋 Collecting SharePoint sites (Comprehensive)...')
 
       const response = await this.graphClient
         .api('/sites')
+        .select('id,displayName,description,webUrl,siteCollection,createdDateTime,lastModifiedDateTime,quota,sensitivity,isReadOnly,classification,sharingSettings,retentionLabel,parentReference')
         .filter("isSearchable eq true")
         .top(999)
         .get()
 
       if (response.value && response.value.length > 0) {
         for (const site of response.value) {
+          // Collect site members/owners
+          let members = []
+          try {
+            const membersResponse = await this.graphClient
+              .api(`/sites/${site.id}/users`)
+              .select('id,displayName,userPrincipalName,email')
+              .top(999)
+              .get()
+
+            if (membersResponse.value) {
+              members = membersResponse.value.map(m => ({
+                Identity: m.id,
+                DisplayName: m.displayName,
+                UserPrincipalName: m.userPrincipalName || m.email,
+                Email: m.email || ''
+              }))
+            }
+          } catch (e) {
+            console.warn(`⚠️ Could not fetch members for site ${site.displayName}`)
+          }
+
+          // Collect site lists
+          let lists = []
+          try {
+            const listsResponse = await this.graphClient
+              .api(`/sites/${site.id}/lists`)
+              .select('id,displayName,description,createdDateTime,items,webUrl,template')
+              .top(999)
+              .get()
+
+            if (listsResponse.value) {
+              lists = listsResponse.value.map(l => ({
+                Identity: l.id,
+                DisplayName: l.displayName,
+                Description: l.description || '',
+                CreatedDateTime: l.createdDateTime || '',
+                Template: l.template?.displayName || l.template || '',
+                WebUrl: l.webUrl || '',
+                ItemCount: l.items?.length || 0
+              }))
+            }
+          } catch (e) {
+            console.warn(`⚠️ Could not fetch lists for site ${site.displayName}`)
+          }
+
           this.resources.push({
             type: 'SPOSite',
             name: site.displayName,
@@ -122,14 +176,27 @@ export class SharePointCollector {
               LastModifiedDateTime: site.lastModifiedDateTime || '',
               Quota: site.quota?.used || 0,
               QuotaTotal: site.quota?.total || 0,
+              QuotaRemaining: (site.quota?.total || 0) - (site.quota?.used || 0),
               Sensitivity: site.sensitivity || 'Normal',
               IsReadOnly: site.isReadOnly || false,
               IsHomeSite: false,
-              Classification: site.classification || ''
+              Classification: site.classification || '',
+              MemberCount: members.length,
+              Members: members,
+              ListCount: lists.length,
+              Lists: lists,
+              SharingCapability: site.sharingSettings?.sharingCapability || 'ExternalUserSharingOnly',
+              RetentionLabel: site.retentionLabel?.displayName || '',
+              StorageQuotaWarningLevel: site.quota?.storageUsageWarningLevel || 0,
+              ResourceBehaviorOptions: site.resourceBehaviorOptions || [],
+              RestrictionLabelDefault: site.restrictionLabelDefault || '',
+              SiteId: site.siteCollection?.root?.id || site.id,
+              IsModern: true,
+              Owner: members.find(m => m.Roles?.includes('admin'))?.DisplayName || 'System'
             }
           })
         }
-        console.log(`✅ Found ${response.value.length} sites`)
+        console.log(`✅ Found ${response.value.length} sites with ${members.length} total members and ${lists.length} lists`)
       }
     } catch (error) {
       this.handleError('collectSites', error)
@@ -137,17 +204,18 @@ export class SharePointCollector {
   }
 
   /**
-   * Collect Hub Sites
+   * Collect Hub Sites (Comprehensive)
    * SPOHubSite
    */
   async collectHubSites() {
     try {
-      console.log('📋 Collecting SharePoint Hub Sites...')
+      console.log('📋 Collecting SharePoint Hub Sites (Comprehensive)...')
 
       // Hub Sites require specific API endpoint
       try {
         const response = await this.graphClient
           .api('/sites/microsoft.graph.getAllSites')
+          .select('id,displayName,description,webUrl,siteCollection,createdDateTime,lastModifiedDateTime,isHubSite,hubSiteData,sharingSettings,classification')
           .top(999)
           .get()
 
@@ -156,6 +224,48 @@ export class SharePointCollector {
           const hubSites = response.value.filter(s => s.isHubSite === true)
 
           for (const hubSite of hubSites) {
+            // Collect hub site members
+            let members = []
+            try {
+              const membersResponse = await this.graphClient
+                .api(`/sites/${hubSite.id}/users`)
+                .select('id,displayName,userPrincipalName,email')
+                .top(999)
+                .get()
+
+              if (membersResponse.value) {
+                members = membersResponse.value.map(m => ({
+                  Identity: m.id,
+                  DisplayName: m.displayName,
+                  UserPrincipalName: m.userPrincipalName || m.email,
+                  Email: m.email || ''
+                }))
+              }
+            } catch (e) {
+              console.warn(`⚠️ Could not fetch members for hub site ${hubSite.displayName}`)
+            }
+
+            // Collect associated sites
+            let associatedSites = []
+            try {
+              const sitesResponse = await this.graphClient
+                .api(`/sites/${hubSite.id}/sites`)
+                .select('id,displayName,webUrl,classification')
+                .top(999)
+                .get()
+
+              if (sitesResponse.value) {
+                associatedSites = sitesResponse.value.map(s => ({
+                  Identity: s.id,
+                  DisplayName: s.displayName,
+                  WebUrl: s.webUrl || '',
+                  Classification: s.classification || ''
+                }))
+              }
+            } catch (e) {
+              console.warn(`⚠️ Could not fetch associated sites for hub ${hubSite.displayName}`)
+            }
+
             this.resources.push({
               type: 'SPOHubSite',
               name: hubSite.displayName,
@@ -169,7 +279,18 @@ export class SharePointCollector {
                 IsHubSite: true,
                 HubSiteID: hubSite.hubSiteData?.id || '',
                 Logo: hubSite.hubSiteData?.logoUrl || '',
-                CreatedDateTime: hubSite.createdDateTime || ''
+                Theme: hubSite.hubSiteData?.theme || 'Default',
+                HeaderEmphasis: hubSite.hubSiteData?.headerEmphasis || '',
+                MemberCount: members.length,
+                Members: members,
+                AssociatedSiteCount: associatedSites.length,
+                AssociatedSites: associatedSites,
+                CreatedDateTime: hubSite.createdDateTime || '',
+                LastModifiedDateTime: hubSite.lastModifiedDateTime || '',
+                Classification: hubSite.classification || '',
+                SharingCapability: hubSite.sharingSettings?.sharingCapability || 'ExternalUserSharingOnly',
+                IsModern: true,
+                HubSearchScope: 'Hub'
               }
             })
           }
@@ -592,6 +713,277 @@ export class SharePointCollector {
    */
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  // ============================================================
+  // POWERSHELL COLLECTION METHODS - Advanced SharePoint Components
+  // ============================================================
+
+  /**
+   * Collect Sharing Settings via PowerShell
+   */
+  async collectSharingSettingsPowerShell() {
+    try {
+      console.log('📋 Collecting Sharing Settings (PowerShell)...')
+      const script = `
+        $settings = Get-SPOTenant -ErrorAction SilentlyContinue
+        if ($settings) {
+          [PSCustomObject]@{
+            Identity = $settings.Url
+            ExternalSharingDefault = $settings.SharingCapability
+            ExternalSharingAllowed = $settings.RequireAcceptingAccountMatchInvitationEmail
+            AllowExternalUserAccess = $settings.SharingDomainRestrictionMode
+            PreventExternalSharingDomains = @($settings.SPOSharePointDomainBlackList)
+            PreventExternalSharingDomainWhitelist = @($settings.SPOSharePointDomainWhiteList)
+            AllowGroomingToAssertByDefault = $settings.AllowGroomingToAssertByDefault
+            EmailAttestationRequired = $settings.EmailAttestationRequired
+            EmailAttestationExpireInDays = $settings.EmailAttestationExpireInDays
+            ApplyAppEnforcedRestrictionsToAdminContent = $settings.ApplyAppEnforcedRestrictionsToAdminContent
+            FileAnonymousLinkType = $settings.FileAnonymousLinkType
+            FolderAnonymousLinkType = $settings.FolderAnonymousLinkType
+            EnableAnonymousLinkExpiration = $settings.EnableAnonymousLinkExpiration
+            AnonymousLinkExpirationDays = $settings.AnonymousLinkExpirationDays
+            CommentsOnGuestAccessRestrictedFiles = $settings.CommentsOnGuestAccessRestrictedFiles
+            DefaultSharingLinkType = $settings.DefaultSharingLinkType
+            DefaultLinkPermission = $settings.DefaultLinkPermission
+            RequireAnonymousLinksExpire = $settings.RequireAnonymousLinksExpire
+            AnonymousLinkExpirationRestricted = $settings.AnonymousLinkExpirationRestricted
+          } | ConvertTo-Json -Depth 2
+        }
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOSharingPolicy',
+          name: 'Tenant Sharing Settings',
+          id: 'SharePointTenant',
+          configuration: {
+            Identity: result.Identity || 'SharePointTenant',
+            ExternalSharingDefault: result.ExternalSharingDefault || 'ExternalUserSharingOnly',
+            ExternalSharingAllowed: result.ExternalSharingAllowed || true,
+            AllowExternalUserAccess: result.AllowExternalUserAccess || 'AllowLimitedAccess',
+            PreventExternalSharingDomains: Array.isArray(result.PreventExternalSharingDomains) ? result.PreventExternalSharingDomains : [],
+            AllowGroomingToAssertByDefault: result.AllowGroomingToAssertByDefault || false,
+            EmailAttestationRequired: result.EmailAttestationRequired || false,
+            EmailAttestationExpireInDays: result.EmailAttestationExpireInDays || 30,
+            ApplyAppEnforcedRestrictionsToAdminContent: result.ApplyAppEnforcedRestrictionsToAdminContent || false,
+            FileAnonymousLinkType: result.FileAnonymousLinkType || 'Edit',
+            FolderAnonymousLinkType: result.FolderAnonymousLinkType || 'Edit',
+            EnableAnonymousLinkExpiration: result.EnableAnonymousLinkExpiration || false,
+            AnonymousLinkExpirationDays: result.AnonymousLinkExpirationDays || 0,
+            CommentsOnGuestAccessRestrictedFiles: result.CommentsOnGuestAccessRestrictedFiles || 'Disabled',
+            DefaultSharingLinkType: result.DefaultSharingLinkType || 'Internal',
+            DefaultLinkPermission: result.DefaultLinkPermission || 'View',
+            RequireAnonymousLinksExpire: result.RequireAnonymousLinksExpire || false,
+            AnonymousLinkExpirationRestricted: result.AnonymousLinkExpirationRestricted || false
+          }
+        })
+        console.log('✅ Sharing settings collected')
+      }
+    } catch (error) {
+      this.handleError('collectSharingSettingsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Site Policies via PowerShell
+   */
+  async collectSitePoliciesPowerShell() {
+    try {
+      console.log('📋 Collecting Site Policies (PowerShell)...')
+      const script = `
+        @((Get-SPOSitePolicy -ErrorAction SilentlyContinue) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.Name
+              DisplayName = $_.Name
+              Description = $_.Description
+              CreatedDate = $_.CreatedDate
+              LastModifiedDate = $_.LastModifiedDate
+              Disabled = $_.Disabled
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const policy of result) {
+          this.resources.push({
+            type: 'SPOSitePolicy',
+            name: policy.DisplayName || policy.Identity,
+            id: policy.Identity,
+            configuration: {
+              Identity: policy.Identity,
+              DisplayName: policy.DisplayName || '',
+              Description: policy.Description || '',
+              CreatedDate: policy.CreatedDate || new Date().toISOString(),
+              LastModifiedDate: policy.LastModifiedDate || new Date().toISOString(),
+              Disabled: policy.Disabled || false
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} site policies`)
+      }
+    } catch (error) {
+      this.handleError('collectSitePoliciesPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect External User Access via PowerShell
+   */
+  async collectExternalUserAccessPowerShell() {
+    try {
+      console.log('📋 Collecting External User Access (PowerShell)...')
+      const script = `
+        @((Get-SPOExternalUser -ErrorAction SilentlyContinue -ResultSize 1000) |
+          ForEach-Object {
+            [PSCustomObject]@{
+              Identity = $_.RecipientTypeDetails
+              DisplayName = $_.DisplayName
+              Email = $_.Email
+              CreatedDate = $_.WhenCreated
+              LastActivity = $_.LastActivity
+              ExternalUserState = $_.ExternalUserState
+            }
+          } |
+          ConvertTo-Json -Depth 2)
+      `
+      const result = await this.executePowerShell(script)
+      if (result && Array.isArray(result)) {
+        for (const user of result) {
+          this.resources.push({
+            type: 'SPOExternalUser',
+            name: user.DisplayName || user.Email,
+            id: user.Email,
+            configuration: {
+              Identity: user.Email,
+              DisplayName: user.DisplayName || '',
+              Email: user.Email || '',
+              CreatedDate: user.CreatedDate || new Date().toISOString(),
+              LastActivity: user.LastActivity || '',
+              ExternalUserState: user.ExternalUserState || 'Accepted'
+            }
+          })
+        }
+        console.log(`✅ Found ${result.length} external users`)
+      }
+    } catch (error) {
+      this.handleError('collectExternalUserAccessPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Records Management Settings via PowerShell
+   */
+  async collectRecordsManagementPowerShell() {
+    try {
+      console.log('📋 Collecting Records Management Settings (PowerShell)...')
+      const script = `
+        $settings = Get-SPOTenant -ErrorAction SilentlyContinue
+        if ($settings) {
+          [PSCustomObject]@{
+            DisplayRecordsManagement = $settings.DisplayStartASiteOption
+            EnableAutoExpirationVersionTrim = $settings.EnableAutoExpirationVersionTrim
+            RetentionEnabled = $true
+            ContentTypeHubUrl = $settings.ContentTypeHubUrl
+          } | ConvertTo-Json -Depth 2
+        }
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPORecordsManagement',
+          name: 'Records Management Settings',
+          id: 'RecordsManagement',
+          configuration: {
+            Identity: 'RecordsManagement',
+            DisplayRecordsManagement: result.DisplayRecordsManagement || false,
+            EnableAutoExpirationVersionTrim: result.EnableAutoExpirationVersionTrim || false,
+            RetentionEnabled: result.RetentionEnabled || false,
+            ContentTypeHubUrl: result.ContentTypeHubUrl || ''
+          }
+        })
+        console.log('✅ Records management settings collected')
+      }
+    } catch (error) {
+      this.handleError('collectRecordsManagementPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Search Settings via PowerShell
+   */
+  async collectSearchSettingsPowerShell() {
+    try {
+      console.log('📋 Collecting Search Settings (PowerShell)...')
+      const script = `
+        $settings = Get-SPOSearchSettings -ErrorAction SilentlyContinue
+        if ($settings) {
+          [PSCustomObject]@{
+            SearchScope = $settings.SearchScope
+            PreferredSearchResultSourceID = $settings.PreferredSearchResultSourceID
+            BrowsingDirectoryDepth = $settings.BrowsingDirectoryDepth
+            SearchQueryToolTipText = $settings.SearchQueryToolTipText
+          } | ConvertTo-Json -Depth 2
+        }
+      `
+      const result = await this.executePowerShell(script)
+      if (result) {
+        this.resources.push({
+          type: 'SPOSearchSetting',
+          name: 'Search Settings',
+          id: 'SearchSettings',
+          configuration: {
+            Identity: 'SearchSettings',
+            SearchScope: result.SearchScope || 'All',
+            PreferredSearchResultSourceID: result.PreferredSearchResultSourceID || '',
+            BrowsingDirectoryDepth: result.BrowsingDirectoryDepth || 20,
+            SearchQueryToolTipText: result.SearchQueryToolTipText || ''
+          }
+        })
+        console.log('✅ Search settings collected')
+      }
+    } catch (error) {
+      this.handleError('collectSearchSettingsPowerShell', error)
+    }
+  }
+
+  /**
+   * Execute PowerShell script safely
+   */
+  async executePowerShell(script) {
+    try {
+      const { exec } = await import('child_process')
+      const { promisify } = await import('util')
+
+      const execAsync = promisify(exec)
+
+      const psCommand = `
+        \$ErrorActionPreference = 'Continue'
+        ${script}
+      `
+
+      let command = `pwsh -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
+
+      try {
+        const { stdout } = await execAsync(command, { timeout: 60000 })
+        if (stdout && stdout.trim()) {
+          return JSON.parse(stdout)
+        }
+        return null
+      } catch (psError) {
+        command = `powershell -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
+        const { stdout } = await execAsync(command, { timeout: 60000 })
+        if (stdout && stdout.trim()) {
+          return JSON.parse(stdout)
+        }
+        return null
+      }
+    } catch (error) {
+      console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
+      return null
+    }
   }
 
   /**
