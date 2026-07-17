@@ -109,16 +109,13 @@ function renderBackupContent(el) {
       <button class="btn ${backupView === 'history' ? 'btn-primary' : 'btn-secondary'}" id="view-history">
         <i class="ti ti-history"></i> Backup History
       </button>
-      <button class="btn ${backupView === 'explorer' ? 'btn-primary' : 'btn-secondary'}" id="view-explorer">
-        <i class="ti ti-folder-open"></i> File Explorer
-      </button>
       <button class="btn ${backupView === 'restore' ? 'btn-primary' : 'btn-secondary'}" id="view-restore">
         <i class="ti ti-restore"></i> Restore Explorer
       </button>
-      <input type="text" class="form-input search" placeholder="Search services..." id="services-search" style="${['services', 'explorer'].includes(backupView) ? '' : 'display:none'}">
+      <input type="text" class="form-input search" placeholder="Search services..." id="services-search" style="${backupView === 'services' ? '' : 'display:none'}">
     </div>
 
-    ${backupView === 'services' ? renderServicesView() : backupView === 'history' ? renderHistoryView() : backupView === 'explorer' ? renderExplorerView() : renderRestoreExplorerView()}
+    ${backupView === 'services' ? renderServicesView() : backupView === 'history' ? renderHistoryView() : renderRestoreExplorerView()}
 
     <!-- Selective Restore Modal -->
     ${renderSelectiveRestoreModal()}
@@ -132,11 +129,6 @@ function renderBackupContent(el) {
 
   el.querySelector('#view-history')?.addEventListener('click', () => {
     backupView = 'history'
-    renderBackupContent(el)
-  })
-
-  el.querySelector('#view-explorer')?.addEventListener('click', () => {
-    backupView = 'explorer'
     renderBackupContent(el)
   })
 
@@ -493,21 +485,11 @@ function renderRestoreExplorerView() {
   return `
     <div style="padding:20px;height:100%;display:flex;flex-direction:column;">
       <div style="display:flex;gap:15px;margin-bottom:20px;align-items:center;">
-        <div style="flex:1;">
-          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:8px;">Select Service & Backup</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <select id="restore-service" style="padding:8px 12px;border:1px solid var(--color-border-secondary);border-radius:6px;font-size:13px;background:var(--color-bg-secondary);color:var(--color-text-primary);">
-              <option value="">Select Service...</option>
-              <option value="Security">Security (Entra ID)</option>
-              <option value="Compliance">Compliance</option>
-              <option value="Governance">Governance</option>
-              <option value="Exchange">Exchange Online</option>
-              <option value="SharePoint">SharePoint</option>
-            </select>
-            <select id="restore-backup" style="padding:8px 12px;border:1px solid var(--color-border-secondary);border-radius:6px;font-size:13px;background:var(--color-bg-secondary);color:var(--color-text-primary);">
-              <option value="">Select Backup...</option>
-            </select>
-          </div>
+        <div style="flex:1;max-width:300px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:8px;">Select Backup Date</label>
+          <select id="restore-backup" style="width:100%;padding:8px 12px;border:1px solid var(--color-border-secondary);border-radius:6px;font-size:13px;background:var(--color-bg-secondary);color:var(--color-text-primary);">
+            <option value="">Loading backups...</option>
+          </select>
         </div>
       </div>
 
@@ -515,7 +497,7 @@ function renderRestoreExplorerView() {
         <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
           <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">📦 Services</div>
           <div id="restore-services-list" style="flex:1;overflow-y:auto;padding:8px;">
-            <div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Select backup first</div>
+            <div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Select backup date</div>
           </div>
         </div>
 
@@ -561,42 +543,23 @@ let restoreState = {
   selectedService: null,
   selectedResourceType: null,
   selectedResource: null,
-  allResources: []
+  allResources: [],
+  allServices: []
 }
 
 function initializeRestoreExplorerBackup() {
-  const serviceSelect = document.getElementById('restore-service')
   const backupSelect = document.getElementById('restore-backup')
   const dryRunBtn = document.getElementById('restore-dry-run-btn')
   const resetBtn = document.getElementById('restore-reset-btn')
 
-  serviceSelect.addEventListener('change', async () => {
-    const service = serviceSelect.value
-    if (!service) return
-
-    try {
-      const response = await fetch(`${API_BASE}/api/backup/m365/history/${service}?limit=20`)
-      const data = await response.json()
-
-      backupSelect.innerHTML = '<option value="">Select Backup...</option>'
-      if (data.success && data.data) {
-        data.data.forEach(backup => {
-          const option = document.createElement('option')
-          option.value = backup.backupId
-          option.textContent = `${backup.backupId.split('-').pop()} (${backup.resourceCount} resources)`
-          backupSelect.appendChild(option)
-        })
-      }
-    } catch (error) {
-      console.error('Error loading backups:', error)
-    }
-  })
+  // Load all backups on initialization
+  loadAllBackupsForRestoreBackup()
 
   backupSelect.addEventListener('change', async () => {
     if (!backupSelect.value) return
 
     restoreState.selectedBackup = backupSelect.value
-    await loadRestoreServicesBackup()
+    await loadRestoreResourcesFromBackupBackup()
   })
 
   dryRunBtn.addEventListener('click', async () => {
@@ -640,64 +603,116 @@ function initializeRestoreExplorerBackup() {
   })
 }
 
-async function loadRestoreServicesBackup() {
+async function loadAllBackupsForRestoreBackup() {
   try {
-    const response = await fetch(`${API_BASE}/api/backup/m365/backup/${restoreState.selectedBackup}/resources?limit=1`)
+    const response = await fetch(`${API_BASE}/api/backup/m365/backups?limit=50`)
     const data = await response.json()
 
-    if (data.success && data.data.length > 0) {
-      const firstResource = data.data[0]
-      const service = firstResource.type?.split('AAD')?.[0] === '' ? 'Security' : 'Unknown'
-      restoreState.selectedService = service
+    const backupSelect = document.getElementById('restore-backup')
+    backupSelect.innerHTML = '<option value="">Select Backup...</option>'
 
-      document.getElementById('restore-services-list').innerHTML = `
-        <div style="padding:8px;background:var(--color-primary);color:white;border-radius:4px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;text-overflow:ellipsis;overflow:hidden;">${service}</div>
-      `
-
-      await loadRestoreResourceTypesBackup()
+    if (data.success && data.data) {
+      // Group backups by date and service
+      data.data.forEach(backup => {
+        const option = document.createElement('option')
+        option.value = backup.backupId
+        const date = backup.backupId.split('-').slice(0, 3).join('-')
+        const service = backup.serviceName
+        option.textContent = `${date} - ${service} (${backup.resourceCount} resources)`
+        backupSelect.appendChild(option)
+      })
     }
   } catch (error) {
-    console.error('Error loading services:', error)
+    console.error('Error loading backups:', error)
+    showToast('Error loading backups', 'error')
   }
 }
 
-async function loadRestoreResourceTypesBackup() {
+async function loadRestoreResourcesFromBackupBackup() {
   try {
-    const response = await fetch(`${API_BASE}/api/backup/m365/backup/${restoreState.selectedBackup}/resources?limit=500`)
+    const response = await fetch(`${API_BASE}/api/backup/m365/backup/${restoreState.selectedBackup}/resources?limit=1000`)
     const data = await response.json()
 
     if (data.success && data.data.length > 0) {
       restoreState.allResources = data.data
 
-      const typesCounts = {}
+      // Extract unique services from resources
+      const servicesSet = new Set()
       data.data.forEach(r => {
-        typesCounts[r.type] = (typesCounts[r.type] || 0) + 1
+        if (r.type?.startsWith('AAD')) {
+          servicesSet.add('Security (Entra ID)')
+        } else if (r.type?.startsWith('EXO')) {
+          servicesSet.add('Exchange Online')
+        } else if (r.type?.startsWith('SPO')) {
+          servicesSet.add('SharePoint')
+        } else if (r.type?.startsWith('Teams')) {
+          servicesSet.add('Teams')
+        }
       })
 
-      const typesHtml = Object.entries(typesCounts)
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([type, count]) => `
-          <div style="padding:8px;background:var(--color-bg-primary);border:1px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;" data-type="${type}">
-            <span>${count > 0 ? '✅' : '⭕'} ${type}</span>
-            <span style="font-size:11px;color:var(--color-text-tertiary);">${count}</span>
-          </div>
-        `).join('')
+      restoreState.allServices = Array.from(servicesSet).sort()
 
-      document.getElementById('restore-types-list').innerHTML = typesHtml
+      // Display services
+      const servicesHtml = restoreState.allServices.map(service => `
+        <div style="padding:8px;background:var(--color-bg-primary);border:1px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s;" data-service="${service}">
+          ${service}
+        </div>
+      `).join('')
 
-      document.querySelectorAll('[data-type]').forEach(el => {
+      document.getElementById('restore-services-list').innerHTML = servicesHtml || '<div style="padding:8px;color:var(--color-text-tertiary);">No services</div>'
+
+      document.querySelectorAll('[data-service]').forEach(el => {
         el.addEventListener('click', () => {
-          restoreState.selectedResourceType = el.dataset.type
-          loadRestoreResourcesBackup()
-          document.querySelectorAll('[data-type]').forEach(e => e.style.background = 'var(--color-bg-primary)')
+          restoreState.selectedService = el.dataset.service
+          loadRestoreResourceTypesForServiceBackup()
+          document.querySelectorAll('[data-service]').forEach(e => e.style.background = 'var(--color-bg-primary)')
           el.style.background = 'var(--color-primary)'
           el.style.color = 'white'
         })
       })
     }
   } catch (error) {
-    console.error('Error loading resource types:', error)
+    console.error('Error loading backup resources:', error)
+    showToast('Error loading backup resources', 'error')
   }
+}
+
+function loadRestoreResourceTypesForServiceBackup() {
+  const serviceTypeMap = {
+    'Security (Entra ID)': 'AAD',
+    'Exchange Online': 'EXO',
+    'SharePoint': 'SPO',
+    'Teams': 'Teams'
+  }
+
+  const prefix = serviceTypeMap[restoreState.selectedService] || ''
+  const filtered = restoreState.allResources.filter(r => r.type?.startsWith(prefix))
+
+  const typesCounts = {}
+  filtered.forEach(r => {
+    typesCounts[r.type] = (typesCounts[r.type] || 0) + 1
+  })
+
+  const typesHtml = Object.entries(typesCounts)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([type, count]) => `
+      <div style="padding:8px;background:var(--color-bg-primary);border:1px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;" data-type="${type}">
+        <span>${count > 0 ? '✅' : '⭕'} ${type}</span>
+        <span style="font-size:11px;color:var(--color-text-tertiary);">${count}</span>
+      </div>
+    `).join('')
+
+  document.getElementById('restore-types-list').innerHTML = typesHtml
+
+  document.querySelectorAll('[data-type]').forEach(el => {
+    el.addEventListener('click', () => {
+      restoreState.selectedResourceType = el.dataset.type
+      loadRestoreResourcesBackup()
+      document.querySelectorAll('[data-type]').forEach(e => e.style.background = 'var(--color-bg-primary)')
+      el.style.background = 'var(--color-primary)'
+      el.style.color = 'white'
+    })
+  })
 }
 
 function loadRestoreResourcesBackup() {
