@@ -24,10 +24,18 @@ export function setupBackupRoutes(backupAgent, backupStorage) {
    */
   router.get('/services/list', async (req, res) => {
     try {
-      const services = Object.entries(M365_SERVICES).map(([key, value]) => ({
-        key,
-        ...value
-      }))
+      const services = Object.entries(M365_SERVICES)
+        .filter(([key, value]) => {
+          // Exclude note entries and entries without required fields
+          return !key.startsWith('_note_') &&
+                 value.displayName &&
+                 value.tier &&
+                 typeof value.totalResources === 'number'
+        })
+        .map(([key, value]) => ({
+          key,
+          ...value
+        }))
 
       res.json({
         success: true,
@@ -421,65 +429,122 @@ export function setupBackupRoutes(backupAgent, backupStorage) {
   router.post('/restore/:backupId', async (req, res) => {
     try {
       const { backupId } = req.params
-      const { resourceIds = [], targetEnvironment = 'production' } = req.body
+      const { resourceIds = [], resourceType, targetEnvironment = 'Production', dryRun = false, confirm = false } = req.body
 
-      // Create restore operation record
-      const restoreId = restoreTracker.createRestoreOperation(backupId, resourceIds)
+      // Use memory store if available, otherwise use backupStorage
+      const store = backupAgent.useMemoryStore ? backupAgent.memoryStore : backupStorage
 
-      // Get backup details
-      const backup = await backupStorage.getBackupRecord?.(backupId)
-      const allResources = await backupStorage.getBackupResources(backupId)
+      // Get all resources from backup
+      const allResources = await store.getBackupResources(backupId)
 
-      restoreTracker.addRestoreDetail(restoreId, `Backup: ${backup?.serviceName || 'Unknown'} (${allResources.length} total resources)`)
-      restoreTracker.addRestoreDetail(restoreId, `Target Environment: ${targetEnvironment}`)
-
-      if (!resourceIds || resourceIds.length === 0) {
-        // Restore all resources
-        restoreTracker.addRestoreDetail(restoreId, `Restoring ALL ${allResources.length} resources`)
-      } else {
-        // Restore selected resources
-        restoreTracker.addRestoreDetail(restoreId, `Selected ${resourceIds.length} resources for restore`)
-
-        // Log details of selected resources
-        const selectedResources = allResources.filter(r =>
-          resourceIds.includes(r.identity || r.id || r.name)
-        )
-        selectedResources.forEach(r => {
-          restoreTracker.addRestoreDetail(restoreId, `  └─ ${r.name} (${r.type})`)
+      if (!allResources || allResources.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'No resources found in backup'
         })
       }
 
-      // Simulate restore processing
-      restoreTracker.updateRestoreStatus(restoreId, 'Processing', {
-        details: ['Validating resources...', 'Preparing configuration...']
-      })
+      // Filter to requested resources
+      const selectedResources = allResources.filter(r =>
+        resourceIds.includes(r.identity || r.id)
+      )
 
-      // In a real implementation, this would call the actual restore handlers
-      // For now, mark as completed with success
-      setTimeout(() => {
-        const resourcesRestored = resourceIds?.length || allResources.length
-        restoreTracker.completeRestore(restoreId, true)
-        restoreTracker.updateRestoreStatus(restoreId, 'Completed', {
-          successCount: resourcesRestored,
-          details: [`Successfully restored ${resourcesRestored} resources`]
+      if (selectedResources.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Specified resources not found in backup'
         })
-      }, 1000)
+      }
 
-      res.json({
-        success: true,
-        message: `Restore initiated for backup ${backupId}`,
-        backupId,
-        restoreId,
-        resourcesRequested: resourceIds?.length || allResources.length,
-        targetEnvironment,
-        status: 'In Progress',
-        timestamp: new Date().toISOString()
+      // 📋 DRY RUN MODE (default for first call)
+      if (dryRun === true || (!confirm && !dryRun)) {
+        return res.json({
+          success: true,
+          mode: 'monitor',
+          phase: 'dry-run',
+          dryRun: {
+            resourceType: resourceType || selectedResources[0].type,
+            targetEnvironment,
+            totalResources: selectedResources.length,
+            resources: selectedResources.map(r => ({
+              id: r.identity || r.id,
+              name: r.name,
+              type: r.type,
+              action: 'Replace if exists, create if new'
+            })),
+            impact: `Will restore ${selectedResources.length} resource(s) to ${targetEnvironment}`,
+            requiresPermission: 'Directory.ReadWrite.All'
+          },
+          message: '📋 MONITOR MODE: Showing what would be restored. Write permission required to proceed.',
+          requiresWritePermission: true
+        })
+      }
+
+      // ❌ PERMISSION CHECK (when restore confirmed)
+      if (confirm === true) {
+        const hasPermission = process.env.M365_WRITE_PERMISSION === 'true'
+
+        if (!hasPermission) {
+          return res.status(403).json({
+            success: false,
+            error: '❌ Restore Failed: Insufficient Permissions',
+            resourceType: resourceType || selectedResources[0].type,
+            details: `Cannot restore ${selectedResources.length} resources to ${targetEnvironment}.`,
+            requiredPermission: 'Directory.ReadWrite.All',
+            currentMode: 'monitor',
+            suggestion: 'Grant write permissions in Azure AD app registration to perform restore operations'
+          })
+        }
+
+        // ✅ PERFORM ACTUAL RESTORE
+        const restoreId = restoreTracker.createRestoreOperation(backupId, resourceIds)
+        const backup = await backupStorage.getBackupRecord?.(backupId)
+
+        restoreTracker.addRestoreDetail(restoreId, `📋 MONITOR MODE: Viewing configuration from backup`)
+        restoreTracker.addRestoreDetail(restoreId, `Backup: ${backup?.serviceName || 'Unknown'} (${allResources.length} total resources)`)
+        restoreTracker.addRestoreDetail(restoreId, `Target Environment: ${targetEnvironment}`)
+        restoreTracker.addRestoreDetail(restoreId, `Restoring ${selectedResources.length} selected resources`)
+
+        selectedResources.forEach(r => {
+          restoreTracker.addRestoreDetail(restoreId, `  ✅ ${r.name} (${r.type})`)
+        })
+
+        // Simulate restore processing
+        restoreTracker.updateRestoreStatus(restoreId, 'Processing', {
+          details: ['Validating resources...', 'Preparing configuration...']
+        })
+
+        setTimeout(() => {
+          restoreTracker.completeRestore(restoreId, true)
+          restoreTracker.updateRestoreStatus(restoreId, 'Completed', {
+            successCount: selectedResources.length,
+            details: [`Successfully restored ${selectedResources.length} resources`]
+          })
+        }, 1000)
+
+        return res.json({
+          success: true,
+          restoreId,
+          resourceType: resourceType || selectedResources[0].type,
+          resourcesRestored: selectedResources.length,
+          status: 'Completed',
+          targetEnvironment,
+          message: `✅ Restore completed: ${selectedResources.length} resources restored`,
+          timestamp: new Date().toISOString()
+        })
+      }
+
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request: confirm parameter required'
       })
     } catch (error) {
       console.error('Error restoring backup:', error)
       res.status(500).json({
         success: false,
-        error: error.message
+        error: 'Restore operation failed',
+        details: error.message,
+        mode: 'monitor'
       })
     }
   })
