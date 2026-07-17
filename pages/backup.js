@@ -910,8 +910,22 @@ function loadRestoreResourceTypesForServiceBackup() {
   const prefix = serviceTypeMap[restoreState.selectedService] || ''
   const filtered = restoreState.allResources.filter(r => r.type?.startsWith(prefix))
 
+  // Get configured resource types for this service from services list
+  const selectedServiceConfig = restoreState.allServices.find(s => s.displayName === restoreState.selectedService)
+  const configuredTypes = selectedServiceConfig?.resources || []
+  const backedUpTypes = new Set(filtered.map(r => r.type))
+
   // Analyze resource status by type
   const typeStats = {}
+
+  // First, initialize stats for all configured types
+  configuredTypes.forEach(configType => {
+    if (!typeStats[configType]) {
+      typeStats[configType] = { successful: 0, notConfigured: 0, errors: 0, total: 0 }
+    }
+  })
+
+  // Then analyze actual backup resources
   filtered.forEach(r => {
     if (!typeStats[r.type]) {
       typeStats[r.type] = { successful: 0, notConfigured: 0, errors: 0, total: 0 }
@@ -925,6 +939,14 @@ function loadRestoreResourceTypesForServiceBackup() {
       typeStats[r.type].errors += 1
     } else {
       typeStats[r.type].notConfigured += 1
+    }
+  })
+
+  // Mark configured types with no backup as "notConfigured"
+  configuredTypes.forEach(configType => {
+    if (!backedUpTypes.has(configType)) {
+      // Type was configured but not found in backup (zero instances or collection failed)
+      typeStats[configType].notConfigured = 1
     }
   })
 
