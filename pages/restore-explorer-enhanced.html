@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restore Explorer - All 53 Entra ID Resource Types</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header .info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .info-card {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-card .label {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .info-card .value {
+            color: #333;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .filter-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        .phase {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .phase-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .resource-item {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            background: #fafafa;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .resource-item:hover {
+            border-color: #667eea;
+            background: #f0f7ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .resource-item.configured {
+            border-left: 4px solid #4caf50;
+        }
+
+        .resource-item.not-configured {
+            border-left: 4px solid #999;
+            opacity: 0.8;
+        }
+
+        .resource-item.failed {
+            border-left: 4px solid #ff9800;
+        }
+
+        .resource-info {
+            flex: 1;
+        }
+
+        .resource-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .resource-status {
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .status-badge.configured {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-badge.not-configured {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .status-badge.failed {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .resource-count {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 14px;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .summary {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            text-align: center;
+            padding: 20px;
+            border-radius: 6px;
+            background: #f5f5f5;
+        }
+
+        .summary-card .number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .summary-card .number.configured {
+            color: #4caf50;
+        }
+
+        .summary-card .number.not-configured {
+            color: #999;
+        }
+
+        .summary-card .label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .table th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+            color: #333;
+        }
+
+        .table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .table tr:hover {
+            background: #fafafa;
+        }
+
+        .legend {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border-left: 4px solid;
+        }
+
+        .legend-box.configured {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+        }
+
+        .legend-box.not-configured {
+            background: #f5f5f5;
+            border-left-color: #999;
+        }
+
+        .legend-box.failed {
+            background: #fff3e0;
+            border-left-color: #ff9800;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .header .info {
+                grid-template-columns: 1fr;
+            }
+
+            .resource-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Restore Explorer - Complete Entra ID Backup</h1>
+            <p style="color: #666; margin-top: 10px;">All 53 Resource Types Overview - Showing Configured, Not Configured, and Failed Collections</p>
+
+            <div class="info">
+                <div class="info-card">
+                    <div class="label">Latest Backup</div>
+                    <div class="value" id="backup-id">Loading...</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Total Resources</div>
+                    <div class="value" id="total-resources">775</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Resource Types</div>
+                    <div class="value"><span id="configured-count">16</span> / 53</div>
+                </div>
+                <div class="info-card">
+                    <div class="label">Execution Time</div>
+                    <div class="value" id="execution-time">167s</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filters">
+            <button class="filter-btn active" onclick="filterTypes('all')">All Types (53)</button>
+            <button class="filter-btn" onclick="filterTypes('configured')">✅ Configured</button>
+            <button class="filter-btn" onclick="filterTypes('not-configured')">⭕ Not Configured</button>
+            <button class="filter-btn" onclick="filterTypes('failed')">❌ Failed</button>
+            <input type="text" id="search" placeholder="Search resource types..." style="flex: 1; padding: 8px 12px; border: 2px solid #ddd; border-radius: 20px; font-size: 14px;">
+        </div>
+
+        <div class="content" id="content">
+            <!-- Generated by JavaScript -->
+        </div>
+
+        <div class="summary">
+            <h2 style="color: #333; margin-bottom: 20px;">Summary & Statistics</h2>
+
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="number configured" id="sum-configured">16</div>
+                    <div class="label">Configured Types</div>
+                </div>
+                <div class="summary-card">
+                    <div class="number not-configured" id="sum-not-configured">35</div>
+                    <div class="label">Not Configured</div>
+                </div>
+                <div class="summary-card">
+                    <div class="number" style="color: #667eea;" id="sum-total">53</div>
+                    <div class="label">Total Resource Types</div>
+                </div>
+                <div class="summary-card">
+                    <div class="number" style="color: #4caf50;" id="sum-coverage">30%</div>
+                    <div class="label">Configuration Coverage</div>
+                </div>
+            </div>
+
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-box configured"></div>
+                    <span>Configured & Backed Up</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box not-configured"></div>
+                    <span>Not Configured (Optional)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box failed"></div>
+                    <span>Collection Issues</span>
+                </div>
+            </div>
+
+            <h3 style="color: #333; margin-top: 30px; margin-bottom: 15px;">Configured Resource Types by Phase</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Phase</th>
+                        <th>Configured Types</th>
+                        <th>Total Types</th>
+                        <th>Resources Captured</th>
+                        <th>Coverage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Phase 1: Core Identity & Access</strong></td>
+                        <td id="p1-configured">11</td>
+                        <td>28</td>
+                        <td id="p1-resources">701</td>
+                        <td id="p1-coverage">39%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Phase 2: Authentication & Conditional Access</strong></td>
+                        <td id="p2-configured">4</td>
+                        <td>13</td>
+                        <td id="p2-resources">41</td>
+                        <td id="p2-coverage">31%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Phase 3: Advanced Governance & Lifecycle</strong></td>
+                        <td id="p3-configured">1</td>
+                        <td>12</td>
+                        <td id="p3-resources">33</td>
+                        <td id="p3-coverage">8%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // All 53 resource types
+        const resourceTypes = [
+            // Phase 1: Core Identity (28 types)
+            { name: 'AADUser', phase: 1, category: 'Users & Devices', count: 15 },
+            { name: 'AADDevice', phase: 1, category: 'Users & Devices', count: 0 },
+            { name: 'AADUserProvisioningPolicy', phase: 1, category: 'Users & Devices', count: 1 },
+            { name: 'AADDeviceCompliancePolicy', phase: 1, category: 'Users & Devices', count: 0 },
+            { name: 'AADGroup', phase: 1, category: 'Groups', count: 52 },
+            { name: 'AADGroupMembershipRule', phase: 1, category: 'Groups', count: 0 },
+            { name: 'AADApplication', phase: 1, category: 'Applications & Service Principals', count: 9 },
+            { name: 'AADApplicationExtensionProperty', phase: 1, category: 'Applications & Service Principals', count: 0 },
+            { name: 'AADApplicationPreAuthorizedPermission', phase: 1, category: 'Applications & Service Principals', count: 0 },
+            { name: 'AADApplicationOwner', phase: 1, category: 'Applications & Service Principals', count: 0 },
+            { name: 'AADServicePrincipal', phase: 1, category: 'Applications & Service Principals', count: 315 },
+            { name: 'AADEnterpriseApplication', phase: 1, category: 'Applications & Service Principals', count: 310 },
+            { name: 'AADApplicationConsentPolicy', phase: 1, category: 'Applications & Service Principals', count: 0 },
+            { name: 'AADCertificateAndSecret', phase: 1, category: 'Applications & Service Principals', count: 1 },
+            { name: 'AADRoleAssignment', phase: 1, category: 'Roles & Access Control', count: 15 },
+            { name: 'AADDirectoryRole', phase: 1, category: 'Roles & Access Control', count: 0 },
+            { name: 'AADRoleDefinition', phase: 1, category: 'Roles & Access Control', count: 10 },
+            { name: 'AADPrivilegedAccess', phase: 1, category: 'Roles & Access Control', count: 0 },
+            { name: 'AADPIMRoleEligibilitySchedule', phase: 1, category: 'Roles & Access Control', count: 0 },
+            { name: 'AADPIMRoleAssignmentScheduleRequest', phase: 1, category: 'Roles & Access Control', count: 0 },
+            { name: 'AADDomain', phase: 1, category: 'Directory & Tenant', count: 2 },
+            { name: 'AADTenantDetails', phase: 1, category: 'Directory & Tenant', count: 1 },
+            { name: 'AADAdministrativeUnit', phase: 1, category: 'Directory & Tenant', count: 0 },
+            { name: 'AADTenantPartner', phase: 1, category: 'Directory & Tenant', count: 1 },
+            { name: 'AADIdentityProvider', phase: 1, category: 'Identity Providers & Authorization', count: 0 },
+            { name: 'AADAuthorizationPolicy', phase: 1, category: 'Identity Providers & Authorization', count: 0 },
+            { name: 'AADPermissionGrantPolicy', phase: 1, category: 'Identity Providers & Authorization', count: 14 },
+
+            // Phase 2: Authentication (13 types)
+            { name: 'AADAuthenticationPolicy', phase: 2, category: 'Authentication Policies', count: 0 },
+            { name: 'AADAuthenticationStrengthPolicy', phase: 2, category: 'Authentication Policies', count: 3 },
+            { name: 'AADAuthenticationMethodsPolicy', phase: 2, category: 'Authentication Policies', count: 0 },
+            { name: 'AADMFASetting', phase: 2, category: 'Authentication Policies', count: 10 },
+            { name: 'AADPasswordPolicy', phase: 2, category: 'Authentication Policies', count: 0 },
+            { name: 'AADConditionalAccessPolicy', phase: 2, category: 'Conditional Access', count: 14 },
+            { name: 'AADNamedLocation', phase: 2, category: 'Conditional Access', count: 0 },
+            { name: 'AADSignInRiskPolicy', phase: 2, category: 'Conditional Access', count: 0 },
+            { name: 'AADSecurityDefaults', phase: 2, category: 'Security Baseline', count: 0 },
+            { name: 'AADIdentityProtectionPolicy', phase: 2, category: 'Security Baseline', count: 0 },
+            { name: 'AADTokenIssuancePolicy', phase: 2, category: 'Token & Claims', count: 0 },
+            { name: 'AADHomeRealmDiscoveryPolicy', phase: 2, category: 'Token & Claims', count: 0 },
+            { name: 'AADClaimsMappingPolicy', phase: 2, category: 'Token & Claims', count: 0 },
+
+            // Phase 3: Governance (12 types)
+            { name: 'AADEntitlementManagementCatalog', phase: 3, category: 'Entitlement Management', count: 0 },
+            { name: 'AADEntitlementAccessPackage', phase: 3, category: 'Entitlement Management', count: 0 },
+            { name: 'AADLifecycleWorkflow', phase: 3, category: 'Lifecycle & User Flows', count: 0 },
+            { name: 'AADB2XUserFlow', phase: 3, category: 'Lifecycle & User Flows', count: 0 },
+            { name: 'AADRiskDetection', phase: 3, category: 'Risk & Compliance', count: 0 },
+            { name: 'AADAccessReview', phase: 3, category: 'Risk & Compliance', count: 0 },
+            { name: 'AADAccessReviewSetting', phase: 3, category: 'Risk & Compliance', count: 0 },
+            { name: 'AADTermsOfUse', phase: 3, category: 'Risk & Compliance', count: 0 },
+            { name: 'AADCrossTenantAccessPolicy', phase: 3, category: 'Cross-Tenant & Advanced', count: 0 },
+            { name: 'AADMultiTenantOrgPolicy', phase: 3, category: 'Cross-Tenant & Advanced', count: 0 },
+            { name: 'AADCustomSecurityAttribute', phase: 3, category: 'Cross-Tenant & Advanced', count: 0 }
+        ];
+
+        let currentFilter = 'all';
+
+        function getStatus(count) {
+            if (count > 0) return 'configured';
+            return 'not-configured';
+        }
+
+        function renderTypes() {
+            const content = document.getElementById('content');
+            const phases = {
+                1: { name: 'Phase 1: Core Identity & Access (28 types)', types: [] },
+                2: { name: 'Phase 2: Authentication & Conditional Access (13 types)', types: [] },
+                3: { name: 'Phase 3: Advanced Governance & Lifecycle (12 types)', types: [] }
+            };
+
+            resourceTypes.forEach(type => {
+                phases[type.phase].types.push(type);
+            });
+
+            let html = '';
+            for (const [phaseNum, phase] of Object.entries(phases)) {
+                html += `<div class="phase">
+                    <div class="phase-title">${phase.name}</div>
+                    <div class="resource-grid">`;
+
+                phase.types.forEach(type => {
+                    const status = getStatus(type.count);
+                    const hidden = currentFilter !== 'all' && currentFilter !== status ? 'hidden' : '';
+                    const searchTerm = document.getElementById('search')?.value.toLowerCase() || '';
+                    const searchHidden = searchTerm && !type.name.toLowerCase().includes(searchTerm) ? 'hidden' : '';
+
+                    const statusIcon = status === 'configured' ? '✅' : '⭕';
+                    const statusText = status === 'configured' ? `✅ Configured (${type.count} resource${type.count !== 1 ? 's' : ''})` : '⭕ Not Configured';
+
+                    html += `<div class="resource-item ${status} ${hidden} ${searchHidden}" data-status="${status}">
+                        <div class="resource-info">
+                            <div class="resource-name">${type.name}</div>
+                            <div class="resource-status">
+                                <span class="status-badge ${status}">${statusText}</span>
+                            </div>
+                        </div>
+                        <div class="resource-count">${type.count > 0 ? type.count : '-'}</div>
+                    </div>`;
+                });
+
+                html += `</div></div>`;
+            }
+
+            content.innerHTML = html;
+            updateStats();
+        }
+
+        function updateStats() {
+            const configured = resourceTypes.filter(t => t.count > 0).length;
+            const notConfigured = resourceTypes.filter(t => t.count === 0).length;
+            const totalResources = resourceTypes.reduce((sum, t) => sum + t.count, 0);
+            const coverage = Math.round(configured / 53 * 100);
+
+            document.getElementById('configured-count').textContent = configured;
+            document.getElementById('sum-configured').textContent = configured;
+            document.getElementById('sum-not-configured').textContent = notConfigured;
+            document.getElementById('sum-coverage').textContent = coverage + '%';
+        }
+
+        function filterTypes(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderTypes();
+        }
+
+        document.getElementById('search').addEventListener('input', renderTypes);
+
+        // Load initial data
+        fetch('http://localhost:3000/api/backup/m365/history?limit=1')
+            .then(r => r.json())
+            .then(data => {
+                const backup = data.data[0];
+                document.getElementById('backup-id').textContent = backup.backupId;
+                document.getElementById('execution-time').textContent = backup.duration + 's';
+            })
+            .catch(() => {});
+
+        renderTypes();
+    </script>
+</body>
+</html>
