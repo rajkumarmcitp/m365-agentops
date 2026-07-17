@@ -822,7 +822,7 @@ async function loadRestoreResourcesForServiceAndDateBackup() {
       return
     }
 
-    const response = await fetch(`${API_BASE}/api/backup/m365/backup/${backup.backupId}/resources?limit=1000`)
+    const response = await fetch(`${API_BASE}/api/backup/m365/backup/${backup.backupId}/resources?limit=5000`)
     const data = await response.json()
 
     if (data.success && data.data.length > 0) {
@@ -839,7 +839,7 @@ async function loadRestoreResourcesForServiceAndDateBackup() {
 
 async function loadRestoreResourcesFromBackupBackup() {
   try {
-    const response = await fetch(`${API_BASE}/api/backup/m365/backup/${restoreState.selectedBackup}/resources?limit=1000`)
+    const response = await fetch(`${API_BASE}/api/backup/m365/backup/${restoreState.selectedBackup}/resources?limit=5000`)
     const data = await response.json()
 
     if (data.success && data.data.length > 0) {
@@ -920,13 +920,22 @@ function loadRestoreResourceTypesForServiceBackup() {
     restoreState.resourceTypeFilter = 'successful'
   }
 
-  // Create filter dropdown
+  // Count total types with any status
+  const totalTypes = Object.keys(typeStats).length
+  const successfulTypes = Object.values(typeStats).filter(s => s.successful > 0).length
+  const notConfiguredTypes = Object.values(typeStats).filter(s => s.notConfigured > 0).length
+  const errorTypes = Object.values(typeStats).filter(s => s.errors > 0).length
+
+  // Create filter dropdown with counts
   const filterDropdownHtml = `
     <div style="margin-bottom:12px;">
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:8px;">
+        📊 Total: ${totalTypes} types (${Object.values(typeStats).reduce((sum, s) => sum + s.total, 0)} resources)
+      </div>
       <select id="restore-types-filter" style="width:100%;padding:8px 12px;font-size:12px;font-weight:500;border:1px solid var(--color-border-secondary);border-radius:6px;background:var(--color-bg-primary);color:var(--color-text-primary);cursor:pointer;">
-        <option value="successful">✅ Successful</option>
-        <option value="notConfigured">⚠️ Not Configured</option>
-        <option value="errors">❌ Errors</option>
+        <option value="successful">✅ Successful (${successfulTypes})</option>
+        <option value="notConfigured">⚠️ Not Configured (${notConfiguredTypes})</option>
+        <option value="errors">❌ Errors (${errorTypes})</option>
       </select>
     </div>
   `
