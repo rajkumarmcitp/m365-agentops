@@ -200,16 +200,17 @@ export class SecurityCollector {
    */
   async collectApplications() {
     try {
-      console.log('📋 Collecting Azure AD Applications...')
+      console.log('📋 Collecting Azure AD Applications (with pagination)...')
 
-      const response = await this.graphClient
-        .api('/applications')
-        .select('id,appId,displayName,description,createdDateTime,signInAudience,keyCredentials,passwordCredentials,replyUrlsWithType,web,implicitGrantSettings,optionalClaims,publisherDomain')
-        .top(999)
-        .get()
+      const results = await this.getPaginatedResults(
+        this.graphClient
+          .api('/applications')
+          .select('id,appId,displayName,description,createdDateTime,signInAudience,keyCredentials,passwordCredentials,replyUrlsWithType,web,implicitGrantSettings,optionalClaims,publisherDomain')
+          .top(100)
+      )
 
-      if (response.value && response.value.length > 0) {
-        for (const app of response.value) {
+      if (results && results.length > 0) {
+        for (const app of results) {
           // Collect owners
           let owners = []
           try {
@@ -283,7 +284,7 @@ export class SecurityCollector {
             }
           })
         }
-        console.log(`✅ Found ${response.value.length} applications with detailed configuration`)
+        console.log(`✅ Found ${results.length} applications with detailed configuration (paginated)`)
       } else {
         console.log('ℹ️ No applications found')
       }
@@ -1335,15 +1336,16 @@ export class SecurityCollector {
    */
   async collectUsers() {
     try {
-      console.log('📋 Collecting Users (Summary)...')
-      const response = await this.graphClient
-        .api('/users')
-        .select('id,displayName,userPrincipalName,userType,createdDateTime')
-        .top(999)
-        .get()
+      console.log('📋 Collecting Users (with pagination)...')
+      const results = await this.getPaginatedResults(
+        this.graphClient
+          .api('/users')
+          .select('id,displayName,userPrincipalName,userType,createdDateTime')
+          .top(100)
+      )
 
-      if (response.value && response.value.length > 0) {
-        for (const user of response.value) {
+      if (results && results.length > 0) {
+        for (const user of results) {
           this.resources.push({
             type: 'AADUser',
             name: user.displayName,
@@ -1357,7 +1359,7 @@ export class SecurityCollector {
             }
           })
         }
-        console.log(`✅ Found ${response.value.length} users (summary only)`)
+        console.log(`✅ Found ${results.length} users (paginated)`)
       } else {
         console.log('ℹ️ No users found')
       }
@@ -2054,16 +2056,17 @@ export class SecurityCollector {
    */
   async collectGroupsEnhanced() {
     try {
-      console.log('📋 Collecting Entra ID Groups (Enhanced)...')
+      console.log('📋 Collecting Entra ID Groups (Enhanced, with pagination)...')
 
-      const response = await this.graphClient
-        .api('/groups')
-        .select('id,displayName,description,mail,mailEnabled,securityEnabled,groupTypes,createdDateTime,lastModifiedDateTime,isAssignableToRole,visibility,membershipRuleProcessingState,owners,members')
-        .top(999)
-        .get()
+      const results = await this.getPaginatedResults(
+        this.graphClient
+          .api('/groups')
+          .select('id,displayName,description,mail,mailEnabled,securityEnabled,groupTypes,createdDateTime,lastModifiedDateTime,isAssignableToRole,visibility,membershipRuleProcessingState,owners,members')
+          .top(100)
+      )
 
-      if (response.value && response.value.length > 0) {
-        for (const group of response.value) {
+      if (results && results.length > 0) {
+        for (const group of results) {
           // Collect group owners
           let owners = []
           try {
@@ -2108,7 +2111,7 @@ export class SecurityCollector {
             }
           })
         }
-        console.log(`✅ Found ${response.value.length} groups with owner details`)
+        console.log(`✅ Found ${results.length} groups with owner details (paginated)`)
       }
     } catch (error) {
       this.handleError('collectGroupsEnhanced', error)
