@@ -1083,20 +1083,40 @@ function displayRestorePreviewBackup() {
   if (!restoreState.selectedResource) return
 
   const jsonStr = JSON.stringify(restoreState.selectedResource, null, 2)
-  const previewHtml = `<pre style="font-size:11px;white-space:pre-wrap;word-wrap:break-word;color:var(--color-text-secondary);line-height:1.4;margin:0;">${escapeHtml(jsonStr)}</pre>`
+  const highlightedJson = syntaxHighlightJson(jsonStr)
+  const previewHtml = `<pre style="font-size:11px;white-space:pre-wrap;word-wrap:break-word;line-height:1.5;margin:0;background:transparent;">${highlightedJson}</pre>`
 
   document.getElementById('restore-preview-content').innerHTML = previewHtml
 }
 
-function escapeHtml(text) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
+function syntaxHighlightJson(json) {
+  json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+    let cls = 'number'
+    if (/^"/.test(match)) {
+      if (/:$/.test(match)) {
+        cls = 'key'
+      } else {
+        cls = 'string'
+      }
+    } else if (/true|false/.test(match)) {
+      cls = 'boolean'
+    } else if (/null/.test(match)) {
+      cls = 'null'
+    }
+    return `<span style="color:${getJsonColor(cls)}">${match}</span>`
+  })
+}
+
+function getJsonColor(type) {
+  const colors = {
+    'key': '#7ec699',      // Green - object keys
+    'string': '#ce9178',   // Orange - string values
+    'number': '#b5cea8',   // Light green - numbers
+    'boolean': '#569cd6',  // Blue - true/false
+    'null': '#569cd6'      // Blue - null
   }
-  return text.replace(/[&<>"']/g, m => map[m])
+  return colors[type] || 'var(--color-text-secondary)'
 }
 
 function showRestoreDryRunModalBackup(dryRun) {
