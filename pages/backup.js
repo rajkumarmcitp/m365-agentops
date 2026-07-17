@@ -112,10 +112,13 @@ function renderBackupContent(el) {
       <button class="btn ${backupView === 'explorer' ? 'btn-primary' : 'btn-secondary'}" id="view-explorer">
         <i class="ti ti-folder-open"></i> File Explorer
       </button>
+      <button class="btn ${backupView === 'restore' ? 'btn-primary' : 'btn-secondary'}" id="view-restore">
+        <i class="ti ti-restore"></i> Restore Explorer
+      </button>
       <input type="text" class="form-input search" placeholder="Search services..." id="services-search" style="${['services', 'explorer'].includes(backupView) ? '' : 'display:none'}">
     </div>
 
-    ${backupView === 'services' ? renderServicesView() : backupView === 'history' ? renderHistoryView() : renderExplorerView()}
+    ${backupView === 'services' ? renderServicesView() : backupView === 'history' ? renderHistoryView() : backupView === 'explorer' ? renderExplorerView() : renderRestoreExplorerView()}
 
     <!-- Selective Restore Modal -->
     ${renderSelectiveRestoreModal()}
@@ -134,6 +137,11 @@ function renderBackupContent(el) {
 
   el.querySelector('#view-explorer')?.addEventListener('click', () => {
     backupView = 'explorer'
+    renderBackupContent(el)
+  })
+
+  el.querySelector('#view-restore')?.addEventListener('click', () => {
+    backupView = 'restore'
     renderBackupContent(el)
   })
 
@@ -164,6 +172,13 @@ function renderBackupContent(el) {
       showRestoreConfirm(el, backupId)
     })
   })
+
+  // Initialize Restore Explorer if viewing restore
+  if (backupView === 'restore') {
+    setTimeout(() => {
+      initializeRestoreExplorerBackup()
+    }, 100)
+  }
 }
 
 function renderServicesView() {
@@ -469,3 +484,317 @@ function renderExplorerView() {
 
   return html
 }
+
+// ============================================================
+// RESTORE EXPLORER VIEW
+// ============================================================
+
+function renderRestoreExplorerView() {
+  return `
+    <div style="padding:20px;height:100%;display:flex;flex-direction:column;">
+      <div style="display:flex;gap:15px;margin-bottom:20px;align-items:center;">
+        <div style="flex:1;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:8px;">Select Service & Backup</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <select id="restore-service" style="padding:8px 12px;border:1px solid var(--color-border-secondary);border-radius:6px;font-size:13px;background:var(--color-bg-secondary);color:var(--color-text-primary);">
+              <option value="">Select Service...</option>
+              <option value="Security">Security (Entra ID)</option>
+              <option value="Compliance">Compliance</option>
+              <option value="Governance">Governance</option>
+              <option value="Exchange">Exchange Online</option>
+              <option value="SharePoint">SharePoint</option>
+            </select>
+            <select id="restore-backup" style="padding:8px 12px;border:1px solid var(--color-border-secondary);border-radius:6px;font-size:13px;background:var(--color-bg-secondary);color:var(--color-text-primary);">
+              <option value="">Select Backup...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1;display:grid;grid-template-columns:200px 1fr 1fr 300px;gap:15px;min-height:0;">
+        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">📦 Services</div>
+          <div id="restore-services-list" style="flex:1;overflow-y:auto;padding:8px;">
+            <div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Select backup first</div>
+          </div>
+        </div>
+
+        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">📋 Resource Types</div>
+          <div id="restore-types-list" style="flex:1;overflow-y:auto;padding:8px;">
+            <div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Select service</div>
+          </div>
+        </div>
+
+        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">📌 Resources</div>
+          <div id="restore-search-container" style="padding:8px;border-bottom:1px solid var(--color-border-tertiary);display:none;">
+            <input type="text" id="restore-resource-search" placeholder="Search..." style="width:100%;padding:6px;border:1px solid var(--color-border-tertiary);border-radius:4px;font-size:12px;background:var(--color-bg-primary);color:var(--color-text-primary);">
+          </div>
+          <div id="restore-resources-list" style="flex:1;overflow-y:auto;padding:8px;">
+            <div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Select resource type</div>
+          </div>
+        </div>
+
+        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">👁️ Preview</div>
+          <div id="restore-preview-content" style="flex:1;overflow-y:auto;padding:12px;font-size:12px;color:var(--color-text-tertiary);text-align:center;">
+            Select a resource to preview
+          </div>
+          <div style="padding:12px;border-top:1px solid var(--color-border-tertiary);display:flex;gap:8px;">
+            <button id="restore-dry-run-btn" style="flex:1;padding:8px;background:var(--color-primary);color:white;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;disabled:opacity:0.5;" disabled>Dry Run</button>
+            <button id="restore-reset-btn" style="flex:1;padding:8px;background:var(--color-bg-tertiary);color:var(--color-text-primary);border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:12px;background:var(--color-bg-tertiary);border-radius:6px;font-size:11px;margin-top:15px;">
+        <div style="color:var(--color-text-secondary);"><strong>📋 MONITOR MODE</strong> - Viewing configurations from backups</div>
+        <div style="color:var(--color-text-tertiary);margin-top:4px;">Write permission required to perform restore operations</div>
+      </div>
+    </div>
+  `
+}
+
+let restoreState = {
+  selectedBackup: null,
+  selectedService: null,
+  selectedResourceType: null,
+  selectedResource: null,
+  allResources: []
+}
+
+function initializeRestoreExplorerBackup() {
+  const serviceSelect = document.getElementById('restore-service')
+  const backupSelect = document.getElementById('restore-backup')
+  const dryRunBtn = document.getElementById('restore-dry-run-btn')
+  const resetBtn = document.getElementById('restore-reset-btn')
+
+  serviceSelect.addEventListener('change', async () => {
+    const service = serviceSelect.value
+    if (!service) return
+
+    try {
+      const response = await fetch(`${API_BASE}/api/backup/m365/history/${service}?limit=20`)
+      const data = await response.json()
+
+      backupSelect.innerHTML = '<option value="">Select Backup...</option>'
+      if (data.success && data.data) {
+        data.data.forEach(backup => {
+          const option = document.createElement('option')
+          option.value = backup.backupId
+          option.textContent = `${backup.backupId.split('-').pop()} (${backup.resourceCount} resources)`
+          backupSelect.appendChild(option)
+        })
+      }
+    } catch (error) {
+      console.error('Error loading backups:', error)
+    }
+  })
+
+  backupSelect.addEventListener('change', async () => {
+    if (!backupSelect.value) return
+
+    restoreState.selectedBackup = backupSelect.value
+    await loadRestoreServicesBackup()
+  })
+
+  dryRunBtn.addEventListener('click', async () => {
+    if (!restoreState.selectedResource) return
+
+    dryRunBtn.innerHTML = 'Running...'
+    dryRunBtn.disabled = true
+
+    try {
+      const resourceId = restoreState.selectedResource.identity || restoreState.selectedResource.id
+      const response = await fetch(`${API_BASE}/api/backup/m365/restore/${restoreState.selectedBackup}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resourceIds: [resourceId],
+          resourceType: restoreState.selectedResourceType,
+          dryRun: true
+        })
+      })
+
+      const data = await response.json()
+      if (data.success && data.dryRun) {
+        showRestoreDryRunModalBackup(data.dryRun)
+      } else {
+        showToast(`Error: ${data.error || 'Dry run failed'}`, 'error')
+      }
+    } catch (error) {
+      showToast(`Error: ${error.message}`, 'error')
+    } finally {
+      dryRunBtn.innerHTML = 'Dry Run'
+      dryRunBtn.disabled = false
+    }
+  })
+
+  resetBtn.addEventListener('click', () => {
+    restoreState = { selectedBackup: restoreState.selectedBackup, selectedService: null, selectedResourceType: null, selectedResource: null, allResources: [] }
+    document.getElementById('restore-types-list').innerHTML = '<div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;">Select service</div>'
+    document.getElementById('restore-resources-list').innerHTML = '<div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;">Select resource type</div>'
+    document.getElementById('restore-preview-content').innerHTML = 'Select a resource to preview'
+    document.getElementById('restore-dry-run-btn').disabled = true
+  })
+}
+
+async function loadRestoreServicesBackup() {
+  try {
+    const response = await fetch(`${API_BASE}/api/backup/m365/backup/${restoreState.selectedBackup}/resources?limit=1`)
+    const data = await response.json()
+
+    if (data.success && data.data.length > 0) {
+      const firstResource = data.data[0]
+      const service = firstResource.type?.split('AAD')?.[0] === '' ? 'Security' : 'Unknown'
+      restoreState.selectedService = service
+
+      document.getElementById('restore-services-list').innerHTML = `
+        <div style="padding:8px;background:var(--color-primary);color:white;border-radius:4px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;text-overflow:ellipsis;overflow:hidden;">${service}</div>
+      `
+
+      await loadRestoreResourceTypesBackup()
+    }
+  } catch (error) {
+    console.error('Error loading services:', error)
+  }
+}
+
+async function loadRestoreResourceTypesBackup() {
+  try {
+    const response = await fetch(`${API_BASE}/api/backup/m365/backup/${restoreState.selectedBackup}/resources?limit=500`)
+    const data = await response.json()
+
+    if (data.success && data.data.length > 0) {
+      restoreState.allResources = data.data
+
+      const typesCounts = {}
+      data.data.forEach(r => {
+        typesCounts[r.type] = (typesCounts[r.type] || 0) + 1
+      })
+
+      const typesHtml = Object.entries(typesCounts)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([type, count]) => `
+          <div style="padding:8px;background:var(--color-bg-primary);border:1px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;" data-type="${type}">
+            <span>${count > 0 ? '✅' : '⭕'} ${type}</span>
+            <span style="font-size:11px;color:var(--color-text-tertiary);">${count}</span>
+          </div>
+        `).join('')
+
+      document.getElementById('restore-types-list').innerHTML = typesHtml
+
+      document.querySelectorAll('[data-type]').forEach(el => {
+        el.addEventListener('click', () => {
+          restoreState.selectedResourceType = el.dataset.type
+          loadRestoreResourcesBackup()
+          document.querySelectorAll('[data-type]').forEach(e => e.style.background = 'var(--color-bg-primary)')
+          el.style.background = 'var(--color-primary)'
+          el.style.color = 'white'
+        })
+      })
+    }
+  } catch (error) {
+    console.error('Error loading resource types:', error)
+  }
+}
+
+function loadRestoreResourcesBackup() {
+  const filtered = restoreState.allResources.filter(r => r.type === restoreState.selectedResourceType)
+  document.getElementById('restore-search-container').style.display = filtered.length >= 10 ? 'block' : 'none'
+
+  const resourcesHtml = filtered.map(r => `
+    <div style="padding:8px;background:var(--color-bg-primary);border:1px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;margin-bottom:4px;transition:all 0.2s;" data-resource-id="${r.identity || r.id}">
+      <input type="radio" name="restore-resource" value="${r.identity || r.id}" style="margin-right:6px;">
+      <label style="cursor:pointer;">${r.name}</label>
+    </div>
+  `).join('')
+
+  document.getElementById('restore-resources-list').innerHTML = resourcesHtml || '<div style="padding:8px;color:var(--color-text-tertiary);">No resources</div>'
+
+  document.querySelectorAll('input[name="restore-resource"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      restoreState.selectedResource = restoreState.allResources.find(r => (r.identity || r.id) === radio.value)
+      displayRestorePreviewBackup()
+      document.getElementById('restore-dry-run-btn').disabled = false
+    })
+  })
+}
+
+function displayRestorePreviewBackup() {
+  if (!restoreState.selectedResource) return
+
+  const jsonStr = JSON.stringify(restoreState.selectedResource, null, 2)
+  const previewHtml = `<pre style="font-size:10px;white-space:pre-wrap;word-wrap:break-word;color:var(--color-text-secondary);">${jsonStr.substring(0, 1000)}...</pre>`
+
+  document.getElementById('restore-preview-content').innerHTML = previewHtml
+}
+
+function showRestoreDryRunModalBackup(dryRun) {
+  const resourceList = dryRun.resources.map(r => `<div style="padding:8px;background:var(--color-bg-tertiary);border-radius:4px;font-size:11px;margin:4px 0;">
+    <strong>${r.name}</strong><br>
+    <span style="color:var(--color-text-tertiary);">${r.type} - ${r.action}</span>
+  </div>`).join('')
+
+  const message = `
+    <div style="padding:15px;">
+      <div style="margin-bottom:15px;padding:12px;background:var(--color-bg-tertiary);border-radius:6px;font-size:12px;">
+        <strong>📋 MONITOR MODE</strong><br>
+        Showing preview of resources to be restored
+      </div>
+
+      <div style="margin-bottom:15px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Impact:</div>
+        ${resourceList}
+      </div>
+
+      <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:15px;">
+        <strong>⚠️ Permission Required:</strong> ${dryRun.requiresPermission}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button onclick="this.closest('[role=dialog]').remove()" style="padding:8px;background:var(--color-bg-tertiary);border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">Cancel</button>
+        <button onclick="performRestoreBackup('${restoreState.selectedBackup}','${restoreState.selectedResourceType}')" style="padding:8px;background:var(--color-primary);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">Proceed</button>
+      </div>
+    </div>
+  `
+
+  const dialog = document.createElement('div')
+  dialog.setAttribute('role', 'dialog')
+  dialog.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;'
+  dialog.innerHTML = `<div style="background:var(--color-bg-primary);border-radius:8px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.3);">${message}</div>`
+  document.body.appendChild(dialog)
+}
+
+async function performRestoreBackup(backupId, resourceType) {
+  const resourceId = restoreState.selectedResource.identity || restoreState.selectedResource.id
+
+  try {
+    const response = await fetch(`${API_BASE}/api/backup/m365/restore/${backupId}?confirm=true`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        resourceIds: [resourceId],
+        resourceType,
+        targetEnvironment: 'Production',
+        confirm: true
+      })
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      showToast(`✅ Restore Completed\n\nResource: ${restoreState.selectedResource.name}\nRestored: ${data.resourcesRestored} resource(s)`, 'success')
+    } else if (response.status === 403) {
+      showToast(`❌ Permission Denied\n\n${data.error || 'Write permissions required to restore'}`, 'error')
+    } else {
+      showToast(`Error: ${data.error || 'Restore failed'}`, 'error')
+    }
+
+    document.querySelector('[role=dialog]')?.remove()
+  } catch (error) {
+    showToast(`Error: ${error.message}`, 'error')
+  }
+}
+

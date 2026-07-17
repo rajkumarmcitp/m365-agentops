@@ -2273,3 +2273,79 @@ async function handleManualValidation(event, controlId) {
     showToast(`Error: ${error.message}`, 'error')
   }
 }
+
+// ============================================================
+// RESTORE EXPLORER TAB
+// ============================================================
+
+function renderRestoreExplorer() {
+  return `
+    <div style="padding:20px;height:100%;display:flex;flex-direction:column;">
+      <div style="display:flex;gap:15px;margin-bottom:20px;align-items:center;">
+        <div style="flex:1;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:8px;">Select Service & Backup</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <select id="restore-service" style="padding:8px 12px;border:1px solid var(--color-border-secondary);border-radius:6px;font-size:13px;background:var(--color-bg-secondary);color:var(--color-text-primary);">
+              <option value="">Select Service...</option>
+              <option value="Security">Security (Entra ID)</option>
+              <option value="Compliance">Compliance</option>
+              <option value="Governance">Governance</option>
+              <option value="Exchange">Exchange Online</option>
+              <option value="SharePoint">SharePoint</option>
+            </select>
+            <select id="restore-backup" style="padding:8px 12px;border:1px solid var(--color-border-secondary);border-radius:6px;font-size:13px;background:var(--color-bg-secondary);color:var(--color-text-primary);">
+              <option value="">Select Backup...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1;display:grid;grid-template-columns:200px 1fr 1fr 300px;gap:15px;min-height:0;">
+        <!-- Services -->
+        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">📦 Services</div>
+          <div id="restore-services-list" style="flex:1;overflow-y:auto;padding:8px;">
+            <div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Select backup first</div>
+          </div>
+        </div>
+
+        <!-- Resource Types -->
+        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">📋 Resource Types</div>
+          <div id="restore-types-list" style="flex:1;overflow-y:auto;padding:8px;">
+            <div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Select service</div>
+          </div>
+        </div>
+
+        <!-- Resources -->
+        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">📌 Resources</div>
+          <div id="restore-search-container" style="padding:8px;border-bottom:1px solid var(--color-border-tertiary);display:none;">
+            <input type="text" id="restore-resource-search" placeholder="Search..." style="width:100%;padding:6px;border:1px solid var(--color-border-tertiary);border-radius:4px;font-size:12px;background:var(--color-bg-primary);color:var(--color-text-primary);">
+          </div>
+          <div id="restore-resources-list" style="flex:1;overflow-y:auto;padding:8px;">
+            <div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Select resource type</div>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">👁️ Preview</div>
+          <div id="restore-preview-content" style="flex:1;overflow-y:auto;padding:12px;font-size:12px;color:var(--color-text-tertiary);text-align:center;">
+            Select a resource to preview
+          </div>
+          <div style="padding:12px;border-top:1px solid var(--color-border-tertiary);display:flex;gap:8px;">
+            <button id="restore-dry-run-btn" style="flex:1;padding:8px;background:var(--color-primary);color:white;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;disabled:opacity:0.5;" disabled>Dry Run</button>
+            <button id="restore-reset-btn" style="flex:1;padding:8px;background:var(--color-bg-tertiary);color:var(--color-text-primary);border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mode Indicator -->
+      <div style="padding:12px;background:var(--color-bg-tertiary);border-radius:6px;font-size:11px;margin-top:15px;">
+        <div style="color:var(--color-text-secondary);"><strong>📋 MONITOR MODE</strong> - Viewing configurations from backups</div>
+        <div style="color:var(--color-text-tertiary);margin-top:4px;">Write permission required to perform restore operations</div>
+      </div>
+    </div>
+  `
+}
