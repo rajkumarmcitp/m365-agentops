@@ -751,6 +751,12 @@ async function loadServicesForSelectedDateBackup() {
     })
 
     backupsForDate.forEach(backup => {
+      // Skip backups without serviceName
+      if (!backup.serviceName) {
+        console.warn('⚠️ Backup has no serviceName:', backup)
+        return
+      }
+
       // Match backup serviceName to service key exactly
       const matchedService = restoreState.allServices.find(s =>
         s.key.toLowerCase() === backup.serviceName.toLowerCase()
@@ -758,13 +764,20 @@ async function loadServicesForSelectedDateBackup() {
 
       if (matchedService) {
         servicesSet.add(matchedService.displayName)
+      } else {
+        // Service not found - log for debugging
+        console.warn(`⚠️ Service not found in allServices: ${backup.serviceName}`)
+        console.log('Available service keys:', restoreState.allServices.map(s => s.key))
       }
     })
 
     const availableServices = Array.from(servicesSet).sort()
 
+    // Filter out any undefined values
+    const validServices = availableServices.filter(s => s !== undefined && s !== null && s !== 'undefined')
+
     // Display ONLY available services (hide unavailable ones)
-    const servicesHtml = availableServices.map(service => `
+    const servicesHtml = validServices.map(service => `
       <div style="padding:10px;background:var(--color-bg-primary);border-left:3px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;font-weight:400;transition:all 0.2s;text-align:left;color:var(--color-text-primary);" data-service="${service}" onmouseover="this.style.backgroundColor='var(--color-bg-secondary)';this.style.borderLeftColor='var(--color-primary)'" onmouseout="this.style.backgroundColor='var(--color-bg-primary)';this.style.borderLeftColor='var(--color-border-tertiary)'">
         ${service}
       </div>
