@@ -490,12 +490,12 @@ function renderRestoreExplorerView() {
       .restore-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary); }
     </style>
     <div style="padding:24px;height:100%;display:flex;flex-direction:column;background:var(--color-bg-primary);">
-      <!-- Date Selection -->
-      <div style="margin-bottom:24px;">
-        <label style="display:block;font-size:13px;font-weight:700;color:var(--color-text-primary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Select Backup Date</label>
-        <select id="restore-backup" style="width:100%;max-width:350px;padding:12px 14px;border:1px solid var(--color-border-secondary);border-radius:8px;font-size:14px;font-weight:500;background:var(--color-bg-secondary);color:var(--color-text-primary);cursor:pointer;">
-          <option value="">Loading backups...</option>
-        </select>
+      <!-- Date Selection as Tabs -->
+      <div style="margin-bottom:20px;">
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.3px;">Select Backup Date</label>
+        <div id="restore-backup-tabs" style="display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--color-border-secondary);padding-bottom:0;overflow-x:auto;">
+          <button style="padding:10px 14px;font-size:12px;font-weight:500;border:none;background:transparent;color:var(--color-text-secondary);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all 0.2s;" disabled>Loading dates...</button>
+        </div>
       </div>
 
       <!-- Context Header -->
@@ -571,7 +571,6 @@ let restoreState = {
 }
 
 async function initializeRestoreExplorerBackup() {
-  const backupSelect = document.getElementById('restore-backup')
   const dryRunBtn = document.getElementById('restore-dry-run-btn')
   const resetBtn = document.getElementById('restore-reset-btn')
 
@@ -584,14 +583,6 @@ async function initializeRestoreExplorerBackup() {
 
   // Show all available services by default
   displayAllAvailableServicesBackup()
-
-  backupSelect.addEventListener('change', async () => {
-    if (!backupSelect.value) return
-
-    restoreState.selectedDate = backupSelect.value
-    document.getElementById('context-date').textContent = backupSelect.value
-    await loadServicesForSelectedDateBackup()
-  })
 
   dryRunBtn.addEventListener('click', async () => {
     if (!restoreState.selectedResource) return
@@ -656,8 +647,8 @@ async function loadAllDatesForRestoreBackup() {
     const response = await fetch(`${API_BASE}/api/backup/m365/backups?limit=100`)
     const data = await response.json()
 
-    const backupSelect = document.getElementById('restore-backup')
-    backupSelect.innerHTML = '<option value="">Select Backup Date...</option>'
+    const backupTabsContainer = document.getElementById('restore-backup-tabs')
+    backupTabsContainer.innerHTML = ''
 
     if (data.success && data.data) {
       // Group backups by date
@@ -673,13 +664,36 @@ async function loadAllDatesForRestoreBackup() {
       restoreState.backupsByDate = dateMap
       restoreState.allAvailableDates = Object.keys(dateMap).sort().reverse() // Most recent first
 
-      // Populate date dropdown with only dates
+      // Create date tabs
       restoreState.allAvailableDates.forEach(date => {
-        const option = document.createElement('option')
-        option.value = date
-        option.textContent = date
-        backupSelect.appendChild(option)
+        const tab = document.createElement('button')
+        tab.textContent = date
+        tab.value = date
+        tab.style.cssText = 'padding:10px 14px;font-size:12px;font-weight:500;border:none;background:transparent;color:var(--color-text-secondary);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all 0.2s;'
+        tab.addEventListener('mouseover', () => { if (tab.value !== restoreState.selectedDate) tab.style.color = 'var(--color-text-primary)' })
+        tab.addEventListener('mouseout', () => { if (tab.value !== restoreState.selectedDate) tab.style.color = 'var(--color-text-secondary)' })
+        tab.addEventListener('click', async () => {
+          restoreState.selectedDate = tab.value
+          document.getElementById('context-date').textContent = tab.value
+
+          // Update all tabs styling
+          document.querySelectorAll('#restore-backup-tabs button').forEach(b => {
+            b.style.color = 'var(--color-text-secondary)'
+            b.style.borderBottomColor = 'transparent'
+          })
+          tab.style.color = 'var(--color-primary)'
+          tab.style.borderBottomColor = 'var(--color-primary)'
+
+          await loadServicesForSelectedDateBackup()
+        })
+        backupTabsContainer.appendChild(tab)
       })
+
+      // Select first date by default
+      if (restoreState.allAvailableDates.length > 0) {
+        const firstTab = backupTabsContainer.querySelector('button')
+        firstTab.click()
+      }
     }
   } catch (error) {
     console.error('Error loading backup dates:', error)
