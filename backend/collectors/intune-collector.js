@@ -2828,7 +2828,7 @@ export class IntuneCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} compliance policies\`)
+        console.log(`✅ Collected \${result.length} compliance policies`)
       }
     } catch (error) {
       this.handleError('collectComplianceSettingsPowerShell', error)
@@ -2908,7 +2908,7 @@ export class IntuneCollector {
           this.resources.push({
             type: 'IntuneWindowsUpdateSettings',
             name: setting.DisplayName,
-            id: \`windows-update-\${setting.DisplayName}\`,
+            id: `windows-update-\${setting.DisplayName}`,
             configuration: {
               Identity: setting.DisplayName,
               DisplayName: setting.DisplayName,
@@ -2919,7 +2919,7 @@ export class IntuneCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} Windows Update settings\`)
+        console.log(`✅ Collected \${result.length} Windows Update settings`)
       }
     } catch (error) {
       this.handleError('collectWindowsUpdateSettingsPowerShell', error)
@@ -2967,7 +2967,7 @@ export class IntuneCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} security baselines\`)
+        console.log(`✅ Collected \${result.length} security baselines`)
       }
     } catch (error) {
       this.handleError('collectSecurityBaselinesPowerShell', error)
@@ -3015,7 +3015,7 @@ export class IntuneCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} conditional access policies\`)
+        console.log(`✅ Collected \${result.length} conditional access policies`)
       }
     } catch (error) {
       this.handleError('collectConditionalAccessPoliciesPowerShell', error)

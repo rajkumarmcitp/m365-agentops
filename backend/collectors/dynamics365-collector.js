@@ -362,7 +362,7 @@ export class Dynamics365Collector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} environments\`)
+        console.log(`✅ Collected \${result.length} environments`)
       }
     } catch (error) {
       this.handleError('collectEnvironmentSettingsPowerShell', error)
@@ -404,7 +404,7 @@ export class Dynamics365Collector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} security roles\`)
+        console.log(`✅ Collected \${result.length} security roles`)
       }
     } catch (error) {
       this.handleError('collectSecurityRolesPowerShell', error)
@@ -446,7 +446,7 @@ export class Dynamics365Collector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} plugin registrations\`)
+        console.log(`✅ Collected \${result.length} plugin registrations`)
       }
     } catch (error) {
       this.handleError('collectPluginRegistrationsPowerShell', error)
@@ -491,7 +491,7 @@ export class Dynamics365Collector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} web resources\`)
+        console.log(`✅ Collected \${result.length} web resources`)
       }
     } catch (error) {
       this.handleError('collectWebResourcesPowerShell', error)
@@ -539,7 +539,7 @@ export class Dynamics365Collector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} solutions\`)
+        console.log(`✅ Collected \${result.length} solutions`)
       }
     } catch (error) {
       this.handleError('collectSolutionsPowerShell', error)

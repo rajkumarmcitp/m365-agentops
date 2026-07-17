@@ -488,7 +488,7 @@ export class PowerPlatformCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} environments\`)
+        console.log(`✅ Collected \${result.length} environments`)
       }
     } catch (error) {
       this.handleError('collectEnvironmentsPowerShell', error)
@@ -536,7 +536,7 @@ export class PowerPlatformCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} DLP policies\`)
+        console.log(`✅ Collected \${result.length} DLP policies`)
       }
     } catch (error) {
       this.handleError('collectDLPPoliciesPowerShell', error)
@@ -587,7 +587,7 @@ export class PowerPlatformCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} cloud flows\`)
+        console.log(`✅ Collected \${result.length} cloud flows`)
       }
     } catch (error) {
       this.handleError('collectFlowsPowerShell', error)
@@ -638,7 +638,7 @@ export class PowerPlatformCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} Power Apps\`)
+        console.log(`✅ Collected \${result.length} Power Apps`)
       }
     } catch (error) {
       this.handleError('collectAppsPowerShell', error)
@@ -686,7 +686,7 @@ export class PowerPlatformCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} connectors\`)
+        console.log(`✅ Collected \${result.length} connectors`)
       }
     } catch (error) {
       this.handleError('collectConnectorsPowerShell', error)

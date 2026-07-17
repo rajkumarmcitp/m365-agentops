@@ -1698,7 +1698,7 @@ export class SecurityCollector {
         for (const request of result) {
           this.resources.push({
             type: 'AADRoleAssignmentScheduleRequest',
-            name: \`PIM-Assignment-\${request.principalId?.substring(0, 8) || 'Unknown'}\`,
+            name: `PIM-Assignment-\${request.principalId?.substring(0, 8) || 'Unknown'}`,
             id: request.id,
             properties: {
               Identity: request.id,
@@ -1713,7 +1713,7 @@ export class SecurityCollector {
             }
           })
         }
-        console.log(\`✅ Found \${result.length} PIM role assignment schedule requests\`)
+        console.log(`✅ Found \${result.length} PIM role assignment schedule requests`)
       } else {
         console.log('ℹ️ No PIM role assignment schedule requests found')
       }
@@ -2333,7 +2333,7 @@ export class SecurityCollector {
           this.resources.push({
             type: 'AADRiskDetection',
             name: detection.DisplayName,
-            id: \`risk-\${detection.RiskType}\`,
+            id: `risk-\${detection.RiskType}`,
             configuration: {
               Identity: detection.RiskType,
               DisplayName: detection.DisplayName,
@@ -2344,7 +2344,7 @@ export class SecurityCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} risk detections\`)
+        console.log(`✅ Collected \${result.length} risk detections`)
       }
     } catch (error) {
       this.handleError('collectRiskDetectionsPowerShell', error)
@@ -2385,7 +2385,7 @@ export class SecurityCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} privileged access resources\`)
+        console.log(`✅ Collected \${result.length} privileged access resources`)
       }
     } catch (error) {
       this.handleError('collectPrivilegedAccessPowerShell', error)
@@ -2430,7 +2430,7 @@ export class SecurityCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} authentication strength policies\`)
+        console.log(`✅ Collected \${result.length} authentication strength policies`)
       }
     } catch (error) {
       this.handleError('collectAuthenticationStrengthPoliciesPowerShell', error)
@@ -2561,7 +2561,7 @@ export class SecurityCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} device compliance policies\`)
+        console.log(`✅ Collected \${result.length} device compliance policies`)
       }
     } catch (error) {
       this.handleError('collectDeviceCompliancePoliciesPowerShell', error)
@@ -2595,7 +2595,7 @@ export class SecurityCollector {
           this.resources.push({
             type: 'AADGroupMembershipRule',
             name: rule.DisplayName,
-            id: \`rule-\${rule.DisplayName}\`,
+            id: `rule-\${rule.DisplayName}`,
             configuration: {
               Identity: rule.DisplayName,
               GroupName: rule.DisplayName,
@@ -2606,7 +2606,7 @@ export class SecurityCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} dynamic group membership rules\`)
+        console.log(`✅ Collected \${result.length} dynamic group membership rules`)
       }
     } catch (error) {
       this.handleError('collectGroupMembershipRulesPowerShell', error)
@@ -2651,7 +2651,7 @@ export class SecurityCollector {
           })
         }
 
-        console.log(\`✅ Collected \${result.length} application consent policies\`)
+        console.log(`✅ Collected \${result.length} application consent policies`)
       }
     } catch (error) {
       this.handleError('collectApplicationConsentPoliciesPowerShell', error)
@@ -2773,7 +2773,7 @@ export class SecurityCollector {
             }
           })
         }
-        console.log(\`✅ Collected \${result.length} custom security attributes\`)
+        console.log(`✅ Collected \${result.length} custom security attributes`)
       }
     } catch (error) {
       this.handleError('collectCustomSecurityAttributesPowerShell', error)
@@ -2817,7 +2817,7 @@ export class SecurityCollector {
             }
           })
         }
-        console.log(\`✅ Collected \${result.length} access reviews\`)
+        console.log(`✅ Collected \${result.length} access reviews`)
       }
     } catch (error) {
       this.handleError('collectAccessReviewsPowerShell', error)
@@ -2861,7 +2861,7 @@ export class SecurityCollector {
             }
           })
         }
-        console.log(\`✅ Collected \${result.length} terms of use\`)
+        console.log(`✅ Collected \${result.length} terms of use`)
       }
     } catch (error) {
       this.handleError('collectTermsOfUsePowerShell', error)
@@ -2965,7 +2965,7 @@ export class SecurityCollector {
             }
           })
         }
-        console.log(\`✅ Collected \${result.length} named locations\`)
+        console.log(`✅ Collected \${result.length} named locations`)
       }
     } catch (error) {
       this.handleError('collectConditionalAccessNamedLocationsPowerShell', error)

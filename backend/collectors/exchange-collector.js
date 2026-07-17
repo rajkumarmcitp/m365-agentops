@@ -2159,7 +2159,7 @@ export class ExchangeCollector {
           this.resources.push({
             type: 'EXOMailboxPermission',
             name: perm.Mailbox,
-            id: \`\${perm.Mailbox}-\${perm.User}\`,
+            id: `${perm.Mailbox}-${perm.User}`,
             properties: {
               Mailbox: perm.Mailbox,
               User: perm.User,
@@ -3147,7 +3147,7 @@ export class ExchangeCollector {
         for (const assignment of result) {
           this.resources.push({
             type: 'EXOManagementRoleAssignment',
-            name: \`\${assignment.Role}-\${assignment.SecurityPrincipal}\`,
+            name: `\${assignment.Role}-\${assignment.SecurityPrincipal}`,
             id: assignment.Identity,
             properties: {
               Identity: assignment.Identity,
@@ -3686,8 +3686,8 @@ export class ExchangeCollector {
         for (const member of result) {
           this.resources.push({
             type: 'EXODistributionGroupMember',
-            name: \`\${member.GroupName}:\${member.MemberName}\`,
-            id: \`\${member.GroupIdentity}:\${member.MemberIdentity}\`,
+            name: `\${member.GroupName}:\${member.MemberName}`,
+            id: `\${member.GroupIdentity}:\${member.MemberIdentity}`,
             properties: {
               GroupIdentity: member.GroupIdentity,
               GroupName: member.GroupName,
@@ -3930,7 +3930,7 @@ export class ExchangeCollector {
           this.resources.push({
             type: 'EXOMigrationUser',
             name: user.Identity,
-            id: \`\${user.BatchId}:\${user.Identity}\`,
+            id: `\${user.BatchId}:\${user.Identity}`,
             properties: {
               Identity: user.Identity,
               BatchId: user.BatchId,
@@ -4224,8 +4224,8 @@ export class ExchangeCollector {
         for (const member of result) {
           this.resources.push({
             type: 'EXORoleGroupMember',
-            name: \`\${member.RoleGroupName}:\${member.MemberName}\`,
-            id: \`\${member.RoleGroupIdentity}:\${member.MemberIdentity}\`,
+            name: `\${member.RoleGroupName}:\${member.MemberName}`,
+            id: `\${member.RoleGroupIdentity}:\${member.MemberIdentity}`,
             properties: {
               RoleGroupIdentity: member.RoleGroupIdentity,
               RoleGroupName: member.RoleGroupName,

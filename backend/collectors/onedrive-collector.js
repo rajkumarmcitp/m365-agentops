@@ -569,7 +569,7 @@ export class OneDriveCollector {
         for (const quota of result) {
           this.resources.push({
             type: 'ODSiteCollectionQuota',
-            name: \`Quota - \${quota.Identity}\`,
+            name: `Quota - \${quota.Identity}`,
             id: quota.Identity,
             configuration: {
               Identity: quota.Identity,
@@ -582,7 +582,7 @@ export class OneDriveCollector {
           })
         }
 
-        console.log(\`✅ Collected quotas for \${result.length} OneDrive sites\`)
+        console.log(`✅ Collected quotas for \${result.length} OneDrive sites`)
       }
     } catch (error) {
       this.handleError('collectSiteCollectionQuotaPowerShell', error)
