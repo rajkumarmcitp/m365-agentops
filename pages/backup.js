@@ -167,8 +167,8 @@ function renderBackupContent(el) {
 
   // Initialize Restore Explorer if viewing restore
   if (backupView === 'restore') {
-    setTimeout(() => {
-      initializeRestoreExplorerBackup()
+    setTimeout(async () => {
+      await initializeRestoreExplorerBackup()
     }, 100)
   }
 }
@@ -551,14 +551,17 @@ let restoreState = {
   allAvailableDates: []
 }
 
-function initializeRestoreExplorerBackup() {
+async function initializeRestoreExplorerBackup() {
   const backupSelect = document.getElementById('restore-backup')
   const dryRunBtn = document.getElementById('restore-dry-run-btn')
   const resetBtn = document.getElementById('restore-reset-btn')
 
-  // Load all services and backups on initialization
-  loadAllServicesForRestoreBackup()
-  loadAllDatesForRestoreBackup()
+  // Show "Loading services..." initially
+  document.getElementById('restore-services-list').innerHTML = '<div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Loading services...</div>'
+
+  // Load all services and backups on initialization (wait for completion)
+  await loadAllServicesForRestoreBackup()
+  await loadAllDatesForRestoreBackup()
 
   // Show all available services by default
   displayAllAvailableServicesBackup()
