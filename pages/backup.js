@@ -962,6 +962,21 @@ function loadRestoreResourceTypesForServiceBackup() {
   if (filterSelect) {
     filterSelect.value = restoreState.resourceTypeFilter
     filterSelect.addEventListener('change', () => {
+      // Reset selected resource type and resources when filter changes
+      restoreState.selectedResourceType = null
+      restoreState.selectedResource = null
+      document.getElementById('restore-resources-list').innerHTML = '<div style="padding:10px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Select resource type</div>'
+      document.getElementById('restore-preview-content').innerHTML = 'Select resource'
+      document.getElementById('restore-dry-run-btn').disabled = true
+
+      // Clear visual selection highlighting from resource types
+      document.querySelectorAll('[data-type]').forEach(el => {
+        el.style.background = 'var(--color-bg-primary)'
+        el.style.borderLeftColor = 'var(--color-border-tertiary)'
+        el.style.color = 'var(--color-text-primary)'
+        el.style.fontWeight = '400'
+      })
+
       restoreState.resourceTypeFilter = filterSelect.value
       loadRestoreResourceTypesForServiceBackup()
     })
