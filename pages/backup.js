@@ -931,11 +931,8 @@ function loadRestoreResourceTypesForServiceBackup() {
       else if (stats.notConfigured > 0) { statusIcon = '⚠️'; statusColor = '#FFC107' }
 
       return `
-        <div style="padding:10px;background:var(--color-bg-primary);border-left:3px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;font-weight:400;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;color:var(--color-text-primary);" data-type="${type}" onmouseover="this.style.backgroundColor='var(--color-bg-secondary)';this.style.borderLeftColor='${statusColor}'" onmouseout="this.style.backgroundColor='var(--color-bg-primary)';this.style.borderLeftColor='var(--color-border-tertiary)'">
+        <div style="padding:10px;background:var(--color-bg-primary);border-left:3px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;font-weight:400;transition:all 0.2s;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" data-type="${type}" onmouseover="this.style.backgroundColor='var(--color-bg-secondary)';this.style.borderLeftColor='${statusColor}'" onmouseout="this.style.backgroundColor='var(--color-bg-primary)';this.style.borderLeftColor='var(--color-border-tertiary)'" title="${statusIcon} ${type}">
           <span style="font-weight:500;">${statusIcon} ${type}</span>
-          <span style="font-size:11px;color:var(--color-text-tertiary);white-space:nowrap;">
-            ${stats.successful}✓ ${stats.notConfigured}⚠ ${stats.errors}✗
-          </span>
         </div>
       `
     }).join('')
