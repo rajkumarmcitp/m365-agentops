@@ -483,56 +483,74 @@ function renderExplorerView() {
 
 function renderRestoreExplorerView() {
   return `
-    <div style="padding:20px;height:100%;display:flex;flex-direction:column;">
-      <div style="display:flex;gap:15px;margin-bottom:20px;align-items:center;">
-        <div style="flex:1;max-width:300px;">
-          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:8px;">Select Backup Date</label>
-          <select id="restore-backup" style="width:100%;padding:8px 12px;border:1px solid var(--color-border-secondary);border-radius:6px;font-size:13px;background:var(--color-bg-secondary);color:var(--color-text-primary);">
-            <option value="">Loading backups...</option>
-          </select>
-        </div>
+    <style>
+      .restore-scrollbar::-webkit-scrollbar { width: 8px; }
+      .restore-scrollbar::-webkit-scrollbar-track { background: var(--color-bg-primary); }
+      .restore-scrollbar::-webkit-scrollbar-thumb { background: var(--color-border-secondary); border-radius: 4px; }
+      .restore-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary); }
+    </style>
+    <div style="padding:24px;height:100%;display:flex;flex-direction:column;background:var(--color-bg-primary);">
+      <!-- Date Selection -->
+      <div style="margin-bottom:24px;">
+        <label style="display:block;font-size:13px;font-weight:700;color:var(--color-text-primary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Select Backup Date</label>
+        <select id="restore-backup" style="width:100%;max-width:350px;padding:12px 14px;border:1px solid var(--color-border-secondary);border-radius:8px;font-size:14px;font-weight:500;background:var(--color-bg-secondary);color:var(--color-text-primary);cursor:pointer;">
+          <option value="">Loading backups...</option>
+        </select>
       </div>
 
-      <div style="flex:1;display:grid;grid-template-columns:200px 1fr 1fr 300px;gap:15px;min-height:0;">
-        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">📦 Services</div>
-          <div id="restore-services-list" style="flex:1;overflow-y:auto;padding:8px;">
-            <div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Select backup date</div>
+      <!-- Context Header -->
+      <div id="restore-context-header" style="padding:14px;background:var(--color-bg-secondary);border-left:3px solid var(--color-primary);border-radius:6px;margin-bottom:24px;display:none;">
+        <div style="font-size:13px;font-weight:600;color:var(--color-text-primary;">Restoring from: <span id="context-service" style="color:var(--color-primary);">Select a service</span></div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;">Date: <span id="context-date" style="font-weight:600;">Select a date</span></div>
+      </div>
+
+      <!-- Four Column Layout -->
+      <div style="flex:1;display:grid;grid-template-columns:220px 1fr 1fr 320px;gap:20px;min-height:0;margin-bottom:24px;">
+
+        <!-- Services Column -->
+        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">📦 Services</div>
+          <div id="restore-services-list" class="restore-scrollbar" style="flex:1;overflow-y:auto;padding:12px;gap:8px;display:flex;flex-direction:column;">
+            <div style="padding:12px;color:var(--color-text-tertiary);font-size:13px;text-align:center;">Select backup date</div>
           </div>
         </div>
 
-        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">📋 Resource Types</div>
-          <div id="restore-types-list" style="flex:1;overflow-y:auto;padding:8px;">
-            <div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Select service</div>
+        <!-- Resource Types Column -->
+        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">📋 Resource Types</div>
+          <div id="restore-types-list" class="restore-scrollbar" style="flex:1;overflow-y:auto;padding:12px;gap:8px;display:flex;flex-direction:column;">
+            <div style="padding:12px;color:var(--color-text-tertiary);font-size:13px;text-align:center;">Select a service</div>
           </div>
         </div>
 
-        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">📌 Resources</div>
-          <div id="restore-search-container" style="padding:8px;border-bottom:1px solid var(--color-border-tertiary);display:none;">
-            <input type="text" id="restore-resource-search" placeholder="Search..." style="width:100%;padding:6px;border:1px solid var(--color-border-tertiary);border-radius:4px;font-size:12px;background:var(--color-bg-primary);color:var(--color-text-primary);">
+        <!-- Resources Column -->
+        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">📌 Resources</div>
+          <div id="restore-search-container" style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);display:none;">
+            <input type="text" id="restore-resource-search" placeholder="Search resources..." style="width:100%;padding:8px 12px;border:1px solid var(--color-border-tertiary);border-radius:6px;font-size:13px;background:var(--color-bg-primary);color:var(--color-text-primary);">
           </div>
-          <div id="restore-resources-list" style="flex:1;overflow-y:auto;padding:8px;">
-            <div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;text-align:center;">Select resource type</div>
+          <div id="restore-resources-list" class="restore-scrollbar" style="flex:1;overflow-y:auto;padding:12px;gap:8px;display:flex;flex-direction:column;">
+            <div style="padding:12px;color:var(--color-text-tertiary);font-size:13px;text-align:center;">Select a resource type</div>
           </div>
         </div>
 
-        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);">👁️ Preview</div>
-          <div id="restore-preview-content" style="flex:1;overflow-y:auto;padding:12px;font-size:12px;color:var(--color-text-tertiary);text-align:center;">
+        <!-- Preview Column -->
+        <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">👁️ Preview</div>
+          <div id="restore-preview-content" class="restore-scrollbar" style="flex:1;overflow-y:auto;padding:16px;font-size:13px;color:var(--color-text-tertiary);text-align:center;">
             Select a resource to preview
           </div>
-          <div style="padding:12px;border-top:1px solid var(--color-border-tertiary);display:flex;gap:8px;">
-            <button id="restore-dry-run-btn" style="flex:1;padding:8px;background:var(--color-primary);color:white;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;disabled:opacity:0.5;" disabled>Dry Run</button>
-            <button id="restore-reset-btn" style="flex:1;padding:8px;background:var(--color-bg-tertiary);color:var(--color-text-primary);border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Reset</button>
+          <div style="padding:12px;border-top:1px solid var(--color-border-tertiary);display:flex;gap:10px;">
+            <button id="restore-dry-run-btn" style="flex:1;padding:10px;background:var(--color-primary);color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='var(--color-primary)';this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" disabled>Dry Run</button>
+            <button id="restore-reset-btn" style="flex:1;padding:10px;background:var(--color-bg-tertiary);color:var(--color-text-primary);border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='var(--color-border-secondary)'" onmouseout="this.style.background='var(--color-bg-tertiary)'">Reset</button>
           </div>
         </div>
       </div>
 
-      <div style="padding:12px;background:var(--color-bg-tertiary);border-radius:6px;font-size:11px;margin-top:15px;">
-        <div style="color:var(--color-text-secondary);"><strong>📋 MONITOR MODE</strong> - Viewing configurations from backups</div>
-        <div style="color:var(--color-text-tertiary);margin-top:4px;">Write permission required to perform restore operations</div>
+      <!-- Info Footer -->
+      <div style="padding:14px 16px;background:var(--color-bg-secondary);border-left:3px solid var(--color-primary);border-radius:6px;font-size:12px;">
+        <div style="color:var(--color-text-secondary);font-weight:600;">📋 MONITOR MODE</div>
+        <div style="color:var(--color-text-tertiary);margin-top:6px;">Viewing configurations from backups • Write permission required to perform restore</div>
       </div>
     </div>
   `
@@ -571,6 +589,7 @@ async function initializeRestoreExplorerBackup() {
     if (!backupSelect.value) return
 
     restoreState.selectedDate = backupSelect.value
+    document.getElementById('context-date').textContent = backupSelect.value
     await loadServicesForSelectedDateBackup()
   })
 
@@ -726,34 +745,35 @@ async function loadServicesForSelectedDateBackup() {
 
     const availableServices = Array.from(servicesSet).sort()
 
-    // Display services with full opacity for available ones, grayed out for unavailable
-    const allServices = restoreState.allServiceNames.length > 0 ? restoreState.allServiceNames : []
+    // Display ONLY available services (hide unavailable ones)
+    const servicesHtml = availableServices.map(service => `
+      <div style="padding:12px;background:var(--color-bg-primary);border:2px solid var(--color-border-secondary);border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;text-align:center;" data-service="${service}" onmouseover="this.style.borderColor='var(--color-primary)';this.style.backgroundColor='var(--color-bg-secondary)'" onmouseout="this.style.borderColor='var(--color-border-secondary)';this.style.backgroundColor='var(--color-bg-primary)'">
+        ${service}
+      </div>
+    `).join('')
 
-    const servicesHtml = allServices.map(service => {
-      const isAvailable = availableServices.includes(service)
-      return `
-        <div style="padding:8px;background:var(--color-bg-primary);border:1px solid var(--color-border-tertiary);border-radius:4px;cursor:${isAvailable ? 'pointer' : 'not-allowed'};font-size:12px;font-weight:500;transition:all 0.2s;opacity:${isAvailable ? '1' : '0.5'};" data-service="${service}" ${isAvailable ? '' : 'data-unavailable="true"'}>
-          ${service}
-        </div>
-      `
-    }).join('')
+    document.getElementById('restore-services-list').innerHTML = servicesHtml || '<div style="padding:12px;color:var(--color-text-tertiary);font-size:13px;text-align:center;">No services available</div>'
 
-    document.getElementById('restore-services-list').innerHTML = servicesHtml
-
-    // Enable only available services
+    // Add event listeners to available services
     document.querySelectorAll('[data-service]').forEach(el => {
-      if (!el.dataset.unavailable) {
-        el.style.pointerEvents = 'auto'
-        el.addEventListener('click', () => {
-          restoreState.selectedService = el.dataset.service
-          loadRestoreResourcesForServiceAndDateBackup()
-          document.querySelectorAll('[data-service]').forEach(e => e.style.background = 'var(--color-bg-primary)')
-          el.style.background = 'var(--color-primary)'
-          el.style.color = 'white'
+      el.addEventListener('click', () => {
+        restoreState.selectedService = el.dataset.service
+        loadRestoreResourcesForServiceAndDateBackup()
+
+        // Update visual selection
+        document.querySelectorAll('[data-service]').forEach(e => {
+          e.style.background = 'var(--color-bg-primary)'
+          e.style.borderColor = 'var(--color-border-secondary)'
+          e.style.color = 'var(--color-text-primary)'
         })
-      } else {
-        el.style.pointerEvents = 'none'
-      }
+        el.style.background = 'var(--color-primary)'
+        el.style.borderColor = 'var(--color-primary)'
+        el.style.color = 'white'
+
+        // Update context header
+        document.getElementById('restore-context-header').style.display = 'block'
+        document.getElementById('context-service').textContent = el.dataset.service
+      })
     })
   } catch (error) {
     console.error('Error loading services for date:', error)
@@ -882,10 +902,10 @@ function loadRestoreResourceTypesForServiceBackup() {
 
   // Create filter buttons
   const filterButtonsHtml = `
-    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
-      <button data-filter="successful" style="padding:6px 10px;font-size:11px;border:1px solid #4CAF50;background:#4CAF50;color:white;border-radius:4px;cursor:pointer;font-weight:600;">✅ Successful</button>
-      <button data-filter="notConfigured" style="padding:6px 10px;font-size:11px;border:1px solid #FFC107;background:transparent;color:#FFC107;border-radius:4px;cursor:pointer;font-weight:600;">⚠️ Not Configured</button>
-      <button data-filter="errors" style="padding:6px 10px;font-size:11px;border:1px solid #f44336;background:transparent;color:#f44336;border-radius:4px;cursor:pointer;font-weight:600;">❌ Errors</button>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button data-filter="successful" style="padding:8px 14px;font-size:12px;font-weight:600;border:1px solid #4CAF50;background:#4CAF50;color:white;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">✅ Successful</button>
+      <button data-filter="notConfigured" style="padding:8px 14px;font-size:12px;font-weight:600;border:1px solid #FFC107;background:transparent;color:#FFC107;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.backgroundColor='rgba(255,193,7,0.1)'" onmouseout="this.style.backgroundColor='transparent'">⚠️ Not Configured</button>
+      <button data-filter="errors" style="padding:8px 14px;font-size:12px;font-weight:600;border:1px solid #f44336;background:transparent;color:#f44336;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.backgroundColor='rgba(244,67,54,0.1)'" onmouseout="this.style.backgroundColor='transparent'">❌ Errors</button>
     </div>
   `
 
@@ -902,14 +922,17 @@ function loadRestoreResourceTypesForServiceBackup() {
   const typesHtml = filteredTypes
     .map(([type, stats]) => {
       let statusIcon = '✅'
-      if (stats.errors > 0) statusIcon = '❌'
-      else if (stats.notConfigured > 0) statusIcon = '⚠️'
+      let statusColor = '#4CAF50'
+      if (stats.errors > 0) { statusIcon = '❌'; statusColor = '#f44336' }
+      else if (stats.notConfigured > 0) { statusIcon = '⚠️'; statusColor = '#FFC107' }
 
       return `
-        <div style="padding:8px;background:var(--color-bg-primary);border:1px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;" data-type="${type}">
-          <span>${statusIcon} ${type}</span>
-          <span style="font-size:10px;color:var(--color-text-tertiary);">
-            ${stats.successful}✓ ${stats.notConfigured}⚠ ${stats.errors}✗
+        <div style="padding:12px;background:var(--color-bg-primary);border:2px solid var(--color-border-tertiary);border-radius:6px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;" data-type="${type}" onmouseover="this.style.borderColor='${statusColor}';this.style.backgroundColor='var(--color-bg-secondary)'" onmouseout="this.style.borderColor='var(--color-border-tertiary)';this.style.backgroundColor='var(--color-bg-primary)'">
+          <span style="font-weight:500;">${statusIcon} ${type}</span>
+          <span style="font-size:11px;color:var(--color-text-tertiary);white-space:nowrap;">
+            <span title="Successful">${stats.successful}✓</span>
+            <span title="Not Configured" style="margin:0 4px;">${stats.notConfigured}⚠</span>
+            <span title="Errors">${stats.errors}✗</span>
           </span>
         </div>
       `
@@ -917,11 +940,20 @@ function loadRestoreResourceTypesForServiceBackup() {
 
   document.getElementById('restore-types-list').innerHTML = filterButtonsHtml + typesHtml
 
-  // Add filter button listeners
+  // Add filter button listeners with active state styling
   document.querySelectorAll('[data-filter]').forEach(btn => {
-    if (btn.dataset.filter === restoreState.resourceTypeFilter) {
-      btn.style.background = btn.dataset.filter === 'successful' ? '#4CAF50' : 'transparent'
-      btn.style.color = btn.dataset.filter === 'successful' ? 'white' : (btn.dataset.filter === 'notConfigured' ? '#FFC107' : '#f44336')
+    const isActive = btn.dataset.filter === restoreState.resourceTypeFilter
+    if (isActive) {
+      if (btn.dataset.filter === 'successful') {
+        btn.style.background = '#4CAF50'
+        btn.style.color = 'white'
+      } else if (btn.dataset.filter === 'notConfigured') {
+        btn.style.background = 'rgba(255,193,7,0.2)'
+        btn.style.color = '#FFC107'
+      } else {
+        btn.style.background = 'rgba(244,67,54,0.2)'
+        btn.style.color = '#f44336'
+      }
     }
     btn.addEventListener('click', () => {
       restoreState.resourceTypeFilter = btn.dataset.filter
@@ -933,8 +965,15 @@ function loadRestoreResourceTypesForServiceBackup() {
     el.addEventListener('click', () => {
       restoreState.selectedResourceType = el.dataset.type
       loadRestoreResourcesBackup()
-      document.querySelectorAll('[data-type]').forEach(e => e.style.background = 'var(--color-bg-primary)')
+
+      // Update visual selection
+      document.querySelectorAll('[data-type]').forEach(e => {
+        e.style.background = 'var(--color-bg-primary)'
+        e.style.borderColor = 'var(--color-border-tertiary)'
+        e.style.color = 'var(--color-text-primary)'
+      })
       el.style.background = 'var(--color-primary)'
+      el.style.borderColor = 'var(--color-primary)'
       el.style.color = 'white'
     })
   })
