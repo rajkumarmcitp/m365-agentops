@@ -703,16 +703,28 @@ async function loadServicesForSelectedDateBackup() {
     // Load resources from first backup to determine available services
     restoreState.selectedBackups = backupsForDate
 
-    // Extract services from backups
+    // Extract services from backups using proper mapping
     const servicesSet = new Set()
+
+    // Create key-to-displayName mapping from allServices
+    const keyToDisplayName = {}
+    restoreState.allServices.forEach(s => {
+      keyToDisplayName[s.key] = s.displayName
+    })
+
     backupsForDate.forEach(backup => {
-      const service = backup.serviceName
-      if (service === 'Security') {
-        servicesSet.add('Security (Entra ID)')
-      } else if (service === 'Exchange') {
-        servicesSet.add('Exchange Online')
+      // Try to match backup serviceName to service key
+      const matchedService = restoreState.allServices.find(s =>
+        s.key === backup.serviceName ||
+        s.key === backup.serviceName.toLowerCase() ||
+        s.displayName.toLowerCase().includes(backup.serviceName.toLowerCase())
+      )
+
+      if (matchedService) {
+        servicesSet.add(matchedService.displayName)
       } else {
-        servicesSet.add(service)
+        // Fallback: just use the backup serviceName as-is
+        servicesSet.add(backup.serviceName)
       }
     })
 
@@ -760,10 +772,15 @@ async function loadRestoreResourcesForServiceAndDateBackup() {
     const service = restoreState.selectedService
     const backupsForDate = restoreState.backupsByDate[date] || []
 
-    // Find backup for this service
+    // Find backup for this service using same matching logic
     const backup = backupsForDate.find(b => {
-      const s = b.serviceName === 'Security' ? 'Security (Entra ID)' : b.serviceName
-      return s === service
+      // Find the service object that matches this backup
+      const matchedService = restoreState.allServices.find(s =>
+        s.key === b.serviceName ||
+        s.key === b.serviceName.toLowerCase() ||
+        s.displayName.toLowerCase().includes(b.serviceName.toLowerCase())
+      )
+      return matchedService && matchedService.displayName === service
     })
 
     if (!backup) {
