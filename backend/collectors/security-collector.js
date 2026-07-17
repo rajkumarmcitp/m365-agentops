@@ -83,18 +83,20 @@ export class SecurityCollector {
       await this.collectUsers()
       await this.collectDevices()
       await this.collectUserProvisioningPoliciesPowerShell()
-      await this.collectDeviceCompliancePoliciesPowerShell()
+      await this.collectDeviceCompliancePolicies()
 
       // Groups (2 resources)
       await this.collectGroupsEnhanced()
-      await this.collectGroupMembershipRulesPowerShell()
+      await this.collectGroupMembershipRules()
 
-      // Applications & Service Principals (6 resources)
+      // Applications & Service Principals (8 resources)
       await this.collectApplications()
+      await this.collectApplicationExtensionProperties()
+      await this.collectApplicationPreAuthorizedPermissions()
       await this.collectApplicationOwners()
       await this.collectServicePrincipals()
       await this.collectEnterpriseApplications()
-      await this.collectApplicationConsentPoliciesPowerShell()
+      await this.collectApplicationConsentPolicies()
       await this.collectApplicationProxySettingsPowerShell()
       await this.collectCertificateAndSecretsPowerShell()
 
@@ -102,7 +104,7 @@ export class SecurityCollector {
       await this.collectRoleAssignmentsFull()
       await this.collectDirectoryRoles()
       await this.collectRoleDefinitions()
-      await this.collectPrivilegedAccessPowerShell()
+      await this.collectPrivilegedAccessGroups()
       await this.collectPIMRoleEligibilitySchedules()
       await this.collectPIMRoleAssignmentScheduleRequests()
 
@@ -124,22 +126,22 @@ export class SecurityCollector {
       await this.collectAuthenticationPolicy()
       await this.collectAuthenticationStrengthPolicies()
       await this.collectAuthenticationMethodsPolicies()
-      await this.collectMFASettingsPowerShell()
-      await this.collectPasswordPoliciesPowerShell()
+      await this.collectMFASettings()
+      await this.collectPasswordPolicies()
 
       // Conditional Access & Named Locations (3 resources)
       await this.collectConditionalAccessPolicies()
       await this.collectNamedLocations()
-      await this.collectSignInRiskPoliciesPowerShell()
+      await this.collectSignInRiskPolicy()
 
       // Security Baseline (2 resources)
-      await this.collectSecurityDefaultsPowerShell()
+      await this.collectSecurityDefaults()
       await this.collectIdentityProtectionPolicy()
 
       // Token & Claims Policies (3 resources)
-      await this.collectTokenIssuancePolicy()
-      await this.collectTokenLifetimePolicy()
-      await this.collectClaimsMappingPolicies()
+      await this.collectTokenIssuancePolicies()
+      await this.collectHomeRealmDiscoveryPolicies()
+      await this.collectClaimsPolicy()
 
       // Phase 3: Advanced Governance & Lifecycle (13 resources - 100% coverage)
       console.log('📊 Starting Security Phase 3 collection (advanced governance & lifecycle)...')
@@ -153,8 +155,8 @@ export class SecurityCollector {
       await this.collectB2XUserFlows()
 
       // Risk & Compliance (4 resources)
-      await this.collectRiskDetectionsPowerShell()
-      await this.collectAccessReviews()
+      await this.collectRiskDetections()
+      await this.collectAccessReviewsDefinitions()
       await this.collectAccessReviewSettings()
       await this.collectTermsOfUse()
 
@@ -162,9 +164,8 @@ export class SecurityCollector {
       await this.collectCrossTenantAccessPoliciesPowerShell()
       await this.collectMultiTenantOrgPolicies()
 
-      // Advanced Features (3 resources)
+      // Advanced Features (2 resources)
       await this.collectCustomSecurityAttributes()
-      await this.collectAppManagementPolicies()
 
       const executionTime = Math.round((Date.now() - startTime) / 1000)
       console.log(`✅ Security backup complete (${executionTime}s, ${this.resources.length} resources)`)
@@ -3343,6 +3344,449 @@ export class SecurityCollector {
       }
     } catch (error) {
       this.handleError('collectAuthenticationStrengthPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Application Extension Properties via Graph API
+   */
+  async collectApplicationExtensionProperties() {
+    try {
+      console.log('📋 Collecting Application Extension Properties...')
+      const results = await this.getPaginatedResults(
+        this.graphClient
+          .api('/applications')
+          .top(100)
+      )
+
+      if (results && results.length > 0) {
+        for (const app of results) {
+          if (app.extensionProperties && app.extensionProperties.length > 0) {
+            for (const prop of app.extensionProperties) {
+              this.resources.push({
+                type: 'AADApplicationExtensionProperty',
+                name: prop.name,
+                id: `${app.id}-${prop.name}`,
+                configuration: { ...prop, appId: app.id }
+              })
+            }
+          }
+        }
+      }
+      console.log('✅ Collected application extension properties')
+    } catch (error) {
+      this.handleError('collectApplicationExtensionProperties', error)
+    }
+  }
+
+  /**
+   * Collect Application Pre-Authorized Permissions via Graph API
+   */
+  async collectApplicationPreAuthorizedPermissions() {
+    try {
+      console.log('📋 Collecting Application Pre-Authorized Permissions...')
+      const results = await this.getPaginatedResults(
+        this.graphClient
+          .api('/applications')
+          .top(100)
+      )
+
+      if (results && results.length > 0) {
+        for (const app of results) {
+          if (app.api && app.api.preAuthorizedApplications && app.api.preAuthorizedApplications.length > 0) {
+            for (const preAuth of app.api.preAuthorizedApplications) {
+              this.resources.push({
+                type: 'AADApplicationPreAuthorizedPermission',
+                name: preAuth.appId,
+                id: `${app.id}-${preAuth.appId}`,
+                configuration: { ...preAuth, appId: app.id }
+              })
+            }
+          }
+        }
+      }
+      console.log('✅ Collected application pre-authorized permissions')
+    } catch (error) {
+      this.handleError('collectApplicationPreAuthorizedPermissions', error)
+    }
+  }
+
+  /**
+   * Collect Token Issuance Policies via Graph API
+   */
+  async collectTokenIssuancePolicies() {
+    try {
+      console.log('📋 Collecting Token Issuance Policies...')
+      const response = await this.graphClient
+        .api('/policies/tokenIssuancePolicies')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const policy of response.value) {
+          this.resources.push({
+            type: 'AADTokenIssuancePolicy',
+            name: policy.displayName || policy.id,
+            id: policy.id,
+            configuration: policy
+          })
+        }
+        console.log(`✅ Found ${response.value.length} token issuance policies`)
+      }
+    } catch (error) {
+      this.handleError('collectTokenIssuancePolicies', error)
+    }
+  }
+
+  /**
+   * Collect Home Realm Discovery Policies via Graph API
+   */
+  async collectHomeRealmDiscoveryPolicies() {
+    try {
+      console.log('📋 Collecting Home Realm Discovery Policies...')
+      const response = await this.graphClient
+        .api('/policies/homeRealmDiscoveryPolicies')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const policy of response.value) {
+          this.resources.push({
+            type: 'AADHomeRealmDiscoveryPolicy',
+            name: policy.displayName || policy.id,
+            id: policy.id,
+            configuration: policy
+          })
+        }
+        console.log(`✅ Found ${response.value.length} home realm discovery policies`)
+      }
+    } catch (error) {
+      this.handleError('collectHomeRealmDiscoveryPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Claims Mapping Policies via Graph API
+   */
+  async collectClaimsPolicy() {
+    try {
+      console.log('📋 Collecting Claims Mapping Policies...')
+      const response = await this.graphClient
+        .api('/policies/claimsMappingPolicies')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const policy of response.value) {
+          this.resources.push({
+            type: 'AADClaimsMappingPolicy',
+            name: policy.displayName || policy.id,
+            id: policy.id,
+            configuration: policy
+          })
+        }
+        console.log(`✅ Found ${response.value.length} claims mapping policies`)
+      }
+    } catch (error) {
+      this.handleError('collectClaimsPolicy', error)
+    }
+  }
+
+  /**
+   * Collect MFA Settings via Graph API
+   */
+  async collectMFASettings() {
+    try {
+      console.log('📋 Collecting MFA Settings...')
+      const response = await this.graphClient
+        .api('/policies/authenticationMethodsPolicy')
+        .get()
+
+      if (response) {
+        const mfaConfig = response.authenticationMethodConfigurations || []
+        for (const config of mfaConfig) {
+          this.resources.push({
+            type: 'AADMFASetting',
+            name: config.id || 'MFA-Config',
+            id: config.id || 'mfa-default',
+            configuration: config
+          })
+        }
+        console.log('✅ Collected MFA settings')
+      }
+    } catch (error) {
+      this.handleError('collectMFASettings', error)
+    }
+  }
+
+  /**
+   * Collect Password Policies via Graph API
+   */
+  async collectPasswordPolicies() {
+    try {
+      console.log('📋 Collecting Password Policies...')
+      const response = await this.graphClient
+        .api('/policies/passwordRuleSettings')
+        .get()
+
+      if (response) {
+        this.resources.push({
+          type: 'AADPasswordPolicy',
+          name: 'Password Policy',
+          id: 'password-default',
+          configuration: response
+        })
+        console.log('✅ Collected password policies')
+      }
+    } catch (error) {
+      this.handleError('collectPasswordPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Device Compliance Policies via Graph API
+   */
+  async collectDeviceCompliancePolicies() {
+    try {
+      console.log('📋 Collecting Device Compliance Policies...')
+      const response = await this.graphClient
+        .api('/deviceManagement/deviceCompliancePolicies')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const policy of response.value) {
+          this.resources.push({
+            type: 'AADDeviceCompliancePolicy',
+            name: policy.displayName || policy.id,
+            id: policy.id,
+            configuration: policy
+          })
+        }
+        console.log(`✅ Found ${response.value.length} device compliance policies`)
+      }
+    } catch (error) {
+      this.handleError('collectDeviceCompliancePolicies', error)
+    }
+  }
+
+  /**
+   * Collect Custom Security Attributes via Graph API
+   */
+  async collectCustomSecurityAttributes() {
+    try {
+      console.log('📋 Collecting Custom Security Attributes...')
+      const response = await this.graphClient
+        .api('/directory/customSecurityAttributeDefinitions')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const attr of response.value) {
+          this.resources.push({
+            type: 'AADCustomSecurityAttribute',
+            name: attr.displayName || attr.name,
+            id: attr.id,
+            configuration: attr
+          })
+        }
+        console.log(`✅ Found ${response.value.length} custom security attributes`)
+      }
+    } catch (error) {
+      this.handleError('collectCustomSecurityAttributes', error)
+    }
+  }
+
+  /**
+   * Collect PIM Role Eligibility Schedules via Graph API
+   */
+  async collectPIMRoleEligibilitySchedules() {
+    try {
+      console.log('📋 Collecting PIM Role Eligibility Schedules...')
+      const response = await this.graphClient
+        .api('/roleManagement/directory/roleEligibilitySchedules')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const schedule of response.value) {
+          this.resources.push({
+            type: 'AADPIMRoleEligibilitySchedule',
+            name: `${schedule.roleDefinitionId}`,
+            id: schedule.id,
+            configuration: schedule
+          })
+        }
+        console.log(`✅ Found ${response.value.length} PIM role eligibility schedules`)
+      }
+    } catch (error) {
+      this.handleError('collectPIMRoleEligibilitySchedules', error)
+    }
+  }
+
+  /**
+   * Collect Risk Detections via Graph API
+   */
+  async collectRiskDetections() {
+    try {
+      console.log('📋 Collecting Risk Detections...')
+      const response = await this.graphClient
+        .api('/identityProtection/riskDetections')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const risk of response.value) {
+          this.resources.push({
+            type: 'AADRiskDetection',
+            name: `${risk.riskType}`,
+            id: risk.id,
+            configuration: risk
+          })
+        }
+        console.log(`✅ Found ${response.value.length} risk detections`)
+      }
+    } catch (error) {
+      this.handleError('collectRiskDetections', error)
+    }
+  }
+
+  /**
+   * Collect Access Reviews via Graph API
+   */
+  async collectAccessReviewsDefinitions() {
+    try {
+      console.log('📋 Collecting Access Review Definitions...')
+      const response = await this.graphClient
+        .api('/identityGovernance/accessReviews/definitions')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const review of response.value) {
+          this.resources.push({
+            type: 'AADAccessReview',
+            name: review.displayName || review.id,
+            id: review.id,
+            configuration: review
+          })
+        }
+        console.log(`✅ Found ${response.value.length} access review definitions`)
+      }
+    } catch (error) {
+      this.handleError('collectAccessReviewsDefinitions', error)
+    }
+  }
+
+  /**
+   * Collect Privileged Access via Graph API
+   */
+  async collectPrivilegedAccessGroups() {
+    try {
+      console.log('📋 Collecting Privileged Access...')
+      const response = await this.graphClient
+        .api('/identityGovernance/privilegedAccess/group/eligibilitySchedules')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const access of response.value) {
+          this.resources.push({
+            type: 'AADPrivilegedAccess',
+            name: access.id,
+            id: access.id,
+            configuration: access
+          })
+        }
+        console.log(`✅ Found ${response.value.length} privileged access items`)
+      }
+    } catch (error) {
+      this.handleError('collectPrivilegedAccessGroups', error)
+    }
+  }
+
+  /**
+   * Collect Group Membership Rules via Graph API
+   */
+  async collectGroupMembershipRules() {
+    try {
+      console.log('📋 Collecting Group Membership Rules...')
+      const results = await this.getPaginatedResults(
+        this.graphClient
+          .api('/groups')
+          .filter("membershipRuleProcessingState eq 'On'")
+          .top(100)
+      )
+
+      if (results && results.length > 0) {
+        for (const group of results) {
+          if (group.membershipRule) {
+            this.resources.push({
+              type: 'AADGroupMembershipRule',
+              name: group.displayName,
+              id: group.id,
+              configuration: {
+                groupId: group.id,
+                groupName: group.displayName,
+                membershipRule: group.membershipRule,
+                membershipRuleProcessingState: group.membershipRuleProcessingState
+              }
+            })
+          }
+        }
+        console.log(`✅ Found ${results.length} groups with membership rules`)
+      }
+    } catch (error) {
+      this.handleError('collectGroupMembershipRules', error)
+    }
+  }
+
+  /**
+   * Collect Application Consent Policies via Graph API
+   */
+  async collectApplicationConsentPolicies() {
+    try {
+      console.log('📋 Collecting Application Consent Policies...')
+      const results = await this.getPaginatedResults(
+        this.graphClient
+          .api('/applications')
+          .top(100)
+      )
+
+      if (results && results.length > 0) {
+        for (const app of results) {
+          if (app.isAuthorizationServicePrincipalRequired) {
+            this.resources.push({
+              type: 'AADApplicationConsentPolicy',
+              name: app.displayName,
+              id: app.id,
+              configuration: {
+                appId: app.id,
+                displayName: app.displayName,
+                isAuthorizationServicePrincipalRequired: app.isAuthorizationServicePrincipalRequired
+              }
+            })
+          }
+        }
+      }
+      console.log('✅ Collected application consent policies')
+    } catch (error) {
+      this.handleError('collectApplicationConsentPolicies', error)
+    }
+  }
+
+  /**
+   * Collect Security Defaults via Graph API
+   */
+  async collectSecurityDefaults() {
+    try {
+      console.log('📋 Collecting Security Defaults...')
+      const response = await this.graphClient
+        .api('/policies/identitySecurityDefaultsEnforcementPolicy')
+        .get()
+
+      if (response) {
+        this.resources.push({
+          type: 'AADSecurityDefaults',
+          name: 'Security Defaults',
+          id: response.id || 'security-defaults',
+          configuration: response
+        })
+        console.log('✅ Collected security defaults')
+      }
+    } catch (error) {
+      this.handleError('collectSecurityDefaults', error)
     }
   }
 
