@@ -747,7 +747,7 @@ async function loadServicesForSelectedDateBackup() {
 
     // Display ONLY available services (hide unavailable ones)
     const servicesHtml = availableServices.map(service => `
-      <div style="padding:12px;background:var(--color-bg-primary);border:2px solid var(--color-border-secondary);border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;text-align:center;" data-service="${service}" onmouseover="this.style.borderColor='var(--color-primary)';this.style.backgroundColor='var(--color-bg-secondary)'" onmouseout="this.style.borderColor='var(--color-border-secondary)';this.style.backgroundColor='var(--color-bg-primary)'">
+      <div style="padding:10px;background:var(--color-bg-primary);border-left:3px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;font-weight:400;transition:all 0.2s;text-align:left;color:var(--color-text-primary);" data-service="${service}" onmouseover="this.style.backgroundColor='var(--color-bg-secondary)';this.style.borderLeftColor='var(--color-primary)'" onmouseout="this.style.backgroundColor='var(--color-bg-primary)';this.style.borderLeftColor='var(--color-border-tertiary)'">
         ${service}
       </div>
     `).join('')
@@ -763,12 +763,13 @@ async function loadServicesForSelectedDateBackup() {
         // Update visual selection
         document.querySelectorAll('[data-service]').forEach(e => {
           e.style.background = 'var(--color-bg-primary)'
-          e.style.borderColor = 'var(--color-border-secondary)'
+          e.style.borderLeftColor = 'var(--color-border-tertiary)'
           e.style.color = 'var(--color-text-primary)'
         })
         el.style.background = 'var(--color-primary)'
-        el.style.borderColor = 'var(--color-primary)'
+        el.style.borderLeftColor = 'var(--color-primary)'
         el.style.color = 'white'
+        el.style.fontWeight = '600'
 
         // Update context header
         document.getElementById('restore-context-header').style.display = 'block'
@@ -927,12 +928,10 @@ function loadRestoreResourceTypesForServiceBackup() {
       else if (stats.notConfigured > 0) { statusIcon = '⚠️'; statusColor = '#FFC107' }
 
       return `
-        <div style="padding:12px;background:var(--color-bg-primary);border:2px solid var(--color-border-tertiary);border-radius:6px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;" data-type="${type}" onmouseover="this.style.borderColor='${statusColor}';this.style.backgroundColor='var(--color-bg-secondary)'" onmouseout="this.style.borderColor='var(--color-border-tertiary)';this.style.backgroundColor='var(--color-bg-primary)'">
+        <div style="padding:10px;background:var(--color-bg-primary);border-left:3px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;font-weight:400;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;color:var(--color-text-primary);" data-type="${type}" onmouseover="this.style.backgroundColor='var(--color-bg-secondary)';this.style.borderLeftColor='${statusColor}'" onmouseout="this.style.backgroundColor='var(--color-bg-primary)';this.style.borderLeftColor='var(--color-border-tertiary)'">
           <span style="font-weight:500;">${statusIcon} ${type}</span>
           <span style="font-size:11px;color:var(--color-text-tertiary);white-space:nowrap;">
-            <span title="Successful">${stats.successful}✓</span>
-            <span title="Not Configured" style="margin:0 4px;">${stats.notConfigured}⚠</span>
-            <span title="Errors">${stats.errors}✗</span>
+            ${stats.successful}✓ ${stats.notConfigured}⚠ ${stats.errors}✗
           </span>
         </div>
       `
@@ -969,12 +968,14 @@ function loadRestoreResourceTypesForServiceBackup() {
       // Update visual selection
       document.querySelectorAll('[data-type]').forEach(e => {
         e.style.background = 'var(--color-bg-primary)'
-        e.style.borderColor = 'var(--color-border-tertiary)'
+        e.style.borderLeftColor = 'var(--color-border-tertiary)'
         e.style.color = 'var(--color-text-primary)'
+        e.style.fontWeight = '400'
       })
       el.style.background = 'var(--color-primary)'
-      el.style.borderColor = 'var(--color-primary)'
+      el.style.borderLeftColor = 'var(--color-primary)'
       el.style.color = 'white'
+      el.style.fontWeight = '600'
     })
   })
 }
