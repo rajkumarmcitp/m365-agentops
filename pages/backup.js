@@ -1110,11 +1110,11 @@ function syntaxHighlightJson(json) {
 
 function getJsonColor(type) {
   const colors = {
-    'key': '#7ec699',      // Green - object keys
-    'string': '#ce9178',   // Orange - string values
-    'number': '#b5cea8',   // Light green - numbers
-    'boolean': '#569cd6',  // Blue - true/false
-    'null': '#569cd6'      // Blue - null
+    'key': '#00d954',      // Bright green - object keys
+    'string': '#ff8c42',   // Bright orange - string values
+    'number': '#66ff00',   // Bright lime - numbers
+    'boolean': '#00b4ff',  // Bright cyan - true/false
+    'null': '#00b4ff'      // Bright cyan - null
   }
   return colors[type] || 'var(--color-text-secondary)'
 }
