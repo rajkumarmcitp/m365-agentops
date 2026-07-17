@@ -33,6 +33,7 @@ import { initMessages } from './pages/messages.js'
 import { initTasks } from './pages/tasks.js'
 import { initBackup } from './pages/backup.js'
 import { initBackupConfig } from './pages/backup-config.js'
+import { initM365DSCCoverage } from './pages/m365dsc-coverage.js'
 import { initNotifications, stopNotifications } from './components/notifications.js'
 import { initApplications } from './pages/applications.js'
 import { initIntune } from './pages/intune.js'
@@ -210,6 +211,7 @@ const PAGE_INIT = {
   settings: initSettings,
   backup: initBackup,
   'backup-config': initBackupConfig,
+  'm365dsc-coverage': initM365DSCCoverage,
 }
 
 // Export configuration utilities
@@ -541,7 +543,7 @@ function renderAllPages() {
   const pages = [
     'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','privaccts','m365config',
     'msgcenter','messages','tasks','applications','intune','licenses','agents','agent-details','approvals','portal','myreqs','myaccount','chat',
-    'graphapi','sso','setup-wizard','audit','settings','backup','backup-config'
+    'graphapi','sso','setup-wizard','audit','settings','backup','backup-config','m365dsc-coverage'
   ]
   return pages.map(p => `<div class="page" id="page-${p}"></div>`).join('')
 }

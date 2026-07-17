@@ -77,6 +77,7 @@ import { SecurityCollector } from './collectors/security-collector.js'
 import { PowerPlatformCollector } from './collectors/powerplatform-collector.js'
 import { TenantSettingsCollector } from './collectors/tenantsettings-collector.js'
 import { Dynamics365Collector } from './collectors/dynamics365-collector.js'
+import M365DSCCollector from './collectors/m365dsc-collector.js'
 import {
   setExecutorGraphClient,
   validateCreateDG, executeCreateDG,
@@ -354,11 +355,13 @@ app.use(cors({
     'http://localhost:5173',    // Vite dev server
     'http://localhost:5174',    // Vite fallback port
     'http://localhost:5175',    // Vite fallback port 2
+    'http://localhost:9000',    // Static file server
     'http://localhost:3000',    // Backend itself
     'http://localhost:3001',    // Backend API server
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174',
     'http://127.0.0.1:5175',
+    'http://127.0.0.1:9000',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
     'https://proud-river-0f55f1e10.7.azurestaticapps.net' // Production frontend
@@ -20142,6 +20145,26 @@ app.use('/api/backup/m365', (req, res, next) => {
 // TEST: Direct route to verify routing works
 app.get('/api/backup/test', (req, res) => {
   res.json({ success: true, message: 'Direct backup test route works!' })
+})
+
+// ============================================================
+// M365DSC Coverage Analysis
+// ============================================================
+app.post('/api/m365dsc/collect', async (req, res) => {
+  try {
+    console.log('🚀 M365DSC Collection Request')
+
+    const collector = new M365DSCCollector()
+    const result = await collector.collect()
+
+    res.json(result)
+  } catch (error) {
+    console.error('❌ M365DSC Collection Error:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
 })
 
 // ============================================================

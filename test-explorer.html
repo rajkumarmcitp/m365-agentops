@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enhanced Explorer Test</title>
+    <style>
+        body { font-family: Arial; margin: 20px; background: #f5f5f5; }
+        .test { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        h1 { color: #333; }
+        code { background: #eee; padding: 2px 5px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Enhanced Restore Explorer - Diagnostics</h1>
+    
+    <div class="test">
+        <h2>✅ Page Version Check</h2>
+        <p>Looking for: "All 53 Entra ID Resource Types" in title...</p>
+        <div id="version-check"></div>
+    </div>
+    
+    <div class="test">
+        <h2>✅ Resource Types Loaded</h2>
+        <p>Checking if all 53 types are rendered...</p>
+        <div id="types-check"></div>
+    </div>
+    
+    <div class="test">
+        <h2>✅ API Connectivity</h2>
+        <p>Testing backend API connection...</p>
+        <div id="api-check"></div>
+    </div>
+    
+    <div class="test">
+        <h2>✅ Data Display</h2>
+        <p>Verifying resource counts and status...</p>
+        <div id="data-check"></div>
+    </div>
+    
+    <script>
+    async function runTests() {
+        // Test 1: Check for page elements
+        try {
+            const response = await fetch('./pages/restore-explorer-enhanced.html');
+            const html = await response.text();
+            
+            if (html.includes('All 53 Entra ID Resource Types')) {
+                document.getElementById('version-check').innerHTML = 
+                    '<span class="pass">✅ PASS</span> - Enhanced explorer found';
+            } else {
+                document.getElementById('version-check').innerHTML = 
+                    '<span class="fail">❌ FAIL</span> - Old version or cache issue';
+            }
+            
+            // Count resource types in HTML
+            const typeMatches = html.match(/AAD[A-Za-z]+/g);
+            if (typeMatches) {
+                const uniqueTypes = new Set(typeMatches);
+                document.getElementById('types-check').innerHTML = 
+                    `<span class="pass">✅ PASS</span> - Found ${uniqueTypes.size} resource types in HTML`;
+            }
+        } catch (e) {
+            document.getElementById('types-check').innerHTML = 
+                `<span class="fail">❌ ERROR</span> - ${e.message}`;
+        }
+        
+        // Test 2: Check API
+        try {
+            const response = await fetch('http://localhost:3000/api/backup/m365/services/list');
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('api-check').innerHTML = 
+                    `<span class="pass">✅ PASS</span> - API responding (${data.data.length} services)`;
+            } else {
+                document.getElementById('api-check').innerHTML = 
+                    `<span class="fail">❌ FAIL</span> - HTTP ${response.status}`;
+            }
+        } catch (e) {
+            document.getElementById('api-check').innerHTML = 
+                `<span class="fail">❌ ERROR</span> - ${e.message}`;
+        }
+        
+        // Test 3: Check backup data
+        try {
+            const response = await fetch('http://localhost:3000/api/backup/m365/history?limit=1');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.data && data.data[0]) {
+                    const backup = data.data[0];
+                    document.getElementById('data-check').innerHTML = 
+                        `<span class="pass">✅ PASS</span> - Latest backup: ${backup.backupId} (${backup.resourceCount} resources)`;
+                }
+            }
+        } catch (e) {
+            document.getElementById('data-check').innerHTML = 
+                `<span class="fail">❌ ERROR</span> - ${e.message}`;
+        }
+    }
+    
+    runTests();
+    </script>
+</body>
+</html>

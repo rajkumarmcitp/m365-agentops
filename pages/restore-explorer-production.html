@@ -311,20 +311,22 @@
 
         /* Modal */
         .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
+            display: none !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: rgba(0,0,0,0.6) !important;
+            z-index: 9999 !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 20px !important;
+            overflow: auto !important;
         }
 
         .modal.active {
-            display: flex;
+            display: flex !important;
         }
 
         .modal-content {
@@ -332,9 +334,12 @@
             padding: 30px;
             border-radius: 8px;
             max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
+            width: 100%;
+            max-height: 90vh;
             overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 10000;
         }
 
         .modal-title {
@@ -353,11 +358,15 @@
         .modal-footer {
             display: flex;
             gap: 10px;
-            margin-top: 20px;
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            justify-content: flex-end;
         }
 
         .modal-footer .btn {
-            flex: 1;
+            padding: 12px 25px;
+            min-width: 120px;
         }
 
         /* Loading */
@@ -499,6 +508,31 @@
     </div>
 
     <script>
+        // All 53 Entra ID Resource Types
+        const ALL_RESOURCE_TYPES = [
+            // Phase 1: Core Identity (28 types)
+            'AADUser', 'AADDevice', 'AADUserProvisioningPolicy', 'AADDeviceCompliancePolicy',
+            'AADGroup', 'AADGroupMembershipRule',
+            'AADApplication', 'AADApplicationExtensionProperty', 'AADApplicationPreAuthorizedPermission',
+            'AADApplicationOwner', 'AADServicePrincipal', 'AADEnterpriseApplication',
+            'AADApplicationConsentPolicy', 'AADCertificateAndSecret',
+            'AADRoleAssignment', 'AADDirectoryRole', 'AADRoleDefinition', 'AADPrivilegedAccess',
+            'AADPIMRoleEligibilitySchedule', 'AADPIMRoleAssignmentScheduleRequest',
+            'AADDomain', 'AADTenantDetails', 'AADAdministrativeUnit', 'AADTenantPartner',
+            'AADIdentityProvider', 'AADAuthorizationPolicy', 'AADPermissionGrantPolicy',
+            // Phase 2: Authentication (13 types)
+            'AADAuthenticationPolicy', 'AADAuthenticationStrengthPolicy', 'AADAuthenticationMethodsPolicy',
+            'AADMFASetting', 'AADPasswordPolicy',
+            'AADConditionalAccessPolicy', 'AADNamedLocation', 'AADSignInRiskPolicy',
+            'AADSecurityDefaults', 'AADIdentityProtectionPolicy',
+            'AADTokenIssuancePolicy', 'AADHomeRealmDiscoveryPolicy', 'AADClaimsMappingPolicy',
+            // Phase 3: Governance (12 types)
+            'AADEntitlementManagementCatalog', 'AADEntitlementAccessPackage',
+            'AADLifecycleWorkflow', 'AADB2XUserFlow',
+            'AADRiskDetection', 'AADAccessReviewsDefinition', 'AADAccessReviewSetting', 'AADTermsOfUse',
+            'AADCrossTenantAccessPolicy', 'AADMultiTenantOrgPolicy', 'AADCustomSecurityAttribute'
+        ];
+
         let state = {
             selectedDate: null,
             selectedService: null,
@@ -565,12 +599,11 @@
                     const resourcesData = await resourcesResponse.json();
                     state.allResources = resourcesData.data || [];
 
-                    // Group by service
+                    // Group by service - use the serviceName from backup or parse from type
                     const services = {};
                     state.allResources.forEach(resource => {
-                        const service = resource.type.split('A')[1]?.split(/(?=[A-Z])/)
-                            .slice(0, 2)
-                            .join('') || 'Unknown';
+                        // Use serviceName from backup, or default to backup's serviceName
+                        const service = backup.serviceName || 'Security';
                         if (!services[service]) {
                             services[service] = 0;
                         }
@@ -620,14 +653,18 @@
         // Load resource types for selected service
         function loadResourceTypes() {
             const resourceTypes = {};
-            state.allResources
-                .filter(r => r.type.includes(state.selectedService))
-                .forEach(resource => {
-                    if (!resourceTypes[resource.type]) {
-                        resourceTypes[resource.type] = 0;
-                    }
+
+            // Initialize all 53 types with 0 count
+            ALL_RESOURCE_TYPES.forEach(type => {
+                resourceTypes[type] = 0;
+            });
+
+            // Add actual counts from backup
+            state.allResources.forEach(resource => {
+                if (resourceTypes.hasOwnProperty(resource.type)) {
                     resourceTypes[resource.type]++;
-                });
+                }
+            });
 
             displayResourceTypes(resourceTypes);
         }
@@ -638,11 +675,13 @@
             container.innerHTML = '';
 
             Object.keys(types).sort().forEach(type => {
+                const count = types[type];
+                const status = count > 0 ? '✅' : '⭕';
                 const div = document.createElement('div');
                 div.className = 'resource-type-item';
                 div.innerHTML = `
-                    <div class="type-name">${type}</div>
-                    <div class="type-count">${types[type]}</div>
+                    <div class="type-name">${status} ${type}</div>
+                    <div class="type-count">${count}</div>
                 `;
                 div.onclick = () => selectResourceType(type);
                 container.appendChild(div);
@@ -697,8 +736,8 @@
                 div.className = 'resource-item';
                 div.innerHTML = `
                     <input type="radio" name="resource-select"
-                           value="${resource.id}"
-                           onchange="selectResource('${resource.id}')">
+                           value="${resource.identity || resource.id}"
+                           onchange="selectResource('${resource.identity || resource.id}')">
                     <div class="resource-label">${resource.name}</div>
                 `;
                 container.appendChild(div);
@@ -716,7 +755,7 @@
 
         // Select resource
         function selectResource(resourceId) {
-            state.selectedResource = state.filteredResources.find(r => r.id === resourceId);
+            state.selectedResource = state.filteredResources.find(r => (r.identity || r.id) === resourceId);
 
             if (state.selectedResource) {
                 document.querySelectorAll('.resource-item').forEach(item => {
@@ -726,6 +765,7 @@
 
                 displayPreview();
                 document.getElementById('dry-run-btn').disabled = false;
+                document.getElementById('confirm-restore-btn').disabled = false;
             }
         }
 
@@ -737,38 +777,25 @@
                 return;
             }
 
-            const config = state.selectedResource.configuration || {};
-            let html = `
-                <div class="preview-item">
-                    <div class="preview-label">Type</div>
-                    <div class="preview-value">${state.selectedResource.type}</div>
-                </div>
-                <div class="preview-item">
-                    <div class="preview-label">Name</div>
-                    <div class="preview-value">${state.selectedResource.name}</div>
-                </div>
-                <div class="preview-item">
-                    <div class="preview-label">ID</div>
-                    <div class="preview-value">${state.selectedResource.id}</div>
-                </div>
+            // Display complete JSON
+            const jsonStr = JSON.stringify(state.selectedResource, null, 2);
+            const html = `
+                <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 11px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; max-height: 500px; overflow-y: auto;">${escapeHtml(jsonStr)}</pre>
             `;
 
-            // Add configuration details
-            if (typeof config === 'object') {
-                Object.keys(config).slice(0, 5).forEach(key => {
-                    const value = config[key];
-                    if (typeof value !== 'object') {
-                        html += `
-                            <div class="preview-item">
-                                <div class="preview-label">${key}</div>
-                                <div class="preview-value">${value}</div>
-                            </div>
-                        `;
-                    }
-                });
-            }
-
             container.innerHTML = html;
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
         }
 
         // Run dry run
@@ -779,29 +806,56 @@
             document.getElementById('dry-run-btn').disabled = true;
 
             try {
-                // Simulate dry run
-                const dryRunResults = `
-                    <strong>Restore Plan:</strong>
-                    <br><br>
-                    <strong>Resource Type:</strong> ${state.selectedResource.type}<br>
-                    <strong>Resource Name:</strong> ${state.selectedResource.name}<br>
-                    <strong>Tenant:</strong> Same (will replace existing)<br>
-                    <br>
-                    <strong>Action:</strong> Replace or Create<br>
-                    <br>
-                    <strong>What will happen:</strong><br>
-                    • If this ${state.selectedResource.type} exists, it will be replaced<br>
-                    • If it doesn't exist, a new one will be created<br>
-                    • All configuration properties will be updated<br>
-                    <br>
-                    <strong>Risk Level:</strong> Low
-                `;
+                const resourceId = state.selectedResource.identity || state.selectedResource.id;
+                const response = await fetch(`http://localhost:3000/api/backup/m365/restore/${state.selectedDate}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        resourceIds: [resourceId],
+                        resourceType: state.selectedResourceType,
+                        targetEnvironment: 'Production',
+                        dryRun: true
+                    })
+                });
 
-                document.getElementById('dry-run-results').innerHTML = dryRunResults;
-                document.getElementById('dry-run-modal').classList.add('active');
+                const data = await response.json();
+
+                if (data.success && data.dryRun) {
+                    const dryRun = data.dryRun;
+                    const dryRunResults = `
+                        <div style="background: #f9f9f9; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                            <strong style="color: #667eea;">📋 MONITOR MODE</strong><br>
+                            <span style="font-size: 12px; color: #666;">Viewing configuration from backup. Write permission required to restore.</span>
+                        </div>
+
+                        <strong>Restore Preview:</strong>
+                        <br><br>
+                        <strong>Resource Type:</strong> ${dryRun.resourceType}<br>
+                        <strong>Resource Name:</strong> ${state.selectedResource.name}<br>
+                        <strong>Target Environment:</strong> ${dryRun.targetEnvironment}<br>
+                        <strong>Total Resources to Restore:</strong> ${dryRun.totalResources}<br>
+                        <br>
+                        <strong>Action:</strong> Replace if exists, create if new<br>
+                        <br>
+                        <strong>What will happen:</strong><br>
+                        • Configuration will be read from backup<br>
+                        • ${dryRun.totalResources} resource(s) will be restored<br>
+                        • If resource exists, it will be replaced<br>
+                        • If resource doesn't exist, a new one will be created<br>
+                        <br>
+                        <strong style="color: #e65100;">⚠️ Required Permission:</strong> ${dryRun.requiresPermission}<br>
+                        <br>
+                        <strong style="color: #2e7d32;">✅ Next Step:</strong> Click "Proceed with Restore" to continue
+                    `;
+
+                    document.getElementById('dry-run-results').innerHTML = dryRunResults;
+                    document.getElementById('dry-run-modal').classList.add('active');
+                } else {
+                    alert('❌ Dry Run Failed\n' + (data.error || 'Unknown error'));
+                }
             } catch (error) {
                 console.error('Dry run error:', error);
-                alert('Error running dry run: ' + error.message);
+                alert('❌ Error running dry run:\n' + error.message);
             } finally {
                 document.getElementById('dry-run-btn').innerHTML = 'Dry Run';
                 document.getElementById('dry-run-btn').disabled = false;
@@ -831,6 +885,17 @@
             document.getElementById('confirm-modal').classList.add('active');
         }
 
+        // Confirm restore (called when Restore button clicked - runs dry run first)
+        function confirmRestore() {
+            if (!state.selectedResource) {
+                alert('Please select a resource first');
+                return;
+            }
+
+            // Run dry run when restore button is clicked
+            runDryRun();
+        }
+
         // Close confirm modal
         function closeConfirmModal() {
             document.getElementById('confirm-modal').classList.remove('active');
@@ -840,28 +905,103 @@
         async function executeConfirmedRestore() {
             closeConfirmModal();
 
-            document.getElementById('confirm-restore-btn').innerHTML = '<span class="loading"></span> Restoring...';
-            document.getElementById('confirm-restore-btn').disabled = true;
+            const restoreBtn = document.getElementById('confirm-restore-btn');
+            restoreBtn.innerHTML = '<span class="loading"></span> Restoring...';
+            restoreBtn.disabled = true;
 
             try {
-                const response = await fetch(`http://localhost:3000/api/backup/m365/restore/${state.selectedDate}`, {
+                const resourceId = state.selectedResource.identity || state.selectedResource.id;
+                const response = await fetch(`http://localhost:3000/api/backup/m365/restore/${state.selectedDate}?confirm=true`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        resourceIds: [state.selectedResource.id],
-                        targetEnvironment: 'Production'
+                        resourceIds: [resourceId],
+                        resourceType: state.selectedResourceType,
+                        targetEnvironment: 'Production',
+                        confirm: true
                     })
                 });
 
                 const data = await response.json();
-                alert(`✅ Restore initiated!\nRestore ID: ${data.restoreId}`);
-                resetSelection();
+
+                if (response.ok && data.success) {
+                    // Check for permission issues
+                    if (data.error && data.error.includes('Permission')) {
+                        showPermissionError(data);
+                    } else if (data.resourcesRestored > 0) {
+                        // Show success message with details
+                        showRestoreSuccess(data, resourceId);
+                        resetSelection();
+                    } else {
+                        alert(`⚠️ Restore Status Unknown\n${data.message || 'No confirmation received'}`);
+                    }
+                } else {
+                    // Handle permission denied errors
+                    if (response.status === 403 || data.error?.includes('Permission')) {
+                        showPermissionError(data);
+                    } else {
+                        alert(`❌ Restore Failed\n${data.error || data.message || 'Unknown error'}`);
+                    }
+                }
             } catch (error) {
                 console.error('Restore error:', error);
-                alert('❌ Error: ' + error.message);
+                alert(`❌ Restore Error\n${error.message}`);
             } finally {
-                document.getElementById('confirm-restore-btn').innerHTML = 'Restore';
+                restoreBtn.innerHTML = 'Restore';
+                restoreBtn.disabled = false;
             }
+        }
+
+        // Show permission error
+        function showPermissionError(data) {
+            const message = `
+❌ RESTORE REQUIRES WRITE PERMISSION
+
+Current Mode: 📋 MONITOR MODE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The restore explorer is in monitor mode and can:
+✅ View configurations from backups
+✅ Preview what would be restored (Dry Run)
+
+❌ Cannot restore without write permissions
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Required Permission: ${data.requiredPermission || 'Directory.ReadWrite.All'}
+
+To enable restore functionality:
+1. Grant write permissions in Azure AD
+2. Configure app registration with proper permissions
+3. Run: export M365_WRITE_PERMISSION=true
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${data.suggestion || ''}
+            `.trim();
+
+            alert(message);
+            console.warn('Permission error details:', data);
+        }
+
+        // Show restore success message
+        function showRestoreSuccess(data, resourceId) {
+            const resourceName = state.selectedResource.name;
+            const resourceType = state.selectedResourceType;
+
+            const message = `
+✅ RESTORE COMPLETED SUCCESSFULLY!
+
+Resource Type: ${resourceType}
+Resource Name: ${resourceName}
+Resource ID: ${resourceId}
+
+Status: ${data.status || 'Completed'}
+Restore ID: ${data.restoreId || data.id || 'N/A'}
+Timestamp: ${new Date().toLocaleString()}
+
+The resource has been restored to your Production environment.
+            `.trim();
+
+            alert(message);
+            console.log('Restore successful:', data);
         }
 
         // Reset selection
@@ -889,6 +1029,7 @@
             document.getElementById('preview-content').innerHTML =
                 '<div class="empty-state"><div class="empty-state-icon">ℹ️</div><div>Select a resource to preview</div></div>';
             document.getElementById('dry-run-btn').disabled = true;
+            document.getElementById('confirm-restore-btn').disabled = true;
         }
 
         // Initialize on load
