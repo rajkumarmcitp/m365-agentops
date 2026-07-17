@@ -37,6 +37,34 @@ export class SecurityCollector {
   }
 
   /**
+   * Helper method to get all items with pagination
+   */
+  async getPaginatedResults(apiRequest) {
+    try {
+      const allResults = []
+      let response = await apiRequest.get()
+
+      while (true) {
+        if (response.value && response.value.length > 0) {
+          allResults.push(...response.value)
+        }
+
+        // Check if there's a nextLink for pagination
+        if (response['@odata.nextLink']) {
+          response = await this.graphClient.api(response['@odata.nextLink']).get()
+        } else {
+          break
+        }
+      }
+
+      return allResults
+    } catch (error) {
+      console.error(`Error in pagination: ${error.message}`)
+      return []
+    }
+  }
+
+  /**
    * Main collect method - gather all security configurations
    */
   async collect() {
@@ -270,16 +298,17 @@ export class SecurityCollector {
    */
   async collectServicePrincipals() {
     try {
-      console.log('📋 Collecting Azure AD Service Principals...')
+      console.log('📋 Collecting Azure AD Service Principals (with pagination)...')
 
-      const response = await this.graphClient
-        .api('/servicePrincipals')
-        .select('id,appId,displayName,appOwnerOrganizationId,createdDateTime,accountEnabled,keyCredentials,passwordCredentials,servicePrincipalType,appRoleAssignmentRequired,replyUrls')
-        .top(999)
-        .get()
+      const results = await this.getPaginatedResults(
+        this.graphClient
+          .api('/servicePrincipals')
+          .select('id,appId,displayName,appOwnerOrganizationId,createdDateTime,accountEnabled,keyCredentials,passwordCredentials,servicePrincipalType,appRoleAssignmentRequired,replyUrls')
+          .top(100)
+      )
 
-      if (response.value && response.value.length > 0) {
-        for (const sp of response.value) {
+      if (results && results.length > 0) {
+        for (const sp of results) {
           // Collect owners
           let owners = []
           try {
@@ -352,7 +381,7 @@ export class SecurityCollector {
             }
           })
         }
-        console.log(`✅ Found ${response.value.length} service principals with detailed configuration`)
+        console.log(`✅ Found ${results.length} service principals with detailed configuration (paginated)`)
       } else {
         console.log('ℹ️ No service principals found')
       }
@@ -1900,7 +1929,7 @@ export class SecurityCollector {
       `
 
       // Use pwsh if available, fallback to powershell
-      let command = `pwsh -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
+      let command = `/usr/local/bin/pwsh -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
 
       try {
         const { stdout } = await execAsync(command, { timeout: 60000 })
@@ -1910,7 +1939,7 @@ export class SecurityCollector {
         return []
       } catch (psError) {
         // Fallback to powershell.exe on Windows
-        command = `powershell -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
+        command = `powershell.exe -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
         const { stdout } = await execAsync(command, { timeout: 60000 })
         if (stdout && stdout.trim()) {
           return JSON.parse(stdout)
@@ -1919,6 +1948,7 @@ export class SecurityCollector {
       }
     } catch (error) {
       console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
+      console.error(`Full error: ${error.toString()}`)
       return []
     }
   }
@@ -2091,17 +2121,18 @@ export class SecurityCollector {
    */
   async collectEnterpriseApplications() {
     try {
-      console.log('📋 Collecting Enterprise Applications...')
+      console.log('📋 Collecting Enterprise Applications (with pagination)...')
 
-      const response = await this.graphClient
-        .api('/servicePrincipals')
-        .filter("servicePrincipalType eq 'Application'")
-        .select('id,displayName,appId,accountEnabled,createdDateTime,signInAudience')
-        .top(999)
-        .get()
+      const results = await this.getPaginatedResults(
+        this.graphClient
+          .api('/servicePrincipals')
+          .filter("servicePrincipalType eq 'Application'")
+          .select('id,displayName,appId,accountEnabled,createdDateTime,signInAudience')
+          .top(100)
+      )
 
-      if (response.value && response.value.length > 0) {
-        for (const app of response.value) {
+      if (results && results.length > 0) {
+        for (const app of results) {
           this.resources.push({
             type: 'AADEnterpriseApplication',
             name: app.displayName,
@@ -2116,7 +2147,7 @@ export class SecurityCollector {
             }
           })
         }
-        console.log(`✅ Found ${response.value.length} enterprise applications`)
+        console.log(`✅ Found ${results.length} enterprise applications (paginated)`)
       }
     } catch (error) {
       this.handleError('collectEnterpriseApplications', error)
@@ -2238,16 +2269,17 @@ export class SecurityCollector {
    */
   async collectSignInActivity() {
     try {
-      console.log('📋 Collecting Sign-In Activity Summary...')
+      console.log('📋 Collecting Sign-In Activity Summary (with pagination)...')
 
-      const response = await this.graphClient
-        .api('/auditLogs/signIns')
-        .select('id,userPrincipalName,createdDateTime,clientAppUsed,deviceDetail,location,status')
-        .top(100)
-        .get()
+      const results = await this.getPaginatedResults(
+        this.graphClient
+          .api('/auditLogs/signIns')
+          .select('id,userPrincipalName,createdDateTime,clientAppUsed,deviceDetail,location,status')
+          .top(100)
+      )
 
-      if (response.value && response.value.length > 0) {
-        for (const signin of response.value) {
+      if (results && results.length > 0) {
+        for (const signin of results) {
           this.resources.push({
             type: 'AADSignInActivity',
             name: signin.userPrincipalName,
@@ -2263,7 +2295,7 @@ export class SecurityCollector {
             }
           })
         }
-        console.log(`✅ Collected ${response.value.length} sign-in records`)
+        console.log(`✅ Collected ${results.length} sign-in records (paginated)`)
       }
     } catch (error) {
       this.handleError('collectSignInActivity', error)
