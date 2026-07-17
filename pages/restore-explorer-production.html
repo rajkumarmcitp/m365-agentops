@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restore Explorer - Production</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 24px;
+        }
+
+        .date-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .date-selector label {
+            color: #666;
+            font-weight: 600;
+        }
+
+        .date-selector select {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            background: white;
+        }
+
+        .date-selector select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        /* Main Layout */
+        .restore-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr 1fr 350px;
+            gap: 20px;
+            height: 600px;
+        }
+
+        /* Panels */
+        .panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            font-weight: 600;
+            color: #333;
+            background: #f9f9f9;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        /* Services List */
+        .service-item {
+            padding: 10px;
+            margin: 5px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .service-item:hover {
+            border-color: #667eea;
+            background: #f0f7ff;
+        }
+
+        .service-item.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .service-count {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 3px;
+        }
+
+        /* Resource Types Tree */
+        .resource-type-item {
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            background: white;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .resource-type-item:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
+        }
+
+        .resource-type-item.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .type-name {
+            flex: 1;
+        }
+
+        .type-count {
+            font-size: 12px;
+            opacity: 0.7;
+            font-weight: 600;
+        }
+
+        /* Resources List */
+        .search-box {
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .resource-item {
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .resource-item:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
+        }
+
+        .resource-item.selected {
+            background: #e8f5e9;
+            border-color: #4caf50;
+        }
+
+        .resource-item input[type="radio"] {
+            cursor: pointer;
+        }
+
+        .resource-label {
+            flex: 1;
+            font-size: 13px;
+        }
+
+        /* Preview Panel */
+        .preview-panel {
+            grid-column: 4;
+        }
+
+        .preview-content {
+            padding: 15px;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .preview-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+
+        .preview-label {
+            font-weight: 600;
+            color: #333;
+            font-size: 12px;
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-bottom: 3px;
+        }
+
+        .preview-value {
+            color: #333;
+            word-break: break-all;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            padding: 15px;
+            border-top: 2px solid #f0f0f0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            flex: 1;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        /* Status Messages */
+        .message {
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .message.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 3px solid #1976d2;
+        }
+
+        .message.warning {
+            background: #fff3e0;
+            color: #e65100;
+            border-left: 3px solid #e65100;
+        }
+
+        .message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 3px solid #2e7d32;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal-body {
+            margin: 20px 0;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-footer .btn {
+            flex: 1;
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #667eea;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header with Date Selector -->
+        <div class="header">
+            <h1>🛡️ Restore Explorer</h1>
+            <div class="date-selector">
+                <label for="backup-date">Select Backup Date:</label>
+                <select id="backup-date" onchange="onDateChange()">
+                    <option value="">Loading backups...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Main Restore Layout -->
+        <div class="restore-layout" id="restore-layout" style="display: none;">
+            <!-- Services Panel -->
+            <div class="panel">
+                <div class="panel-header">📦 Services</div>
+                <div class="panel-content" id="services-list">
+                    <div class="empty-state">
+                        <div class="empty-state-text">Select a backup date</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resource Types Panel -->
+            <div class="panel">
+                <div class="panel-header">📋 Resource Types</div>
+                <div class="panel-content" id="resource-types-list">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">→</div>
+                        <div class="empty-state-text">Select a service</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resources Panel -->
+            <div class="panel">
+                <div class="panel-header">📌 Resources</div>
+                <div class="panel-content">
+                    <div id="resources-search-container" style="display: none;">
+                        <input type="text" class="search-box" id="resource-search"
+                               placeholder="Search resources..."
+                               onkeyup="filterResources()">
+                    </div>
+                    <div id="resources-list" class="panel-content">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">→</div>
+                            <div class="empty-state-text">Select a resource type</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="dry-run-btn" onclick="runDryRun()" disabled>
+                        Dry Run
+                    </button>
+                </div>
+            </div>
+
+            <!-- Preview Panel -->
+            <div class="panel preview-panel">
+                <div class="panel-header">👁️ Preview</div>
+                <div class="panel-content" id="preview-content">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">ℹ️</div>
+                        <div class="empty-state-text">Select a resource to preview</div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="resetSelection()">Reset</button>
+                    <button class="btn btn-primary" id="confirm-restore-btn" onclick="confirmRestore()" disabled>
+                        Restore
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dry Run Modal -->
+    <div class="modal" id="dry-run-modal">
+        <div class="modal-content">
+            <div class="modal-title">Dry Run Results</div>
+            <div class="modal-body" id="dry-run-results"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDryRunModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="executeRestore()">Proceed with Restore</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal" id="confirm-modal">
+        <div class="modal-content">
+            <div class="modal-title">Confirm Restore</div>
+            <div class="modal-body" id="confirm-message"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+                <button class="btn btn-primary" id="confirm-btn" onclick="executeConfirmedRestore()">Confirm Restore</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let state = {
+            selectedDate: null,
+            selectedService: null,
+            selectedResourceType: null,
+            selectedResource: null,
+            backupData: {},
+            allResources: [],
+            filteredResources: []
+        };
+
+        // Load available backups on startup
+        async function loadBackups() {
+            try {
+                const response = await fetch('http://localhost:3000/api/backup/m365/history?limit=30');
+                const data = await response.json();
+
+                const dateSelect = document.getElementById('backup-date');
+                dateSelect.innerHTML = '<option value="">Select a backup date...</option>';
+
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach(backup => {
+                        const option = document.createElement('option');
+                        option.value = backup.backupId;
+                        option.textContent = `${backup.backupId} (${backup.resourceCount} resources)`;
+                        dateSelect.appendChild(option);
+                    });
+                } else {
+                    dateSelect.innerHTML = '<option value="">No backups available</option>';
+                }
+            } catch (error) {
+                console.error('Error loading backups:', error);
+                document.getElementById('backup-date').innerHTML = '<option value="">Error loading backups</option>';
+            }
+        }
+
+        // On date change
+        async function onDateChange() {
+            const dateSelect = document.getElementById('backup-date');
+            state.selectedDate = dateSelect.value;
+            state.selectedService = null;
+            state.selectedResourceType = null;
+            state.selectedResource = null;
+
+            if (!state.selectedDate) {
+                document.getElementById('restore-layout').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('restore-layout').style.display = 'grid';
+            await loadServices();
+        }
+
+        // Load services for selected backup
+        async function loadServices() {
+            try {
+                const response = await fetch(`http://localhost:3000/api/backup/m365/history?limit=30`);
+                const data = await response.json();
+                const backup = data.data.find(b => b.backupId === state.selectedDate);
+
+                if (backup) {
+                    const resourcesResponse = await fetch(
+                        `http://localhost:3000/api/backup/m365/backup/${state.selectedDate}/resources`
+                    );
+                    const resourcesData = await resourcesResponse.json();
+                    state.allResources = resourcesData.data || [];
+
+                    // Group by service
+                    const services = {};
+                    state.allResources.forEach(resource => {
+                        const service = resource.type.split('A')[1]?.split(/(?=[A-Z])/)
+                            .slice(0, 2)
+                            .join('') || 'Unknown';
+                        if (!services[service]) {
+                            services[service] = 0;
+                        }
+                        services[service]++;
+                    });
+
+                    displayServices(services);
+                }
+            } catch (error) {
+                console.error('Error loading services:', error);
+            }
+        }
+
+        // Display services
+        function displayServices(services) {
+            const container = document.getElementById('services-list');
+            container.innerHTML = '';
+
+            Object.keys(services).sort().forEach(service => {
+                const div = document.createElement('div');
+                div.className = 'service-item';
+                div.innerHTML = `
+                    <div>${service}</div>
+                    <div class="service-count">${services[service]} resources</div>
+                `;
+                div.onclick = () => selectService(service);
+                container.appendChild(div);
+            });
+        }
+
+        // Select service
+        function selectService(service) {
+            state.selectedService = service;
+            state.selectedResourceType = null;
+            state.selectedResource = null;
+
+            document.querySelectorAll('.service-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.service-item').classList.add('active');
+
+            loadResourceTypes();
+            clearResourcesList();
+            clearPreview();
+        }
+
+        // Load resource types for selected service
+        function loadResourceTypes() {
+            const resourceTypes = {};
+            state.allResources
+                .filter(r => r.type.includes(state.selectedService))
+                .forEach(resource => {
+                    if (!resourceTypes[resource.type]) {
+                        resourceTypes[resource.type] = 0;
+                    }
+                    resourceTypes[resource.type]++;
+                });
+
+            displayResourceTypes(resourceTypes);
+        }
+
+        // Display resource types
+        function displayResourceTypes(types) {
+            const container = document.getElementById('resource-types-list');
+            container.innerHTML = '';
+
+            Object.keys(types).sort().forEach(type => {
+                const div = document.createElement('div');
+                div.className = 'resource-type-item';
+                div.innerHTML = `
+                    <div class="type-name">${type}</div>
+                    <div class="type-count">${types[type]}</div>
+                `;
+                div.onclick = () => selectResourceType(type);
+                container.appendChild(div);
+            });
+        }
+
+        // Select resource type
+        function selectResourceType(type) {
+            state.selectedResourceType = type;
+            state.selectedResource = null;
+
+            document.querySelectorAll('.resource-type-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.resource-type-item').classList.add('active');
+
+            loadResources();
+            clearPreview();
+        }
+
+        // Load resources for selected type
+        function loadResources() {
+            state.filteredResources = state.allResources.filter(
+                r => r.type === state.selectedResourceType
+            );
+
+            const resourcesContainer = document.getElementById('resources-list');
+            const searchContainer = document.getElementById('resources-search-container');
+
+            if (state.filteredResources.length === 0) {
+                resourcesContainer.innerHTML = '<div class="empty-state"><div>No resources found</div></div>';
+                searchContainer.style.display = 'none';
+                return;
+            }
+
+            if (state.filteredResources.length >= 10) {
+                searchContainer.style.display = 'block';
+            } else {
+                searchContainer.style.display = 'none';
+            }
+
+            displayResources(state.filteredResources);
+        }
+
+        // Display resources
+        function displayResources(resources) {
+            const container = document.getElementById('resources-list');
+            container.innerHTML = '';
+
+            resources.forEach(resource => {
+                const div = document.createElement('div');
+                div.className = 'resource-item';
+                div.innerHTML = `
+                    <input type="radio" name="resource-select"
+                           value="${resource.id}"
+                           onchange="selectResource('${resource.id}')">
+                    <div class="resource-label">${resource.name}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Filter resources (search)
+        function filterResources() {
+            const searchTerm = document.getElementById('resource-search').value.toLowerCase();
+            const filtered = state.filteredResources.filter(r =>
+                r.name.toLowerCase().includes(searchTerm)
+            );
+            displayResources(filtered);
+        }
+
+        // Select resource
+        function selectResource(resourceId) {
+            state.selectedResource = state.filteredResources.find(r => r.id === resourceId);
+
+            if (state.selectedResource) {
+                document.querySelectorAll('.resource-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                event.target.closest('.resource-item').classList.add('selected');
+
+                displayPreview();
+                document.getElementById('dry-run-btn').disabled = false;
+            }
+        }
+
+        // Display preview
+        function displayPreview() {
+            const container = document.getElementById('preview-content');
+            if (!state.selectedResource) {
+                container.innerHTML = '<div class="empty-state"><div>No resource selected</div></div>';
+                return;
+            }
+
+            const config = state.selectedResource.configuration || {};
+            let html = `
+                <div class="preview-item">
+                    <div class="preview-label">Type</div>
+                    <div class="preview-value">${state.selectedResource.type}</div>
+                </div>
+                <div class="preview-item">
+                    <div class="preview-label">Name</div>
+                    <div class="preview-value">${state.selectedResource.name}</div>
+                </div>
+                <div class="preview-item">
+                    <div class="preview-label">ID</div>
+                    <div class="preview-value">${state.selectedResource.id}</div>
+                </div>
+            `;
+
+            // Add configuration details
+            if (typeof config === 'object') {
+                Object.keys(config).slice(0, 5).forEach(key => {
+                    const value = config[key];
+                    if (typeof value !== 'object') {
+                        html += `
+                            <div class="preview-item">
+                                <div class="preview-label">${key}</div>
+                                <div class="preview-value">${value}</div>
+                            </div>
+                        `;
+                    }
+                });
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Run dry run
+        async function runDryRun() {
+            if (!state.selectedResource) return;
+
+            document.getElementById('dry-run-btn').innerHTML = '<span class="loading"></span> Running...';
+            document.getElementById('dry-run-btn').disabled = true;
+
+            try {
+                // Simulate dry run
+                const dryRunResults = `
+                    <strong>Restore Plan:</strong>
+                    <br><br>
+                    <strong>Resource Type:</strong> ${state.selectedResource.type}<br>
+                    <strong>Resource Name:</strong> ${state.selectedResource.name}<br>
+                    <strong>Tenant:</strong> Same (will replace existing)<br>
+                    <br>
+                    <strong>Action:</strong> Replace or Create<br>
+                    <br>
+                    <strong>What will happen:</strong><br>
+                    • If this ${state.selectedResource.type} exists, it will be replaced<br>
+                    • If it doesn't exist, a new one will be created<br>
+                    • All configuration properties will be updated<br>
+                    <br>
+                    <strong>Risk Level:</strong> Low
+                `;
+
+                document.getElementById('dry-run-results').innerHTML = dryRunResults;
+                document.getElementById('dry-run-modal').classList.add('active');
+            } catch (error) {
+                console.error('Dry run error:', error);
+                alert('Error running dry run: ' + error.message);
+            } finally {
+                document.getElementById('dry-run-btn').innerHTML = 'Dry Run';
+                document.getElementById('dry-run-btn').disabled = false;
+            }
+        }
+
+        // Close dry run modal
+        function closeDryRunModal() {
+            document.getElementById('dry-run-modal').classList.remove('active');
+        }
+
+        // Execute restore after dry run
+        async function executeRestore() {
+            closeDryRunModal();
+
+            const confirmMessage = `
+                <strong>Ready to restore?</strong>
+                <br><br>
+                <strong>Resource:</strong> ${state.selectedResource.name}<br>
+                <strong>Type:</strong> ${state.selectedResource.type}<br>
+                <strong>Action:</strong> Replace if exists, create if new<br>
+                <br>
+                Click "Confirm Restore" to proceed.
+            `;
+
+            document.getElementById('confirm-message').innerHTML = confirmMessage;
+            document.getElementById('confirm-modal').classList.add('active');
+        }
+
+        // Close confirm modal
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').classList.remove('active');
+        }
+
+        // Execute confirmed restore
+        async function executeConfirmedRestore() {
+            closeConfirmModal();
+
+            document.getElementById('confirm-restore-btn').innerHTML = '<span class="loading"></span> Restoring...';
+            document.getElementById('confirm-restore-btn').disabled = true;
+
+            try {
+                const response = await fetch(`http://localhost:3000/api/backup/m365/restore/${state.selectedDate}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        resourceIds: [state.selectedResource.id],
+                        targetEnvironment: 'Production'
+                    })
+                });
+
+                const data = await response.json();
+                alert(`✅ Restore initiated!\nRestore ID: ${data.restoreId}`);
+                resetSelection();
+            } catch (error) {
+                console.error('Restore error:', error);
+                alert('❌ Error: ' + error.message);
+            } finally {
+                document.getElementById('confirm-restore-btn').innerHTML = 'Restore';
+            }
+        }
+
+        // Reset selection
+        function resetSelection() {
+            state.selectedResource = null;
+            document.querySelectorAll('.resource-item input[type="radio"]').forEach(radio => {
+                radio.checked = false;
+            });
+            document.querySelectorAll('.resource-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            clearPreview();
+            document.getElementById('dry-run-btn').disabled = true;
+        }
+
+        // Clear resources list
+        function clearResourcesList() {
+            const container = document.getElementById('resources-list');
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">→</div><div>Select a resource type</div></div>';
+            document.getElementById('resources-search-container').style.display = 'none';
+        }
+
+        // Clear preview
+        function clearPreview() {
+            document.getElementById('preview-content').innerHTML =
+                '<div class="empty-state"><div class="empty-state-icon">ℹ️</div><div>Select a resource to preview</div></div>';
+            document.getElementById('dry-run-btn').disabled = true;
+        }
+
+        // Initialize on load
+        window.onload = loadBackups;
+    </script>
+</body>
+</html>
