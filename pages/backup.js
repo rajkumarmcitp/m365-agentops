@@ -902,12 +902,14 @@ function loadRestoreResourceTypesForServiceBackup() {
     restoreState.resourceTypeFilter = 'successful'
   }
 
-  // Create filter buttons
-  const filterButtonsHtml = `
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <button data-filter="successful" style="padding:8px 14px;font-size:12px;font-weight:600;border:1px solid #4CAF50;background:#4CAF50;color:white;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">✅ Successful</button>
-      <button data-filter="notConfigured" style="padding:8px 14px;font-size:12px;font-weight:600;border:1px solid #FFC107;background:transparent;color:#FFC107;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.backgroundColor='rgba(255,193,7,0.1)'" onmouseout="this.style.backgroundColor='transparent'">⚠️ Not Configured</button>
-      <button data-filter="errors" style="padding:8px 14px;font-size:12px;font-weight:600;border:1px solid #f44336;background:transparent;color:#f44336;border-radius:6px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.backgroundColor='rgba(244,67,54,0.1)'" onmouseout="this.style.backgroundColor='transparent'">❌ Errors</button>
+  // Create filter dropdown
+  const filterDropdownHtml = `
+    <div style="margin-bottom:12px;">
+      <select id="restore-types-filter" style="width:100%;padding:8px 12px;font-size:12px;font-weight:500;border:1px solid var(--color-border-secondary);border-radius:6px;background:var(--color-bg-primary);color:var(--color-text-primary);cursor:pointer;">
+        <option value="successful">✅ Successful</option>
+        <option value="notConfigured">⚠️ Not Configured</option>
+        <option value="errors">❌ Errors</option>
+      </select>
     </div>
   `
 
@@ -938,28 +940,17 @@ function loadRestoreResourceTypesForServiceBackup() {
       `
     }).join('')
 
-  document.getElementById('restore-types-list').innerHTML = filterButtonsHtml + typesHtml
+  document.getElementById('restore-types-list').innerHTML = filterDropdownHtml + typesHtml
 
-  // Add filter button listeners with active state styling
-  document.querySelectorAll('[data-filter]').forEach(btn => {
-    const isActive = btn.dataset.filter === restoreState.resourceTypeFilter
-    if (isActive) {
-      if (btn.dataset.filter === 'successful') {
-        btn.style.background = '#4CAF50'
-        btn.style.color = 'white'
-      } else if (btn.dataset.filter === 'notConfigured') {
-        btn.style.background = 'rgba(255,193,7,0.2)'
-        btn.style.color = '#FFC107'
-      } else {
-        btn.style.background = 'rgba(244,67,54,0.2)'
-        btn.style.color = '#f44336'
-      }
-    }
-    btn.addEventListener('click', () => {
-      restoreState.resourceTypeFilter = btn.dataset.filter
+  // Add filter dropdown listener
+  const filterSelect = document.getElementById('restore-types-filter')
+  if (filterSelect) {
+    filterSelect.value = restoreState.resourceTypeFilter
+    filterSelect.addEventListener('change', () => {
+      restoreState.resourceTypeFilter = filterSelect.value
       loadRestoreResourceTypesForServiceBackup()
     })
-  })
+  }
 
   document.querySelectorAll('[data-type]').forEach(el => {
     el.addEventListener('click', () => {
