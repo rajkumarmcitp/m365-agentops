@@ -79,10 +79,9 @@ export class SecurityCollector {
       // Phase 1: Core Identity & Access (28 resources - 34% coverage)
       console.log('📊 Starting Security Phase 1 collection (core identity & access)...')
 
-      // Users & Devices (5 resources)
+      // Users & Devices (4 resources)
       await this.collectUsers()
       await this.collectDevices()
-      await this.collectSignInActivity()
       await this.collectUserProvisioningPoliciesPowerShell()
       await this.collectDeviceCompliancePoliciesPowerShell()
 
@@ -205,7 +204,6 @@ export class SecurityCollector {
       const results = await this.getPaginatedResults(
         this.graphClient
           .api('/applications')
-          .select('id,appId,displayName,description,createdDateTime,signInAudience,keyCredentials,passwordCredentials,replyUrlsWithType,web,implicitGrantSettings,optionalClaims,publisherDomain')
           .top(100)
       )
 
@@ -304,7 +302,6 @@ export class SecurityCollector {
       const results = await this.getPaginatedResults(
         this.graphClient
           .api('/servicePrincipals')
-          .select('id,appId,displayName,appOwnerOrganizationId,createdDateTime,accountEnabled,keyCredentials,passwordCredentials,servicePrincipalType,appRoleAssignmentRequired,replyUrls')
           .top(100)
       )
 
@@ -401,7 +398,6 @@ export class SecurityCollector {
 
       const response = await this.graphClient
         .api('/roleManagement/directory/roleAssignments')
-        .select('id,roleDefinitionId,principalId,createdDateTime,resourceScopes')
         .top(999)
         .get()
 
@@ -439,8 +435,6 @@ export class SecurityCollector {
 
       const response = await this.graphClient
         .api('/identity/conditionalAccess/policies')
-        .select('id,displayName,state,createdDateTime,modifiedDateTime')
-        .top(999)
         .get()
 
       if (response.value && response.value.length > 0) {
@@ -577,8 +571,6 @@ export class SecurityCollector {
 
       const response = await this.graphClient
         .api('/administrativeUnits')
-        .select('id,displayName,description,createdDateTime,membershipType')
-        .top(999)
         .get()
 
       if (response.value && response.value.length > 0) {
@@ -1340,7 +1332,6 @@ export class SecurityCollector {
       const results = await this.getPaginatedResults(
         this.graphClient
           .api('/users')
-          .select('id,displayName,userPrincipalName,userType,createdDateTime')
           .top(100)
       )
 
@@ -2061,7 +2052,6 @@ export class SecurityCollector {
       const results = await this.getPaginatedResults(
         this.graphClient
           .api('/groups')
-          .select('id,displayName,description,mail,mailEnabled,securityEnabled,groupTypes,createdDateTime,lastModifiedDateTime,isAssignableToRole,visibility,membershipRuleProcessingState,owners,members')
           .top(100)
       )
 
@@ -2130,7 +2120,6 @@ export class SecurityCollector {
         this.graphClient
           .api('/servicePrincipals')
           .filter("servicePrincipalType eq 'Application'")
-          .select('id,displayName,appId,accountEnabled,createdDateTime,signInAudience')
           .top(100)
       )
 
@@ -2263,45 +2252,6 @@ export class SecurityCollector {
       }
     } catch (error) {
       this.handleError('collectRoleDefinitions', error)
-    }
-  }
-
-  /**
-   * Collect Sign-In Activity
-   * AADSignInActivity
-   */
-  async collectSignInActivity() {
-    try {
-      console.log('📋 Collecting Sign-In Activity Summary (with pagination)...')
-
-      const results = await this.getPaginatedResults(
-        this.graphClient
-          .api('/auditLogs/signIns')
-          .select('id,userPrincipalName,createdDateTime,clientAppUsed,deviceDetail,location,status')
-          .top(100)
-      )
-
-      if (results && results.length > 0) {
-        for (const signin of results) {
-          this.resources.push({
-            type: 'AADSignInActivity',
-            name: signin.userPrincipalName,
-            id: signin.id,
-            configuration: {
-              Identity: signin.id,
-              UserPrincipalName: signin.userPrincipalName,
-              CreatedDateTime: signin.createdDateTime,
-              ClientApp: signin.clientAppUsed,
-              Device: signin.deviceDetail?.displayName,
-              Location: signin.location?.city,
-              Status: signin.status?.errorCode ? 'Failed' : 'Success'
-            }
-          })
-        }
-        console.log(`✅ Collected ${results.length} sign-in records (paginated)`)
-      }
-    } catch (error) {
-      this.handleError('collectSignInActivity', error)
     }
   }
 
