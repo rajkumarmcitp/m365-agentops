@@ -949,12 +949,11 @@ function loadRestoreResourceTypesForServiceBackup() {
     }
   })
 
-  // Mark configured types with no backup as "successful" (zero instances found)
+  // Mark configured types with no backup as "notConfigured"
   configuredTypes.forEach(configType => {
     if (!backedUpTypes.has(configType)) {
-      // Type was configured and collection ran successfully, but found zero instances
-      typeStats[configType].successful = 0  // Mark as successful with 0 instances
-      typeStats[configType].total = 0
+      // Type was configured but not found in backup (zero instances or collection failed)
+      typeStats[configType].notConfigured = 1
     }
   })
 
@@ -965,8 +964,8 @@ function loadRestoreResourceTypesForServiceBackup() {
 
   // Count total types with any status
   const totalTypes = Object.keys(typeStats).length
-  const successfulTypes = Object.values(typeStats).filter(s => s.total === 0 || s.successful > 0).length
-  const notConfiguredTypes = Object.values(typeStats).filter(s => s.notConfigured > 0 && s.total > 0).length
+  const successfulTypes = Object.values(typeStats).filter(s => s.successful > 0).length
+  const notConfiguredTypes = Object.values(typeStats).filter(s => s.notConfigured > 0).length
   const errorTypes = Object.values(typeStats).filter(s => s.errors > 0).length
   const emptyTypes = totalTypes - successfulTypes - notConfiguredTypes - errorTypes
   const totalResources = Object.values(typeStats).reduce((sum, s) => sum + s.total, 0)
@@ -991,7 +990,7 @@ function loadRestoreResourceTypesForServiceBackup() {
           📋 View Type Breakdown
         </summary>
         <div style="margin-top:8px;padding:8px;background:var(--color-bg-primary);border-radius:4px;font-size:9px;line-height:1.6;max-height:200px;overflow-y:auto;">
-          ${successfulTypes > 0 ? `<div><strong style="color:#4CAF50;">✅ Successful (${successfulTypes}):</strong> ${Object.entries(typeStats).filter(([_, s]) => s.total === 0 || s.successful > 0).map(([t]) => t).join(', ')}</div>` : ''}
+          ${successfulTypes > 0 ? `<div><strong style="color:#4CAF50;">✅ Successful (${successfulTypes}):</strong> ${Object.entries(typeStats).filter(([_, s]) => s.successful > 0).map(([t]) => t).join(', ')}</div>` : ''}
           ${notConfiguredTypes > 0 ? `<div style="margin-top:6px;"><strong style="color:#FFC107;">⚠️ Not Configured (${notConfiguredTypes}):</strong> ${Object.entries(typeStats).filter(([_, s]) => s.notConfigured > 0).map(([t]) => t).join(', ')}</div>` : ''}
           ${errorTypes > 0 ? `<div style="margin-top:6px;"><strong style="color:#f44336;">❌ Errors (${errorTypes}):</strong> ${Object.entries(typeStats).filter(([_, s]) => s.errors > 0).map(([t]) => t).join(', ')}</div>` : ''}
           ${emptyTypes > 0 ? `<div style="margin-top:6px;"><strong style="color:var(--color-text-tertiary);">🔍 Empty (${emptyTypes}):</strong> No resources to show</div>` : ''}
@@ -1003,8 +1002,8 @@ function loadRestoreResourceTypesForServiceBackup() {
   // Filter resource types based on current filter
   const filteredTypes = Object.entries(typeStats)
     .filter(([type, stats]) => {
-      if (restoreState.resourceTypeFilter === 'successful') return stats.total === 0 || stats.successful > 0
-      if (restoreState.resourceTypeFilter === 'notConfigured') return stats.notConfigured > 0 && stats.total > 0
+      if (restoreState.resourceTypeFilter === 'successful') return stats.successful > 0
+      if (restoreState.resourceTypeFilter === 'notConfigured') return stats.notConfigured > 0
       if (restoreState.resourceTypeFilter === 'errors') return stats.errors > 0
       return true
     })
