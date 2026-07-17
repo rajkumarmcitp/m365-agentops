@@ -99,7 +99,7 @@ export class SecurityCollector {
       await this.collectCertificateAndSecretsPowerShell()
 
       // Roles & Access Control (6 resources)
-      await this.collectRoleAssignments()
+      await this.collectRoleAssignmentsFull()
       await this.collectDirectoryRoles()
       await this.collectRoleDefinitions()
       await this.collectPrivilegedAccessPowerShell()
@@ -121,8 +121,8 @@ export class SecurityCollector {
       console.log('📊 Starting Security Phase 2 collection (authentication & conditional access)...')
 
       // Authentication Policies (5 resources)
-      await this.collectAuthenticationMethodsPoliciesPowerShell()
-      await this.collectAuthenticationStrengthPoliciesPowerShell()
+      await this.collectAuthenticationPolicy()
+      await this.collectAuthenticationStrengthPolicies()
       await this.collectAuthenticationMethodsPolicies()
       await this.collectMFASettingsPowerShell()
       await this.collectPasswordPoliciesPowerShell()
@@ -134,7 +134,7 @@ export class SecurityCollector {
 
       // Security Baseline (2 resources)
       await this.collectSecurityDefaultsPowerShell()
-      await this.collectIdentityProtectionPolicies()
+      await this.collectIdentityProtectionPolicy()
 
       // Token & Claims Policies (3 resources)
       await this.collectTokenIssuancePolicy()
@@ -1907,7 +1907,7 @@ export class SecurityCollector {
   }
 
   /**
-   * Execute PowerShell script safely
+   * Execute PowerShell script with Microsoft Graph modules
    */
   async executePowerShell(script) {
     try {
@@ -1916,8 +1916,21 @@ export class SecurityCollector {
 
       const execAsync = promisify(exec)
 
+      // Import all required Microsoft Graph modules
       const psCommand = `
         \$ErrorActionPreference = 'Continue'
+        \$WarningPreference = 'SilentlyContinue'
+
+        # Import required modules
+        Import-Module Microsoft.Graph.Authentication -ErrorAction SilentlyContinue
+        Import-Module Microsoft.Graph.Identity.DirectoryManagement -ErrorAction SilentlyContinue
+        Import-Module Microsoft.Graph.Identity.Governance -ErrorAction SilentlyContinue
+        Import-Module Microsoft.Graph.Users -ErrorAction SilentlyContinue
+        Import-Module Microsoft.Graph.Groups -ErrorAction SilentlyContinue
+        Import-Module Microsoft.Graph.Applications -ErrorAction SilentlyContinue
+        Import-Module Microsoft.Graph.DeviceManagement -ErrorAction SilentlyContinue
+        Import-Module Microsoft.Graph.Identity.SignIns -ErrorAction SilentlyContinue
+
         ${script}
       `
 
@@ -1925,7 +1938,7 @@ export class SecurityCollector {
       let command = `/usr/local/bin/pwsh -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
 
       try {
-        const { stdout } = await execAsync(command, { timeout: 60000 })
+        const { stdout, stderr } = await execAsync(command, { timeout: 90000 })
         if (stdout && stdout.trim()) {
           return JSON.parse(stdout)
         }
@@ -1933,7 +1946,7 @@ export class SecurityCollector {
       } catch (psError) {
         // Fallback to powershell.exe on Windows
         command = `powershell.exe -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
-        const { stdout } = await execAsync(command, { timeout: 60000 })
+        const { stdout, stderr } = await execAsync(command, { timeout: 90000 })
         if (stdout && stdout.trim()) {
           return JSON.parse(stdout)
         }
@@ -1941,7 +1954,6 @@ export class SecurityCollector {
       }
     } catch (error) {
       console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
-      console.error(`Full error: ${error.toString()}`)
       return []
     }
   }
@@ -2514,17 +2526,7 @@ export class SecurityCollector {
       console.log('📋 Collecting Device Compliance Policies (PowerShell)...')
 
       const script = `
-        Get-MgDeviceManagementDeviceCompliancePolicy | Select-Object @{
-          n='DisplayName';e={$_.displayName}
-        }, @{
-          n='Description';e={$_.description}
-        }, @{
-          n='CreatedDateTime';e={$_.createdDateTime}
-        }, @{
-          n='LastModifiedDateTime';e={$_.lastModifiedDateTime}
-        }, @{
-          n='Version';e={$_.version}
-        } | ConvertTo-Json -AsArray
+        Get-MgDeviceManagementDeviceCompliancePolicy | ConvertTo-Json -AsArray -Depth 3
       `
 
       const result = await this.executePowerShell(script)
@@ -2533,20 +2535,13 @@ export class SecurityCollector {
         for (const policy of result) {
           this.resources.push({
             type: 'AADDeviceCompliancePolicy',
-            name: policy.DisplayName,
-            id: policy.DisplayName,
-            configuration: {
-              Identity: policy.DisplayName,
-              DisplayName: policy.DisplayName,
-              Description: policy.Description || '',
-              CreatedDateTime: policy.CreatedDateTime || '',
-              LastModifiedDateTime: policy.LastModifiedDateTime || '',
-              Version: policy.Version || 1
-            }
+            name: policy.displayName || policy.id,
+            id: policy.id,
+            configuration: policy
           })
         }
 
-        console.log(`✅ Collected \${result.length} device compliance policies`)
+        console.log(`✅ Collected ${result.length} device compliance policies`)
       }
     } catch (error) {
       this.handleError('collectDeviceCompliancePoliciesPowerShell', error)
@@ -3241,6 +3236,113 @@ export class SecurityCollector {
       }
     } catch (error) {
       this.handleError('collectApplicationOwners', error)
+    }
+  }
+
+  /**
+   * Collect Authentication Policies via Graph API
+   * AADAuthenticationMethodPolicy
+   */
+  async collectAuthenticationPolicy() {
+    try {
+      console.log('📋 Collecting Authentication Policy...')
+      const response = await this.graphClient
+        .api('/policies/authenticationMethodsPolicy')
+        .get()
+
+      if (response) {
+        this.resources.push({
+          type: 'AADAuthenticationMethodPolicy',
+          name: 'Authentication Methods Policy',
+          id: response.id || 'default',
+          configuration: response
+        })
+        console.log('✅ Found authentication methods policy')
+      }
+    } catch (error) {
+      this.handleError('collectAuthenticationPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Identity Protection Policy via Graph API
+   * AADIdentityProtectionPolicy
+   */
+  async collectIdentityProtectionPolicy() {
+    try {
+      console.log('📋 Collecting Identity Protection Policy...')
+      const response = await this.graphClient
+        .api('/identityProtection/riskPolicies')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const policy of response.value) {
+          this.resources.push({
+            type: 'AADIdentityProtectionPolicy',
+            name: policy.displayName || policy.id,
+            id: policy.id,
+            configuration: policy
+          })
+        }
+        console.log(`✅ Found ${response.value.length} identity protection policies`)
+      }
+    } catch (error) {
+      this.handleError('collectIdentityProtectionPolicy', error)
+    }
+  }
+
+  /**
+   * Collect Role Assignments via Graph API (full pagination)
+   */
+  async collectRoleAssignmentsFull() {
+    try {
+      console.log('📋 Collecting Role Assignments (complete)...')
+      const results = await this.getPaginatedResults(
+        this.graphClient
+          .api('/roleManagement/directory/roleAssignments')
+          .top(100)
+      )
+
+      if (results && results.length > 0) {
+        for (const assignment of results) {
+          this.resources.push({
+            type: 'AADRoleAssignment',
+            name: `${assignment.id}`,
+            id: assignment.id,
+            configuration: assignment
+          })
+        }
+        console.log(`✅ Found ${results.length} role assignments (paginated)`)
+      }
+    } catch (error) {
+      this.handleError('collectRoleAssignmentsFull', error)
+    }
+  }
+
+  /**
+   * Collect Authentication Strength Policies via Graph API
+   * AADAuthenticationStrengthPolicy
+   */
+  async collectAuthenticationStrengthPolicies() {
+    try {
+      console.log('📋 Collecting Authentication Strength Policies...')
+      const response = await this.graphClient
+        .api('/policies/authenticationStrengthPolicies')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const policy of response.value) {
+          this.resources.push({
+            type: 'AADAuthenticationStrengthPolicy',
+            name: policy.displayName || policy.id,
+            id: policy.id,
+            configuration: policy
+          })
+        }
+        console.log(`✅ Found ${response.value.length} authentication strength policies`)
+      }
+    } catch (error) {
+      this.handleError('collectAuthenticationStrengthPolicies', error)
     }
   }
 
