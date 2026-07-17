@@ -1083,9 +1083,20 @@ function displayRestorePreviewBackup() {
   if (!restoreState.selectedResource) return
 
   const jsonStr = JSON.stringify(restoreState.selectedResource, null, 2)
-  const previewHtml = `<pre style="font-size:10px;white-space:pre-wrap;word-wrap:break-word;color:var(--color-text-secondary);">${jsonStr.substring(0, 1000)}...</pre>`
+  const previewHtml = `<pre style="font-size:11px;white-space:pre-wrap;word-wrap:break-word;color:var(--color-text-secondary);line-height:1.4;margin:0;">${escapeHtml(jsonStr)}</pre>`
 
   document.getElementById('restore-preview-content').innerHTML = previewHtml
+}
+
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  }
+  return text.replace(/[&<>"']/g, m => map[m])
 }
 
 function showRestoreDryRunModalBackup(dryRun) {
