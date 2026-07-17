@@ -925,18 +925,35 @@ function loadRestoreResourceTypesForServiceBackup() {
   const successfulTypes = Object.values(typeStats).filter(s => s.successful > 0).length
   const notConfiguredTypes = Object.values(typeStats).filter(s => s.notConfigured > 0).length
   const errorTypes = Object.values(typeStats).filter(s => s.errors > 0).length
+  const emptyTypes = totalTypes - successfulTypes - notConfiguredTypes - errorTypes
+  const totalResources = Object.values(typeStats).reduce((sum, s) => sum + s.total, 0)
 
   // Create filter dropdown with counts
   const filterDropdownHtml = `
     <div style="margin-bottom:12px;">
-      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:8px;">
-        📊 Total: ${totalTypes} types (${Object.values(typeStats).reduce((sum, s) => sum + s.total, 0)} resources)
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:8px;line-height:1.5;">
+        📊 Total: ${totalTypes} types | ${totalResources} resources<br>
+        ✅ ${successfulTypes} successful | ⚠️ ${notConfiguredTypes} not configured | ❌ ${errorTypes} errors ${emptyTypes > 0 ? `| 🔍 ${emptyTypes} empty` : ''}
       </div>
       <select id="restore-types-filter" style="width:100%;padding:8px 12px;font-size:12px;font-weight:500;border:1px solid var(--color-border-secondary);border-radius:6px;background:var(--color-bg-primary);color:var(--color-text-primary);cursor:pointer;">
         <option value="successful">✅ Successful (${successfulTypes})</option>
         <option value="notConfigured">⚠️ Not Configured (${notConfiguredTypes})</option>
         <option value="errors">❌ Errors (${errorTypes})</option>
       </select>
+      ${emptyTypes > 0 ? `<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:8px;padding:8px;background:var(--color-bg-primary);border-radius:4px;border-left:2px solid var(--color-primary);">
+        💡 <strong>${emptyTypes} types are empty</strong> (configured but no instances in your environment)
+      </div>` : ''}
+      <details style="margin-top:8px;font-size:10px;cursor:pointer;">
+        <summary style="color:var(--color-primary);font-weight:600;padding:6px;background:var(--color-bg-primary);border-radius:4px;">
+          📋 View Type Breakdown
+        </summary>
+        <div style="margin-top:8px;padding:8px;background:var(--color-bg-primary);border-radius:4px;font-size:9px;line-height:1.6;max-height:200px;overflow-y:auto;">
+          ${successfulTypes > 0 ? `<div><strong style="color:#4CAF50;">✅ Successful (${successfulTypes}):</strong> ${Object.entries(typeStats).filter(([_, s]) => s.successful > 0).map(([t]) => t).join(', ')}</div>` : ''}
+          ${notConfiguredTypes > 0 ? `<div style="margin-top:6px;"><strong style="color:#FFC107;">⚠️ Not Configured (${notConfiguredTypes}):</strong> ${Object.entries(typeStats).filter(([_, s]) => s.notConfigured > 0).map(([t]) => t).join(', ')}</div>` : ''}
+          ${errorTypes > 0 ? `<div style="margin-top:6px;"><strong style="color:#f44336;">❌ Errors (${errorTypes}):</strong> ${Object.entries(typeStats).filter(([_, s]) => s.errors > 0).map(([t]) => t).join(', ')}</div>` : ''}
+          ${emptyTypes > 0 ? `<div style="margin-top:6px;"><strong style="color:var(--color-text-tertiary);">🔍 Empty (${emptyTypes}):</strong> No resources to show</div>` : ''}
+        </div>
+      </details>
     </div>
   `
 
