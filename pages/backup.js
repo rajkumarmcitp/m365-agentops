@@ -545,7 +545,8 @@ let restoreState = {
   selectedResourceType: null,
   selectedResource: null,
   allResources: [],
-  allServices: [],
+  allServices: [], // All services in the system
+  allServiceNames: [], // Display names of all services
   backupsByDate: {}, // Map of date -> array of backups
   allAvailableDates: []
 }
@@ -555,7 +556,8 @@ function initializeRestoreExplorerBackup() {
   const dryRunBtn = document.getElementById('restore-dry-run-btn')
   const resetBtn = document.getElementById('restore-reset-btn')
 
-  // Load all backups on initialization
+  // Load all services and backups on initialization
+  loadAllServicesForRestoreBackup()
   loadAllDatesForRestoreBackup()
 
   // Show all available services by default
@@ -609,6 +611,23 @@ function initializeRestoreExplorerBackup() {
   })
 }
 
+async function loadAllServicesForRestoreBackup() {
+  try {
+    const response = await fetch(`${API_BASE}/api/backup/m365/services/list`)
+    const data = await response.json()
+
+    if (data.success && data.data) {
+      // Extract service names, filter out notes and other metadata
+      const services = data.data.filter(s => s.displayName && !s.key?.startsWith('_note_'))
+      restoreState.allServiceNames = services.map(s => s.displayName).sort()
+      restoreState.allServices = services
+    }
+  } catch (error) {
+    console.error('Error loading services:', error)
+    showToast('Error loading services', 'error')
+  }
+}
+
 async function loadAllDatesForRestoreBackup() {
   try {
     const response = await fetch(`${API_BASE}/api/backup/m365/backups?limit=100`)
@@ -646,8 +665,13 @@ async function loadAllDatesForRestoreBackup() {
 }
 
 function displayAllAvailableServicesBackup() {
-  // Extract all possible services from system
-  const allServices = ['Security (Entra ID)', 'Exchange Online', 'SharePoint', 'Teams', 'Compliance', 'Governance']
+  // Use dynamically loaded services from API
+  const allServices = restoreState.allServiceNames.length > 0 ? restoreState.allServiceNames : []
+
+  if (allServices.length === 0) {
+    document.getElementById('restore-services-list').innerHTML = '<div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;">Loading services...</div>'
+    return
+  }
 
   const servicesHtml = allServices.map(service => `
     <div style="padding:8px;background:var(--color-bg-primary);border:1px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s;opacity:0.6;" data-service="${service}">
@@ -692,7 +716,7 @@ async function loadServicesForSelectedDateBackup() {
     const availableServices = Array.from(servicesSet).sort()
 
     // Display services with full opacity for available ones, grayed out for unavailable
-    const allServices = ['Security (Entra ID)', 'Exchange Online', 'SharePoint', 'Teams', 'Compliance', 'Governance']
+    const allServices = restoreState.allServiceNames.length > 0 ? restoreState.allServiceNames : []
 
     const servicesHtml = allServices.map(service => {
       const isAvailable = availableServices.includes(service)
