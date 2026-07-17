@@ -539,12 +539,15 @@ function renderRestoreExplorerView() {
 }
 
 let restoreState = {
-  selectedBackup: null,
+  selectedDate: null,
+  selectedBackups: [], // Array of backups for selected date
   selectedService: null,
   selectedResourceType: null,
   selectedResource: null,
   allResources: [],
-  allServices: []
+  allServices: [],
+  backupsByDate: {}, // Map of date -> array of backups
+  allAvailableDates: []
 }
 
 function initializeRestoreExplorerBackup() {
@@ -553,13 +556,16 @@ function initializeRestoreExplorerBackup() {
   const resetBtn = document.getElementById('restore-reset-btn')
 
   // Load all backups on initialization
-  loadAllBackupsForRestoreBackup()
+  loadAllDatesForRestoreBackup()
+
+  // Show all available services by default
+  displayAllAvailableServicesBackup()
 
   backupSelect.addEventListener('change', async () => {
     if (!backupSelect.value) return
 
-    restoreState.selectedBackup = backupSelect.value
-    await loadRestoreResourcesFromBackupBackup()
+    restoreState.selectedDate = backupSelect.value
+    await loadServicesForSelectedDateBackup()
   })
 
   dryRunBtn.addEventListener('click', async () => {
@@ -603,28 +609,153 @@ function initializeRestoreExplorerBackup() {
   })
 }
 
-async function loadAllBackupsForRestoreBackup() {
+async function loadAllDatesForRestoreBackup() {
   try {
-    const response = await fetch(`${API_BASE}/api/backup/m365/backups?limit=50`)
+    const response = await fetch(`${API_BASE}/api/backup/m365/backups?limit=100`)
     const data = await response.json()
 
     const backupSelect = document.getElementById('restore-backup')
-    backupSelect.innerHTML = '<option value="">Select Backup...</option>'
+    backupSelect.innerHTML = '<option value="">Select Backup Date...</option>'
 
     if (data.success && data.data) {
-      // Group backups by date and service
+      // Group backups by date
+      const dateMap = {}
       data.data.forEach(backup => {
-        const option = document.createElement('option')
-        option.value = backup.backupId
         const date = backup.backupId.split('-').slice(0, 3).join('-')
-        const service = backup.serviceName
-        option.textContent = `${date} - ${service} (${backup.resourceCount} resources)`
+        if (!dateMap[date]) {
+          dateMap[date] = []
+        }
+        dateMap[date].push(backup)
+      })
+
+      restoreState.backupsByDate = dateMap
+      restoreState.allAvailableDates = Object.keys(dateMap).sort().reverse() // Most recent first
+
+      // Populate date dropdown with only dates
+      restoreState.allAvailableDates.forEach(date => {
+        const option = document.createElement('option')
+        option.value = date
+        option.textContent = date
         backupSelect.appendChild(option)
       })
     }
   } catch (error) {
-    console.error('Error loading backups:', error)
-    showToast('Error loading backups', 'error')
+    console.error('Error loading backup dates:', error)
+    showToast('Error loading backup dates', 'error')
+  }
+}
+
+function displayAllAvailableServicesBackup() {
+  // Extract all possible services from system
+  const allServices = ['Security (Entra ID)', 'Exchange Online', 'SharePoint', 'Teams', 'Compliance', 'Governance']
+
+  const servicesHtml = allServices.map(service => `
+    <div style="padding:8px;background:var(--color-bg-primary);border:1px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s;opacity:0.6;" data-service="${service}">
+      ${service}
+    </div>
+  `).join('')
+
+  document.getElementById('restore-services-list').innerHTML = servicesHtml
+
+  // Disable all services until date is selected
+  document.querySelectorAll('[data-service]').forEach(el => {
+    el.style.pointerEvents = 'none'
+  })
+}
+
+async function loadServicesForSelectedDateBackup() {
+  try {
+    const date = restoreState.selectedDate
+    const backupsForDate = restoreState.backupsByDate[date] || []
+
+    if (backupsForDate.length === 0) {
+      document.getElementById('restore-services-list').innerHTML = '<div style="padding:8px;color:var(--color-text-tertiary);font-size:12px;">No services for this date</div>'
+      return
+    }
+
+    // Load resources from first backup to determine available services
+    restoreState.selectedBackups = backupsForDate
+
+    // Extract services from backups
+    const servicesSet = new Set()
+    backupsForDate.forEach(backup => {
+      const service = backup.serviceName
+      if (service === 'Security') {
+        servicesSet.add('Security (Entra ID)')
+      } else if (service === 'Exchange') {
+        servicesSet.add('Exchange Online')
+      } else {
+        servicesSet.add(service)
+      }
+    })
+
+    const availableServices = Array.from(servicesSet).sort()
+
+    // Display services with full opacity for available ones, grayed out for unavailable
+    const allServices = ['Security (Entra ID)', 'Exchange Online', 'SharePoint', 'Teams', 'Compliance', 'Governance']
+
+    const servicesHtml = allServices.map(service => {
+      const isAvailable = availableServices.includes(service)
+      return `
+        <div style="padding:8px;background:var(--color-bg-primary);border:1px solid var(--color-border-tertiary);border-radius:4px;cursor:${isAvailable ? 'pointer' : 'not-allowed'};font-size:12px;font-weight:500;transition:all 0.2s;opacity:${isAvailable ? '1' : '0.5'};" data-service="${service}" ${isAvailable ? '' : 'data-unavailable="true"'}>
+          ${service}
+        </div>
+      `
+    }).join('')
+
+    document.getElementById('restore-services-list').innerHTML = servicesHtml
+
+    // Enable only available services
+    document.querySelectorAll('[data-service]').forEach(el => {
+      if (!el.dataset.unavailable) {
+        el.style.pointerEvents = 'auto'
+        el.addEventListener('click', () => {
+          restoreState.selectedService = el.dataset.service
+          loadRestoreResourcesForServiceAndDateBackup()
+          document.querySelectorAll('[data-service]').forEach(e => e.style.background = 'var(--color-bg-primary)')
+          el.style.background = 'var(--color-primary)'
+          el.style.color = 'white'
+        })
+      } else {
+        el.style.pointerEvents = 'none'
+      }
+    })
+  } catch (error) {
+    console.error('Error loading services for date:', error)
+    showToast('Error loading services', 'error')
+  }
+}
+
+async function loadRestoreResourcesForServiceAndDateBackup() {
+  try {
+    // Load resources from the backup matching service and date
+    const date = restoreState.selectedDate
+    const service = restoreState.selectedService
+    const backupsForDate = restoreState.backupsByDate[date] || []
+
+    // Find backup for this service
+    const backup = backupsForDate.find(b => {
+      const s = b.serviceName === 'Security' ? 'Security (Entra ID)' : b.serviceName
+      return s === service
+    })
+
+    if (!backup) {
+      showToast('No backup found for this service and date', 'error')
+      return
+    }
+
+    const response = await fetch(`${API_BASE}/api/backup/m365/backup/${backup.backupId}/resources?limit=1000`)
+    const data = await response.json()
+
+    if (data.success && data.data.length > 0) {
+      restoreState.allResources = data.data
+
+      // Load resource types for the selected service
+      loadRestoreResourceTypesForServiceBackup()
+    }
+  } catch (error) {
+    console.error('Error loading backup resources:', error)
+    showToast('Error loading backup resources', 'error')
   }
 }
 
