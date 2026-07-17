@@ -20168,6 +20168,55 @@ app.post('/api/m365dsc/collect', async (req, res) => {
 })
 
 // ============================================================
+// Create Test Backups (for demo/testing)
+// ============================================================
+app.post('/api/m365dsc/test-backups', (req, res) => {
+  try {
+    console.log('📋 Creating test backups for M365DSC Coverage...')
+
+    const testServices = [
+      { name: 'Entra ID', count: 54 },
+      { name: 'Exchange Online', count: 100 },
+      { name: 'SharePoint Online', count: 100 },
+      { name: 'Microsoft Teams', count: 64 },
+      { name: 'Security & Compliance', count: 46 },
+      { name: 'Intune', count: 164 },
+      { name: 'Power Platform', count: 23 },
+      { name: 'OneDrive', count: 30 },
+      { name: 'Microsoft 365 Groups', count: 30 },
+      { name: 'Dynamics 365', count: 35 },
+      { name: 'Tenant Settings', count: 20 }
+    ]
+
+    const backups = []
+    const timestamp = new Date().toISOString()
+    const backupBaseId = 'BACKUP-TEST-' + Date.now()
+
+    testServices.forEach((service, index) => {
+      backups.push({
+        backupId: `${backupBaseId}-${index}`,
+        serviceName: service.name,
+        timestamp: new Date(Date.now() - index * 1000).toISOString(),
+        status: 'Completed',
+        resourceCount: service.count
+      })
+    })
+
+    res.json({
+      success: true,
+      message: 'Test backups created',
+      backups: backups
+    })
+  } catch (error) {
+    console.error('❌ Test Backup Error:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+// ============================================================
 // 404 Handler - MUST be last
 // ============================================================
 app.use((req, res) => {
