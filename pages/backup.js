@@ -509,7 +509,7 @@ function renderRestoreExplorerView() {
 
         <!-- Services Column -->
         <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-          <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">📦 Services</div>
+          <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">📦 Services</div>
           <div id="restore-services-list" class="restore-scrollbar" style="flex:1;overflow-y:auto;padding:12px;gap:8px;display:flex;flex-direction:column;">
             <div style="padding:12px;color:var(--color-text-tertiary);font-size:13px;text-align:center;">Select backup date</div>
           </div>
@@ -517,7 +517,7 @@ function renderRestoreExplorerView() {
 
         <!-- Resource Types Column -->
         <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-          <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">📋 Resource Types</div>
+          <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">📋 Resource Types</div>
           <div id="restore-types-list" class="restore-scrollbar" style="flex:1;overflow-y:auto;padding:12px;gap:8px;display:flex;flex-direction:column;">
             <div style="padding:12px;color:var(--color-text-tertiary);font-size:13px;text-align:center;">Select a service</div>
           </div>
@@ -525,7 +525,7 @@ function renderRestoreExplorerView() {
 
         <!-- Resources Column -->
         <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-          <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">📌 Resources</div>
+          <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">📌 Resources</div>
           <div id="restore-search-container" style="padding:12px;border-bottom:1px solid var(--color-border-tertiary);display:none;">
             <input type="text" id="restore-resource-search" placeholder="Search resources..." style="width:100%;padding:8px 12px;border:1px solid var(--color-border-tertiary);border-radius:6px;font-size:13px;background:var(--color-bg-primary);color:var(--color-text-primary);">
           </div>
@@ -536,7 +536,7 @@ function renderRestoreExplorerView() {
 
         <!-- Preview Column -->
         <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-          <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">👁️ Preview</div>
+          <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:12px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">👁️ Preview</div>
           <div id="restore-preview-content" class="restore-scrollbar" style="flex:1;overflow-y:auto;padding:16px;font-size:13px;color:var(--color-text-tertiary);text-align:left;">
             Select a resource to preview
           </div>
