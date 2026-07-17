@@ -955,7 +955,22 @@ function loadRestoreResourceTypesForServiceBackup() {
       `
     }).join('')
 
-  document.getElementById('restore-types-list').innerHTML = filterDropdownHtml + typesHtml
+  // Show empty state if no types match filter
+  const emptyStateHtml = filteredTypes.length === 0 ? `
+    <div style="padding:20px;color:var(--color-text-tertiary);font-size:12px;text-align:center;margin-top:10px;">
+      <div style="margin-bottom:8px;">
+        ${restoreState.resourceTypeFilter === 'notConfigured' ? '⚠️ No Not Configured Types' : restoreState.resourceTypeFilter === 'errors' ? '❌ No Error Types' : '✅ No Types Found'}
+      </div>
+      <div style="font-size:11px;line-height:1.5;">
+        ${restoreState.resourceTypeFilter === 'notConfigured' ? 'All resource types have been successfully configured.' : restoreState.resourceTypeFilter === 'errors' ? 'All resource types backed up successfully with no errors.' : 'No resource types available for this service.'}
+      </div>
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-top:8px;">
+        Try selecting a different filter or service.
+      </div>
+    </div>
+  ` : ''
+
+  document.getElementById('restore-types-list').innerHTML = filterDropdownHtml + typesHtml + emptyStateHtml
 
   // Add filter dropdown listener
   const filterSelect = document.getElementById('restore-types-filter')
