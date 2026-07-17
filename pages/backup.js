@@ -766,10 +766,11 @@ async function loadServicesForSelectedDateBackup() {
           e.style.borderLeftColor = 'var(--color-border-tertiary)'
           e.style.color = 'var(--color-text-primary)'
         })
-        el.style.background = 'var(--color-primary)'
+        el.style.background = 'var(--color-bg-secondary)'
         el.style.borderLeftColor = 'var(--color-primary)'
-        el.style.color = 'white'
-        el.style.fontWeight = '600'
+        el.style.borderLeftWidth = '4px'
+        el.style.color = 'var(--color-primary)'
+        el.style.fontWeight = '700'
 
         // Update context header
         document.getElementById('restore-context-header').style.display = 'block'
@@ -972,10 +973,11 @@ function loadRestoreResourceTypesForServiceBackup() {
         e.style.color = 'var(--color-text-primary)'
         e.style.fontWeight = '400'
       })
-      el.style.background = 'var(--color-primary)'
+      el.style.background = 'var(--color-bg-secondary)'
       el.style.borderLeftColor = 'var(--color-primary)'
-      el.style.color = 'white'
-      el.style.fontWeight = '600'
+      el.style.borderLeftWidth = '4px'
+      el.style.color = 'var(--color-primary)'
+      el.style.fontWeight = '700'
     })
   })
 }
