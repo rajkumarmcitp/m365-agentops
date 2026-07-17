@@ -692,21 +692,46 @@ export class ComplianceCollector {
       // Build authentication code for SecurityComplianceCenter
       let authCode = ''
       if (tenantId && clientId && clientSecret) {
+        // Escape secrets properly for PowerShell
+        const escapedSecret = clientSecret.replace(/\$/g, '`$').replace(/'/g, "''")
         authCode = `
-          # Authenticate to Security & Compliance Center
-          \$securePassword = ConvertTo-SecureString -String '${clientSecret.replace(/'/g, "''")}' -AsPlainText -Force
-          \$credential = New-Object System.Management.Automation.PSCredential('${clientId}', \$securePassword)
-          Connect-SecurityComplianceCenter -Credential \$credential -TenantId '${tenantId}' -ErrorAction SilentlyContinue
+          # Suppress module warnings
+          \$WarningPreference = 'SilentlyContinue'
+
+          try {
+            # Authenticate to Security & Compliance Center
+            \$securePassword = ConvertTo-SecureString -String '${escapedSecret}' -AsPlainText -Force
+            \$credential = New-Object System.Management.Automation.PSCredential('${clientId}', \$securePassword)
+
+            # Connect to Compliance using ExchangeOnlineManagement
+            Connect-SecurityComplianceCenter -Credential \$credential -ErrorAction Stop | Out-Null
+            Write-Host "✅ Connected to Compliance"
+          } catch {
+            Write-Host "⚠️ Compliance connection failed: \$_"
+          }
         `
       }
 
-      const psCommand = `${authCode}\n${script}`
+      const psCommand = `
+\$ErrorActionPreference = 'SilentlyContinue'
+\$WarningPreference = 'SilentlyContinue'
+${authCode}
+${script}
+      `
+
       const result = execSync(`pwsh -Command "${psCommand.replace(/"/g, '\\"')}"`, {
         timeout: 60000,
         encoding: 'utf-8'
       }).trim()
 
-      return JSON.parse(result)
+      // Filter out connection messages
+      const lines = result.split('\n').filter(l => l && !l.includes('Connected') && !l.includes('✅'))
+      const jsonLine = lines.find(l => l.trim().startsWith('[') || l.trim().startsWith('{'))
+
+      if (jsonLine) {
+        return JSON.parse(jsonLine)
+      }
+      return null
     } catch (error) {
       console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
       return null

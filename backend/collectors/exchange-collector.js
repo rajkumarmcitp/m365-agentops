@@ -4259,19 +4259,32 @@ export class ExchangeCollector {
       const clientId = process.env.AZURE_CLIENT_ID
       const clientSecret = process.env.AZURE_CLIENT_SECRET
 
-      // Build authentication code
+      // Build authentication code for Exchange Online
       let authCode = ''
       if (tenantId && clientId && clientSecret) {
+        // Escape secrets properly for PowerShell
+        const escapedSecret = clientSecret.replace(/\$/g, '`$').replace(/'/g, "''")
         authCode = `
-          # Authenticate to Exchange Online
-          \$securePassword = ConvertTo-SecureString -String '${clientSecret.replace(/'/g, "''")}' -AsPlainText -Force
-          \$credential = New-Object System.Management.Automation.PSCredential('${clientId}', \$securePassword)
-          Connect-ExchangeOnlineManagement -AppId '${clientId}' -Credential \$credential -Organization '${tenantId}' -ErrorAction SilentlyContinue
+          # Suppress module warnings and import required modules
+          \$WarningPreference = 'SilentlyContinue'
+
+          try {
+            # Authenticate to Exchange Online using App-only authentication
+            \$securePassword = ConvertTo-SecureString -String '${escapedSecret}' -AsPlainText -Force
+            \$credential = New-Object System.Management.Automation.PSCredential('${clientId}', \$securePassword)
+
+            # Connect using organization parameter for service principal auth
+            Connect-ExchangeOnlineManagement -Credential \$credential -Organization '${tenantId}' -SkipLoadingCmdletHelp -ErrorAction Stop | Out-Null
+            Write-Host "✅ Connected to Exchange Online"
+          } catch {
+            Write-Host "⚠️ Exchange connection failed: \$_"
+          }
         `
       }
 
       const psCommand = `
-        \$ErrorActionPreference = 'Continue'
+        \$ErrorActionPreference = 'SilentlyContinue'
+        \$WarningPreference = 'SilentlyContinue'
         ${authCode}
         ${script}
       `
@@ -4281,7 +4294,12 @@ export class ExchangeCollector {
       try {
         const { stdout } = await execAsync(command, { timeout: 60000 })
         if (stdout && stdout.trim()) {
-          return JSON.parse(stdout)
+          // Filter out connection messages
+          const lines = stdout.split('\n').filter(l => l && !l.includes('Connected') && !l.includes('✅'))
+          const jsonLine = lines.find(l => l.trim().startsWith('[') || l.trim().startsWith('{'))
+          if (jsonLine) {
+            return JSON.parse(jsonLine)
+          }
         }
         return []
       } catch (psError) {

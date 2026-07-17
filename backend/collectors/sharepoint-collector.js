@@ -4227,19 +4227,30 @@ export class SharePointCollector {
       const tenantId = process.env.AZURE_TENANT_ID
       const clientId = process.env.AZURE_CLIENT_ID
       const clientSecret = process.env.AZURE_CLIENT_SECRET
-      const siteUrl = process.env.SHAREPOINT_SITE_URL
+      const siteUrl = process.env.SHAREPOINT_SITE_URL || `https://${tenantId.split('-')[0]}.sharepoint.com`
 
       // Build authentication code for PnP.PowerShell
       let authCode = ''
-      if (tenantId && clientId && clientSecret && siteUrl) {
+      if (tenantId && clientId && clientSecret) {
+        // Escape secrets properly for PowerShell
+        const escapedSecret = clientSecret.replace(/\$/g, '`$').replace(/'/g, "''")
         authCode = `
-          # Authenticate to SharePoint Online with PnP.PowerShell
-          Connect-PnPOnline -Url '${siteUrl}' -ClientId '${clientId}' -ClientSecret '${clientSecret}' -TenantId '${tenantId}' -ErrorAction SilentlyContinue
+          # Suppress module warnings
+          \$WarningPreference = 'SilentlyContinue'
+
+          try {
+            # Authenticate to SharePoint Online using PnP.PowerShell with service principal
+            Connect-PnPOnline -Url '${siteUrl}' -ClientId '${clientId}' -ClientSecret '${escapedSecret}' -Tenant '${tenantId}' -ErrorAction Stop | Out-Null
+            Write-Host "✅ Connected to SharePoint"
+          } catch {
+            Write-Host "⚠️ SharePoint connection failed: \$_"
+          }
         `
       }
 
       const psCommand = `
-        \$ErrorActionPreference = 'Continue'
+        \$ErrorActionPreference = 'SilentlyContinue'
+        \$WarningPreference = 'SilentlyContinue'
         ${authCode}
         ${script}
       `
@@ -4249,7 +4260,12 @@ export class SharePointCollector {
       try {
         const { stdout } = await execAsync(command, { timeout: 60000 })
         if (stdout && stdout.trim()) {
-          return JSON.parse(stdout)
+          // Filter out connection messages
+          const lines = stdout.split('\n').filter(l => l && !l.includes('Connected') && !l.includes('✅'))
+          const jsonLine = lines.find(l => l.trim().startsWith('[') || l.trim().startsWith('{'))
+          if (jsonLine) {
+            return JSON.parse(jsonLine)
+          }
         }
         return null
       } catch (psError) {

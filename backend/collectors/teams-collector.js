@@ -3530,19 +3530,38 @@ export class TeamsCollector {
       const clientId = process.env.AZURE_CLIENT_ID
       const clientSecret = process.env.AZURE_CLIENT_SECRET
 
-      // Build authentication code
+      // Build authentication code for Teams
       let authCode = ''
       if (tenantId && clientId && clientSecret) {
+        // Escape secrets properly for PowerShell
+        const escapedSecret = clientSecret.replace(/\$/g, '`$').replace(/'/g, "''")
         authCode = `
-          # Authenticate to Microsoft Teams
-          \$securePassword = ConvertTo-SecureString -String '${clientSecret.replace(/'/g, "''")}' -AsPlainText -Force
-          \$credential = New-Object System.Management.Automation.PSCredential('${clientId}', \$securePassword)
-          Connect-MicrosoftTeams -Credential \$credential -TenantId '${tenantId}' -ErrorAction SilentlyContinue
+          # Suppress module warnings
+          \$WarningPreference = 'SilentlyContinue'
+
+          try {
+            # Authenticate to Microsoft Teams using service principal
+            \$securePassword = ConvertTo-SecureString -String '${escapedSecret}' -AsPlainText -Force
+            \$credential = New-Object System.Management.Automation.PSCredential('${clientId}', \$securePassword)
+
+            # For Teams, use Connect-MicrosoftTeams
+            Connect-MicrosoftTeams -Credential \$credential -TenantId '${tenantId}' -ErrorAction Stop | Out-Null
+            Write-Host "✅ Connected to Teams"
+          } catch {
+            # Teams module might not support service principal - try alternative
+            try {
+              Import-Module MicrosoftTeams -ErrorAction SilentlyContinue
+              Write-Host "⚠️ Teams module loaded, but connection requires interactive auth"
+            } catch {
+              Write-Host "⚠️ Teams module not available"
+            }
+          }
         `
       }
 
       const psCommand = `
-        \$ErrorActionPreference = 'Continue'
+        \$ErrorActionPreference = 'SilentlyContinue'
+        \$WarningPreference = 'SilentlyContinue'
         ${authCode}
         ${script}
       `
@@ -3552,7 +3571,12 @@ export class TeamsCollector {
       try {
         const { stdout } = await execAsync(command, { timeout: 60000 })
         if (stdout && stdout.trim()) {
-          return JSON.parse(stdout)
+          // Filter out connection messages
+          const lines = stdout.split('\n').filter(l => l && !l.includes('Connected') && !l.includes('✅'))
+          const jsonLine = lines.find(l => l.trim().startsWith('[') || l.trim().startsWith('{'))
+          if (jsonLine) {
+            return JSON.parse(jsonLine)
+          }
         }
         return []
       } catch (psError) {
