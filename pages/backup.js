@@ -548,7 +548,8 @@ let restoreState = {
   allServices: [], // All services in the system
   allServiceNames: [], // Display names of all services
   backupsByDate: {}, // Map of date -> array of backups
-  allAvailableDates: []
+  allAvailableDates: [],
+  resourceTypeFilter: 'successful' // Filter for resource types: successful, notConfigured, errors
 }
 
 async function initializeRestoreExplorerBackup() {
@@ -856,21 +857,77 @@ function loadRestoreResourceTypesForServiceBackup() {
   const prefix = serviceTypeMap[restoreState.selectedService] || ''
   const filtered = restoreState.allResources.filter(r => r.type?.startsWith(prefix))
 
-  const typesCounts = {}
+  // Analyze resource status by type
+  const typeStats = {}
   filtered.forEach(r => {
-    typesCounts[r.type] = (typesCounts[r.type] || 0) + 1
+    if (!typeStats[r.type]) {
+      typeStats[r.type] = { successful: 0, notConfigured: 0, errors: 0, total: 0 }
+    }
+    typeStats[r.type].total += 1
+
+    // Check if resource was successfully backed up
+    if (r.configuration && Object.keys(r.configuration).length > 0) {
+      typeStats[r.type].successful += 1
+    } else if (r.error) {
+      typeStats[r.type].errors += 1
+    } else {
+      typeStats[r.type].notConfigured += 1
+    }
   })
 
-  const typesHtml = Object.entries(typesCounts)
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([type, count]) => `
-      <div style="padding:8px;background:var(--color-bg-primary);border:1px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;" data-type="${type}">
-        <span>${count > 0 ? '✅' : '⭕'} ${type}</span>
-        <span style="font-size:11px;color:var(--color-text-tertiary);">${count}</span>
-      </div>
-    `).join('')
+  // Set default filter to successful
+  if (!restoreState.resourceTypeFilter) {
+    restoreState.resourceTypeFilter = 'successful'
+  }
 
-  document.getElementById('restore-types-list').innerHTML = typesHtml
+  // Create filter buttons
+  const filterButtonsHtml = `
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+      <button data-filter="successful" style="padding:6px 10px;font-size:11px;border:1px solid #4CAF50;background:#4CAF50;color:white;border-radius:4px;cursor:pointer;font-weight:600;">✅ Successful</button>
+      <button data-filter="notConfigured" style="padding:6px 10px;font-size:11px;border:1px solid #FFC107;background:transparent;color:#FFC107;border-radius:4px;cursor:pointer;font-weight:600;">⚠️ Not Configured</button>
+      <button data-filter="errors" style="padding:6px 10px;font-size:11px;border:1px solid #f44336;background:transparent;color:#f44336;border-radius:4px;cursor:pointer;font-weight:600;">❌ Errors</button>
+    </div>
+  `
+
+  // Filter resource types based on current filter
+  const filteredTypes = Object.entries(typeStats)
+    .filter(([type, stats]) => {
+      if (restoreState.resourceTypeFilter === 'successful') return stats.successful > 0
+      if (restoreState.resourceTypeFilter === 'notConfigured') return stats.notConfigured > 0
+      if (restoreState.resourceTypeFilter === 'errors') return stats.errors > 0
+      return true
+    })
+    .sort((a, b) => a[0].localeCompare(b[0]))
+
+  const typesHtml = filteredTypes
+    .map(([type, stats]) => {
+      let statusIcon = '✅'
+      if (stats.errors > 0) statusIcon = '❌'
+      else if (stats.notConfigured > 0) statusIcon = '⚠️'
+
+      return `
+        <div style="padding:8px;background:var(--color-bg-primary);border:1px solid var(--color-border-tertiary);border-radius:4px;cursor:pointer;font-size:12px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;" data-type="${type}">
+          <span>${statusIcon} ${type}</span>
+          <span style="font-size:10px;color:var(--color-text-tertiary);">
+            ${stats.successful}✓ ${stats.notConfigured}⚠ ${stats.errors}✗
+          </span>
+        </div>
+      `
+    }).join('')
+
+  document.getElementById('restore-types-list').innerHTML = filterButtonsHtml + typesHtml
+
+  // Add filter button listeners
+  document.querySelectorAll('[data-filter]').forEach(btn => {
+    if (btn.dataset.filter === restoreState.resourceTypeFilter) {
+      btn.style.background = btn.dataset.filter === 'successful' ? '#4CAF50' : 'transparent'
+      btn.style.color = btn.dataset.filter === 'successful' ? 'white' : (btn.dataset.filter === 'notConfigured' ? '#FFC107' : '#f44336')
+    }
+    btn.addEventListener('click', () => {
+      restoreState.resourceTypeFilter = btn.dataset.filter
+      loadRestoreResourceTypesForServiceBackup()
+    })
+  })
 
   document.querySelectorAll('[data-type]').forEach(el => {
     el.addEventListener('click', () => {
