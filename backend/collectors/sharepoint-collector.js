@@ -4223,8 +4223,24 @@ export class SharePointCollector {
 
       const execAsync = promisify(exec)
 
+      // Get credentials from environment
+      const tenantId = process.env.AZURE_TENANT_ID
+      const clientId = process.env.AZURE_CLIENT_ID
+      const clientSecret = process.env.AZURE_CLIENT_SECRET
+      const siteUrl = process.env.SHAREPOINT_SITE_URL
+
+      // Build authentication code for PnP.PowerShell
+      let authCode = ''
+      if (tenantId && clientId && clientSecret && siteUrl) {
+        authCode = `
+          # Authenticate to SharePoint Online with PnP.PowerShell
+          Connect-PnPOnline -Url '${siteUrl}' -ClientId '${clientId}' -ClientSecret '${clientSecret}' -TenantId '${tenantId}' -ErrorAction SilentlyContinue
+        `
+      }
+
       const psCommand = `
         \$ErrorActionPreference = 'Continue'
+        ${authCode}
         ${script}
       `
 
@@ -4237,11 +4253,7 @@ export class SharePointCollector {
         }
         return null
       } catch (psError) {
-        command = `powershell -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
-        const { stdout } = await execAsync(command, { timeout: 60000 })
-        if (stdout && stdout.trim()) {
-          return JSON.parse(stdout)
-        }
+        console.warn(`⚠️ PowerShell execution failed: ${psError.message}`)
         return null
       }
     } catch (error) {

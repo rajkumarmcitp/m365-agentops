@@ -4254,8 +4254,25 @@ export class ExchangeCollector {
 
       const execAsync = promisify(exec)
 
+      // Get credentials from environment
+      const tenantId = process.env.AZURE_TENANT_ID
+      const clientId = process.env.AZURE_CLIENT_ID
+      const clientSecret = process.env.AZURE_CLIENT_SECRET
+
+      // Build authentication code
+      let authCode = ''
+      if (tenantId && clientId && clientSecret) {
+        authCode = `
+          # Authenticate to Exchange Online
+          \$securePassword = ConvertTo-SecureString -String '${clientSecret.replace(/'/g, "''")}' -AsPlainText -Force
+          \$credential = New-Object System.Management.Automation.PSCredential('${clientId}', \$securePassword)
+          Connect-ExchangeOnlineManagement -AppId '${clientId}' -Credential \$credential -Organization '${tenantId}' -ErrorAction SilentlyContinue
+        `
+      }
+
       const psCommand = `
         \$ErrorActionPreference = 'Continue'
+        ${authCode}
         ${script}
       `
 
@@ -4268,11 +4285,7 @@ export class ExchangeCollector {
         }
         return []
       } catch (psError) {
-        command = `powershell -NoProfile -Command "${psCommand.replace(/"/g, '\\"')}"`
-        const { stdout } = await execAsync(command, { timeout: 60000 })
-        if (stdout && stdout.trim()) {
-          return JSON.parse(stdout)
-        }
+        console.warn(`⚠️ PowerShell execution failed: ${psError.message}`)
         return []
       }
     } catch (error) {

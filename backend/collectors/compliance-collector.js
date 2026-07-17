@@ -683,24 +683,33 @@ export class ComplianceCollector {
   async executePowerShell(script) {
     try {
       const { execSync } = require('child_process')
-      const result = execSync(`pwsh -Command "${script.replace(/"/g, '\\"')}"`, {
+
+      // Get credentials from environment
+      const tenantId = process.env.AZURE_TENANT_ID
+      const clientId = process.env.AZURE_CLIENT_ID
+      const clientSecret = process.env.AZURE_CLIENT_SECRET
+
+      // Build authentication code for SecurityComplianceCenter
+      let authCode = ''
+      if (tenantId && clientId && clientSecret) {
+        authCode = `
+          # Authenticate to Security & Compliance Center
+          \$securePassword = ConvertTo-SecureString -String '${clientSecret.replace(/'/g, "''")}' -AsPlainText -Force
+          \$credential = New-Object System.Management.Automation.PSCredential('${clientId}', \$securePassword)
+          Connect-SecurityComplianceCenter -Credential \$credential -TenantId '${tenantId}' -ErrorAction SilentlyContinue
+        `
+      }
+
+      const psCommand = `${authCode}\n${script}`
+      const result = execSync(`pwsh -Command "${psCommand.replace(/"/g, '\\"')}"`, {
         timeout: 60000,
         encoding: 'utf-8'
       }).trim()
 
       return JSON.parse(result)
     } catch (error) {
-      try {
-        const { execSync } = require('child_process')
-        const result = execSync(`powershell.exe -Command "${script.replace(/"/g, '\\"')}"`, {
-          timeout: 60000,
-          encoding: 'utf-8'
-        }).trim()
-        return JSON.parse(result)
-      } catch (fallbackError) {
-        console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
-        return null
-      }
+      console.warn(`⚠️ PowerShell execution failed: ${error.message}`)
+      return null
     }
   }
 
