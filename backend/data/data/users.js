@@ -9,7 +9,7 @@ export const USERS = [
     navAccess: [
       'dashboard', 'requests', 'security', 'tenantguard', 'tenantguard-enhanced', 'zerotrust', 'privaccts',
       'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'messages', 'applications', 'intune',
-      'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings', 'setup-wizard', 'backup', 'backup-config', 'm365dsc-coverage'
+      'portal', 'myreqs', 'myaccount', 'chat', 'audit', 'settings', 'setup-wizard', 'backup', 'backup-config'
     ],
     isDemoAccount: true,
   },

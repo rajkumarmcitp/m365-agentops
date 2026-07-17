@@ -30,7 +30,6 @@ const NAV_ITEMS = {
   config: [
     { id: 'backup',   label: 'Backup & Restore', icon: 'ti-database-backup' },
     { id: 'backup-config', label: 'Backup Configuration', icon: 'ti-settings-automation' },
-    { id: 'm365dsc-coverage', label: 'M365DSC Coverage', icon: 'ti-radar-2' },
     { id: 'audit',    label: 'Audit Log',        icon: 'ti-database' },
     { id: 'settings', label: 'Admin Settings',   icon: 'ti-adjustments-horizontal' },
   ],

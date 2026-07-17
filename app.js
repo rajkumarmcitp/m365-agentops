@@ -33,7 +33,6 @@ import { initMessages } from './pages/messages.js'
 import { initTasks } from './pages/tasks.js'
 import { initBackup } from './pages/backup.js'
 import { initBackupConfig } from './pages/backup-config.js'
-import { initM365DSCCoverage } from './pages/m365dsc-coverage.js'
 import { initNotifications, stopNotifications } from './components/notifications.js'
 import { initApplications } from './pages/applications.js'
 import { initIntune } from './pages/intune.js'
@@ -211,7 +210,6 @@ const PAGE_INIT = {
   settings: initSettings,
   backup: initBackup,
   'backup-config': initBackupConfig,
-  'm365dsc-coverage': initM365DSCCoverage,
 }
 
 // Export configuration utilities
@@ -466,8 +464,8 @@ async function doLoginWithEntraID(account) {
 
   // Determine nav access based on role
   const roleNavAccess = {
-    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config', 'm365dsc-coverage'],
-    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config', 'm365dsc-coverage'],
+    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
+    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
     manager: ['requests', 'msgcenter', 'tasks', 'portal', 'myreqs', 'myaccount', 'chat'],
     user: ['portal', 'myreqs', 'myaccount', 'chat']
   }
@@ -543,7 +541,7 @@ function renderAllPages() {
   const pages = [
     'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','privaccts','m365config',
     'msgcenter','messages','tasks','applications','intune','licenses','agents','agent-details','approvals','portal','myreqs','myaccount','chat',
-    'graphapi','sso','setup-wizard','audit','settings','backup','backup-config','m365dsc-coverage'
+    'graphapi','sso','setup-wizard','audit','settings','backup','backup-config'
   ]
   return pages.map(p => `<div class="page" id="page-${p}"></div>`).join('')
 }
