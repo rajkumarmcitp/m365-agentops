@@ -901,10 +901,17 @@ async function loadRestoreResourcesFromBackupBackup() {
 
 function loadRestoreResourceTypesForServiceBackup() {
   const serviceTypeMap = {
-    'Security (Entra ID)': 'AAD',
+    'Entra ID': 'AAD',
     'Exchange Online': 'EXO',
-    'SharePoint': 'SPO',
-    'Teams': 'Teams'
+    'SharePoint Online': 'SPO',
+    'Microsoft Teams': 'Teams',
+    'OneDrive': 'OD',
+    'Microsoft 365 Groups': 'O365Group',
+    'Security & Compliance': 'SC',
+    'Intune': 'Intune',
+    'Power Platform': 'PP',
+    'Tenant Settings': 'O365Org',
+    'Dynamics 365 / Model-Driven Apps': 'CRM'
   }
 
   const prefix = serviceTypeMap[restoreState.selectedService] || ''
