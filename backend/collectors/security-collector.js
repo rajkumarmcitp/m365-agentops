@@ -95,7 +95,7 @@ export class SecurityCollector {
       // Authentication Policies (5 resources)
       await this.collectAuthenticationMethodsPoliciesPowerShell()
       await this.collectAuthenticationStrengthPoliciesPowerShell()
-      await this.collectAuthenticationMethodsPolicy()
+      await this.collectAuthenticationMethodsPolicies()
       await this.collectMFASettingsPowerShell()
       await this.collectPasswordPoliciesPowerShell()
 
