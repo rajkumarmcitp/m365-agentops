@@ -492,10 +492,11 @@ function renderRestoreExplorerView() {
     <div style="padding:24px;height:100%;display:flex;flex-direction:column;background:var(--color-bg-primary);">
       <!-- Date Selection as Tabs -->
       <div style="margin-bottom:20px;">
-        <label style="display:block;font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.3px;">Select Backup Date</label>
-        <div id="restore-backup-tabs" style="display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--color-border-secondary);padding-bottom:0;overflow-x:auto;">
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:12px;letter-spacing:0.3px;">Select Backup Date <span id="restore-dates-count" style="color:var(--color-text-tertiary);font-weight:400;"> (Loading...)</span></label>
+        <div id="restore-backup-tabs" style="display:flex;gap:4px;border-bottom:1px solid var(--color-border-secondary);padding-bottom:0;overflow-x:auto;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;">
           <button style="padding:10px 14px;font-size:12px;font-weight:500;border:none;background:transparent;color:var(--color-text-secondary);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all 0.2s;" disabled>Loading dates...</button>
         </div>
+        <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px;">💡 Scroll horizontally to view older backups</div>
       </div>
 
       <!-- Context Header -->
@@ -664,8 +665,11 @@ async function loadAllDatesForRestoreBackup() {
       restoreState.backupsByDate = dateMap
       restoreState.allAvailableDates = Object.keys(dateMap).sort().reverse() // Most recent first
 
+      // Update dates count
+      document.getElementById('restore-dates-count').textContent = `(${restoreState.allAvailableDates.length} dates available)`
+
       // Create date tabs
-      restoreState.allAvailableDates.forEach(date => {
+      restoreState.allAvailableDates.forEach((date, index) => {
         const tab = document.createElement('button')
         tab.textContent = date
         tab.value = date
