@@ -64,6 +64,7 @@ export class SecurityCollector {
 
       // Applications & Service Principals (6 resources)
       await this.collectApplications()
+      await this.collectApplicationOwners()
       await this.collectServicePrincipals()
       await this.collectEnterpriseApplications()
       await this.collectApplicationConsentPoliciesPowerShell()
@@ -101,7 +102,7 @@ export class SecurityCollector {
 
       // Conditional Access & Named Locations (3 resources)
       await this.collectConditionalAccessPolicies()
-      await this.collectConditionalAccessNamedLocationsPowerShell()
+      await this.collectNamedLocations()
       await this.collectSignInRiskPoliciesPowerShell()
 
       // Security Baseline (2 resources)
@@ -117,7 +118,7 @@ export class SecurityCollector {
       console.log('📊 Starting Security Phase 3 collection (advanced governance & lifecycle)...')
 
       // Entitlement Management (2 resources)
-      await this.collectEntitlementManagementCatalogs()
+      await this.collectEntitlementCatalogs()
       await this.collectEntitlementAccessPackages()
 
       // Lifecycle & User Flows (2 resources)
@@ -126,9 +127,9 @@ export class SecurityCollector {
 
       // Risk & Compliance (4 resources)
       await this.collectRiskDetectionsPowerShell()
-      await this.collectAccessReviewsPowerShell()
+      await this.collectAccessReviews()
       await this.collectAccessReviewSettings()
-      await this.collectTermsOfUsePowerShell()
+      await this.collectTermsOfUse()
 
       // Cross-Tenant & Multi-Org (2 resources)
       await this.collectCrossTenantAccessPoliciesPowerShell()
@@ -369,7 +370,7 @@ export class SecurityCollector {
       console.log('📋 Collecting Azure AD Role Assignments...')
 
       const response = await this.graphClient
-        .api('/directoryRoleAssignments')
+        .api('/roleManagement/directory/roleAssignments')
         .select('id,roleDefinitionId,principalId,createdDateTime,resourceScopes')
         .top(999)
         .get()
@@ -1133,20 +1134,19 @@ export class SecurityCollector {
     try {
       console.log('📋 Collecting Identity Providers...')
       const response = await this.graphClient
-        .api('/identityProviders')
-        .select('id,name,type,clientId')
+        .api('/identity/identityProviders')
         .get()
 
       if (response.value && response.value.length > 0) {
         for (const provider of response.value) {
           this.resources.push({
             type: 'AADIdentityProvider',
-            name: provider.name || provider.id,
+            name: provider.displayName || provider.id,
             id: provider.id,
             configuration: {
               Identity: provider.id,
-              Name: provider.name || '',
-              Type: provider.type || '',
+              DisplayName: provider.displayName || '',
+              Type: provider['@odata.type'] || '',
               ClientId: provider.clientId || ''
             }
           })
@@ -3036,6 +3036,226 @@ export class SecurityCollector {
       }
     } catch (error) {
       this.handleError('collectCertificateAndSecretsPowerShell', error)
+    }
+  }
+
+  /**
+   * Collect Named Locations via Graph API
+   * AADNamedLocation
+   */
+  async collectNamedLocations() {
+    try {
+      console.log('📋 Collecting Named Locations...')
+      const response = await this.graphClient
+        .api('/identity/conditionalAccess/namedLocations')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const location of response.value) {
+          this.resources.push({
+            type: 'AADNamedLocation',
+            name: location.displayName,
+            id: location.id,
+            properties: {
+              id: location.id,
+              displayName: location.displayName,
+              countriesAllowed: location.countriesAllowed || [],
+              countriesBlocked: location.countriesBlocked || [],
+              includeUnknownCountriesAndRegions: location.includeUnknownCountriesAndRegions || false
+            }
+          })
+        }
+        console.log(`✅ Found ${response.value.length} named locations`)
+      }
+    } catch (error) {
+      this.handleError('collectNamedLocations', error)
+    }
+  }
+
+  /**
+   * Collect Devices via Graph API
+   * AADDevice
+   */
+  async collectDevices() {
+    try {
+      console.log('📋 Collecting Devices...')
+      const response = await this.graphClient
+        .api('/devices')
+        .select('id,displayName,deviceId,operatingSystem,trustType,createdDateTime')
+        .top(999)
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const device of response.value) {
+          this.resources.push({
+            type: 'AADDevice',
+            name: device.displayName,
+            id: device.id,
+            properties: {
+              id: device.id,
+              displayName: device.displayName,
+              deviceId: device.deviceId,
+              operatingSystem: device.operatingSystem,
+              trustType: device.trustType,
+              createdDateTime: device.createdDateTime
+            }
+          })
+        }
+        console.log(`✅ Found ${response.value.length} devices`)
+      }
+    } catch (error) {
+      this.handleError('collectDevices', error)
+    }
+  }
+
+  /**
+   * Collect Terms of Use via Graph API
+   * AADTermsOfUse
+   */
+  async collectTermsOfUse() {
+    try {
+      console.log('📋 Collecting Terms of Use...')
+      const response = await this.graphClient
+        .api('/agreements')
+        .select('id,displayName,description,createdDateTime,userConsentToUseAppId')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const agreement of response.value) {
+          this.resources.push({
+            type: 'AADTermsOfUse',
+            name: agreement.displayName,
+            id: agreement.id,
+            properties: {
+              id: agreement.id,
+              displayName: agreement.displayName,
+              description: agreement.description || '',
+              createdDateTime: agreement.createdDateTime
+            }
+          })
+        }
+        console.log(`✅ Found ${response.value.length} terms of use`)
+      }
+    } catch (error) {
+      this.handleError('collectTermsOfUse', error)
+    }
+  }
+
+  /**
+   * Collect Access Reviews via Graph API
+   * AADAccessReview
+   */
+  async collectAccessReviews() {
+    try {
+      console.log('📋 Collecting Access Reviews...')
+      const response = await this.graphClient
+        .api('/identityGovernance/accessReviews/definitions')
+        .select('id,displayName,description,createdDateTime,status')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const review of response.value) {
+          this.resources.push({
+            type: 'AADAccessReview',
+            name: review.displayName,
+            id: review.id,
+            properties: {
+              id: review.id,
+              displayName: review.displayName,
+              description: review.description || '',
+              createdDateTime: review.createdDateTime,
+              status: review.status
+            }
+          })
+        }
+        console.log(`✅ Found ${response.value.length} access reviews`)
+      }
+    } catch (error) {
+      this.handleError('collectAccessReviews', error)
+    }
+  }
+
+  /**
+   * Collect Entitlement Management Catalogs via Graph API
+   * AADEntitlementManagementCatalog
+   */
+  async collectEntitlementCatalogs() {
+    try {
+      console.log('📋 Collecting Entitlement Management Catalogs...')
+      const response = await this.graphClient
+        .api('/identityGovernance/entitlementManagement/catalogs')
+        .select('id,displayName,description,createdDateTime,status')
+        .get()
+
+      if (response.value && response.value.length > 0) {
+        for (const catalog of response.value) {
+          this.resources.push({
+            type: 'AADEntitlementManagementCatalog',
+            name: catalog.displayName,
+            id: catalog.id,
+            properties: {
+              id: catalog.id,
+              displayName: catalog.displayName,
+              description: catalog.description || '',
+              createdDateTime: catalog.createdDateTime,
+              status: catalog.status
+            }
+          })
+        }
+        console.log(`✅ Found ${response.value.length} entitlement catalogs`)
+      }
+    } catch (error) {
+      this.handleError('collectEntitlementCatalogs', error)
+    }
+  }
+
+  /**
+   * Collect Application Owners via Graph API
+   * AADApplicationOwner
+   */
+  async collectApplicationOwners() {
+    try {
+      console.log('📋 Collecting Application Owners...')
+
+      // First get all applications
+      const appsResponse = await this.graphClient
+        .api('/applications')
+        .select('id,displayName')
+        .top(999)
+        .get()
+
+      if (appsResponse.value && appsResponse.value.length > 0) {
+        for (const app of appsResponse.value) {
+          try {
+            const ownersResponse = await this.graphClient
+              .api(`/applications/${app.id}/owners`)
+              .select('id,displayName,userPrincipalName')
+              .get()
+
+            if (ownersResponse.value && ownersResponse.value.length > 0) {
+              for (const owner of ownersResponse.value) {
+                this.resources.push({
+                  type: 'AADApplicationOwner',
+                  name: `${app.displayName} - ${owner.displayName}`,
+                  id: `${app.id}-${owner.id}`,
+                  properties: {
+                    applicationId: app.id,
+                    applicationName: app.displayName,
+                    ownerId: owner.id,
+                    ownerName: owner.displayName,
+                    ownerUpn: owner.userPrincipalName || ''
+                  }
+                })
+              }
+            }
+          } catch (e) {
+            // Silently skip if we can't get owners for this app
+          }
+        }
+        console.log(`✅ Found application owners`)
+      }
+    } catch (error) {
+      this.handleError('collectApplicationOwners', error)
     }
   }
 
