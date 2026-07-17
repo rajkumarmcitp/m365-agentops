@@ -713,18 +713,13 @@ async function loadServicesForSelectedDateBackup() {
     })
 
     backupsForDate.forEach(backup => {
-      // Try to match backup serviceName to service key
+      // Match backup serviceName to service key exactly
       const matchedService = restoreState.allServices.find(s =>
-        s.key === backup.serviceName ||
-        s.key === backup.serviceName.toLowerCase() ||
-        s.displayName.toLowerCase().includes(backup.serviceName.toLowerCase())
+        s.key.toLowerCase() === backup.serviceName.toLowerCase()
       )
 
       if (matchedService) {
         servicesSet.add(matchedService.displayName)
-      } else {
-        // Fallback: just use the backup serviceName as-is
-        servicesSet.add(backup.serviceName)
       }
     })
 
@@ -774,11 +769,9 @@ async function loadRestoreResourcesForServiceAndDateBackup() {
 
     // Find backup for this service using same matching logic
     const backup = backupsForDate.find(b => {
-      // Find the service object that matches this backup
+      // Find the service object that matches this backup (exact key match)
       const matchedService = restoreState.allServices.find(s =>
-        s.key === b.serviceName ||
-        s.key === b.serviceName.toLowerCase() ||
-        s.displayName.toLowerCase().includes(b.serviceName.toLowerCase())
+        s.key.toLowerCase() === b.serviceName.toLowerCase()
       )
       return matchedService && matchedService.displayName === service
     })
