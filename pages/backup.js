@@ -537,7 +537,7 @@ function renderRestoreExplorerView() {
         <!-- Preview Column -->
         <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-secondary);border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
           <div style="padding:16px;border-bottom:1px solid var(--color-border-tertiary);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--color-text-primary);letter-spacing:0.5px;">👁️ Preview</div>
-          <div id="restore-preview-content" class="restore-scrollbar" style="flex:1;overflow-y:auto;padding:16px;font-size:13px;color:var(--color-text-tertiary);text-align:center;">
+          <div id="restore-preview-content" class="restore-scrollbar" style="flex:1;overflow-y:auto;padding:16px;font-size:13px;color:var(--color-text-tertiary);text-align:left;">
             Select a resource to preview
           </div>
           <div style="padding:12px;border-top:1px solid var(--color-border-tertiary);display:flex;gap:10px;">
