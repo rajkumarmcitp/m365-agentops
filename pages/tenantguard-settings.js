@@ -528,12 +528,14 @@ async function handleSaveRateLimit() {
 
 async function handleVerifyConfig() {
   try {
+    const status = document.getElementById('config-status')
+    if (!status) return
+
     const response = await fetch(`${api}/email/verify`, {
       method: 'GET'
     })
 
     const result = await response.json()
-    const status = document.getElementById('config-status')
 
     if (result.success) {
       status.className = 'status-indicator success'
@@ -545,8 +547,11 @@ async function handleVerifyConfig() {
       showToast('❌ ' + result.message, 'error')
     }
   } catch (error) {
-    document.getElementById('config-status').className = 'status-indicator error'
-    document.getElementById('config-status').textContent = '❌ ' + error.message
+    const status = document.getElementById('config-status')
+    if (status) {
+      status.className = 'status-indicator error'
+      status.textContent = '❌ ' + error.message
+    }
     showToast('❌ Error: ' + error.message, 'error')
   }
 }
@@ -627,12 +632,14 @@ async function loadSettings() {
 
 async function checkEmailConfig() {
   try {
+    const status = document.getElementById('config-status')
+    if (!status) return
+
     const response = await fetch(`${api}/email/verify`, {
       method: 'GET'
     })
 
     const result = await response.json()
-    const status = document.getElementById('config-status')
 
     if (result.success) {
       status.className = 'status-indicator success'
@@ -642,8 +649,11 @@ async function checkEmailConfig() {
       status.textContent = '❌ ' + result.message
     }
   } catch (error) {
-    document.getElementById('config-status').className = 'status-indicator error'
-    document.getElementById('config-status').textContent = '❌ Unreachable'
+    const status = document.getElementById('config-status')
+    if (status) {
+      status.className = 'status-indicator error'
+      status.textContent = '❌ Unreachable'
+    }
   }
 }
 
