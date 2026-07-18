@@ -1,0 +1,53 @@
+name: Deploy Backend to Azure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'backend/package-lock.json'
+      
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --production
+      
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: m365ops-api
+          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
+          package: backend/
+      
+      - name: Restart App Service
+        run: |
+          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+          az webapp restart --name m365ops-api --resource-group m365-agentops-rg
+      
+      - name: Verify Deployment
+        run: |
+          for i in {1..30}; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net/api/health)
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Backend is online!"
+              exit 0
+            fi
+            echo "Waiting for backend to start... (attempt $i/30)"
+            sleep 10
+          done
+          echo "❌ Backend failed to start"
+          exit 1
