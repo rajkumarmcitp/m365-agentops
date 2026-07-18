@@ -1,9 +1,11 @@
 /**
  * TenantGuard Email Settings Page
  * Configure alert recipients, priorities, and notification preferences
+ * Uses centralized email settings manager for global configuration
  */
 
 import './styles/tenantguard-settings.css'
+import emailSettings from '../lib/email-settings-manager.js'
 
 export function renderTenantGuardSettings(el) {
   const container = el.querySelector('.content-area')
@@ -380,11 +382,15 @@ async function handleSaveEmail() {
     from: document.getElementById('email-from').value,
     smtpHost: document.getElementById('smtp-host').value,
     smtpPort: parseInt(document.getElementById('smtp-port').value),
-    authUser: document.getElementById('email-user').value || undefined,
-    authPass: document.getElementById('email-password').value || undefined
+    authUser: document.getElementById('email-user').value || '',
+    authPass: document.getElementById('email-password').value || ''
   }
 
   try {
+    // Save to local settings manager
+    emailSettings.updateEmailConfig(config)
+
+    // Also sync to backend
     const response = await fetch('http://localhost:3000/api/email/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -394,12 +400,12 @@ async function handleSaveEmail() {
     const result = await response.json()
     if (result.success) {
       showToast('✅ Email configuration saved!', 'success')
-      localStorage.setItem('tg-email-config', JSON.stringify(config))
     } else {
-      showToast('❌ ' + result.message, 'error')
+      showToast('⚠️ Backend sync: ' + result.message, 'warning')
     }
   } catch (error) {
-    showToast('❌ Error: ' + error.message, 'error')
+    // Still save locally even if backend fails
+    showToast('✅ Settings saved locally (backend unreachable)', 'success')
   }
 }
 
@@ -418,19 +424,21 @@ async function handleAddRecipient() {
   }
 
   try {
-    const response = await fetch('http://localhost:3000/api/email/recipients', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    })
-
-    const result = await response.json()
-    if (result.success) {
+    // Add to local settings manager
+    const success = emailSettings.addRecipient(email)
+    if (success) {
       showToast(`✅ Added ${email}`, 'success')
       input.value = ''
       loadSettings()
+
+      // Also sync to backend
+      fetch('http://localhost:3000/api/email/recipients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      }).catch(err => console.log('Backend sync failed (non-critical):', err))
     } else {
-      showToast('❌ ' + result.message, 'error')
+      showToast('❌ Email already added or invalid', 'error')
     }
   } catch (error) {
     showToast('❌ Error: ' + error.message, 'error')
@@ -439,18 +447,20 @@ async function handleAddRecipient() {
 
 async function handleRemoveRecipient(email) {
   try {
-    const response = await fetch('http://localhost:3000/api/email/recipients', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    })
-
-    const result = await response.json()
-    if (result.success) {
+    // Remove from local settings manager
+    const success = emailSettings.removeRecipient(email)
+    if (success) {
       showToast(`✅ Removed ${email}`, 'success')
       loadSettings()
+
+      // Also sync to backend
+      fetch('http://localhost:3000/api/email/recipients', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      }).catch(err => console.log('Backend sync failed (non-critical):', err))
     } else {
-      showToast('❌ ' + result.message, 'error')
+      showToast('❌ Cannot remove - at least one recipient required', 'error')
     }
   } catch (error) {
     showToast('❌ Error: ' + error.message, 'error')
@@ -466,6 +476,10 @@ async function handleSaveThresholds() {
   }
 
   try {
+    // Save to local settings manager
+    emailSettings.setAlertThresholds(thresholds)
+
+    // Also sync to backend
     const response = await fetch('http://localhost:3000/api/email/thresholds', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -475,12 +489,11 @@ async function handleSaveThresholds() {
     const result = await response.json()
     if (result.success) {
       showToast('✅ Alert preferences saved!', 'success')
-      localStorage.setItem('tg-alert-thresholds', JSON.stringify(thresholds))
     } else {
-      showToast('❌ ' + result.message, 'error')
+      showToast('⚠️ Backend sync: ' + result.message, 'warning')
     }
   } catch (error) {
-    showToast('❌ Error: ' + error.message, 'error')
+    showToast('✅ Settings saved locally (backend unreachable)', 'success')
   }
 }
 
@@ -491,6 +504,10 @@ async function handleSaveRateLimit() {
   }
 
   try {
+    // Save to local settings manager
+    emailSettings.setRateLimit(limits)
+
+    // Also sync to backend
     const response = await fetch('http://localhost:3000/api/email/rate-limit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -500,12 +517,11 @@ async function handleSaveRateLimit() {
     const result = await response.json()
     if (result.success) {
       showToast('✅ Rate limits saved!', 'success')
-      localStorage.setItem('tg-rate-limit', JSON.stringify(limits))
     } else {
-      showToast('❌ ' + result.message, 'error')
+      showToast('⚠️ Backend sync: ' + result.message, 'warning')
     }
   } catch (error) {
-    showToast('❌ Error: ' + error.message, 'error')
+    showToast('✅ Settings saved locally (backend unreachable)', 'success')
   }
 }
 
@@ -579,28 +595,32 @@ async function handleRefreshStats() {
 }
 
 async function loadSettings() {
-  const recipients = localStorage.getItem('tg-recipients')
-  if (recipients) {
-    try {
-      const list = JSON.parse(recipients)
-      const container = document.getElementById('recipients-list')
-      container.innerHTML = list.map(email => `
-        <div class="recipient-item">
-          <span>${email}</span>
-          <button class="btn-remove" data-email="${email}">Remove</button>
-        </div>
-      `).join('')
+  try {
+    // Load recipients from global settings manager
+    const recipients = emailSettings.getRecipients()
+    const container = document.getElementById('recipients-list')
 
-      // Re-attach remove handlers
-      container.querySelectorAll('.btn-remove').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const email = e.target.dataset.email
-          handleRemoveRecipient(email)
-        })
-      })
-    } catch (e) {
-      console.error('Error loading recipients:', e)
+    if (recipients.length === 0) {
+      container.innerHTML = '<div style="color:var(--color-text-secondary);text-align:center;padding:20px">No recipients added yet</div>'
+      return
     }
+
+    container.innerHTML = recipients.map(email => `
+      <div class="recipient-item">
+        <span>${email}</span>
+        <button class="btn-remove" data-email="${email}">Remove</button>
+      </div>
+    `).join('')
+
+    // Re-attach remove handlers
+    container.querySelectorAll('.btn-remove').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const email = e.target.dataset.email
+        handleRemoveRecipient(email)
+      })
+    })
+  } catch (error) {
+    console.error('Error loading recipients:', error)
   }
 }
 
