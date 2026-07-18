@@ -8,6 +8,15 @@ let allCorrelations = []
 let allPatterns = []
 let selectedAlertId = null
 let autoRefreshInterval = null
+let lastUpdateTime = null
+let isRefreshing = false
+let updateCount = 0
+
+// Real-time update config
+const REFRESH_INTERVAL = 10 * 1000 // 10 seconds for real-time feel
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3000'
+  : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
 
 const ALERT_PRIORITY = {
   'P0': { label: '🚨 Drop Everything', color: '#A32D2D', bg: '#FCEBEB' },
@@ -27,26 +36,48 @@ export async function initTenantGuard() {
   const el = document.getElementById('page-tenantguard')
   if (!el) return
 
-  el.innerHTML = `<div style="padding:20px"><div class="spinner"></div><p>Loading TenantGuard...</p></div>`
+  el.innerHTML = `<div style="padding:20px"><div class="spinner"></div><p>Loading TenantGuard (Real-Time)...</p></div>`
 
   if (isDemoAccount()) {
     renderDemoTenantGuard(el)
+    // Still refresh demo data in real-time
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval)
+    autoRefreshInterval = setInterval(() => {
+      renderContent(el)
+    }, REFRESH_INTERVAL)
     return
   }
 
   try {
+    console.log('🚀 Starting TenantGuard with real-time updates (every ' + (REFRESH_INTERVAL/1000) + ' seconds)')
     await refreshData()
     renderContent(el)
+    lastUpdateTime = new Date()
   } catch (error) {
     console.error('Error initializing TenantGuard:', error)
-    showToast('Failed to load alerts', 'error')
+    showToast('Failed to load alerts - check backend connection', 'error')
+    // Fall back to demo data
+    renderDemoTenantGuard(el)
+    return
   }
 
+  // Real-time polling - update every 10 seconds
   if (autoRefreshInterval) clearInterval(autoRefreshInterval)
-  autoRefreshInterval = setInterval(() => {
-    refreshData()
-    renderContent(el)
-  }, 5 * 60 * 1000)
+  autoRefreshInterval = setInterval(async () => {
+    if (!isRefreshing) {
+      isRefreshing = true
+      try {
+        await refreshData()
+        renderContent(el)
+        lastUpdateTime = new Date()
+        updateCount++
+      } catch (error) {
+        console.error('Real-time update error:', error)
+      } finally {
+        isRefreshing = false
+      }
+    }
+  }, REFRESH_INTERVAL)
 }
 
 function renderContent(el) {
@@ -63,14 +94,21 @@ function renderContent(el) {
 
   const riskLevel = riskScore >= 80 ? 'CRITICAL' : riskScore >= 50 ? 'HIGH' : riskScore >= 20 ? 'MEDIUM' : 'LOW'
 
+  const lastUpdateStr = lastUpdateTime
+    ? lastUpdateTime.toLocaleTimeString()
+    : 'Loading...'
+  const liveIndicator = isRefreshing
+    ? '<span style="color:#0C447C">⏳ Updating...</span>'
+    : '<span style="color:#3B6D11">🟢 LIVE</span>'
+
   el.innerHTML = `
     <div class="page-header">
       <div>
         <div class="page-title"><i class="ti ti-shield-exclamation"></i> TenantGuard Security Monitoring</div>
-        <div class="page-subtitle">Real-time threat detection & attack pattern analysis</div>
+        <div class="page-subtitle">Real-time threat detection & attack pattern analysis · ${liveIndicator} · Updated: ${lastUpdateStr}</div>
       </div>
       <div class="page-actions" style="display:flex;gap:8px">
-        <button class="btn" id="tg-refresh"><i class="ti ti-refresh"></i> Refresh</button>
+        <button class="btn" id="tg-refresh" ${isRefreshing ? 'disabled' : ''}><i class="ti ti-refresh"></i> ${isRefreshing ? 'Updating...' : 'Refresh'}</button>
         <button class="btn btn-primary" id="tg-export"><i class="ti ti-download"></i> Export</button>
       </div>
     </div>
@@ -107,9 +145,21 @@ function renderContent(el) {
   })
 
   document.getElementById('tg-refresh')?.addEventListener('click', async () => {
-    await refreshData()
-    renderContent(el)
-    showToast('Data refreshed', 'success')
+    if (!isRefreshing) {
+      isRefreshing = true
+      showToast('Refreshing real-time data...', 'info')
+      try {
+        await refreshData()
+        renderContent(el)
+        lastUpdateTime = new Date()
+        updateCount++
+        showToast(`✅ Data refreshed (${updateCount} updates)`, 'success')
+      } catch (error) {
+        showToast('Failed to refresh data', 'error')
+      } finally {
+        isRefreshing = false
+      }
+    }
   })
 
   document.getElementById('tg-export')?.addEventListener('click', () => {
@@ -416,18 +466,53 @@ function renderDemoTenantGuard(el) {
 
 async function refreshData() {
   try {
-    const [summary, alerts, correlations, patterns] = await Promise.all([
-      getAlertSummary().catch(() => ({})),
-      getAlerts('all', 100).catch(() => []),
-      getCorrelations('all').catch(() => []),
-      getPatterns().catch(() => []),
+    console.log('📡 Fetching real-time data from backend...')
+
+    // Parallel fetch from all backend APIs
+    const [alertsRes, correlationsRes, patternsRes] = await Promise.all([
+      fetch(`${API_BASE}/api/tenantguard/alerts?limit=100`).then(r => r.json()).catch(e => {
+        console.error('Failed to fetch alerts:', e)
+        return { success: false, data: [] }
+      }),
+      fetch(`${API_BASE}/api/tenantguard/correlations`).then(r => r.json()).catch(e => {
+        console.error('Failed to fetch correlations:', e)
+        return { success: false, data: [] }
+      }),
+      fetch(`${API_BASE}/api/tenantguard/patterns`).then(r => r.json()).catch(e => {
+        console.error('Failed to fetch patterns:', e)
+        return { success: false, data: [] }
+      }),
     ])
 
-    allAlerts = (alerts && alerts.length > 0) ? alerts : getDemoAlerts()
-    allCorrelations = (correlations && correlations.length > 0) ? correlations : getDemoCorrelations()
-    allPatterns = patterns || []
+    // Process alerts
+    if (alertsRes?.success && alertsRes?.data?.length > 0) {
+      allAlerts = alertsRes.data
+      console.log(`✅ Loaded ${allAlerts.length} real alerts`)
+    } else {
+      allAlerts = getDemoAlerts()
+      console.log('⚠️ No real alerts, using demo data')
+    }
+
+    // Process correlations
+    if (correlationsRes?.success && correlationsRes?.data?.length > 0) {
+      allCorrelations = correlationsRes.data
+      console.log(`✅ Loaded ${allCorrelations.length} correlations`)
+    } else {
+      allCorrelations = getDemoCorrelations()
+      console.log('⚠️ No correlations, using demo data')
+    }
+
+    // Process patterns
+    if (patternsRes?.success && patternsRes?.data?.length > 0) {
+      allPatterns = patternsRes.data
+      console.log(`✅ Loaded ${allPatterns.length} patterns`)
+    } else {
+      allPatterns = []
+    }
   } catch (error) {
     console.error('Error refreshing data:', error)
+    allAlerts = getDemoAlerts()
+    allCorrelations = getDemoCorrelations()
   }
 }
 
