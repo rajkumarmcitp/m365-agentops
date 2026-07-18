@@ -464,6 +464,40 @@ function renderDemoTenantGuard(el) {
   renderContent(el)
 }
 
+// Normalize alert field names to match UI expectations
+function normalizeAlert(alert) {
+  if (!alert) return null
+
+  return {
+    id: alert.id || alert.ID || 'unknown',
+    headline: alert.headline || alert.name || alert.title || alert.activityDisplayName || 'Unknown Alert',
+    description: alert.description || alert.details || alert.message || 'No description available',
+    priority: alert.priority || alert.Priority || 'P3',
+    severity: alert.severity || alert.Severity || 'MEDIUM',
+    actor: alert.actor || alert.initiatedBy?.user?.userPrincipalName || alert.user || 'System',
+    source: alert.source || alert.Source || 'Unknown',
+    timestamp: alert.timestamp || alert.activityDateTime || alert.created_at || new Date().toISOString(),
+    score: alert.score || alert.riskScore || 50,
+    status: alert.status || alert.Status || 'open'
+  }
+}
+
+// Normalize correlation field names
+function normalizeCorrelation(corr) {
+  if (!corr) return null
+
+  return {
+    id: corr.id || corr.ID || 'unknown',
+    description: corr.description || corr.Description || 'Unknown Correlation',
+    alert_count: corr.alert_count || corr.alertCount || corr.eventCount || 0,
+    correlation_type: corr.correlation_type || corr.correlationType || 'PATTERN',
+    risk_level: corr.risk_level || corr.riskLevel || 'HIGH',
+    correlation_score: corr.correlation_score || corr.correlationScore || corr.score || 50,
+    start_timestamp: corr.start_timestamp || corr.startTime || corr.startedAt || new Date().toISOString(),
+    end_timestamp: corr.end_timestamp || corr.endTime || corr.endedAt || new Date().toISOString()
+  }
+}
+
 async function refreshData() {
   try {
     console.log('📡 Fetching real-time data from backend...')
@@ -484,26 +518,29 @@ async function refreshData() {
       }),
     ])
 
-    // Process alerts
-    if (alertsRes?.success && alertsRes?.data?.length > 0) {
-      allAlerts = alertsRes.data
+    // Process alerts with field name normalization
+    if (alertsRes?.data && Array.isArray(alertsRes.data) && alertsRes.data.length > 0) {
+      allAlerts = alertsRes.data.map(normalizeAlert).filter(a => a)
       console.log(`✅ Loaded ${allAlerts.length} real alerts`)
+    } else if (alertsRes?.success === false || !alertsRes?.data) {
+      allAlerts = getDemoAlerts()
+      console.log('⚠️ No real alerts from API, using demo data')
     } else {
       allAlerts = getDemoAlerts()
-      console.log('⚠️ No real alerts, using demo data')
+      console.log('⚠️ Empty alerts response, using demo data')
     }
 
-    // Process correlations
-    if (correlationsRes?.success && correlationsRes?.data?.length > 0) {
-      allCorrelations = correlationsRes.data
+    // Process correlations with field name normalization
+    if (correlationsRes?.data && Array.isArray(correlationsRes.data) && correlationsRes.data.length > 0) {
+      allCorrelations = correlationsRes.data.map(normalizeCorrelation).filter(c => c)
       console.log(`✅ Loaded ${allCorrelations.length} correlations`)
     } else {
       allCorrelations = getDemoCorrelations()
-      console.log('⚠️ No correlations, using demo data')
+      console.log('⚠️ No correlations from API, using demo data')
     }
 
     // Process patterns
-    if (patternsRes?.success && patternsRes?.data?.length > 0) {
+    if (patternsRes?.data && Array.isArray(patternsRes.data) && patternsRes.data.length > 0) {
       allPatterns = patternsRes.data
       console.log(`✅ Loaded ${allPatterns.length} patterns`)
     } else {
