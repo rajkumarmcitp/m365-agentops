@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "echo 'Frontend build handled by Azure Static Web Apps - skipping here'",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
