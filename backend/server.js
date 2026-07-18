@@ -1911,23 +1911,48 @@ app.post('/api/user/role', async (req, res) => {
 app.get('/api/devices', async (req, res) => {
   try {
     console.log('Fetching managed devices...')
-    const devices = await graphClient
-      .api('/deviceManagement/managedDevices')
-      .get()
 
-    console.log(`✓ Found ${devices.value.length} devices`)
-    res.json({
-      success: true,
-      count: devices.value.length,
-      data: devices.value.slice(0, 50)
-    })
+    if (!graphClient) {
+      console.log('ℹ️ Graph Client not available - returning empty devices')
+      return res.json({
+        success: true,
+        count: 0,
+        data: []
+      })
+    }
+
+    try {
+      const devices = await graphClient
+        .api('/deviceManagement/managedDevices')
+        .get()
+
+      console.log(`✓ Found ${devices.value?.length || 0} devices`)
+      return res.json({
+        success: true,
+        count: devices.value?.length || 0,
+        data: (devices.value || []).slice(0, 50)
+      })
+    } catch (apiError) {
+      // Handle permission errors gracefully
+      if (apiError.statusCode === 403 || apiError.message?.includes('Forbidden')) {
+        console.warn('⚠️ Permission denied for devices endpoint - missing DeviceManagementReadWrite.All')
+        return res.json({
+          success: true,
+          count: 0,
+          data: [],
+          warning: 'Requires DeviceManagementReadWrite.All permission'
+        })
+      }
+      throw apiError
+    }
   } catch (error) {
     console.error('✗ Devices API error:', error.message)
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      endpoint: '/deviceManagement/managedDevices',
-      hint: 'Ensure DeviceManagementReadWrite.All permission is granted'
+    // Return 200 with empty data instead of 500 for graceful degradation
+    res.json({
+      success: true,
+      count: 0,
+      data: [],
+      error: error.message
     })
   }
 })
@@ -1936,20 +1961,47 @@ app.get('/api/devices', async (req, res) => {
 app.get('/api/device-compliance-policies', async (req, res) => {
   try {
     console.log('Fetching device compliance policies...')
-    const policies = await graphClient
-      .api('/deviceManagement/deviceCompliancePolicies')
-      .get()
 
-    console.log(`✓ Found ${policies.value.length} policies`)
-    res.json({
-      success: true,
-      count: policies.value.length,
-      data: policies.value
-    })
+    if (!graphClient) {
+      console.log('ℹ️ Graph Client not available - returning empty policies')
+      return res.json({
+        success: true,
+        count: 0,
+        data: []
+      })
+    }
+
+    try {
+      const policies = await graphClient
+        .api('/deviceManagement/deviceCompliancePolicies')
+        .get()
+
+      console.log(`✓ Found ${policies.value?.length || 0} policies`)
+      return res.json({
+        success: true,
+        count: policies.value?.length || 0,
+        data: policies.value || []
+      })
+    } catch (apiError) {
+      // Handle permission errors gracefully
+      if (apiError.statusCode === 403 || apiError.message?.includes('Forbidden')) {
+        console.warn('⚠️ Permission denied for compliance policies - missing DeviceManagementReadWrite.All')
+        return res.json({
+          success: true,
+          count: 0,
+          data: [],
+          warning: 'Requires DeviceManagementReadWrite.All permission'
+        })
+      }
+      throw apiError
+    }
   } catch (error) {
     console.error('✗ Compliance policies error:', error.message)
-    res.status(500).json({
-      success: false,
+    // Return 200 with empty data instead of 500 for graceful degradation
+    res.json({
+      success: true,
+      count: 0,
+      data: [],
       error: error.message
     })
   }
