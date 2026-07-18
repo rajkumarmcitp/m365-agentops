@@ -246,7 +246,7 @@ function renderDashboard(riskScore, riskLevel) {
           ${allAlerts.slice(0, 5).map(alert => `
             <div style="padding:10px;background:var(--color-background-secondary);border-radius:6px;border-left:3px solid ${ALERT_PRIORITY[alert?.priority]?.color || '#999'};cursor:pointer" data-alert-id="${alert?.id}">
               <div style="font-size:12px;font-weight:600;margin-bottom:4px">${(alert?.headline || 'Unknown Alert').substring(0, 45)}</div>
-              <div style="font-size:11px;color:var(--color-text-secondary)">${alert?.actor || 'System'} · ${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</div>
+              <div style="font-size:11px;color:var(--color-text-secondary)">${alert?.actor ? alert.actor + ' · ' : ''}${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</div>
             </div>
           `).join('')}
           ${allAlerts.length === 0 ? '<div style="color:var(--color-text-secondary);font-size:12px;text-align:center;padding:20px">No alerts</div>' : ''}
@@ -338,7 +338,7 @@ function renderAlertsView() {
               </div>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary)">
-              <span>${alert?.actor || 'System'} · ${alert?.source || 'Unknown'}</span>
+              <span>${alert?.source || 'Unknown'}${alert?.actor ? ' · ' + alert.actor : ''}</span>
               <span>${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</span>
             </div>
           </div>
@@ -435,7 +435,7 @@ function renderAuditView() {
         ${allAlerts.slice(0, 20).map(alert => `
           <div style="padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px">
             <div style="font-weight:600">${(alert?.headline || 'Unknown').substring(0, 50)}</div>
-            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${alert?.actor || 'System'}</div>
+            ${alert?.actor ? `<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${alert.actor}</div>` : ''}
             <div style="font-size:11px;color:var(--color-text-secondary)">${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</div>
           </div>
         `).join('')}
