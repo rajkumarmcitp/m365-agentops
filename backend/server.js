@@ -9585,6 +9585,72 @@ app.get('/api/tenantguard/patterns', (req, res) => {
 })
 
 /**
+ * POST /api/tenantguard/audit/detect-attacks
+ * Detect attack patterns from audit events using MITRE ATT&CK framework
+ */
+app.post('/api/tenantguard/audit/detect-attacks', async (req, res) => {
+  try {
+    const { events } = req.body
+
+    if (!events || !Array.isArray(events)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Events array required'
+      })
+    }
+
+    const AttackPatternDetector = (await import('./services/attack-pattern-detector.js')).default
+    const detector = new AttackPatternDetector()
+
+    // Detect patterns
+    const patterns = detector.detectPatterns(events)
+    const riskScore = detector.calculateRiskScore(patterns)
+
+    // Generate alerts
+    const alerts = patterns.map(p => detector.generateAlert(p))
+
+    // Separate drop-everything alerts
+    const dropEverythingAlerts = alerts.filter(a => a.isDropEverything)
+    const criticalAlerts = alerts.filter(a => a.severity === 'CRITICAL' && !a.isDropEverything)
+    const highAlerts = alerts.filter(a => a.severity === 'HIGH')
+
+    console.log(`🚨 Attack Pattern Detection:
+      • Total patterns detected: ${patterns.length}
+      • Drop-Everything alerts: ${dropEverythingAlerts.length}
+      • Critical alerts: ${criticalAlerts.length}
+      • High alerts: ${highAlerts.length}
+      • Overall risk score: ${riskScore}/100
+    `)
+
+    res.json({
+      success: true,
+      data: {
+        patterns: patterns.length,
+        riskScore: riskScore,
+        alerts: {
+          dropEverything: dropEverythingAlerts,
+          critical: criticalAlerts,
+          high: highAlerts
+        },
+        allAlerts: alerts,
+        summary: {
+          totalPatterns: patterns.length,
+          totalAlerts: alerts.length,
+          dropEverythingCount: dropEverythingAlerts.length,
+          riskLevel: riskScore >= 80 ? 'CRITICAL' : riskScore >= 50 ? 'HIGH' : 'MEDIUM'
+        }
+      }
+    })
+  } catch (error) {
+    console.error('❌ Attack pattern detection error:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
  * POST /api/tenantguard/audit/collect-all
  * Collect audit data from all Microsoft 365 sources
  */
@@ -9603,6 +9669,18 @@ app.post('/api/tenantguard/audit/collect-all', async (req, res) => {
     const auditService = new AuditCollectionService(graphClient)
     const result = await auditService.collectAll()
 
+    // Detect attack patterns from collected events
+    console.log('🚨 Running attack pattern detection...')
+    const AttackPatternDetector = (await import('./services/attack-pattern-detector.js')).default
+    const detector = new AttackPatternDetector()
+    const patterns = detector.detectPatterns(result.events)
+    const riskScore = detector.calculateRiskScore(patterns)
+    const alerts = patterns.map(p => detector.generateAlert(p))
+
+    const dropEverythingAlerts = alerts.filter(a => a.isDropEverything)
+    const criticalAlerts = alerts.filter(a => a.severity === 'CRITICAL' && !a.isDropEverything)
+    const highAlerts = alerts.filter(a => a.severity === 'HIGH')
+
     console.log(`✅ Audit collection complete:
       • Total events: ${result.summary.total}
       • Critical: ${result.summary.critical}
@@ -9618,6 +9696,13 @@ app.post('/api/tenantguard/audit/collect-all', async (req, res) => {
         - Intune: ${result.sourceBreakdown.intuneAudit}
         - Exchange: ${result.sourceBreakdown.exchangeAudit}
         - SharePoint: ${result.sourceBreakdown.sharePointAudit}
+
+      🚨 Attack Pattern Detection:
+        • Patterns detected: ${patterns.length}
+        • Drop-Everything alerts: ${dropEverythingAlerts.length}
+        • Critical alerts: ${criticalAlerts.length}
+        • High alerts: ${highAlerts.length}
+        • Overall risk score: ${riskScore}/100
     `)
 
     res.json({
@@ -9625,7 +9710,18 @@ app.post('/api/tenantguard/audit/collect-all', async (req, res) => {
       data: result.events,
       summary: result.summary,
       sourceBreakdown: result.sourceBreakdown,
-      correlations: result.correlations
+      correlations: result.correlations,
+      attackPatterns: {
+        riskScore: riskScore,
+        patterns: patterns.length,
+        alerts: {
+          dropEverything: dropEverythingAlerts,
+          critical: criticalAlerts,
+          high: highAlerts
+        },
+        allAlerts: alerts,
+        riskLevel: riskScore >= 80 ? 'CRITICAL' : riskScore >= 50 ? 'HIGH' : 'MEDIUM'
+      }
     })
   } catch (error) {
     console.error('❌ Audit collection error:', error)
