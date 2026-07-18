@@ -160,6 +160,8 @@ import {
 
 import { randomUUID } from 'crypto'
 import { loadConfig, saveConfig, initializeAllLists, getListId, setListId } from './sharepoint-config.js'
+import emailService from './services/email-service.js'
+import alertRouter from './services/alert-router.js'
 
 // Reload credentials after dotenv.config() has loaded environment variables
 graphConfigService.reloadCredentials()
@@ -17870,6 +17872,9 @@ const server = app.listen(PORT, () => {
     console.error('❌ TenantGuard initialization failed:', err.message)
   })
 
+  // Initialize Email Alerting Service
+  initEmailServiceOnStartup()
+
   // Start Message Center sync job (every hour)
   startMessageCenterSyncJob()
 })
@@ -20505,6 +20510,149 @@ app.use('/api/backup/m365', (req, res, next) => {
 // TEST: Direct route to verify routing works
 app.get('/api/backup/test', (req, res) => {
   res.json({ success: true, message: 'Direct backup test route works!' })
+})
+
+// ============================================================
+// Email Alerting API Endpoints
+// ============================================================
+
+function initEmailServiceOnStartup() {
+  const emailConfig = emailService.initEmailService({
+    provider: 'office365',
+    from: process.env.EMAIL_FROM || 'TenantGuard@yourdomain.onmicrosoft.com',
+    recipients: JSON.parse(process.env.EMAIL_RECIPIENTS || '["security-admin@yourdomain.onmicrosoft.com"]'),
+    smtpHost: 'smtp.office365.com',
+    smtpPort: 587,
+    authUser: process.env.EMAIL_USER,
+    authPass: process.env.EMAIL_PASSWORD
+  })
+
+  console.log(`📧 Email service initialized: ${emailConfig.provider}`)
+  return emailConfig
+}
+
+// Email Configuration API
+app.post('/api/email/config', (req, res) => {
+  try {
+    const config = req.body
+    emailService.initEmailService(config)
+    res.json({ success: true, message: 'Email configuration updated' })
+  } catch (error) {
+    console.error('Email config error:', error)
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+app.get('/api/email/verify', async (req, res) => {
+  try {
+    const result = await emailService.verifyEmailConfig()
+    res.json(result)
+  } catch (error) {
+    console.error('Email verify error:', error)
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+app.post('/api/email/test', async (req, res) => {
+  try {
+    const recipient = req.body.recipient || (emailService.getEmailConfig()?.recipients?.[0])
+    if (!recipient) {
+      return res.status(400).json({ success: false, message: 'No recipient specified' })
+    }
+
+    const result = await emailService.sendTestEmail(recipient)
+    res.json({ success: result, message: result ? 'Test email sent' : 'Failed to send test email' })
+  } catch (error) {
+    console.error('Test email error:', error)
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Recipients Management API
+app.post('/api/email/recipients', (req, res) => {
+  try {
+    const { email } = req.body
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email required' })
+    }
+
+    const config = emailService.getEmailConfig()
+    if (!config.recipients.includes(email)) {
+      config.recipients.push(email)
+    }
+
+    res.json({ success: true, message: 'Recipient added', recipients: config.recipients })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+app.delete('/api/email/recipients', (req, res) => {
+  try {
+    const { email } = req.body
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email required' })
+    }
+
+    const config = emailService.getEmailConfig()
+    config.recipients = config.recipients.filter(r => r !== email)
+
+    if (config.recipients.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one recipient required' })
+    }
+
+    res.json({ success: true, message: 'Recipient removed', recipients: config.recipients })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Alert Thresholds API
+app.post('/api/email/thresholds', (req, res) => {
+  try {
+    const thresholds = req.body
+    const config = emailService.getEmailConfig()
+    config.alertThresholds = { ...config.alertThresholds, ...thresholds }
+
+    res.json({ success: true, message: 'Alert thresholds updated', thresholds: config.alertThresholds })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Rate Limiting API
+app.post('/api/email/rate-limit', (req, res) => {
+  try {
+    const { maxEmailsPerMinute, deduplicationWindow } = req.body
+    const config = emailService.getEmailConfig()
+
+    if (maxEmailsPerMinute) config.maxEmailsPerMinute = maxEmailsPerMinute
+    if (deduplicationWindow) config.deduplicationWindow = deduplicationWindow
+
+    res.json({ success: true, message: 'Rate limits updated', config })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Alert Router Stats API
+app.get('/api/email/stats', (req, res) => {
+  try {
+    const stats = alertRouter.getRoutingStats()
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Send Pending Digests API
+app.post('/api/email/send-digests', async (req, res) => {
+  try {
+    const results = await alertRouter.sendAllDigests()
+    res.json({ success: true, results })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
 })
 
 // ============================================================

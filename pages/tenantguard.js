@@ -1,6 +1,7 @@
 import { getAlertSummary, getAlerts, dismissAlert, getCorrelations, getPatterns, startInvestigation, getInvestigation, chatInvestigation, generateInvestigationReport } from '../lib/tenantguard-client.js'
 import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
+import { renderTenantGuardSettings } from './tenantguard-settings.js'
 
 let activeTab = 'dashboard'
 let allAlerts = []
@@ -130,6 +131,9 @@ function renderContent(el) {
       <button class="tab-btn ${activeTab === 'audit' ? 'active' : ''}" data-tab="audit">
         <i class="ti ti-list"></i> Audit
       </button>
+      <button class="tab-btn ${activeTab === 'settings' ? 'active' : ''}" data-tab="settings">
+        <i class="ti ti-settings"></i> Settings
+      </button>
     </div>
 
     <div id="tg-content">
@@ -142,6 +146,12 @@ function renderContent(el) {
     btn.addEventListener('click', (e) => {
       activeTab = e.currentTarget.dataset.tab
       renderContent(el)
+      // Render settings UI if settings tab selected
+      if (activeTab === 'settings') {
+        setTimeout(() => {
+          renderTenantGuardSettings(el)
+        }, 0)
+      }
     })
   })
 
@@ -191,6 +201,8 @@ function renderTabContent(riskScore, riskLevel) {
       return renderIncidentsView()
     case 'audit':
       return renderAuditView()
+    case 'settings':
+      return `<div class="content-area" id="settings-container"></div>`
     default:
       return ''
   }
