@@ -194,9 +194,9 @@ function renderDashboard(riskScore, riskLevel) {
         <div class="card-title">TOP RECENT ALERTS</div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
           ${allAlerts.slice(0, 5).map(alert => `
-            <div style="padding:10px;background:var(--color-background-secondary);border-radius:6px;border-left:3px solid ${ALERT_PRIORITY[alert.priority]?.color || '#999'};cursor:pointer" data-alert-id="${alert.id}">
-              <div style="font-size:12px;font-weight:600;margin-bottom:4px">${alert.headline.substring(0, 45)}</div>
-              <div style="font-size:11px;color:var(--color-text-secondary)">${alert.actor || 'System'} · ${new Date(alert.timestamp).toLocaleTimeString()}</div>
+            <div style="padding:10px;background:var(--color-background-secondary);border-radius:6px;border-left:3px solid ${ALERT_PRIORITY[alert?.priority]?.color || '#999'};cursor:pointer" data-alert-id="${alert?.id}">
+              <div style="font-size:12px;font-weight:600;margin-bottom:4px">${(alert?.headline || 'Unknown Alert').substring(0, 45)}</div>
+              <div style="font-size:11px;color:var(--color-text-secondary)">${alert?.actor || 'System'} · ${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</div>
             </div>
           `).join('')}
           ${allAlerts.length === 0 ? '<div style="color:var(--color-text-secondary);font-size:12px;text-align:center;padding:20px">No alerts</div>' : ''}
@@ -207,9 +207,9 @@ function renderDashboard(riskScore, riskLevel) {
         <div class="card-title">ACTIVE ATTACK CHAINS</div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
           ${allCorrelations.slice(0, 5).map(incident => `
-            <div style="padding:10px;background:var(--color-background-secondary);border-radius:6px;border-left:3px solid ${incident.risk_level === 'CRITICAL' ? ALERT_PRIORITY.P1.color : ALERT_PRIORITY.P2.color}">
-              <div style="font-size:12px;font-weight:600;margin-bottom:4px">${incident.description.substring(0, 45)}</div>
-              <div style="font-size:11px;color:var(--color-text-secondary)">${incident.alert_count} events · Score: ${incident.correlation_score}/100</div>
+            <div style="padding:10px;background:var(--color-background-secondary);border-radius:6px;border-left:3px solid ${incident?.risk_level === 'CRITICAL' ? ALERT_PRIORITY.P1.color : ALERT_PRIORITY.P2.color}">
+              <div style="font-size:12px;font-weight:600;margin-bottom:4px">${(incident?.description || 'Unknown Incident').substring(0, 45)}</div>
+              <div style="font-size:11px;color:var(--color-text-secondary)">${incident?.alert_count || 0} events · Score: ${incident?.correlation_score || 0}/100</div>
             </div>
           `).join('')}
           ${allCorrelations.length === 0 ? '<div style="color:var(--color-text-secondary);font-size:12px;text-align:center;padding:20px">No active chains</div>' : ''}
@@ -222,8 +222,8 @@ function renderDashboard(riskScore, riskLevel) {
         <div class="card-title">SERVICE IMPACT MAP</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
           ${['Entra ID', 'Exchange', 'SharePoint', 'OneDrive', 'Teams', 'Intune'].map(service => {
-            const count = allAlerts.filter(a => a.source && a.source.includes(service)).length
-            const hasCritical = allAlerts.some(a => a.source && a.source.includes(service) && a.severity === 'CRITICAL')
+            const count = allAlerts.filter(a => a?.source && String(a.source).includes(service)).length
+            const hasCritical = allAlerts.some(a => a?.source && String(a.source).includes(service) && a?.severity === 'CRITICAL')
             return `
               <div style="padding:12px;background:var(--color-background-secondary);border-radius:6px;border-left:3px solid ${hasCritical ? ALERT_PRIORITY.P1.color : count > 0 ? ALERT_PRIORITY.P2.color : '#3B6D11'};text-align:center">
                 <div style="font-size:12px;font-weight:600;margin-bottom:4px">${service}</div>
@@ -276,20 +276,20 @@ function renderAlertsView() {
 
       <div style="max-height:600px;overflow-y:auto">
         ${allAlerts.map(alert => `
-          <div style="padding:12px;border-bottom:0.5px solid var(--color-border-secondary);cursor:pointer" data-alert-id="${alert.id}" onmouseover="this.style.background='var(--color-background-secondary)'" onmouseout="this.style.background='transparent'">
+          <div style="padding:12px;border-bottom:0.5px solid var(--color-border-secondary);cursor:pointer" data-alert-id="${alert?.id}" onmouseover="this.style.background='var(--color-background-secondary)'" onmouseout="this.style.background='transparent'">
             <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px">
               <div>
-                <div style="font-size:13px;font-weight:600">${alert.headline}</div>
-                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px">${alert.description}</div>
+                <div style="font-size:13px;font-weight:600">${alert?.headline || 'Unknown'}</div>
+                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px">${alert?.description || 'No description'}</div>
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <span style="background:${ALERT_PRIORITY[alert.priority]?.bg};color:${ALERT_PRIORITY[alert.priority]?.color};padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600">${alert.priority}</span>
-                <span style="background:${ALERT_PRIORITY[alert.severity]?.bg};color:${SEVERITY_COLOR[alert.severity]};padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600">${alert.severity}</span>
+                <span style="background:${ALERT_PRIORITY[alert?.priority]?.bg};color:${ALERT_PRIORITY[alert?.priority]?.color};padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600">${alert?.priority || 'P3'}</span>
+                <span style="background:${ALERT_PRIORITY[alert?.severity]?.bg};color:${SEVERITY_COLOR[alert?.severity]};padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600">${alert?.severity || 'MEDIUM'}</span>
               </div>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary)">
-              <span>${alert.actor || 'System'} · ${alert.source || 'Unknown'}</span>
-              <span>${new Date(alert.timestamp).toLocaleTimeString()}</span>
+              <span>${alert?.actor || 'System'} · ${alert?.source || 'Unknown'}</span>
+              <span>${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</span>
             </div>
           </div>
         `).join('')}
@@ -309,10 +309,10 @@ function renderTimelineView() {
         <div style="display:flex;flex-direction:column;gap:16px">
           ${sorted.map(alert => `
             <div>
-              <div style="position:absolute;left:-8px;width:14px;height:14px;background:${ALERT_PRIORITY[alert.priority]?.color || '#999'};border:3px solid white;border-radius:50%"></div>
-              <div style="font-size:12px;font-weight:600">${alert.headline.substring(0, 60)}</div>
-              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${alert.description}</div>
-              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">${new Date(alert.timestamp).toLocaleTimeString()}</div>
+              <div style="position:absolute;left:-8px;width:14px;height:14px;background:${ALERT_PRIORITY[alert?.priority]?.color || '#999'};border:3px solid white;border-radius:50%"></div>
+              <div style="font-size:12px;font-weight:600">${(alert?.headline || 'Unknown').substring(0, 60)}</div>
+              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${alert?.description || 'No description'}</div>
+              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</div>
             </div>
           `).join('')}
         </div>
@@ -327,14 +327,14 @@ function renderIncidentsView() {
       <div class="card-title">Correlated Incidents (${allCorrelations.length})</div>
       <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
         ${allCorrelations.map(incident => `
-          <div style="padding:12px;border:0.5px solid var(--color-border-secondary);border-left:3px solid ${incident.risk_level === 'CRITICAL' ? ALERT_PRIORITY.P1.color : ALERT_PRIORITY.P2.color};border-radius:6px">
-            <div style="font-size:12px;font-weight:600;margin-bottom:6px">${incident.description}</div>
+          <div style="padding:12px;border:0.5px solid var(--color-border-secondary);border-left:3px solid ${incident?.risk_level === 'CRITICAL' ? ALERT_PRIORITY.P1.color : ALERT_PRIORITY.P2.color};border-radius:6px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:6px">${incident?.description || 'Unknown'}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;color:var(--color-text-secondary)">
-              <div>📊 ${incident.alert_count} events | Score: ${incident.correlation_score}/100</div>
-              <div>🏷️ ${incident.correlation_type}</div>
+              <div>📊 ${incident?.alert_count || 0} events | Score: ${incident?.correlation_score || 0}/100</div>
+              <div>🏷️ ${incident?.correlation_type || 'UNKNOWN'}</div>
             </div>
             <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px">
-              ${new Date(incident.start_timestamp).toLocaleString()} → ${new Date(incident.end_timestamp).toLocaleString()}
+              ${new Date(incident?.start_timestamp || Date.now()).toLocaleString()} → ${new Date(incident?.end_timestamp || Date.now()).toLocaleString()}
             </div>
           </div>
         `).join('')}
@@ -384,9 +384,9 @@ function renderAuditView() {
       <div style="max-height:400px;overflow-y:auto">
         ${allAlerts.slice(0, 20).map(alert => `
           <div style="padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px">
-            <div style="font-weight:600">${alert.headline.substring(0, 50)}</div>
-            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${alert.actor || 'System'}</div>
-            <div style="font-size:11px;color:var(--color-text-secondary)">${new Date(alert.timestamp).toLocaleTimeString()}</div>
+            <div style="font-weight:600">${(alert?.headline || 'Unknown').substring(0, 50)}</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${alert?.actor || 'System'}</div>
+            <div style="font-size:11px;color:var(--color-text-secondary)">${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</div>
           </div>
         `).join('')}
       </div>
