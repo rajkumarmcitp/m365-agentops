@@ -1,0 +1,3 @@
+nodeProcessCommandLine: "node server.js"
+logicalDirectory: /
+watchedDirectories: .
