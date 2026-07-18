@@ -30,6 +30,28 @@ export function initUserInvestigation() {
   const el = document.getElementById('page-user-investigation')
   if (!el) return
 
+  // Add Leaflet CSS to ensure proper map sizing
+  if (!document.getElementById('leaflet-fix-css')) {
+    const style = document.createElement('style')
+    style.id = 'leaflet-fix-css'
+    style.textContent = `
+      #signin-locations-map {
+        display: block !important;
+        position: relative !important;
+        width: 100% !important;
+        height: 300px !important;
+      }
+      #signin-locations-map .leaflet-container {
+        width: 100% !important;
+        height: 100% !important;
+      }
+      .leaflet-container {
+        z-index: 1;
+      }
+    `
+    document.head.appendChild(style)
+  }
+
   if (isDemoAccount()) {
     renderDemoUserInvestigation(el)
     return
@@ -433,9 +455,9 @@ function renderUserInvestigation(el) {
           <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-login"></i> Sign-in Activity</div>
 
           <!-- Sign-in Locations Map -->
-          <div style="margin-bottom:16px">
+          <div style="margin-bottom:16px;display:block;width:100%">
             <div style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--color-text-secondary)">📍 Sign-in Locations Map</div>
-            <div id="signin-locations-map" style="width:100%;height:300px;border-radius:6px;background:var(--color-background-secondary);overflow:hidden"></div>
+            <div id="signin-locations-map" style="position:relative;width:100%;height:300px;border-radius:6px;background:var(--color-background-secondary);overflow:hidden;box-sizing:border-box"></div>
           </div>
 
           <div id="signin-logs-section" style="font-size:11px"></div>
@@ -907,8 +929,10 @@ function renderInvestigation(el, data) {
   el.querySelector('#signin-logs-section').innerHTML = signinHtml
 
   // Initialize Sign-in Locations Map
-  // Note: Graph API may not always include lat/long for all sign-ins
-  initSigninLocationsMap(el, signInLogs)
+  // Delay to allow DOM to lay out and container to get proper dimensions
+  setTimeout(() => {
+    initSigninLocationsMap(el, signInActivity)
+  }, 100)
 
   // Audit Logs
   const auditHtml = `
@@ -1938,6 +1962,21 @@ function renderSigninMapContent(mapEl, signInLogs) {
       return
     }
 
+    // Ensure container and all parents have proper dimensions
+    // Walk up the DOM tree and fix widths
+    let current = mapEl
+    for (let i = 0; i < 5; i++) {
+      if (!current) break
+      current.style.width = '100%'
+      current.style.display = 'block'
+      current.style.boxSizing = 'border-box'
+      console.log(`  ✓ Set width:100% on level ${i}`)
+      current = current.parentElement
+    }
+
+    mapEl.style.height = '300px'
+    mapEl.style.position = 'relative'
+
     // Clear any existing map
     mapEl.innerHTML = ''
 
@@ -1960,7 +1999,7 @@ function renderSigninMapContent(mapEl, signInLogs) {
       const loc = locationMap.get(key)
       loc.count++
       loc.signins.push(log)
-      if (log.result === 'Success') {
+      if (log.status === 'Success' || log.result === 'Success') {
         loc.success++
       } else {
         loc.failed++
@@ -1977,24 +2016,57 @@ function renderSigninMapContent(mapEl, signInLogs) {
     const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2
     const centerLon = (Math.max(...lons) + Math.min(...lons)) / 2
 
+    const rect = mapEl.getBoundingClientRect()
+    console.log(`🗺️ Map bounds: lat=${centerLat}, lon=${centerLon}, locations=${locationMap.size}`)
+    console.log(`🗺️ Container offsetSize: ${mapEl.offsetWidth}x${mapEl.offsetHeight}`)
+    console.log(`🗺️ Container boundingRect: ${rect.width}x${rect.height}`)
+    console.log(`🗺️ Container visibility: display=${getComputedStyle(mapEl).display}, visibility=${getComputedStyle(mapEl).visibility}`)
+
+    // Ensure container has proper display and position
+    mapEl.style.display = 'block'
+    mapEl.style.visibility = 'visible'
+    if (!mapEl.style.position || mapEl.style.position === 'static') {
+      mapEl.style.position = 'relative'
+    }
+
+    // Force a layout recalculation
+    mapEl.offsetHeight // Trigger reflow
+
     // Initialize map
-    const map = window.L.map(mapEl).setView([centerLat, centerLon], 4)
+    const map = window.L.map(mapEl, {
+      preferCanvas: true
+    }).setView([centerLat, centerLon], 4)
+    console.log(`✓ Map initialized at [${centerLat}, ${centerLon}]`)
 
     // Add CartoDB tiles
-    window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    const tileLayer = window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '© CartoDB',
       maxZoom: 19,
       subdomains: 'abcd'
-    }).addTo(map)
+    })
+    tileLayer.on('load', () => {
+      console.log('🗺️ CartoDB tiles loaded')
+      // Force map to recalculate size after tiles load
+      setTimeout(() => map.invalidateSize(), 100)
+    })
+    tileLayer.on('error', (e) => console.error('🗺️ CartoDB tiles error:', e))
+    tileLayer.addTo(map)
+    console.log(`✓ Tile layer added`)
+
+    // Force initial size calculation
+    map.invalidateSize()
 
     // Add markers for each location
     locationMap.forEach((location, key) => {
       // Color based on success/failure ratio
       const successRate = location.success / location.count
       const color = successRate >= 0.8 ? '#10b981' : successRate >= 0.5 ? '#f59e0b' : '#ef4444'
+      const radius = Math.min(Math.max(8, location.count / 2), 20)
+
+      console.log(`  📍 Adding marker: ${location.location} (${location.latitude}, ${location.longitude}), radius=${radius}, color=${color}`)
 
       const marker = window.L.circleMarker([location.latitude, location.longitude], {
-        radius: Math.min(Math.max(8, location.count / 2), 20),
+        radius: radius,
         fillColor: color,
         color: '#fff',
         weight: 2,
