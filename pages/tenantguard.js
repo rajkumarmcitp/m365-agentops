@@ -468,17 +468,24 @@ function renderDemoTenantGuard(el) {
 function normalizeAlert(alert) {
   if (!alert) return null
 
+  // Debug logging to see actual fields
+  if (!alert.headline && !alert.name) {
+    console.log('⚠️ Alert missing headline/name:', Object.keys(alert).slice(0, 10))
+  }
+
   return {
     id: alert.id || alert.ID || 'unknown',
-    headline: alert.headline || alert.name || alert.title || alert.activityDisplayName || 'Unknown Alert',
-    description: alert.description || alert.details || alert.message || 'No description available',
+    headline: alert.headline || alert.name || alert.title || alert.activityDisplayName || alert.type || 'Unknown Alert',
+    description: alert.description || alert.details || alert.message || alert.category || 'No description available',
     priority: alert.priority || alert.Priority || 'P3',
     severity: alert.severity || alert.Severity || 'MEDIUM',
-    actor: alert.actor || alert.initiatedBy?.user?.userPrincipalName || alert.user || 'System',
-    source: alert.source || alert.Source || 'Unknown',
-    timestamp: alert.timestamp || alert.activityDateTime || alert.created_at || new Date().toISOString(),
+    actor: alert.actor || alert.initiatedBy?.user?.userPrincipalName || alert.user || alert.target || 'System',
+    source: alert.source || alert.Source || alert.category || 'Unknown',
+    timestamp: alert.timestamp || alert.activityDateTime || alert.created_at || alert.action_timestamp || new Date().toISOString(),
     score: alert.score || alert.riskScore || 50,
-    status: alert.status || alert.Status || 'open'
+    status: alert.status || alert.Status || 'open',
+    type: alert.type || 'AUDIT',
+    dismissed: alert.dismissed || 0
   }
 }
 
@@ -520,8 +527,12 @@ async function refreshData() {
 
     // Process alerts with field name normalization
     if (alertsRes?.data && Array.isArray(alertsRes.data) && alertsRes.data.length > 0) {
+      console.log(`📊 Raw alert data (first item):`, alertsRes.data[0])
+      console.log(`📊 Alert source: ${alertsRes.source || 'unknown'}`)
+
       allAlerts = alertsRes.data.map(normalizeAlert).filter(a => a)
       console.log(`✅ Loaded ${allAlerts.length} real alerts`)
+      console.log(`📊 Normalized alert (first):`, allAlerts[0])
     } else if (alertsRes?.success === false || !alertsRes?.data) {
       allAlerts = getDemoAlerts()
       console.log('⚠️ No real alerts from API, using demo data')
