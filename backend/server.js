@@ -6856,14 +6856,26 @@ app.get('/api/tenantguard/alerts', async (req, res) => {
           // Only show security-relevant change/modification events
           // Filter OUT purely informational read-only operations
           const informationalPatterns = [
-            // Most common non-security operations
-            /^User logged in/i,
-            /^User logged off/i,
+            // Operations ending with read-only verbs (e.g., GroupLifecyclePolicies_Get)
+            /_Get$/,
+            /_Read$/,
+            /_Validate$/,
+            /_List$/,
+            /_View$/,
+            /_Retrieve$/,
+            /_Search$/,
+            /_Query$/,
+            /_Fetch$/,
+            /_Lookup$/,
+            /_Check$/,
+            // User login/logout events
+            /^User logged (in|off)/i,
             /^Sign.?in activity/i,
+            // Audit log read operations
+            /^read.*audit|^get.*audit/i,
+            // Authentication flow reads
             /get authentication.*flow/i,
             /validate user.*authentication/i,
-            // Generic audit log reads (no changes made)
-            /^read.*audit|^get.*audit/i,
           ]
 
           // Check if activity is purely informational (just reading/viewing, no security impact)
