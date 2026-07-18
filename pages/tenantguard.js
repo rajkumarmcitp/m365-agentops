@@ -7,6 +7,7 @@ let allAlerts = []
 let allCorrelations = []
 let allPatterns = []
 let selectedAlertId = null
+let selectedAlertDetail = null
 let autoRefreshInterval = null
 let lastUpdateTime = null
 let isRefreshing = false
@@ -166,11 +167,14 @@ function renderContent(el) {
     showToast('Export feature coming soon', 'info')
   })
 
-  // Alert selection
+  // Alert selection - show detail modal
   document.querySelectorAll('[data-alert-id]').forEach(element => {
     element.addEventListener('click', (e) => {
-      selectedAlertId = e.currentTarget.dataset.alertId
-      showToast(`Selected: ${selectedAlertId}`, 'info')
+      const alertId = e.currentTarget.dataset.alertId
+      selectedAlertDetail = allAlerts.find(a => a.id === alertId)
+      if (selectedAlertDetail) {
+        showAlertDetail(el, selectedAlertDetail)
+      }
     })
   })
 }
@@ -576,6 +580,110 @@ function getDemoCorrelations() {
   return [
     { id: 'corr-3', description: 'Multi-Stage: Admin compromise → Security bypass → Access', alert_count: 4, correlation_type: 'PATTERN', risk_level: 'CRITICAL', correlation_score: 95, start_timestamp: new Date(Date.now() - 20*60000).toISOString(), end_timestamp: new Date().toISOString() },
   ]
+}
+
+function showAlertDetail(parentEl, alert) {
+  if (!alert) return
+
+  const modal = document.createElement('div')
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  `
+
+  const content = document.createElement('div')
+  content.style.cssText = `
+    background: var(--color-background-primary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  `
+
+  const severityColor = SEVERITY_COLOR[alert?.severity] || '#666'
+  const priorityColor = ALERT_PRIORITY[alert?.priority]?.color || '#666'
+
+  content.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
+      <div>
+        <h2 style="margin:0;font-size:18px;color:var(--color-text-primary)">${alert?.headline || 'Alert Details'}</h2>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px">${alert?.category || 'Alert'}</div>
+      </div>
+      <button onclick="this.closest('div').parentElement.parentElement.remove()" style="
+        background:transparent;
+        border:none;
+        font-size:24px;
+        cursor:pointer;
+        color:var(--color-text-secondary);
+      ">×</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">PRIORITY</div>
+        <div style="font-size:14px;font-weight:600;color:${priorityColor}">${alert?.priority || 'P3'}</div>
+      </div>
+      <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">SEVERITY</div>
+        <div style="font-size:14px;font-weight:600;color:${severityColor}">${alert?.severity || 'MEDIUM'}</div>
+      </div>
+      <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">RISK SCORE</div>
+        <div style="font-size:14px;font-weight:600;color:${alert?.score >= 70 ? severityColor : '#666'}">${Math.round(alert?.score || 0)}/100</div>
+      </div>
+      <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">STATUS</div>
+        <div style="font-size:14px;font-weight:600">${alert?.status || 'open'}</div>
+      </div>
+    </div>
+
+    <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px;margin-bottom:16px">
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px;font-weight:600">DESCRIPTION</div>
+      <div style="font-size:13px;color:var(--color-text-primary);line-height:1.5">${alert?.description || 'No description available'}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:600">SOURCE</div>
+        <div style="font-size:13px;color:var(--color-text-primary)">${alert?.source || 'Unknown'}</div>
+      </div>
+      <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:600">ACTOR</div>
+        <div style="font-size:13px;color:var(--color-text-primary)">${alert?.actor || 'System'}</div>
+      </div>
+    </div>
+
+    <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px;margin-bottom:16px">
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:600">TIMESTAMP</div>
+      <div style="font-size:13px;color:var(--color-text-primary)">${new Date(alert?.timestamp).toLocaleString()}</div>
+    </div>
+
+    <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:600">ALERT ID</div>
+      <div style="font-size:12px;color:var(--color-text-primary);font-family:monospace;word-break:break-all">${alert?.id || 'unknown'}</div>
+    </div>
+  `
+
+  modal.appendChild(content)
+  document.body.appendChild(modal)
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove()
+    }
+  })
 }
 
 window.switchTab = (tab) => {
