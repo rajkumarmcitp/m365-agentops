@@ -313,9 +313,23 @@ export function renderTenantGuardSettings(el) {
     </div>
   `
 
-  attachEventListeners()
-  loadSettings()
-  checkEmailConfig()
+  try {
+    attachEventListeners()
+  } catch (err) {
+    console.error('Error attaching event listeners:', err)
+  }
+
+  try {
+    loadSettings()
+  } catch (err) {
+    console.error('Error loading settings:', err)
+  }
+
+  try {
+    checkEmailConfig()
+  } catch (err) {
+    console.error('Error checking email config:', err)
+  }
 }
 
 function attachEventListeners() {
@@ -591,8 +605,10 @@ async function handleRefreshStats() {
     const result = await response.json()
     if (result.data) {
       const stats = result.data.digestQueues || {}
-      document.querySelector('.stat:nth-child(3) .stat-value').textContent = stats.P2 || 0
-      document.querySelector('.stat:nth-child(4) .stat-value').textContent = stats.P3 || 0
+      const stat3 = document.querySelector('.stat:nth-child(3) .stat-value')
+      const stat4 = document.querySelector('.stat:nth-child(4) .stat-value')
+      if (stat3) stat3.textContent = stats.P2 || 0
+      if (stat4) stat4.textContent = stats.P3 || 0
       showToast('✅ Stats refreshed', 'success')
     }
   } catch (error) {
@@ -605,6 +621,11 @@ async function loadSettings() {
     // Load recipients from global settings manager
     const recipients = emailSettings.getRecipients()
     const container = document.getElementById('recipients-list')
+
+    if (!container) {
+      console.warn('recipients-list element not found')
+      return
+    }
 
     if (recipients.length === 0) {
       container.innerHTML = '<div style="color:var(--color-text-secondary);text-align:center;padding:20px">No recipients added yet</div>'
