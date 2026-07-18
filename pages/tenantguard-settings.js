@@ -9,10 +9,16 @@ import emailSettings from '../lib/email-settings-manager.js'
 import { api } from '../lib/api-client.js'
 
 export function renderTenantGuardSettings(el) {
-  const container = el.querySelector('.content-area') || document.querySelector('#tg-content .content-area')
-  if (!container) return
+  try {
+    console.log('🔧 renderTenantGuardSettings called')
+    const container = el.querySelector('.content-area') || document.querySelector('#tg-content .content-area')
+    if (!container) {
+      console.warn('❌ No container found for settings')
+      return
+    }
+    console.log('✅ Container found, rendering settings...')
 
-  container.innerHTML = `
+    container.innerHTML = `
     <div class="tg-settings-container">
       <div class="settings-header">
         <h1>🔧 TenantGuard Alert Settings</h1>
@@ -313,22 +319,30 @@ export function renderTenantGuardSettings(el) {
     </div>
   `
 
-  try {
-    attachEventListeners()
-  } catch (err) {
-    console.error('Error attaching event listeners:', err)
-  }
+    try {
+      attachEventListeners()
+      console.log('✅ Event listeners attached')
+    } catch (err) {
+      console.error('Error attaching event listeners:', err)
+    }
 
-  try {
-    loadSettings()
-  } catch (err) {
-    console.error('Error loading settings:', err)
-  }
+    try {
+      loadSettings()
+      console.log('✅ Settings loaded')
+    } catch (err) {
+      console.error('Error loading settings:', err)
+    }
 
-  try {
-    checkEmailConfig()
-  } catch (err) {
-    console.error('Error checking email config:', err)
+    try {
+      checkEmailConfig()
+      console.log('✅ Email config checked')
+    } catch (err) {
+      console.error('Error checking email config:', err)
+    }
+
+    console.log('✅ Settings page fully rendered')
+  } catch (error) {
+    console.error('❌ Fatal error in renderTenantGuardSettings:', error)
   }
 }
 
