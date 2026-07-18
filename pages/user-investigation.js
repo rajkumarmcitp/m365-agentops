@@ -907,6 +907,7 @@ function renderInvestigation(el, data) {
   el.querySelector('#signin-logs-section').innerHTML = signinHtml
 
   // Initialize Sign-in Locations Map
+  // Note: Graph API may not always include lat/long for all sign-ins
   initSigninLocationsMap(el, signInLogs)
 
   // Audit Logs
@@ -1872,16 +1873,30 @@ function formatDateTime(dateString) {
  */
 function initSigninLocationsMap(el, signInLogs) {
   const mapEl = el.querySelector('#signin-locations-map')
-  if (!mapEl || !signInLogs || signInLogs.length === 0) {
-    if (mapEl) {
-      mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary);font-size:11px">No location data available for map</div>'
-    }
+  if (!mapEl) return
+
+  if (!signInLogs || signInLogs.length === 0) {
+    mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary);font-size:11px">No sign-in activity to display on map</div>'
+    return
+  }
+
+  // Check if any logs have location data with coordinates
+  const logsWithCoords = signInLogs.filter(log => {
+    return log.latitude !== undefined && log.longitude !== undefined &&
+           typeof log.latitude === 'number' && typeof log.longitude === 'number'
+  })
+
+  console.log(`📍 Map initialization: Found ${logsWithCoords.length} of ${signInLogs.length} logs with coordinates`)
+
+  if (logsWithCoords.length === 0) {
+    console.warn('⚠️ No logs with valid coordinates found. Available fields:', signInLogs[0] ? Object.keys(signInLogs[0]) : 'none')
+    mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary);font-size:11px">Location data not available for this user</div>'
     return
   }
 
   // Load Leaflet if not already loaded
   if (window.L) {
-    renderSigninMapContent(mapEl, signInLogs)
+    renderSigninMapContent(mapEl, logsWithCoords)
   } else {
     // Load CSS first
     const link = document.createElement('link')
@@ -1892,11 +1907,12 @@ function initSigninLocationsMap(el, signInLogs) {
       const script = document.createElement('script')
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'
       script.onload = () => {
-        renderSigninMapContent(mapEl, signInLogs)
+        console.log('✓ Leaflet loaded')
+        renderSigninMapContent(mapEl, logsWithCoords)
       }
       script.onerror = () => {
         console.error('Failed to load Leaflet')
-        mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary);font-size:11px">Map failed to load</div>'
+        mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary);font-size:11px">Map library failed to load</div>'
       }
       document.head.appendChild(script)
     }
