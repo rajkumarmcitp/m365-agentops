@@ -6,6 +6,7 @@
 
 import './styles/tenantguard-settings.css'
 import emailSettings from '../lib/email-settings-manager.js'
+import { api } from '../lib/api-client.js'
 
 export function renderTenantGuardSettings(el) {
   const container = el.querySelector('.content-area')
@@ -354,7 +355,7 @@ async function handleTestEmail() {
   btn.textContent = '⏳ Testing...'
 
   try {
-    const response = await fetch('http://localhost:3000/api/email/test', {
+    const response = await fetch(`${api}/email/test`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -391,7 +392,7 @@ async function handleSaveEmail() {
     emailSettings.updateEmailConfig(config)
 
     // Also sync to backend
-    const response = await fetch('http://localhost:3000/api/email/config', {
+    const response = await fetch(`${api}/email/config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config)
@@ -432,7 +433,7 @@ async function handleAddRecipient() {
       loadSettings()
 
       // Also sync to backend
-      fetch('http://localhost:3000/api/email/recipients', {
+      fetch(`${api}/email/recipients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -454,7 +455,7 @@ async function handleRemoveRecipient(email) {
       loadSettings()
 
       // Also sync to backend
-      fetch('http://localhost:3000/api/email/recipients', {
+      fetch(`${api}/email/recipients`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -480,7 +481,7 @@ async function handleSaveThresholds() {
     emailSettings.setAlertThresholds(thresholds)
 
     // Also sync to backend
-    const response = await fetch('http://localhost:3000/api/email/thresholds', {
+    const response = await fetch(`${api}/email/thresholds`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(thresholds)
@@ -508,7 +509,7 @@ async function handleSaveRateLimit() {
     emailSettings.setRateLimit(limits)
 
     // Also sync to backend
-    const response = await fetch('http://localhost:3000/api/email/rate-limit', {
+    const response = await fetch(`${api}/email/rate-limit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(limits)
@@ -527,7 +528,7 @@ async function handleSaveRateLimit() {
 
 async function handleVerifyConfig() {
   try {
-    const response = await fetch('http://localhost:3000/api/email/verify', {
+    const response = await fetch(`${api}/email/verify`, {
       method: 'GET'
     })
 
@@ -559,7 +560,7 @@ async function handleSendTest() {
   }
 
   try {
-    const response = await fetch('http://localhost:3000/api/email/test', {
+    const response = await fetch(`${api}/email/test`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ recipient })
@@ -578,7 +579,7 @@ async function handleSendTest() {
 
 async function handleRefreshStats() {
   try {
-    const response = await fetch('http://localhost:3000/api/email/stats', {
+    const response = await fetch(`${api}/email/stats`, {
       method: 'GET'
     })
 
@@ -626,7 +627,7 @@ async function loadSettings() {
 
 async function checkEmailConfig() {
   try {
-    const response = await fetch('http://localhost:3000/api/email/verify', {
+    const response = await fetch(`${api}/email/verify`, {
       method: 'GET'
     })
 
