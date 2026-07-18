@@ -6852,14 +6852,41 @@ app.get('/api/tenantguard/alerts', async (req, res) => {
 
         if (auditResponse.ok) {
           const auditData = await auditResponse.json()
-          const realAlerts = (auditData.value || []).map((log, idx) => ({
+
+          // List of informational/non-security events to exclude
+          const informationalPatterns = [
+            /^(Get|Read|Validate|Check|List|Search|View|Query|Retrieve|Retrieve|Fetch|Lookup|Download)\s/i,
+            /^User logged in/i,
+            /^User logged off/i,
+            /^Sign-in activity/i,
+            /^Download/i,
+            /^Access/i,
+            /^View/i,
+            /^Retrieve/i,
+            /^Search/i,
+            /^Query/i,
+            /^Lookup/i,
+          ]
+
+          // Check if activity is informational (just reading/viewing, no security impact)
+          const isInformational = (activityName) => {
+            return informationalPatterns.some(pattern => pattern.test(activityName))
+          }
+
+          // Filter to security-relevant events only
+          const securityRelevantLogs = (auditData.value || []).filter(log => {
+            const activity = log.activityDisplayName || ''
+            return !isInformational(activity)
+          })
+
+          const realAlerts = securityRelevantLogs.map((log, idx) => ({
             id: `audit-${idx}-${Date.now()}`,
             name: `Audit Log: ${log.activityDisplayName}`,
             headline: `Audit Log: ${log.activityDisplayName}`,
             category: 'Directory Audit',
-            priority: 'P3',
-            severity: 'MEDIUM',
-            riskScore: 30 + Math.random() * 40,
+            priority: log.result === 'Failure' ? 'P1' : 'P2', // Failed actions are higher priority
+            severity: log.result === 'Failure' ? 'HIGH' : 'MEDIUM',
+            riskScore: log.result === 'Failure' ? (50 + Math.random() * 40) : (30 + Math.random() * 20),
             description: log.result === 'Success' ? `Successful: ${log.activityDisplayName}` : `Failed: ${log.activityDisplayName}`,
             actor: log.initiatedBy?.[0]?.user?.userPrincipalName || log.initiatedBy?.[0]?.user?.displayName || log.initiatedBy?.[0]?.app?.displayName || 'System',
             target: log.targetResources?.[0]?.displayName || 'N/A',
@@ -6867,6 +6894,8 @@ app.get('/api/tenantguard/alerts', async (req, res) => {
             timestamp: new Date(log.activityDateTime).toISOString(),
             dismissed: 0
           }))
+
+          console.log(`📊 Filtered audit logs: ${securityRelevantLogs.length} security-relevant events from ${auditData.value?.length || 0} total`)
 
           // Apply filters
           let filtered = realAlerts
@@ -6921,6 +6950,21 @@ app.get('/api/tenantguard/alerts', async (req, res) => {
         WHERE dismissed = 0
       `
 
+      // Exclude informational events (low security value)
+      query += ` AND headline NOT LIKE 'Audit Log: Get %'
+        AND headline NOT LIKE 'Audit Log: Read %'
+        AND headline NOT LIKE 'Audit Log: Validate %'
+        AND headline NOT LIKE 'Audit Log: Check %'
+        AND headline NOT LIKE 'Audit Log: List %'
+        AND headline NOT LIKE 'Audit Log: Search %'
+        AND headline NOT LIKE 'Audit Log: View %'
+        AND headline NOT LIKE 'Audit Log: Query %'
+        AND headline NOT LIKE 'Audit Log: Retrieve %'
+        AND headline NOT LIKE 'User logged%'
+        AND headline NOT LIKE '%User logged in%'
+        AND headline NOT LIKE '%User logged off%'
+        AND headline NOT LIKE '%Sign-in activity%'`
+
       if (severity !== 'all') {
         query += ` AND severity = '${severity}'`
       }
@@ -6932,6 +6976,8 @@ app.get('/api/tenantguard/alerts', async (req, res) => {
       query += ' ORDER BY score DESC, action_timestamp DESC LIMIT ' + limit
 
       const alerts = db.prepare(query).all()
+
+      console.log(`📊 Database alerts after filtering: ${alerts.length} security-relevant events`)
 
       // Parse JSON fields
       const parsed = alerts.map(alert => ({
