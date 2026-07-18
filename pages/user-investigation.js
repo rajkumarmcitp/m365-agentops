@@ -66,10 +66,10 @@ function renderDemoUserInvestigation(el) {
   ]
 
   const demoSignInLogs = [
-    { timestamp: '2026-06-01 14:32', location: 'Seattle, WA', app: 'Teams', status: 'Success', risk: 'Low' },
-    { timestamp: '2026-06-01 13:45', location: 'Seattle, WA', app: 'OWA', status: 'Success', risk: 'Low' },
-    { timestamp: '2026-06-01 10:20', location: 'Seattle, WA', app: 'SharePoint', status: 'Success', risk: 'Low' },
-    { timestamp: '2026-05-31 18:30', location: 'Unknown', app: 'Exchange', status: 'MFA Challenge', risk: 'Medium' },
+    { timestamp: '2026-06-01 14:32', location: 'Seattle, WA', app: 'Teams', status: 'Success', risk: 'Low', latitude: 47.6062, longitude: -122.3321, result: 'Success' },
+    { timestamp: '2026-06-01 13:45', location: 'Seattle, WA', app: 'OWA', status: 'Success', risk: 'Low', latitude: 47.6062, longitude: -122.3321, result: 'Success' },
+    { timestamp: '2026-06-01 10:20', location: 'San Francisco, CA', app: 'SharePoint', status: 'Success', risk: 'Low', latitude: 37.7749, longitude: -122.4194, result: 'Success' },
+    { timestamp: '2026-05-31 18:30', location: 'New York, NY', app: 'Exchange', status: 'MFA Challenge', risk: 'Medium', latitude: 40.7128, longitude: -74.0060, result: 'MFA Challenge' },
   ]
 
   const demoAuditLogs = [
@@ -167,6 +167,13 @@ function renderDemoUserInvestigation(el) {
     <!-- Sign-in Activity -->
     <div class="card mb-3">
       <div class="card-title mb-3"><i class="ti ti-login"></i> Recent Sign-in Activity</div>
+
+      <!-- Sign-in Locations Map (Demo) -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--color-text-secondary)">📍 Sign-in Locations Map</div>
+        <div id="demo-signin-map" style="width:100%;height:300px;border-radius:6px;background:var(--color-background-secondary);overflow:hidden"></div>
+      </div>
+
       <table style="width:100%;border-collapse:collapse;font-size:11px">
         <thead style="background:var(--color-background-secondary)">
           <tr>
@@ -255,6 +262,11 @@ function renderDemoUserInvestigation(el) {
       card.style.background = 'var(--clr-info-bg)'
     })
   })
+
+  // Initialize Sign-in Locations Map for demo
+  setTimeout(() => {
+    initSigninLocationsMap(el, demoSignInLogs)
+  }, 100)
 }
 
 function renderUserInvestigation(el) {
@@ -419,6 +431,13 @@ function renderUserInvestigation(el) {
         <!-- Sign-in Activity -->
         <div class="card mb-3">
           <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-login"></i> Sign-in Activity</div>
+
+          <!-- Sign-in Locations Map -->
+          <div style="margin-bottom:16px">
+            <div style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--color-text-secondary)">📍 Sign-in Locations Map</div>
+            <div id="signin-locations-map" style="width:100%;height:300px;border-radius:6px;background:var(--color-background-secondary);overflow:hidden"></div>
+          </div>
+
           <div id="signin-logs-section" style="font-size:11px"></div>
         </div>
 
@@ -886,6 +905,9 @@ function renderInvestigation(el, data) {
   `
 
   el.querySelector('#signin-logs-section').innerHTML = signinHtml
+
+  // Initialize Sign-in Locations Map
+  initSigninLocationsMap(el, signInLogs)
 
   // Audit Logs
   const auditHtml = `
@@ -1841,5 +1863,177 @@ function formatDateTime(dateString) {
     })
   } catch (e) {
     return dateString
+  }
+}
+
+/**
+ * Initialize Sign-in Locations Map
+ * Shows geographic locations of user sign-ins on a map
+ */
+function initSigninLocationsMap(el, signInLogs) {
+  const mapEl = el.querySelector('#signin-locations-map')
+  if (!mapEl || !signInLogs || signInLogs.length === 0) {
+    if (mapEl) {
+      mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary);font-size:11px">No location data available for map</div>'
+    }
+    return
+  }
+
+  // Load Leaflet if not already loaded
+  if (window.L) {
+    renderSigninMapContent(mapEl, signInLogs)
+  } else {
+    // Load CSS first
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'
+    link.onload = () => {
+      // Then load JS
+      const script = document.createElement('script')
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'
+      script.onload = () => {
+        renderSigninMapContent(mapEl, signInLogs)
+      }
+      script.onerror = () => {
+        console.error('Failed to load Leaflet')
+        mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary);font-size:11px">Map failed to load</div>'
+      }
+      document.head.appendChild(script)
+    }
+    document.head.appendChild(link)
+  }
+}
+
+/**
+ * Render Sign-in Map Content
+ * Displays markers for each unique location
+ */
+function renderSigninMapContent(mapEl, signInLogs) {
+  try {
+    // Filter logs with location data
+    const logsWithLocation = signInLogs.filter(log =>
+      log.latitude && log.longitude &&
+      typeof log.latitude === 'number' &&
+      typeof log.longitude === 'number'
+    )
+
+    if (logsWithLocation.length === 0) {
+      mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary);font-size:11px">No location coordinates available</div>'
+      return
+    }
+
+    // Clear any existing map
+    mapEl.innerHTML = ''
+
+    // Group logs by location to avoid duplicate markers
+    const locationMap = new Map()
+    logsWithLocation.forEach(log => {
+      const key = `${log.latitude},${log.longitude}`
+      if (!locationMap.has(key)) {
+        locationMap.set(key, {
+          latitude: log.latitude,
+          longitude: log.longitude,
+          location: log.location || 'Unknown',
+          count: 0,
+          success: 0,
+          failed: 0,
+          lastSignin: log.timestamp,
+          signins: []
+        })
+      }
+      const loc = locationMap.get(key)
+      loc.count++
+      loc.signins.push(log)
+      if (log.result === 'Success') {
+        loc.success++
+      } else {
+        loc.failed++
+      }
+      // Update last signin if this one is newer
+      if (new Date(log.timestamp) > new Date(loc.lastSignin)) {
+        loc.lastSignin = log.timestamp
+      }
+    })
+
+    // Calculate bounds for all locations
+    const lats = Array.from(locationMap.values()).map(loc => loc.latitude)
+    const lons = Array.from(locationMap.values()).map(loc => loc.longitude)
+    const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2
+    const centerLon = (Math.max(...lons) + Math.min(...lons)) / 2
+
+    // Initialize map
+    const map = window.L.map(mapEl).setView([centerLat, centerLon], 4)
+
+    // Add CartoDB tiles
+    window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© CartoDB',
+      maxZoom: 19,
+      subdomains: 'abcd'
+    }).addTo(map)
+
+    // Add markers for each location
+    locationMap.forEach((location, key) => {
+      // Color based on success/failure ratio
+      const successRate = location.success / location.count
+      const color = successRate >= 0.8 ? '#10b981' : successRate >= 0.5 ? '#f59e0b' : '#ef4444'
+
+      const marker = window.L.circleMarker([location.latitude, location.longitude], {
+        radius: Math.min(Math.max(8, location.count / 2), 20),
+        fillColor: color,
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.8
+      })
+
+      // Create popup with detailed info
+      const popupContent = `
+        <div style="font-size:11px;width:200px">
+          <div style="font-weight:600;margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:6px">
+            📍 ${location.location}
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div>
+              <div style="font-size:9px;color:var(--color-text-tertiary)">Total Sign-ins</div>
+              <div style="font-weight:600;font-size:13px">${location.count}</div>
+            </div>
+            <div>
+              <div style="font-size:9px;color:var(--color-text-tertiary)">Success Rate</div>
+              <div style="font-weight:600;font-size:13px;color:${successRate >= 0.8 ? '#10b981' : '#ef4444'}">${Math.round(successRate * 100)}%</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 0;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;margin-bottom:6px">
+            <div style="text-align:center">
+              <div style="font-size:9px;color:var(--color-text-tertiary)">✅ Successful</div>
+              <div style="font-weight:600;font-size:11px;color:#10b981">${location.success}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:9px;color:var(--color-text-tertiary)">❌ Failed</div>
+              <div style="font-weight:600;font-size:11px;color:#ef4444">${location.failed}</div>
+            </div>
+          </div>
+          <div style="font-size:9px;color:var(--color-text-tertiary)">
+            Last sign-in: ${formatTime(location.lastSignin)}
+          </div>
+        </div>
+      `
+
+      marker.bindPopup(popupContent)
+      marker.addTo(map)
+    })
+
+    // Fit map to bounds
+    if (lats.length > 0) {
+      const bounds = window.L.latLngBounds(
+        [Math.min(...lats), Math.min(...lons)],
+        [Math.max(...lats), Math.max(...lons)]
+      )
+      map.fitBounds(bounds, { padding: [50, 50] })
+    }
+
+    console.log(`✓ Sign-in map rendered with ${locationMap.size} locations`)
+  } catch (error) {
+    console.error('Map rendering error:', error)
+    mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary);font-size:11px">Error loading map: ' + error.message + '</div>'
   }
 }
