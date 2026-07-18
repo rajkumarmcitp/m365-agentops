@@ -703,3 +703,4 @@ window.switchTab = (tab) => {
   const el = document.getElementById('page-tenantguard')
   if (el) renderContent(el)
 }
+// Force rebuild on Sat Jul 18 23:30:35 IST 2026
