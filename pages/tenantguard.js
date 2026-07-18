@@ -70,8 +70,13 @@ export async function initTenantGuard() {
       isRefreshing = true
       try {
         await refreshData()
-        renderContent(el)
-        lastUpdateTime = new Date()
+        // Don't re-render main content if on settings tab
+        if (activeTab !== 'settings') {
+          renderContent(el)
+        } else {
+          // Just update the timestamp without re-rendering
+          lastUpdateTime = new Date()
+        }
         updateCount++
       } catch (error) {
         console.error('Real-time update error:', error)
