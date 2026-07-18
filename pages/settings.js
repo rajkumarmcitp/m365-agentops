@@ -1238,98 +1238,110 @@ SHAREPOINT_ZEROTRUST_HISTORY_LIST_ID=${result.historyListId}`
 
   // ---- Main service toggles ----
   const mainGrid = el.querySelector('#portal-main-toggles')
-  SERVICE_GROUPS.forEach(group => {
-    const key = 'portal_' + group.id.replace(/-/g, '_')
-    const card = document.createElement('div')
-    card.style.cssText = 'padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:1px solid var(--color-border-primary);display:flex;align-items:center;gap:10px'
-    card.innerHTML = `
-      <div class="psc-icon" style="background:${group.bg};color:${group.color};width:28px;height:28px;font-size:12px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
-        <i class="ti ${group.icon}"></i>
-      </div>
-      <span style="flex:1;font-size:11px;font-weight:600">${group.name}</span>
-      <div id="portal-toggle-${key}"></div>
-    `
-    mainGrid.appendChild(card)
+  if (mainGrid) {
+    SERVICE_GROUPS.forEach(group => {
+      const key = 'portal_' + group.id.replace(/-/g, '_')
+      const card = document.createElement('div')
+      card.style.cssText = 'padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:1px solid var(--color-border-primary);display:flex;align-items:center;gap:10px'
+      card.innerHTML = `
+        <div class="psc-icon" style="background:${group.bg};color:${group.color};width:28px;height:28px;font-size:12px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+          <i class="ti ${group.icon}"></i>
+        </div>
+        <span style="flex:1;font-size:11px;font-weight:600">${group.name}</span>
+        <div id="portal-toggle-${key}"></div>
+      `
+      mainGrid.appendChild(card)
 
-    const toggle = createToggle({
-      id: `chk-${key}`,
-      checked: s[key] !== false,
-      label: '',
-      onChange: (v) => { state.settings[key] = v; saveState() },
+      const toggle = createToggle({
+        id: `chk-${key}`,
+        checked: s[key] !== false,
+        label: '',
+        onChange: (v) => { state.settings[key] = v; saveState() },
+      })
+      const toggleContainer = card.querySelector(`#portal-toggle-${key}`)
+      if (toggleContainer) toggleContainer.appendChild(toggle)
     })
-    card.querySelector(`#portal-toggle-${key}`).appendChild(toggle)
-  })
+  }
 
   // ---- Exchange sub-service toggles ----
   const exGrid = el.querySelector('#portal-exchange-toggles')
-  const subKeys = {
-    'exchange-groups': 'portal_exchange_groups',
-    'shared-mailbox':  'portal_shared_mailbox',
-    'room-equipment':  'portal_room_equipment',
-    'email-services':  'portal_email_services',
-  }
-  EXCHANGE_SUB.forEach(sub => {
-    const key = subKeys[sub.id]
-    const card = document.createElement('div')
-    card.style.cssText = 'padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:1px solid var(--color-border-primary);display:flex;align-items:center;gap:10px'
-    card.innerHTML = `
-      <i class="ti ${sub.icon}" style="color:var(--clr-info-text);font-size:14px;flex-shrink:0"></i>
-      <span style="flex:1;font-size:11px;font-weight:600">${sub.name}</span>
-      <div id="portal-toggle-${key}"></div>
-    `
-    exGrid.appendChild(card)
+  if (exGrid) {
+    const subKeys = {
+      'exchange-groups': 'portal_exchange_groups',
+      'shared-mailbox':  'portal_shared_mailbox',
+      'room-equipment':  'portal_room_equipment',
+      'email-services':  'portal_email_services',
+    }
+    EXCHANGE_SUB.forEach(sub => {
+      const key = subKeys[sub.id]
+      const card = document.createElement('div')
+      card.style.cssText = 'padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:1px solid var(--color-border-primary);display:flex;align-items:center;gap:10px'
+      card.innerHTML = `
+        <i class="ti ${sub.icon}" style="color:var(--clr-info-text);font-size:14px;flex-shrink:0"></i>
+        <span style="flex:1;font-size:11px;font-weight:600">${sub.name}</span>
+        <div id="portal-toggle-${key}"></div>
+      `
+      exGrid.appendChild(card)
 
-    const toggle = createToggle({
-      id: `chk-${key}`,
-      checked: s[key] !== false,
-      label: '',
-      onChange: (v) => { state.settings[key] = v; saveState() },
+      const toggle = createToggle({
+        id: `chk-${key}`,
+        checked: s[key] !== false,
+        label: '',
+        onChange: (v) => { state.settings[key] = v; saveState() },
+      })
+      const toggleContainer = card.querySelector(`#portal-toggle-${key}`)
+      if (toggleContainer) toggleContainer.appendChild(toggle)
     })
-    card.querySelector(`#portal-toggle-${key}`).appendChild(toggle)
-  })
+  }
 
   // ---- Service Availability Collapse Toggle ----
   const svcToggleBtn = el.querySelector('#svc-availability-toggle')
   const svcContent = el.querySelector('#svc-availability-content')
-  const svcChevron = svcToggleBtn.querySelector('.ti-chevron-down')
+  if (svcToggleBtn && svcContent) {
+    const svcChevron = svcToggleBtn.querySelector('.ti-chevron-down')
 
-  svcToggleBtn.addEventListener('click', () => {
-    const isHidden = svcContent.style.display === 'none'
-    svcContent.style.display = isHidden ? 'block' : 'none'
-    svcChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)'
-  })
+    svcToggleBtn.addEventListener('click', () => {
+      const isHidden = svcContent.style.display === 'none'
+      svcContent.style.display = isHidden ? 'block' : 'none'
+      if (svcChevron) svcChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)'
+    })
+  }
 
   // ---- Approval Workflow Configuration ----
   const workflowConfig = el.querySelector('#workflow-config')
-  SERVICE_GROUPS.forEach(group => {
-    const workflowKey = 'workflow_' + group.id.replace(/-/g, '_')
-    const currentWorkflow = s[workflowKey] || 'admin-only'
+  if (workflowConfig) {
+    SERVICE_GROUPS.forEach(group => {
+      const workflowKey = 'workflow_' + group.id.replace(/-/g, '_')
+      const currentWorkflow = s[workflowKey] || 'admin-only'
 
-    const card = document.createElement('div')
-    card.style.cssText = 'padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:1px solid var(--color-border-primary)'
-    card.innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-        <div class="psc-icon" style="background:${group.bg};color:${group.color};width:24px;height:24px;font-size:11px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
-          <i class="ti ${group.icon}"></i>
+      const card = document.createElement('div')
+      card.style.cssText = 'padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:1px solid var(--color-border-primary)'
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div class="psc-icon" style="background:${group.bg};color:${group.color};width:24px;height:24px;font-size:11px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+            <i class="ti ${group.icon}"></i>
+          </div>
+          <span style="font-weight:600;font-size:11px">${group.name}</span>
         </div>
-        <span style="font-weight:600;font-size:11px">${group.name}</span>
-      </div>
-      <select class="form-select" style="font-size:11px" id="workflow-${group.id}">
-        <option value="no-approval" ${currentWorkflow === 'no-approval' ? 'selected' : ''}>No Approval Required (Direct to Agent)</option>
-        <option value="admin-only" ${currentWorkflow === 'admin-only' ? 'selected' : ''}>Admin Approval Only</option>
-        <option value="manager-then-admin" ${currentWorkflow === 'manager-then-admin' ? 'selected' : ''}>Manager Approval → Admin Approval</option>
-        <option value="manager-only" ${currentWorkflow === 'manager-only' ? 'selected' : ''}>Manager Approval Only</option>
-      </select>
-    `
-    workflowConfig.appendChild(card)
+        <select class="form-select" style="font-size:11px" id="workflow-${group.id}">
+          <option value="no-approval" ${currentWorkflow === 'no-approval' ? 'selected' : ''}>No Approval Required (Direct to Agent)</option>
+          <option value="admin-only" ${currentWorkflow === 'admin-only' ? 'selected' : ''}>Admin Approval Only</option>
+          <option value="manager-then-admin" ${currentWorkflow === 'manager-then-admin' ? 'selected' : ''}>Manager Approval → Admin Approval</option>
+          <option value="manager-only" ${currentWorkflow === 'manager-only' ? 'selected' : ''}>Manager Approval Only</option>
+        </select>
+      `
+      workflowConfig.appendChild(card)
 
-    const select = card.querySelector(`#workflow-${group.id}`)
-    select.addEventListener('change', (e) => {
-      state.settings[workflowKey] = e.target.value
-      saveState()
-      showToast(`Workflow updated for ${group.name}`, 'success')
+      const select = card.querySelector(`#workflow-${group.id}`)
+      if (select) {
+        select.addEventListener('change', (e) => {
+          state.settings[workflowKey] = e.target.value
+          saveState()
+          showToast(`Workflow updated for ${group.name}`, 'success')
+        })
+      }
     })
-  })
+  }
 
   // ---- Save & Reset ----
   el.querySelector('#settings-save').addEventListener('click', () => {
@@ -1357,6 +1369,8 @@ SHAREPOINT_ZEROTRUST_HISTORY_LIST_ID=${result.historyListId}`
       const lastRunEl = el.querySelector('#settings-last-run-time')
       const nextRunEl = el.querySelector('#settings-next-run-time')
 
+      if (!lastRunEl || !nextRunEl) return
+
       if (data.lastRunTime) {
         const lastRunDate = new Date(data.lastRunTime)
         lastRunEl.textContent = lastRunDate.toLocaleString()
@@ -1378,6 +1392,7 @@ SHAREPOINT_ZEROTRUST_HISTORY_LIST_ID=${result.historyListId}`
 
   if (runNowBtn) {
     runNowBtn.addEventListener('click', async () => {
+      if (!runNowBtn) return
       runNowBtn.disabled = true
       runNowBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Running...'
       try {
@@ -1387,21 +1402,26 @@ SHAREPOINT_ZEROTRUST_HISTORY_LIST_ID=${result.historyListId}`
       } catch (err) {
         showToast('Error: ' + err.message, 'error')
       } finally {
-        runNowBtn.disabled = false
-        runNowBtn.innerHTML = '<i class="ti ti-player-play"></i> Run Now'
+        if (runNowBtn) {
+          runNowBtn.disabled = false
+          runNowBtn.innerHTML = '<i class="ti ti-player-play"></i> Run Now'
+        }
       }
     })
   }
 
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
+      if (!refreshBtn) return
       refreshBtn.disabled = true
       refreshBtn.innerHTML = '<span class="spinner dark" style="width:14px;height:14px"></span> Refreshing...'
       await new Promise(r => setTimeout(r, 500))
       await loadSchedulerStatus()
       showToast('Status refreshed', 'info')
-      refreshBtn.disabled = false
-      refreshBtn.innerHTML = '<i class="ti ti-refresh"></i> Refresh Status'
+      if (refreshBtn) {
+        refreshBtn.disabled = false
+        refreshBtn.innerHTML = '<i class="ti ti-refresh"></i> Refresh Status'
+      }
     })
   }
 
@@ -1463,11 +1483,14 @@ SHAREPOINT_ZEROTRUST_HISTORY_LIST_ID=${result.historyListId}`
 
 async function loadClaudeStatus(el) {
   try {
+    if (!el) return
     const status = await getClaudeStatus()
     if (status) {
       const badge = el.querySelector('#claude-status-badge')
       const modeText = el.querySelector('#claude-mode-text')
       const removeBtn = el.querySelector('#claude-remove-btn')
+
+      if (!badge || !modeText || !removeBtn) return
 
       if (status.available) {
         badge.innerHTML = '<span style="background:var(--clr-success-bg);color:var(--clr-success-text);padding:2px 8px;border-radius:3px;font-size:9px;font-weight:600">ACTIVE</span>'
@@ -1486,6 +1509,7 @@ async function loadClaudeStatus(el) {
 
 async function loadLicenseConfig(el) {
   try {
+    if (!el) return
     const response = await fetch(`${api}/admin/license-config`)
     const result = await response.json()
 
@@ -1519,15 +1543,20 @@ async function loadLicenseConfig(el) {
       wrap.innerHTML = html
 
       // Event listeners
-      el.querySelector('#license-config-save').addEventListener('click', async () => {
+      const saveBtn = el.querySelector('#license-config-save')
+      const reloadBtn = el.querySelector('#license-config-reload')
+      if (!saveBtn || !reloadBtn) return
+
+      saveBtn.addEventListener('click', async () => {
         const config = {}
         licenseTypes.forEach(license => {
           const inputId = `license-group-${license.replace(/\s+/g, '-').toLowerCase()}`
           const input = el.querySelector(`#${inputId}`)
-          config[license] = input.value.trim() || null
+          if (input) config[license] = input.value.trim() || null
         })
 
         const btn = el.querySelector('#license-config-save')
+        if (!btn) return
         btn.disabled = true
         btn.innerHTML = '<i class="ti ti-loading"></i> Saving...'
 
@@ -1548,11 +1577,13 @@ async function loadLicenseConfig(el) {
           showToast('Error saving configuration: ' + error.message, 'error')
         }
 
-        btn.disabled = false
-        btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save Configuration'
+        if (btn) {
+          btn.disabled = false
+          btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save Configuration'
+        }
       })
 
-      el.querySelector('#license-config-reload').addEventListener('click', () => {
+      reloadBtn.addEventListener('click', () => {
         loadLicenseConfig(el)
         showToast('Configuration reloaded', 'info')
       })

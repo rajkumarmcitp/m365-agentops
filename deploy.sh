@@ -1,16 +1,10 @@
 #!/bin/bash
+set -e
 
-# M365 AgentOps Deployment Script for Azure App Service
-# Installs dependencies for the Node.js backend
+echo "Installing dependencies..."
+cd /home/site/wwwroot
+npm install --production 2>&1
 
-echo "🚀 Deploying M365 AgentOps Backend..."
-
-# Change to backend directory
-cd backend || { echo "❌ Backend directory not found"; exit 1; }
-
-echo "📦 Installing backend dependencies..."
-npm ci --only=production || { echo "❌ npm install failed"; exit 1; }
-
-echo "✅ Backend dependencies installed"
-echo "✅ Deployment ready - startup command will run: node backend/server.js"
-exit 0
+echo "Dependencies installed!"
+echo "Starting server..."
+node server.js
