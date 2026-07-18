@@ -9,7 +9,7 @@ import emailSettings from '../lib/email-settings-manager.js'
 import { api } from '../lib/api-client.js'
 
 export function renderTenantGuardSettings(el) {
-  const container = el.querySelector('.content-area')
+  const container = el.querySelector('.content-area') || document.querySelector('#tg-content .content-area')
   if (!container) return
 
   container.innerHTML = `
