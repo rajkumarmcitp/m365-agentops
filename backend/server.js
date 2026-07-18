@@ -162,6 +162,7 @@ import { randomUUID } from 'crypto'
 import { loadConfig, saveConfig, initializeAllLists, getListId, setListId } from './sharepoint-config.js'
 import emailService from './services/email-service.js'
 import alertRouter from './services/alert-router.js'
+import geolocationService from './services/geolocation-service.js'
 
 // Reload credentials after dotenv.config() has loaded environment variables
 graphConfigService.reloadCredentials()
@@ -10357,15 +10358,66 @@ app.get('/api/user-investigation/signin-logs', async (req, res) => {
           .top(20)
           .get()
 
-        signInLogs = (signIns.value || []).map(s => ({
-          timestamp: s.createdDateTime,
-          location: s.location?.city ? `${s.location.city}, ${s.location.state}` : 'Unknown',
-          device: s.deviceDetail?.displayName || s.deviceDetail?.operatingSystem || 'Unknown',
-          os: s.deviceDetail?.operatingSystem || 'Unknown',
-          browser: s.deviceDetail?.browser || 'Unknown',
-          status: s.status?.errorCode === 0 ? 'Success' : 'Failed',
-          riskLevel: s.riskLevelDuringSignIn || 'Low'
-        }))
+        // Debug: Log first item to see available fields
+        if (signIns.value && signIns.value.length > 0) {
+          console.log('📊 Sample sign-in fields:', Object.keys(signIns.value[0]).slice(0, 15))
+        }
+
+        signInLogs = (signIns.value || []).map((s, idx) => {
+          const locationCity = s.location?.city || s.location?.displayName || 'Unknown'
+          const locationState = s.location?.state || s.location?.countryOrRegion || ''
+          const locationName = locationState
+            ? `${locationCity}, ${locationState}`
+            : locationCity
+
+          const log = {
+            timestamp: s.createdDateTime,
+            location: locationName,
+            device: s.deviceDetail?.displayName || s.deviceDetail?.operatingSystem || 'Unknown',
+            os: s.deviceDetail?.operatingSystem || 'Unknown',
+            browser: s.deviceDetail?.browser || 'Unknown',
+            ipAddress: s.ipAddress || s.clientAppUsed || 'Unknown',
+            status: s.status?.errorCode === 0 ? 'Success' : 'Failed',
+            riskLevel: s.riskLevelDuringSignIn || 'Low'
+          }
+
+          // Try geolocation enrichment
+          let enriched = false
+
+          // Method 1: Try to enrich from IP address
+          if (log.ipAddress && log.ipAddress !== 'Unknown') {
+            const geoData = geolocationService.getCoordinatesByIP(log.ipAddress)
+            if (geoData) {
+              log.latitude = geoData.latitude
+              log.longitude = geoData.longitude
+              log.geoLocation = geoData.location
+              log.geoCity = geoData.city
+              log.geoCountry = geoData.country
+              enriched = true
+            }
+          }
+
+          // Method 2: Fallback to location name parsing if IP didn't work
+          if (!enriched && log.location !== 'Unknown') {
+            const geoData = geolocationService.parseLocationName(log.location)
+            if (geoData) {
+              log.latitude = geoData.latitude
+              log.longitude = geoData.longitude
+              log.geoLocation = geoData.location
+              log.geoCity = geoData.city
+              enriched = true
+            }
+          }
+
+          return log
+        })
+
+        // Log enrichment statistics
+        const enrichedCount = signInLogs.filter(log => log.latitude && log.longitude).length
+        console.log(`✓ Enriched ${enrichedCount}/${signInLogs.length} sign-in logs with geolocation data`)
+        if (enrichedCount === 0 && signInLogs.length > 0) {
+          console.warn(`⚠️ No geolocation data added. Sample location: "${signInLogs[0].location}", IP: "${signInLogs[0].ipAddress}"`)
+        }
       } catch (error) {
         console.warn('⚠️ Error fetching sign-in logs:', error.message)
       }
@@ -17875,6 +17927,9 @@ const server = app.listen(PORT, () => {
   // Initialize Email Alerting Service
   initEmailServiceOnStartup()
 
+  // Initialize Geolocation Service
+  geolocationService.initGeolocationService()
+
   // Start Message Center sync job (every hour)
   startMessageCenterSyncJob()
 })
@@ -20650,6 +20705,66 @@ app.post('/api/email/send-digests', async (req, res) => {
   try {
     const results = await alertRouter.sendAllDigests()
     res.json({ success: true, results })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// ============================================================
+// Geolocation API Endpoints
+// ============================================================
+
+// Get geolocation for specific IP
+app.get('/api/geolocation/:ip', (req, res) => {
+  try {
+    const ip = req.params.ip
+    const location = geolocationService.getLocationInfo(ip)
+    res.json({ success: true, data: location })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Enrich sign-in logs with geolocation
+app.post('/api/geolocation/enrich', (req, res) => {
+  try {
+    const { signInLogs } = req.body
+    if (!Array.isArray(signInLogs)) {
+      return res.status(400).json({ success: false, message: 'signInLogs must be an array' })
+    }
+
+    const enriched = geolocationService.batchEnrichSignInLogs(signInLogs)
+    const enrichedCount = enriched.filter(log => log.latitude && log.longitude).length
+
+    res.json({
+      success: true,
+      data: enriched,
+      stats: {
+        total: enriched.length,
+        enriched: enrichedCount,
+        percentage: Math.round((enrichedCount / enriched.length) * 100)
+      }
+    })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get geolocation cache statistics
+app.get('/api/geolocation/stats', (req, res) => {
+  try {
+    const stats = geolocationService.getCacheStats()
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Clear geolocation caches
+app.post('/api/geolocation/clear-cache', (req, res) => {
+  try {
+    geolocationService.clearCaches()
+    res.json({ success: true, message: 'Geolocation caches cleared' })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
   }

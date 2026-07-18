@@ -125,6 +125,10 @@ export function enrichSignInLogsWithGeolocation(signInLogs) {
  * Parse location string to approximate coordinates
  * This is a fallback when IP geolocation isn't available
  */
+export function parseLocationName(locationString) {
+  return parseLocationString(locationString)
+}
+
 function parseLocationString(locationString) {
   if (!locationString) return null
 
@@ -248,5 +252,6 @@ export default {
   getCacheStats,
   clearCaches,
   batchEnrichSignInLogs,
-  getLocationInfo
+  getLocationInfo,
+  parseLocationName
 }
