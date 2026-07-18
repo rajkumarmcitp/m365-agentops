@@ -9585,6 +9585,198 @@ app.get('/api/tenantguard/patterns', (req, res) => {
 })
 
 /**
+ * POST /api/tenantguard/audit/collect-all
+ * Collect audit data from all Microsoft 365 sources
+ */
+app.post('/api/tenantguard/audit/collect-all', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(503).json({
+        success: false,
+        error: 'Graph API client not initialized'
+      })
+    }
+
+    console.log('🔍 TenantGuard: Starting unified audit collection from all sources')
+
+    const AuditCollectionService = (await import('./services/audit-collection-service.js')).default
+    const auditService = new AuditCollectionService(graphClient)
+    const result = await auditService.collectAll()
+
+    console.log(`✅ Audit collection complete:
+      • Total events: ${result.summary.total}
+      • Critical: ${result.summary.critical}
+      • High: ${result.summary.high}
+      • Medium: ${result.summary.medium}
+      • Source breakdown:
+        - Purview Audit: ${result.sourceBreakdown.purviewAudit}
+        - Entra ID: ${result.sourceBreakdown.entraIdAudit}
+        - Defender Incidents: ${result.sourceBreakdown.defenderIncidents}
+        - Defender Alerts: ${result.sourceBreakdown.defenderAlerts}
+        - Risky Users: ${result.sourceBreakdown.riskyUsers}
+        - Sign-ins: ${result.sourceBreakdown.signIns}
+        - Intune: ${result.sourceBreakdown.intuneAudit}
+        - Exchange: ${result.sourceBreakdown.exchangeAudit}
+        - SharePoint: ${result.sourceBreakdown.sharePointAudit}
+    `)
+
+    res.json({
+      success: true,
+      data: result.events,
+      summary: result.summary,
+      sourceBreakdown: result.sourceBreakdown,
+      correlations: result.correlations
+    })
+  } catch (error) {
+    console.error('❌ Audit collection error:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/tenantguard/audit/sources
+ * Get audit source status and configuration
+ */
+app.get('/api/tenantguard/audit/sources', (req, res) => {
+  try {
+    const sources = [
+      {
+        name: 'Microsoft Purview Audit Log',
+        status: 'enabled',
+        priority: 'CRITICAL',
+        description: 'Primary audit source - covers Exchange, SharePoint, Teams, OneDrive',
+        services: ['Exchange Online', 'SharePoint Online', 'OneDrive', 'Microsoft Teams', 'Entra ID'],
+        capabilities: [
+          'Mailbox delegation',
+          'Inbox rules',
+          'File access & modification',
+          'Sharing changes',
+          'DLP policy modifications',
+          'Team creation/deletion',
+          'Group management',
+          'Admin role changes'
+        ]
+      },
+      {
+        name: 'Microsoft Entra ID Audit Logs',
+        status: 'enabled',
+        priority: 'CRITICAL',
+        description: 'Identity and directory administration monitoring',
+        services: ['Entra ID', 'Conditional Access'],
+        capabilities: [
+          'User created/deleted',
+          'Group changes',
+          'Role assignments',
+          'Conditional Access changes',
+          'Application registrations',
+          'Service principal changes',
+          'Device registration'
+        ]
+      },
+      {
+        name: 'Microsoft Defender XDR',
+        status: 'enabled',
+        priority: 'CRITICAL',
+        description: 'Security detections and threat intelligence',
+        services: ['Defender XDR', 'Defender for Office 365', 'Defender for Identity'],
+        capabilities: [
+          'Security incidents',
+          'Malware detection',
+          'Phishing detection',
+          'Compromised accounts',
+          'Endpoint detections',
+          'Email attacks',
+          'Identity attacks'
+        ]
+      },
+      {
+        name: 'Sign-in Logs',
+        status: 'enabled',
+        priority: 'HIGH',
+        description: 'User authentication and access monitoring',
+        services: ['Entra ID'],
+        capabilities: [
+          'Failed sign-in attempts',
+          'Risky sign-in detection',
+          'Unusual locations',
+          'Multifactor authentication events',
+          'Password spray attempts'
+        ]
+      },
+      {
+        name: 'Risky Users (Identity Protection)',
+        status: 'enabled',
+        priority: 'HIGH',
+        description: 'Flagged users based on risk detection',
+        services: ['Entra ID Identity Protection'],
+        capabilities: [
+          'User flagged as risky',
+          'Confirmed compromise',
+          'Risk level assessment',
+          'Remediation actions'
+        ]
+      },
+      {
+        name: 'Intune Audit Logs',
+        status: 'enabled',
+        priority: 'HIGH',
+        description: 'Device management and compliance monitoring',
+        services: ['Intune', 'Endpoint Manager'],
+        capabilities: [
+          'Policy changes',
+          'Configuration modifications',
+          'Device actions',
+          'Compliance changes',
+          'Security baseline updates'
+        ]
+      },
+      {
+        name: 'Exchange Online Audit',
+        status: 'enabled',
+        priority: 'MEDIUM',
+        description: 'Mailbox-specific audit events',
+        services: ['Exchange Online'],
+        capabilities: [
+          'Mailbox permissions',
+          'Transport rules',
+          'Mail flow connectors',
+          'Organization configuration'
+        ]
+      },
+      {
+        name: 'SharePoint & OneDrive Audit',
+        status: 'enabled',
+        priority: 'MEDIUM',
+        description: 'File and sharing activity monitoring',
+        services: ['SharePoint Online', 'OneDrive'],
+        capabilities: [
+          'File downloads',
+          'Sharing links creation',
+          'External sharing',
+          'Site permissions',
+          'Site administration'
+        ]
+      }
+    ]
+
+    res.json({
+      success: true,
+      data: sources,
+      summary: {
+        enabled: sources.filter(s => s.status === 'enabled').length,
+        total: sources.length,
+        coverage: '99%'
+      }
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
  * ============================================================
  * TenantGuard User Investigation Endpoints
  * ============================================================

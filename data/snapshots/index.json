@@ -1,5 +1,14 @@
 [
   {
+    "dateKey": "2026-07-18",
+    "timestamp": "2026-07-18T00:11:13.035Z",
+    "overallScore": 9,
+    "pass": 27,
+    "fail": 44,
+    "warn": 232,
+    "riskScore": 36
+  },
+  {
     "dateKey": "2026-07-17",
     "timestamp": "2026-07-17T09:07:53.220Z",
     "overallScore": 11,
