@@ -20714,18 +20714,27 @@ app.post('/api/email/send-digests', async (req, res) => {
 // Geolocation API Endpoints
 // ============================================================
 
-// Get geolocation for specific IP
-app.get('/api/geolocation/:ip', (req, res) => {
+// Get geolocation cache statistics (MUST be before :ip route)
+app.get('/api/geolocation/stats', (req, res) => {
   try {
-    const ip = req.params.ip
-    const location = geolocationService.getLocationInfo(ip)
-    res.json({ success: true, data: location })
+    const stats = geolocationService.getCacheStats()
+    res.json({ success: true, data: stats })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
   }
 })
 
-// Enrich sign-in logs with geolocation
+// Clear geolocation caches (MUST be before :ip route)
+app.post('/api/geolocation/clear-cache', (req, res) => {
+  try {
+    geolocationService.clearCaches()
+    res.json({ success: true, message: 'Geolocation caches cleared' })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Enrich sign-in logs with geolocation (MUST be before :ip route)
 app.post('/api/geolocation/enrich', (req, res) => {
   try {
     const { signInLogs } = req.body
@@ -20750,21 +20759,12 @@ app.post('/api/geolocation/enrich', (req, res) => {
   }
 })
 
-// Get geolocation cache statistics
-app.get('/api/geolocation/stats', (req, res) => {
+// Get geolocation for specific IP (MUST be last - generic :ip route)
+app.get('/api/geolocation/:ip', (req, res) => {
   try {
-    const stats = geolocationService.getCacheStats()
-    res.json({ success: true, data: stats })
-  } catch (error) {
-    res.status(400).json({ success: false, message: error.message })
-  }
-})
-
-// Clear geolocation caches
-app.post('/api/geolocation/clear-cache', (req, res) => {
-  try {
-    geolocationService.clearCaches()
-    res.json({ success: true, message: 'Geolocation caches cleared' })
+    const ip = req.params.ip
+    const location = geolocationService.getLocationInfo(ip)
+    res.json({ success: true, data: location })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
   }
