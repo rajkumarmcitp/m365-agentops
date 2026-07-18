@@ -6853,27 +6853,26 @@ app.get('/api/tenantguard/alerts', async (req, res) => {
         if (auditResponse.ok) {
           const auditData = await auditResponse.json()
 
-          // List of informational/non-security events to exclude
+          // Only show security-relevant change/modification events
+          // Filter OUT purely informational read-only operations
           const informationalPatterns = [
-            /^(Get|Read|Validate|Check|List|Search|View|Query|Retrieve|Retrieve|Fetch|Lookup|Download)\s/i,
+            // Most common non-security operations
             /^User logged in/i,
             /^User logged off/i,
-            /^Sign-in activity/i,
-            /^Download/i,
-            /^Access/i,
-            /^View/i,
-            /^Retrieve/i,
-            /^Search/i,
-            /^Query/i,
-            /^Lookup/i,
+            /^Sign.?in activity/i,
+            /get authentication.*flow/i,
+            /validate user.*authentication/i,
+            // Generic audit log reads (no changes made)
+            /^read.*audit|^get.*audit/i,
           ]
 
-          // Check if activity is informational (just reading/viewing, no security impact)
+          // Check if activity is purely informational (just reading/viewing, no security impact)
           const isInformational = (activityName) => {
+            if (!activityName) return false
             return informationalPatterns.some(pattern => pattern.test(activityName))
           }
 
-          // Filter to security-relevant events only
+          // Filter to meaningful events (exclude pure informational)
           const securityRelevantLogs = (auditData.value || []).filter(log => {
             const activity = log.activityDisplayName || ''
             return !isInformational(activity)
@@ -6960,6 +6959,21 @@ app.get('/api/tenantguard/alerts', async (req, res) => {
         AND headline NOT LIKE 'Audit Log: View %'
         AND headline NOT LIKE 'Audit Log: Query %'
         AND headline NOT LIKE 'Audit Log: Retrieve %'
+        AND headline NOT LIKE 'Audit Log: Fetch %'
+        AND headline NOT LIKE 'Audit Log: Lookup %'
+        AND headline NOT LIKE 'Audit Log: Download %'
+        AND headline NOT LIKE '%_Get'
+        AND headline NOT LIKE '%_Read'
+        AND headline NOT LIKE '%_Validate'
+        AND headline NOT LIKE '%_Check'
+        AND headline NOT LIKE '%_List'
+        AND headline NOT LIKE '%_View'
+        AND headline NOT LIKE '%_Retrieve'
+        AND headline NOT LIKE '%_Search'
+        AND headline NOT LIKE '%_Fetch'
+        AND headline NOT LIKE '%_Query'
+        AND headline NOT LIKE '%_Lookup'
+        AND headline NOT LIKE '%_Download'
         AND headline NOT LIKE 'User logged%'
         AND headline NOT LIKE '%User logged in%'
         AND headline NOT LIKE '%User logged off%'
