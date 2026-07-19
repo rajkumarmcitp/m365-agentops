@@ -15,7 +15,7 @@ let isRefreshing = false
 let updateCount = 0
 
 // Real-time update config
-const REFRESH_INTERVAL = 10 * 1000 // 10 seconds for real-time feel
+const REFRESH_INTERVAL = 60 * 1000 // 60 seconds (1 minute) for efficient polling
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:3000'
   : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
@@ -532,7 +532,7 @@ async function refreshData() {
 
     // Parallel fetch from all backend APIs
     const [alertsRes, correlationsRes, patternsRes] = await Promise.all([
-      fetch(`${API_BASE}/api/tenantguard/alerts?limit=100`).then(r => r.json()).catch(e => {
+      fetch(`${API_BASE}/api/tenantguard/alerts?limit=1000&exclude=informational`).then(r => r.json()).catch(e => {
         console.error('Failed to fetch alerts:', e)
         return { success: false, data: [] }
       }),

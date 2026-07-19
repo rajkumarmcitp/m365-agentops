@@ -6893,6 +6893,7 @@ app.get('/api/tenantguard/alerts', async (req, res) => {
     const severity = req.query.severity || 'all'
     const priority = req.query.priority || 'all'
     const limit = parseInt(req.query.limit) || 50
+    const excludeInformational = req.query.exclude === 'informational'
 
     // First try to fetch REAL alerts from Graph API
     try {
@@ -6939,10 +6940,13 @@ app.get('/api/tenantguard/alerts', async (req, res) => {
             return informationalPatterns.some(pattern => pattern.test(activityName))
           }
 
-          // Filter to meaningful events (exclude pure informational)
+          // Filter to meaningful events (exclude pure informational if requested)
           const securityRelevantLogs = (auditData.value || []).filter(log => {
             const activity = log.activityDisplayName || ''
-            return !isInformational(activity)
+            if (excludeInformational) {
+              return !isInformational(activity)
+            }
+            return true
           })
 
           const realAlerts = securityRelevantLogs.map((log, idx) => ({
