@@ -5,6 +5,7 @@ import { renderTenantGuardSettings } from './tenantguard-settings.js'
 import { calculateSeverityScore, getSeverityLevel, getSeverityColors, getActionChecklist } from '../lib/severity-scoring.js'
 import { getPolicyRecommendations, getPriorityColor, getEffortColor } from '../lib/policy-recommendations.js'
 import { getAlertStatus, setAlertStatus, getStatusInfo, getNextStatuses, addStatusTransition, getAvailableStatuses, getStatusMetrics } from '../lib/alert-status-manager.js'
+import { analyzeUserRisks, getUserBehaviorSummary, getRiskColor, getRiskLevel } from '../lib/user-risk-analyzer.js'
 
 let activeTab = 'dashboard'
 let allAlerts = []
@@ -144,6 +145,12 @@ function renderContent(el) {
       <button class="tab-btn ${activeTab === 'audit' ? 'active' : ''}" data-tab="audit">
         <i class="ti ti-list"></i> Audit
       </button>
+      <button class="tab-btn ${activeTab === 'users' ? 'active' : ''}" data-tab="users">
+        <i class="ti ti-users"></i> Users
+      </button>
+      <button class="tab-btn ${activeTab === 'forensics' ? 'active' : ''}" data-tab="forensics">
+        <i class="ti ti-history"></i> Forensics
+      </button>
       <button class="tab-btn ${activeTab === 'settings' ? 'active' : ''}" data-tab="settings">
         <i class="ti ti-settings"></i> Settings
       </button>
@@ -222,6 +229,52 @@ function renderContent(el) {
       attachAlertsViewListeners()
     }, 100)
   }
+
+  // Attach forensics export listener
+  document.getElementById('forensics-export')?.addEventListener('click', () => {
+    exportForensicTimeline()
+  })
+}
+
+function exportForensicTimeline() {
+  const timelineData = {
+    exportDate: new Date().toISOString(),
+    tenant: 'M365 OpsAgent',
+    alertCount: allAlerts.length,
+    correlationCount: allCorrelations.length,
+    alerts: allAlerts.map(alert => ({
+      id: alert.id,
+      headline: alert.headline,
+      description: alert.description,
+      severity: getSeverityLevel(calculateSeverityScore(alert)),
+      score: calculateSeverityScore(alert),
+      status: getAlertStatus(alert.id),
+      actor: alert.actor,
+      source: alert.source,
+      timestamp: alert.timestamp,
+      events: alert.events || []
+    })),
+    correlations: allCorrelations.map(corr => ({
+      id: corr.id,
+      description: corr.description,
+      riskLevel: corr.risk_level,
+      correlationScore: corr.correlation_score,
+      alertCount: corr.alert_count,
+      startTime: corr.start_timestamp,
+      endTime: corr.end_timestamp
+    }))
+  }
+
+  const dataStr = JSON.stringify(timelineData, null, 2)
+  const blob = new Blob([dataStr], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `forensic-report-${new Date().toISOString().split('T')[0]}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+
+  showToast('✅ Forensic report exported', 'success')
 }
 
 function renderTabContent(riskScore, riskLevel) {
@@ -236,6 +289,10 @@ function renderTabContent(riskScore, riskLevel) {
       return renderIncidentsView()
     case 'audit':
       return renderAuditView()
+    case 'users':
+      return renderUserInvestigationView()
+    case 'forensics':
+      return renderForensicTimelineView()
     case 'settings':
       return `<div class="content-area" id="settings-container"></div>`
     default:
@@ -885,6 +942,202 @@ function renderAuditView() {
             <div style="font-size:11px;color:var(--color-text-secondary)">${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</div>
           </div>
         `).join('')}
+      </div>
+    </div>
+  `
+}
+
+function renderUserInvestigationView() {
+  const userRisks = analyzeUserRisks(allAlerts)
+  const highRiskUsers = userRisks.filter(u => u.riskScore >= 60)
+
+  return `
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="card-title" style="margin:0">👥 USER RISK ANALYSIS (${userRisks.length})</div>
+        <div style="display:flex;gap:12px;font-size:11px">
+          <div style="padding:6px 10px;background:var(--color-background-secondary);border-radius:4px">
+            <span style="color:var(--color-text-secondary)">High Risk: </span>
+            <span style="font-weight:700;color:#d32f2f">${highRiskUsers.length}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;gap:12px">
+        ${userRisks.slice(0, 10).map((user, idx) => {
+          const riskColor = getRiskColor(user.riskScore)
+          const riskLevel = getRiskLevel(user.riskScore)
+          const behaviorSummary = getUserBehaviorSummary(user)
+
+          return `
+            <div style="padding:14px;background:var(--color-background-secondary);border-radius:6px;border-left:4px solid ${riskColor}">
+              <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600;color:var(--color-text-primary)">${user.actor}</div>
+                  <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${user.alertCount} alert(s) | Last activity: ${new Date(user.lastAlertTime).toLocaleTimeString()}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+                  <div style="padding:4px 12px;background:${riskColor};color:white;border-radius:4px;font-size:12px;font-weight:600">
+                    ${riskLevel} (${user.riskScore}/100)
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+                ${behaviorSummary.map(summary => `
+                  <span style="font-size:11px;color:var(--color-text-secondary);background:var(--color-background-primary);padding:4px 8px;border-radius:3px">${summary}</span>
+                `).join('')}
+              </div>
+
+              ${user.policyGaps.length > 0 ? `
+                <div style="padding:10px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid #f57c00">
+                  <div style="font-size:11px;font-weight:600;color:#f57c00;margin-bottom:6px">⚠️ Policy Gaps:</div>
+                  <div style="display:flex;flex-direction:column;gap:4px">
+                    ${user.policyGaps.slice(0, 2).map(gap => `
+                      <div style="font-size:11px;color:var(--color-text-secondary)">
+                        <span style="font-weight:600">${gap.policy}:</span> ${gap.recommendation}
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `
+        }).join('')}
+        ${userRisks.length === 0 ? '<div style="text-align:center;padding:40px;color:var(--color-text-secondary);font-size:12px">No user risk data available</div>' : ''}
+      </div>
+    </div>
+  `
+}
+
+function renderForensicTimelineView() {
+  // Sort all alerts and their events chronologically
+  const timelineEvents = []
+
+  allAlerts.forEach(alert => {
+    if (alert?.events) {
+      alert.events.forEach(event => {
+        timelineEvents.push({
+          timestamp: new Date(event.timestamp),
+          type: 'event',
+          alert: alert,
+          event: event
+        })
+      })
+    }
+
+    // Add alert detection event
+    timelineEvents.push({
+      timestamp: new Date(alert?.timestamp),
+      type: 'alert',
+      alert: alert,
+      event: null
+    })
+  })
+
+  // Sort by timestamp descending
+  timelineEvents.sort((a, b) => b.timestamp - a.timestamp)
+
+  // Group by actor to show attack chains
+  const actorChains = {}
+  allAlerts.forEach(alert => {
+    const actor = alert?.actor || 'System'
+    if (!actorChains[actor]) {
+      actorChains[actor] = []
+    }
+    actorChains[actor].push(alert)
+  })
+
+  // Sort actors by alert count
+  const sortedActors = Object.entries(actorChains)
+    .map(([actor, alerts]) => ({
+      actor,
+      alerts,
+      count: alerts.length,
+      riskScore: alerts.reduce((sum, a) => sum + (calculateSeverityScore(a) || 0), 0) / alerts.length
+    }))
+    .sort((a, b) => b.riskScore - a.riskScore)
+
+  return `
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px">
+      <!-- ATTACK CHAINS BY ACTOR -->
+      <div class="card">
+        <div class="card-title">🔗 ATTACK CHAINS</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+          ${sortedActors.slice(0, 5).map((chain, idx) => {
+            const avgRisk = Math.round(chain.riskScore)
+            const riskColor = avgRisk >= 80 ? '#d32f2f' : avgRisk >= 60 ? '#f57c00' : '#1976d2'
+            return `
+              <div style="padding:10px;background:var(--color-background-secondary);border-radius:6px;border-left:3px solid ${riskColor};cursor:pointer" onclick="document.querySelector('#timeline-container').scrollTop = 0">
+                <div style="font-size:12px;font-weight:600;margin-bottom:4px">${chain.actor}</div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary)">
+                  <span>${chain.count} alert(s)</span>
+                  <span style="color:${riskColor};font-weight:600">${avgRisk}/100</span>
+                </div>
+              </div>
+            `
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- FORENSIC TIMELINE -->
+      <div class="card" style="min-height:500px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="card-title" style="margin:0">📈 FORENSIC TIMELINE</div>
+          <button id="forensics-export" style="padding:6px 12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:4px;cursor:pointer;font-size:11px;font-weight:600">⬇️ Export</button>
+        </div>
+        <div id="timeline-container" style="max-height:600px;overflow-y:auto;position:relative;padding-left:24px">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--color-border-primary)"></div>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            ${timelineEvents.slice(0, 50).map(item => {
+              const eventColor = item.type === 'alert'
+                ? '#d32f2f'
+                : item.event?.severity === 'CRITICAL' ? '#d32f2f'
+                : item.event?.severity === 'HIGH' ? '#f57c00'
+                : '#1976d2'
+
+              if (item.type === 'alert') {
+                const severity = calculateSeverityScore(item.alert)
+                const level = getSeverityLevel(severity)
+                const colors = getSeverityColors(level)
+
+                return `
+                  <div style="position:relative">
+                    <div style="position:absolute;left:-11px;width:14px;height:14px;background:${eventColor};border:3px solid white;border-radius:50%;margin-top:2px;z-index:1"></div>
+                    <div style="padding:10px;background:${colors.bg};border-radius:4px;border:1px solid ${colors.border}">
+                      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                        <div style="font-size:12px;font-weight:600;color:${colors.text}">
+                          ${colors.icon} ALERT DETECTED
+                        </div>
+                        <span style="font-size:11px;color:var(--color-text-secondary)">${item.timestamp.toLocaleTimeString()}</span>
+                      </div>
+                      <div style="font-size:11px;font-weight:600;color:var(--color-text-primary)">${item.alert?.headline}</div>
+                      <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">
+                        👤 ${item.alert?.actor} | 📡 ${item.alert?.source}
+                      </div>
+                    </div>
+                  </div>
+                `
+              } else {
+                return `
+                  <div style="position:relative">
+                    <div style="position:absolute;left:-11px;width:14px;height:14px;background:${eventColor};border:3px solid white;border-radius:50%;margin-top:2px;z-index:1"></div>
+                    <div style="padding:8px;background:var(--color-background-primary);border-radius:4px;border-left:2px solid ${eventColor}">
+                      <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+                        <div style="font-size:11px;font-weight:600;color:var(--color-text-primary)">
+                          📌 ${item.event?.type?.replace(/_/g, ' ').toUpperCase()}
+                        </div>
+                        <span style="font-size:10px;color:var(--color-text-secondary)">${item.timestamp.toLocaleTimeString()}</span>
+                      </div>
+                      <div style="font-size:11px;color:var(--color-text-secondary)">${item.event?.description}</div>
+                      ${item.event?.actionRequired ? '<div style="font-size:10px;color:#d32f2f;margin-top:4px;font-weight:600">⚠️ Action Required</div>' : ''}
+                    </div>
+                  </div>
+                `
+              }
+            }).join('')}
+          </div>
+        </div>
       </div>
     </div>
   `
