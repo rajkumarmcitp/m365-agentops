@@ -4213,30 +4213,30 @@ Current status: Secure Score 64/95 · ${_e.filter(l=>l.status!=="resolved").leng
     <!-- Investigation results -->
     <div id="investigation-results" style="display:none">
       <!-- 1. INVESTIGATION SCORECARD (Top Priority - KPIs) -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px">
-        <div style="background:var(--color-bg-primary);border:1px solid var(--color-border);border-radius:6px;padding:12px">
-          <div style="font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">Overall Risk</div>
-          <div style="font-size:20px;font-weight:700;color:var(--color-primary)" id="scorecard-risk-score">45/100</div>
+      <div class="kpi-grid">
+        <div class="kpi-tile">
+          <div class="kpi-value" id="scorecard-risk-score">45/100</div>
+          <div class="kpi-label">Overall Risk</div>
         </div>
-        <div style="background:var(--color-bg-primary);border:1px solid var(--color-border);border-radius:6px;padding:12px">
-          <div style="font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">Successful Sign-ins</div>
-          <div style="font-size:20px;font-weight:700;color:var(--color-info)" id="scorecard-signin-success">20</div>
+        <div class="kpi-tile">
+          <div class="kpi-value success" id="scorecard-signin-success">20</div>
+          <div class="kpi-label">Successful Sign-ins</div>
         </div>
-        <div style="background:var(--color-bg-primary);border:1px solid var(--color-border);border-radius:6px;padding:12px">
-          <div style="font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">Failed Sign-ins</div>
-          <div style="font-size:20px;font-weight:700;color:var(--color-warning)" id="scorecard-signin-failed">1</div>
+        <div class="kpi-tile">
+          <div class="kpi-value danger" id="scorecard-signin-failed">1</div>
+          <div class="kpi-label">Failed Sign-ins</div>
         </div>
-        <div style="background:var(--color-bg-primary);border:1px solid var(--color-border);border-radius:6px;padding:12px">
-          <div style="font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">Admin Changes</div>
-          <div style="font-size:20px;font-weight:700;color:var(--color-warning)" id="scorecard-admin-changes">2</div>
+        <div class="kpi-tile">
+          <div class="kpi-value warning" id="scorecard-admin-changes">2</div>
+          <div class="kpi-label">Admin Changes</div>
         </div>
-        <div style="background:var(--color-bg-primary);border:1px solid var(--color-border);border-radius:6px;padding:12px">
-          <div style="font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">OAuth Consents</div>
-          <div style="font-size:20px;font-weight:700;color:var(--color-info)" id="scorecard-oauth">3</div>
+        <div class="kpi-tile">
+          <div class="kpi-value info" id="scorecard-oauth">3</div>
+          <div class="kpi-label">OAuth Consents</div>
         </div>
-        <div style="background:var(--color-bg-primary);border:1px solid var(--color-border);border-radius:6px;padding:12px">
-          <div style="font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">Risk Detections</div>
-          <div style="font-size:20px;font-weight:700;color:var(--color-danger)" id="scorecard-risk-detections">0</div>
+        <div class="kpi-tile">
+          <div class="kpi-value danger" id="scorecard-risk-detections">0</div>
+          <div class="kpi-label">Risk Detections</div>
         </div>
       </div>
 
