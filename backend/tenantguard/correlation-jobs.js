@@ -89,10 +89,11 @@ function initializeDemoData(db) {
   ]
 
   // Insert demo alerts
+  let insertedCount = 0
   demoAlerts.forEach(alert => {
     try {
       db.prepare(`
-        INSERT INTO alerts
+        INSERT OR IGNORE INTO alerts
         (id, priority, severity, headline, description, actor, source, action_timestamp, score, status, dismissed, risk_assessment, recommendations)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
@@ -100,12 +101,14 @@ function initializeDemoData(db) {
         alert.actor, alert.source, alert.action_timestamp, alert.score, alert.status,
         alert.dismissed, alert.risk_assessment, alert.recommendations
       )
+      insertedCount++
     } catch (e) {
-      // Alert may already exist, skip
+      console.error(`⚠️ Failed to insert alert ${alert.id}:`, e.message)
     }
   })
 
-  console.log(`✅ Initialized ${demoAlerts.length} demo alerts`)
+  const totalAlerts = db.prepare('SELECT COUNT(*) as count FROM alerts').get().count
+  console.log(`✅ Initialized ${insertedCount} demo alerts (total in DB: ${totalAlerts})`)
 
   // Add demo correlations for testing
   const demoCorrelations = [
