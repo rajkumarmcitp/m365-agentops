@@ -4213,7 +4213,7 @@ Current status: Secure Score 64/95 · ${_e.filter(l=>l.status!=="resolved").leng
     <!-- Investigation results -->
     <div id="investigation-results" style="display:none">
       <!-- 1. INVESTIGATION SCORECARD (Top Priority - KPIs) -->
-      <div class="kpi-grid">
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:24px">
         <div class="kpi-tile">
           <div class="kpi-value" id="scorecard-risk-score">45/100</div>
           <div class="kpi-label">Overall Risk</div>
