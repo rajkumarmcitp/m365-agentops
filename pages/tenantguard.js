@@ -4,7 +4,7 @@ import { isDemoAccount } from '../lib/demo-account.js'
 import { renderTenantGuardSettings } from './tenantguard-settings.js'
 import { calculateSeverityScore, getSeverityLevel, getSeverityColors, getActionChecklist } from '../lib/severity-scoring.js'
 import { getPolicyRecommendations, getPriorityColor, getEffortColor } from '../lib/policy-recommendations.js'
-import { getAlertStatus, setAlertStatus, getStatusInfo, getNextStatuses, addStatusTransition, getAvailableStatuses, getStatusMetrics } from '../lib/alert-status-manager.js'
+import { getAlertStatus, setAlertStatus, getStatusInfo, getNextStatuses, addStatusTransition, getAvailableStatuses, getStatusMetrics, initializeStatusCache } from '../lib/alert-status-manager.js'
 import { analyzeUserRisks, getUserBehaviorSummary, getRiskColor, getRiskLevel } from '../lib/user-risk-analyzer.js'
 
 let activeTab = 'dashboard'
@@ -43,6 +43,9 @@ export async function initTenantGuard() {
   if (!el) return
 
   el.innerHTML = `<div style="padding:20px"><div class="spinner"></div><p>Loading TenantGuard (Real-Time)...</p></div>`
+
+  // Initialize status cache from backend
+  await initializeStatusCache()
 
   if (isDemoAccount()) {
     renderDemoTenantGuard(el)
@@ -667,14 +670,15 @@ function showBulkStatusUpdateModal(alertIds, onComplete) {
   document.body.appendChild(modal)
 
   content.querySelectorAll('.bulk-status-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const newStatus = btn.dataset.status
       const oldStatuses = alertIds.map(id => getAlertStatus(id))
 
-      alertIds.forEach((alertId, idx) => {
-        setAlertStatus(alertId, newStatus)
-        addStatusTransition(alertId, oldStatuses[idx], newStatus)
-      })
+      for (let i = 0; i < alertIds.length; i++) {
+        const alertId = alertIds[i]
+        await setAlertStatus(alertId, newStatus)
+        await addStatusTransition(alertId, oldStatuses[i], newStatus)
+      }
 
       showToast(`✅ Updated ${alertIds.length} alert(s) to ${getStatusInfo(newStatus).label}`, 'success')
       modal.remove()
@@ -1974,12 +1978,12 @@ function showAlertDetail(el, alert) {
 
   // Status transition handlers
   content.querySelectorAll('.status-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const newStatus = btn.dataset.status
       const oldStatus = currentStatus
 
-      if (setAlertStatus(alert.id, newStatus)) {
-        addStatusTransition(alert.id, oldStatus, newStatus)
+      if (await setAlertStatus(alert.id, newStatus)) {
+        await addStatusTransition(alert.id, oldStatus, newStatus)
 
         // Show success message
         const msgElement = content.querySelector('#status-message')

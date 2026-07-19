@@ -66,6 +66,11 @@ import {
 import { BackupAgent } from './lib/backup-agent.js'
 import { BackupStorageManager } from './lib/backup-storage.js'
 import setupBackupRoutes from './routes/backup-routes.js'
+import {
+  getAlertStatus, setAlertStatus, getAlertStatusHistory, getAllAlertStatuses,
+  getAlertsByStatus, getStatusMetrics, bulkUpdateStatus, pruneHistory,
+  exportAlertData, importAlertData
+} from './alert-status-service.js'
 import { ExchangeCollector } from './collectors/exchange-collector.js'
 import { TeamsCollector } from './collectors/teams-collector.js'
 import { SharePointCollector } from './collectors/sharepoint-collector.js'
@@ -20825,6 +20830,130 @@ app.get('/api/geolocation/:ip', (req, res) => {
     const ip = req.params.ip
     const location = geolocationService.getLocationInfo(ip)
     res.json({ success: true, data: location })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// ============================================================
+// Alert Status Persistence API Endpoints
+// ============================================================
+
+// Get alert status
+app.get('/api/alert-status/:alertId', (req, res) => {
+  try {
+    const { alertId } = req.params
+    const status = getAlertStatus(alertId)
+    res.json({ success: true, data: { alertId, status } })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Update alert status
+app.put('/api/alert-status/:alertId', (req, res) => {
+  try {
+    const { alertId } = req.params
+    const { status, userId } = req.body
+
+    if (!status) {
+      return res.status(400).json({ success: false, message: 'Status is required' })
+    }
+
+    const result = setAlertStatus(alertId, status, userId || 'system')
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get alert status history
+app.get('/api/alert-status/:alertId/history', (req, res) => {
+  try {
+    const { alertId } = req.params
+    const history = getAlertStatusHistory(alertId)
+    res.json({ success: true, data: { alertId, history } })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get all alert statuses
+app.get('/api/alert-statuses/all', (req, res) => {
+  try {
+    const statuses = getAllAlertStatuses()
+    res.json({ success: true, data: statuses })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get alerts by status
+app.get('/api/alert-statuses/by/:status', (req, res) => {
+  try {
+    const { status } = req.params
+    const alertIds = getAlertsByStatus(status)
+    res.json({ success: true, data: { status, alertIds, count: alertIds.length } })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get status metrics
+app.get('/api/alert-statuses/metrics', (req, res) => {
+  try {
+    const metrics = getStatusMetrics()
+    res.json({ success: true, data: metrics })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Bulk update statuses
+app.post('/api/alert-statuses/bulk-update', (req, res) => {
+  try {
+    const { alertIds, status, userId } = req.body
+
+    if (!Array.isArray(alertIds) || alertIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'alertIds must be a non-empty array' })
+    }
+    if (!status) {
+      return res.status(400).json({ success: false, message: 'Status is required' })
+    }
+
+    const result = bulkUpdateStatus(alertIds, status, userId || 'system')
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Prune old history
+app.post('/api/alert-statuses/prune-history', (req, res) => {
+  try {
+    const { maxEntries } = req.body
+    const result = pruneHistory(maxEntries || 100)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Export all alert data for backup
+app.get('/api/alert-statuses/export', (req, res) => {
+  try {
+    const data = exportAlertData()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Import alert data from backup
+app.post('/api/alert-statuses/import', (req, res) => {
+  try {
+    const result = importAlertData(req.body)
+    res.json({ success: true, data: result })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
   }
