@@ -414,13 +414,13 @@ function renderUserInvestigation(el) {
         </div>
 
         <!-- Findings by Severity -->
-        <div class="card" style="margin-top:16px">
+        <div class="card" style="margin-top:16px;margin-bottom:24px">
           <div class="card-title"><i class="ti ti-list-check"></i> Findings</div>
           <div id="findings-section" style="font-size:12px;margin-top:12px;min-height:60px;padding:12px;background:var(--color-background-secondary);border-radius:6px"></div>
         </div>
 
         <!-- Recommended Actions -->
-        <div class="card" style="margin-top:16px">
+        <div class="card" style="margin-top:16px;margin-bottom:24px">
           <div class="card-title"><i class="ti ti-bulb"></i> Recommended Actions</div>
           <div id="recommendations-section" style="font-size:12px;margin-top:12px;min-height:60px;padding:12px;background:var(--color-background-secondary);border-radius:6px"></div>
         </div>
@@ -437,13 +437,13 @@ function renderUserInvestigation(el) {
       <!-- TAB: IDENTITY -->
       <div class="investigation-tab-content" data-tab="identity" style="display:none">
         <!-- Account Changes -->
-        <div class="card">
+        <div class="card" style="margin-bottom:24px">
           <div class="card-title"><i class="ti ti-clipboard-list"></i> Account Changes</div>
           <div id="account-changes-section" style="font-size:12px;margin-top:12px;min-height:60px;padding:12px;background:var(--color-background-secondary);border-radius:6px"></div>
         </div>
 
         <!-- Risk Detections -->
-        <div class="card" style="margin-top:16px">
+        <div class="card" style="margin-top:16px;margin-bottom:24px">
           <div class="card-title"><i class="ti ti-alert-triangle"></i> Risk Detections</div>
           <div id="risk-detections-section" style="font-size:12px;margin-top:12px;min-height:60px;padding:12px;background:var(--color-background-secondary);border-radius:6px"></div>
         </div>
