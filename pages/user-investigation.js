@@ -375,7 +375,7 @@ function renderUserInvestigation(el) {
       </div>
 
       <!-- 2. EXECUTIVE VERDICT (AI Analysis) -->
-      <div id="ai-analysis-section" style="margin-bottom:24px;border:2px solid var(--color-border);border-radius:8px;padding:20px;background:var(--color-bg-secondary)"></div>
+      <div id="ai-analysis-section" style="margin-bottom:24px;border:2px solid var(--color-primary);border-left:6px solid var(--color-primary);border-radius:8px;padding:24px;background:linear-gradient(135deg, var(--color-bg-secondary) 0%, rgba(59, 130, 246, 0.05) 100%);box-shadow:0 2px 8px rgba(0,0,0,0.08)"></div>
 
       <!-- 3. INVESTIGATION TABS -->
       <div class="tabs" id="investigation-tabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px">
