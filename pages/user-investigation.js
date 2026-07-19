@@ -1083,10 +1083,9 @@ function setupInvestigationTabs(el) {
       const tabName = tab.getAttribute('data-tab')
       console.log('📌 Clicked tab:', tabName)
 
-      // Deactivate all tabs
+      // Remove active class from all tabs
       tabs.forEach(t => {
-        t.style.color = 'var(--color-text-secondary)'
-        t.style.borderBottomColor = 'transparent'
+        t.classList.remove('active')
       })
 
       // Hide all content
@@ -1094,9 +1093,8 @@ function setupInvestigationTabs(el) {
         tc.style.display = 'none'
       })
 
-      // Activate clicked tab
-      tab.style.color = 'var(--color-primary)'
-      tab.style.borderBottomColor = 'var(--color-primary)'
+      // Add active class to clicked tab
+      tab.classList.add('active')
 
       // Show matching content
       const activeContent = el.querySelector(`.investigation-tab-content[data-tab="${tabName}"]`)
