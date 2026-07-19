@@ -632,7 +632,7 @@ function attachIncidentDetailListeners() {
   })
 }
 
-async function startInvestigation(incident) {
+async function startIncidentInvestigation(incident) {
   try {
     console.log('🔍 Starting investigation for incident:', incident.id)
     showToast('🔍 Investigation started for: ' + incident.description.substring(0, 50), 'success')
