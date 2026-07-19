@@ -378,33 +378,31 @@ function renderUserInvestigation(el) {
       <div id="ai-analysis-section" style="margin-bottom:24px;border:2px solid var(--color-border);border-radius:8px;padding:20px;background:var(--color-bg-secondary)"></div>
 
       <!-- 3. INVESTIGATION TABS -->
-      <div style="border-bottom:1px solid var(--color-border);margin-bottom:20px">
-        <div id="investigation-tabs" style="display:flex;gap:0;flex-wrap:wrap;border-bottom:2px solid var(--color-border)">
-          <button class="investigation-tab active" data-tab="overview" style="padding:12px 20px;font-size:12px;font-weight:600;border:none;background:transparent;cursor:pointer;border-bottom:2px solid var(--color-primary);color:var(--color-primary)">
-            <i class="ti ti-layout-list" style="margin-right:6px"></i>Overview
-          </button>
-          <button class="investigation-tab" data-tab="timeline" style="padding:12px 20px;font-size:12px;font-weight:600;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary)">
-            <i class="ti ti-timeline" style="margin-right:6px"></i>Timeline
-          </button>
-          <button class="investigation-tab" data-tab="identity" style="padding:12px 20px;font-size:12px;font-weight:600;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary)">
-            <i class="ti ti-user" style="margin-right:6px"></i>Identity
-          </button>
-          <button class="investigation-tab" data-tab="permissions" style="padding:12px 20px;font-size:12px;font-weight:600;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary)">
-            <i class="ti ti-shield-lock" style="margin-right:6px"></i>Permissions
-          </button>
-          <button class="investigation-tab" data-tab="devices" style="padding:12px 20px;font-size:12px;font-weight:600;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary)">
-            <i class="ti ti-device-laptop" style="margin-right:6px"></i>Devices
-          </button>
-          <button class="investigation-tab" data-tab="applications" style="padding:12px 20px;font-size:12px;font-weight:600;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary)">
-            <i class="ti ti-apps" style="margin-right:6px"></i>Applications
-          </button>
-          <button class="investigation-tab" data-tab="admin-changes" style="padding:12px 20px;font-size:12px;font-weight:600;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary)">
-            <i class="ti ti-user-edit" style="margin-right:6px"></i>Admin Changes
-          </button>
-          <button class="investigation-tab" data-tab="raw-events" style="padding:12px 20px;font-size:12px;font-weight:600;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary)">
-            <i class="ti ti-list-details" style="margin-right:6px"></i>Raw Events
-          </button>
-        </div>
+      <div class="tabs" id="investigation-tabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px">
+        <button class="tab-btn active" data-tab="overview">
+          <i class="ti ti-layout-list"></i> Overview
+        </button>
+        <button class="tab-btn" data-tab="timeline">
+          <i class="ti ti-timeline"></i> Timeline
+        </button>
+        <button class="tab-btn" data-tab="identity">
+          <i class="ti ti-user"></i> Identity
+        </button>
+        <button class="tab-btn" data-tab="permissions">
+          <i class="ti ti-shield-lock"></i> Permissions
+        </button>
+        <button class="tab-btn" data-tab="devices">
+          <i class="ti ti-device-laptop"></i> Devices
+        </button>
+        <button class="tab-btn" data-tab="applications">
+          <i class="ti ti-apps"></i> Applications
+        </button>
+        <button class="tab-btn" data-tab="admin-changes">
+          <i class="ti ti-user-edit"></i> Admin Changes
+        </button>
+        <button class="tab-btn" data-tab="raw-events">
+          <i class="ti ti-list-details"></i> Raw Events
+        </button>
       </div>
 
       <!-- TAB: OVERVIEW -->
@@ -1075,7 +1073,7 @@ function renderInvestigation(el, data) {
  * Setup investigation tab switching
  */
 function setupInvestigationTabs(el) {
-  const tabs = el.querySelectorAll('.investigation-tab')
+  const tabs = el.querySelectorAll('.tab-btn')
   const tabContents = el.querySelectorAll('.investigation-tab-content')
 
   console.log('🔧 Setting up tabs. Found:', tabs.length, 'tabs and', tabContents.length, 'content divs')
