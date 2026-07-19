@@ -635,25 +635,19 @@ function attachIncidentDetailListeners() {
 async function startIncidentInvestigation(incident) {
   try {
     console.log('🔍 Starting investigation for incident:', incident.id)
+
+    // Call the imported startInvestigation function with proper parameters
+    const result = await startInvestigation(
+      null, // alertId (not applicable for correlations)
+      incident.id, // correlationId
+      incident.description // title
+    )
+
     showToast('🔍 Investigation started for: ' + incident.description.substring(0, 50), 'success')
-
-    // In a real system, this would:
-    // 1. Create an investigation record
-    // 2. Fetch related events
-    // 3. Run correlation analysis
-    // 4. Generate initial report
-
-    console.log('📊 Investigation data:', {
-      incident_id: incident.id,
-      description: incident.description,
-      events_count: incident.alert_count,
-      timeline_start: incident.start_timestamp,
-      timeline_end: incident.end_timestamp,
-      risk_level: incident.risk_level
-    })
+    console.log('✅ Investigation created:', result)
   } catch (error) {
     console.error('❌ Investigation start failed:', error)
-    showToast('❌ Failed to start investigation', 'error')
+    showToast('❌ Failed to start investigation: ' + error.message, 'error')
   }
 }
 
