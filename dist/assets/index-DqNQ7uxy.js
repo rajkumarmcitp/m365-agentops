@@ -3500,6 +3500,26 @@ Current status: Secure Score 64/95 · ${Ge.filter(l=>l.status!=="resolved").leng
     <!-- INVESTIGATION TIMELINE -->
     <div class="card" style="margin-bottom:16px;padding:16px;background:var(--color-background-secondary);border-radius:8px">
       <div style="font-size:14px;font-weight:600;margin-bottom:12px">📈 INVESTIGATION TIMELINE</div>
+      ${(()=>{const n=(t==null?void 0:t.events)||[],d=n.length,p=n.filter(v=>v.severity==="CRITICAL").length,c=n.filter(v=>v.actionRequired).length,u=d>0?Math.round((new Date(n[0].timestamp)-new Date(n[n.length-1].timestamp))/(1e3*60)):0;return d>0?`
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+            <div style="padding:8px;background:var(--color-background-primary);border-radius:4px;text-align:center">
+              <div style="font-size:16px;font-weight:700;color:var(--color-text-primary)">${d}</div>
+              <div style="font-size:10px;color:var(--color-text-secondary)">Total Events</div>
+            </div>
+            <div style="padding:8px;background:var(--color-background-primary);border-radius:4px;text-align:center">
+              <div style="font-size:16px;font-weight:700;color:#d32f2f">${p}</div>
+              <div style="font-size:10px;color:var(--color-text-secondary)">Critical</div>
+            </div>
+            <div style="padding:8px;background:var(--color-background-primary);border-radius:4px;text-align:center">
+              <div style="font-size:16px;font-weight:700;color:#d32f2f">${c}</div>
+              <div style="font-size:10px;color:var(--color-text-secondary)">Require Action</div>
+            </div>
+            <div style="padding:8px;background:var(--color-background-primary);border-radius:4px;text-align:center">
+              <div style="font-size:16px;font-weight:700;color:var(--color-text-primary)">${u}m</div>
+              <div style="font-size:10px;color:var(--color-text-secondary)">Time Span</div>
+            </div>
+          </div>
+        `:""})()}
       <div style="margin-top:12px;position:relative;padding-left:24px">
         <div style="position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--color-border-primary)"></div>
         <div style="display:flex;flex-direction:column;gap:16px">
