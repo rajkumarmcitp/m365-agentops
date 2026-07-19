@@ -83,6 +83,14 @@ import {
   addIncidentNote, tagIncident, getIncidentByAlertId, getIncidentsByStatus,
   getIncidentsBySeverity, getIncidentStats, deleteIncident, exportIncidents
 } from './incident-service.js'
+import {
+  createPlaybook, getPlaybook, getAllPlaybooks, getPlaybooksByTrigger,
+  updatePlaybook, togglePlaybook, deletePlaybook, getPlaybookStats,
+  getExecutionHistory, getExecution, validatePlaybook, exportPlaybooks, importPlaybooks
+} from './playbook-service.js'
+import {
+  executePlaybook, getAvailableActions, getTriggerTypes
+} from './playbook-executor.js'
 import { ExchangeCollector } from './collectors/exchange-collector.js'
 import { TeamsCollector } from './collectors/teams-collector.js'
 import { SharePointCollector } from './collectors/sharepoint-collector.js'
@@ -21243,6 +21251,176 @@ app.delete('/api/incidents/:incidentId', (req, res) => {
   try {
     const result = deleteIncident(req.params.incidentId)
     res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// ============================================================
+// Automated Response Playbooks API Endpoints
+// ============================================================
+
+// Get available actions
+app.get('/api/playbooks/actions', (req, res) => {
+  try {
+    const actions = getAvailableActions()
+    res.json({ success: true, data: actions })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get available triggers
+app.get('/api/playbooks/triggers', (req, res) => {
+  try {
+    const triggers = getTriggerTypes()
+    res.json({ success: true, data: triggers })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get playbook statistics
+app.get('/api/playbooks/stats', (req, res) => {
+  try {
+    const stats = getPlaybookStats()
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get all playbooks (must be before :playbookId route)
+app.get('/api/playbooks', (req, res) => {
+  try {
+    const playbooks = getAllPlaybooks()
+    res.json({ success: true, data: playbooks })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Export playbooks (must be before :playbookId route)
+app.get('/api/playbooks/export', (req, res) => {
+  try {
+    const data = exportPlaybooks()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get playbooks by trigger (must be before :playbookId route)
+app.get('/api/playbooks/by-trigger/:triggerType', (req, res) => {
+  try {
+    const playbooks = getPlaybooksByTrigger(req.params.triggerType)
+    res.json({ success: true, data: playbooks })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get execution by ID (must be before :playbookId route)
+app.get('/api/playbooks/executions/:executionId', (req, res) => {
+  try {
+    const execution = getExecution(req.params.executionId)
+    res.json({ success: true, data: execution })
+  } catch (error) {
+    res.status(404).json({ success: false, message: error.message })
+  }
+})
+
+// Create playbook
+app.post('/api/playbooks', (req, res) => {
+  try {
+    const validation = validatePlaybook(req.body)
+    if (!validation.valid) {
+      return res.status(400).json({ success: false, message: validation.errors.join(', ') })
+    }
+    const playbook = createPlaybook(req.body)
+    res.json({ success: true, data: playbook })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Import playbooks
+app.post('/api/playbooks/import', (req, res) => {
+  try {
+    const result = importPlaybooks(req.body)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get playbook by ID (generic, must be after specific routes)
+app.get('/api/playbooks/:playbookId', (req, res) => {
+  try {
+    const playbook = getPlaybook(req.params.playbookId)
+    res.json({ success: true, data: playbook })
+  } catch (error) {
+    res.status(404).json({ success: false, message: error.message })
+  }
+})
+
+// Update playbook
+app.put('/api/playbooks/:playbookId', (req, res) => {
+  try {
+    const playbook = updatePlaybook(req.params.playbookId, req.body)
+    res.json({ success: true, data: playbook })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Toggle playbook enabled/disabled
+app.put('/api/playbooks/:playbookId/toggle', (req, res) => {
+  try {
+    const { enabled } = req.body
+    if (enabled === undefined) {
+      return res.status(400).json({ success: false, message: 'enabled field is required' })
+    }
+    const playbook = togglePlaybook(req.params.playbookId, enabled)
+    res.json({ success: true, data: playbook })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Delete playbook
+app.delete('/api/playbooks/:playbookId', (req, res) => {
+  try {
+    const result = deletePlaybook(req.params.playbookId)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Execute playbook
+app.post('/api/playbooks/:playbookId/execute', async (req, res) => {
+  try {
+    const { trigger, alert, incident, dryRun } = req.body
+    const playbook = getPlaybook(req.params.playbookId)
+
+    if (!playbook.enabled) {
+      return res.status(400).json({ success: false, message: 'Playbook is disabled' })
+    }
+
+    const result = await executePlaybook(playbook, trigger, alert, incident, dryRun || false)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get execution history
+app.get('/api/playbooks/:playbookId/executions', (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit) : 50
+    const executions = getExecutionHistory(req.params.playbookId, limit)
+    res.json({ success: true, data: executions })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
   }
