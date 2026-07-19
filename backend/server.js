@@ -99,6 +99,34 @@ import {
   deleteRule, getExecutionHistory as getRuleExecutionHistory, getExecution as getRuleExecution, getRuleStats, searchRules,
   exportRules, importRules, duplicateRule, logExecution
 } from './rules-service.js'
+import {
+  addComment as addCollaborationComment, getComments, deleteComment, addReaction, assignResource, getAssignment,
+  unassignResource, getActivityTimeline, getUserAssignments, getMentionedUsers,
+  getCollaborationStats, exportCollaborationData
+} from './collaboration-service.js'
+import {
+  createApiKey, validateApiKey, checkPermission, createSession, validateSession,
+  revokeSession, logSecurityEvent, getAuditLog, getSecurityStats, revokeApiKey,
+  getUserApiKeys, hashPassword, verifyPassword
+} from './security-service.js'
+import {
+  createOrUpdateBaseline, getBaseline, getAllBaselines, deleteBaseline,
+  analyzeAlert, batchAnalyzeAlerts, getDetectionHistory, getAnomalyStats,
+  createDetectionModel, getDetectionModel, getAllDetectionModels, deleteDetectionModel,
+  purgeOldDetections, exportAnomalyData
+} from './anomaly-service.js'
+import {
+  checkAlertDuplicate, batchCheckDuplicates, createThrottlePolicy, getThrottlePolicy,
+  getAllThrottlePolicies, updateThrottlePolicy, deleteThrottlePolicy,
+  evaluateAlertAgainstPolicies, getThrottlingStats, getDeduplicationRecommendations,
+  purgeOldThrottleHistory, exportThrottlingData
+} from './alert-throttling-service.js'
+import {
+  createOrGetUserProfile, getUserProfile, getAllUserProfiles, recordUserActivity,
+  getUserRecentActivity, analyzeUserRisk, batchAnalyzeUsers, getInsiderThreats,
+  getHighRiskUsers, getUserActivitySummary, getUBAStatistics, purgeOldActivity,
+  exportUBAData, updateUserBaseline
+} from './user-behavior-service.js'
 import { ExchangeCollector } from './collectors/exchange-collector.js'
 import { TeamsCollector } from './collectors/teams-collector.js'
 import { SharePointCollector } from './collectors/sharepoint-collector.js'
@@ -21633,6 +21661,742 @@ app.get('/api/rules/executions/:executionId', (req, res) => {
     res.json({ success: true, data: execution })
   } catch (error) {
     res.status(404).json({ success: false, message: error.message })
+  }
+})
+
+// ============================================================
+// Real-time Collaboration API Endpoints
+// ============================================================
+
+// Add comment
+app.post('/api/collaboration/comments', (req, res) => {
+  try {
+    const { resourceType, resourceId, author, authorName, text } = req.body
+    if (!resourceType || !resourceId || !author || !text) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' })
+    }
+    const comment = addCollaborationComment({ resourceType, resourceId, author, authorName, text })
+    res.json({ success: true, data: comment })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get comments
+app.get('/api/collaboration/:resourceType/:resourceId/comments', (req, res) => {
+  try {
+    const { resourceType, resourceId } = req.params
+    const comments = getComments(resourceType, resourceId)
+    res.json({ success: true, data: comments })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Delete comment
+app.delete('/api/collaboration/comments/:commentId', (req, res) => {
+  try {
+    const result = deleteComment(req.params.commentId)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Add reaction to comment
+app.post('/api/collaboration/comments/:commentId/react', (req, res) => {
+  try {
+    const { emoji, author } = req.body
+    if (!emoji || !author) {
+      return res.status(400).json({ success: false, message: 'emoji and author are required' })
+    }
+    const comment = addReaction(req.params.commentId, emoji, author)
+    res.json({ success: true, data: comment })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Assign resource
+app.post('/api/collaboration/:resourceType/:resourceId/assign', (req, res) => {
+  try {
+    const { resourceType, resourceId } = req.params
+    const { assignedTo, assignedBy } = req.body
+    if (!assignedTo) {
+      return res.status(400).json({ success: false, message: 'assignedTo is required' })
+    }
+    const assignment = assignResource(resourceType, resourceId, assignedTo, assignedBy)
+    res.json({ success: true, data: assignment })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get assignment
+app.get('/api/collaboration/:resourceType/:resourceId/assignment', (req, res) => {
+  try {
+    const { resourceType, resourceId } = req.params
+    const assignment = getAssignment(resourceType, resourceId)
+    res.json({ success: true, data: assignment })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Unassign resource
+app.delete('/api/collaboration/:resourceType/:resourceId/assign', (req, res) => {
+  try {
+    const { resourceType, resourceId } = req.params
+    const { unassignedBy } = req.body
+    const result = unassignResource(resourceType, resourceId, unassignedBy)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get activity timeline
+app.get('/api/collaboration/:resourceType/:resourceId/activity', (req, res) => {
+  try {
+    const { resourceType, resourceId } = req.params
+    const limit = req.query.limit ? parseInt(req.query.limit) : 50
+    const activity = getActivityTimeline(resourceType, resourceId, limit)
+    res.json({ success: true, data: activity })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get user assignments
+app.get('/api/collaboration/assignments/:userId', (req, res) => {
+  try {
+    const { userId } = req.params
+    const assignments = getUserAssignments(userId)
+    res.json({ success: true, data: assignments })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get collaboration statistics
+app.get('/api/collaboration/stats', (req, res) => {
+  try {
+    const stats = getCollaborationStats()
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Export collaboration data
+app.get('/api/collaboration/export', (req, res) => {
+  try {
+    const data = exportCollaborationData()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// ============================================================
+// Advanced Security Features API Endpoints
+// ============================================================
+
+// Create API key
+app.post('/api/security/api-keys', (req, res) => {
+  try {
+    const { name, description, createdBy, permissions } = req.body
+    if (!name || !createdBy) {
+      return res.status(400).json({ success: false, message: 'name and createdBy are required' })
+    }
+    const apiKey = createApiKey({ name, description, createdBy, permissions })
+    res.json({ success: true, data: apiKey })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get user's API keys
+app.get('/api/security/api-keys/:createdBy', (req, res) => {
+  try {
+    const { createdBy } = req.params
+    const keys = getUserApiKeys(createdBy)
+    res.json({ success: true, data: keys })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Revoke API key
+app.delete('/api/security/api-keys/:keyId', (req, res) => {
+  try {
+    const { keyId } = req.params
+    const { revokedBy } = req.body
+    const result = revokeApiKey(keyId, revokedBy || 'system')
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Create session
+app.post('/api/security/sessions', (req, res) => {
+  try {
+    const { userId, userEmail, ipAddress } = req.body
+    if (!userId || !userEmail) {
+      return res.status(400).json({ success: false, message: 'userId and userEmail are required' })
+    }
+    const session = createSession(userId, userEmail, ipAddress || req.ip)
+    res.json({ success: true, data: session })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Validate session
+app.get('/api/security/sessions/:sessionId/validate', (req, res) => {
+  try {
+    const { sessionId } = req.params
+    const session = validateSession(sessionId)
+    if (!session) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired session' })
+    }
+    res.json({ success: true, data: session })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Revoke session
+app.delete('/api/security/sessions/:sessionId', (req, res) => {
+  try {
+    const { sessionId } = req.params
+    const result = revokeSession(sessionId)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get audit log
+app.get('/api/security/audit-log', (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit) : 100
+    const actor = req.query.actor || null
+    const log = getAuditLog(limit, actor)
+    res.json({ success: true, data: log })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Check permission
+app.post('/api/security/permissions/check', (req, res) => {
+  try {
+    const { role, permission } = req.body
+    if (!role || !permission) {
+      return res.status(400).json({ success: false, message: 'role and permission are required' })
+    }
+    const hasPermission = checkPermission(role, permission)
+    res.json({ success: true, data: { hasPermission, role, permission } })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get security statistics
+app.get('/api/security/stats', (req, res) => {
+  try {
+    const stats = getSecurityStats()
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// ============================================================
+// Machine Learning Anomaly Detection API Endpoints
+// ============================================================
+
+// Create or update baseline
+app.post('/api/anomaly/baselines/:entityId', (req, res) => {
+  try {
+    const { entityId } = req.params
+    const { historicalAlerts } = req.body
+    if (!historicalAlerts || !Array.isArray(historicalAlerts)) {
+      return res.status(400).json({ success: false, message: 'historicalAlerts array is required' })
+    }
+    const baseline = createOrUpdateBaseline(entityId, historicalAlerts)
+    res.json({ success: true, data: baseline })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get baseline
+app.get('/api/anomaly/baselines/:entityId', (req, res) => {
+  try {
+    const { entityId } = req.params
+    const baseline = getBaseline(entityId)
+    if (!baseline) {
+      return res.status(404).json({ success: false, message: `Baseline not found: ${entityId}` })
+    }
+    res.json({ success: true, data: baseline })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get all baselines
+app.get('/api/anomaly/baselines', (req, res) => {
+  try {
+    const baselines = getAllBaselines()
+    res.json({ success: true, data: baselines })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Delete baseline
+app.delete('/api/anomaly/baselines/:entityId', (req, res) => {
+  try {
+    const { entityId } = req.params
+    const result = deleteBaseline(entityId)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Analyze single alert
+app.post('/api/anomaly/analyze', (req, res) => {
+  try {
+    const alert = req.body
+    if (!alert || !alert.id) {
+      return res.status(400).json({ success: false, message: 'Alert with id is required' })
+    }
+    const result = analyzeAlert(alert)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Batch analyze alerts
+app.post('/api/anomaly/analyze-batch', (req, res) => {
+  try {
+    const { alerts } = req.body
+    if (!alerts || !Array.isArray(alerts)) {
+      return res.status(400).json({ success: false, message: 'alerts array is required' })
+    }
+    const result = batchAnalyzeAlerts(alerts)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get detection history
+app.get('/api/anomaly/detections/:entityId', (req, res) => {
+  try {
+    const { entityId } = req.params
+    const limit = req.query.limit ? parseInt(req.query.limit) : 100
+    const history = getDetectionHistory(entityId, limit)
+    res.json({ success: true, data: history })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get anomaly statistics
+app.get('/api/anomaly/stats', (req, res) => {
+  try {
+    const stats = getAnomalyStats()
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Create detection model
+app.post('/api/anomaly/models', (req, res) => {
+  try {
+    const { name, description, type, sensitivity, baselines } = req.body
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'name is required' })
+    }
+    const model = createDetectionModel({ name, description, type, sensitivity, baselines })
+    res.json({ success: true, data: model })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get detection model
+app.get('/api/anomaly/models/:modelId', (req, res) => {
+  try {
+    const { modelId } = req.params
+    const model = getDetectionModel(modelId)
+    res.json({ success: true, data: model })
+  } catch (error) {
+    res.status(404).json({ success: false, message: error.message })
+  }
+})
+
+// Get all detection models
+app.get('/api/anomaly/models', (req, res) => {
+  try {
+    const models = getAllDetectionModels()
+    res.json({ success: true, data: models })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Delete detection model
+app.delete('/api/anomaly/models/:modelId', (req, res) => {
+  try {
+    const { modelId } = req.params
+    const result = deleteDetectionModel(modelId)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Purge old detections
+app.post('/api/anomaly/purge', (req, res) => {
+  try {
+    const { daysToKeep } = req.body
+    const result = purgeOldDetections(daysToKeep || 30)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Export anomaly data
+app.get('/api/anomaly/export', (req, res) => {
+  try {
+    const data = exportAnomalyData()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// ============================================================
+// Alert Throttling & Deduplication API Endpoints
+// ============================================================
+
+// Check if alert is duplicate
+app.post('/api/throttle/check-duplicate', (req, res) => {
+  try {
+    const alert = req.body
+    const threshold = req.query.threshold ? parseInt(req.query.threshold) : 70
+    if (!alert || !alert.id) {
+      return res.status(400).json({ success: false, message: 'Alert with id is required' })
+    }
+    const result = checkAlertDuplicate(alert, threshold)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Batch check for duplicates
+app.post('/api/throttle/batch-check-duplicates', (req, res) => {
+  try {
+    const { alerts } = req.body
+    const threshold = req.query.threshold ? parseInt(req.query.threshold) : 70
+    if (!alerts || !Array.isArray(alerts)) {
+      return res.status(400).json({ success: false, message: 'alerts array is required' })
+    }
+    const result = batchCheckDuplicates(alerts, threshold)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Create throttle policy
+app.post('/api/throttle/policies', (req, res) => {
+  try {
+    const { name, description, throttleType, alertTypes, actors, minSeverity, timeWindowMinutes, maxAlertsPerWindow } = req.body
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'name is required' })
+    }
+    const policy = createThrottlePolicy({
+      name, description, throttleType, alertTypes, actors, minSeverity, timeWindowMinutes, maxAlertsPerWindow
+    })
+    res.json({ success: true, data: policy })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get throttle policy
+app.get('/api/throttle/policies/:policyId', (req, res) => {
+  try {
+    const { policyId } = req.params
+    const policy = getThrottlePolicy(policyId)
+    res.json({ success: true, data: policy })
+  } catch (error) {
+    res.status(404).json({ success: false, message: error.message })
+  }
+})
+
+// Get all throttle policies
+app.get('/api/throttle/policies', (req, res) => {
+  try {
+    const policies = getAllThrottlePolicies()
+    res.json({ success: true, data: policies })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Update throttle policy
+app.put('/api/throttle/policies/:policyId', (req, res) => {
+  try {
+    const { policyId } = req.params
+    const updates = req.body
+    const policy = updateThrottlePolicy(policyId, updates)
+    res.json({ success: true, data: policy })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Delete throttle policy
+app.delete('/api/throttle/policies/:policyId', (req, res) => {
+  try {
+    const { policyId } = req.params
+    const result = deleteThrottlePolicy(policyId)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Evaluate alert against all policies
+app.post('/api/throttle/evaluate', (req, res) => {
+  try {
+    const alert = req.body
+    if (!alert || !alert.id) {
+      return res.status(400).json({ success: false, message: 'Alert with id is required' })
+    }
+    const result = evaluateAlertAgainstPolicies(alert)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get throttling statistics
+app.get('/api/throttle/stats', (req, res) => {
+  try {
+    const stats = getThrottlingStats()
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get deduplication recommendations
+app.get('/api/throttle/recommendations', (req, res) => {
+  try {
+    const recommendations = getDeduplicationRecommendations()
+    res.json({ success: true, data: recommendations })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Purge old throttle history
+app.post('/api/throttle/purge', (req, res) => {
+  try {
+    const { hoursToKeep } = req.body
+    const result = purgeOldThrottleHistory(hoursToKeep || 24)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Export throttling data
+app.get('/api/throttle/export', (req, res) => {
+  try {
+    const data = exportThrottlingData()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// ============================================================
+// User Behavior Analytics (UBA) API Endpoints
+// ============================================================
+
+// Create or get user profile
+app.post('/api/uba/profiles/:userId', (req, res) => {
+  try {
+    const { userId } = req.params
+    const userInfo = req.body
+    const profile = createOrGetUserProfile(userId, userInfo)
+    res.json({ success: true, data: profile })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get user profile
+app.get('/api/uba/profiles/:userId', (req, res) => {
+  try {
+    const { userId } = req.params
+    const profile = getUserProfile(userId)
+    res.json({ success: true, data: profile })
+  } catch (error) {
+    res.status(404).json({ success: false, message: error.message })
+  }
+})
+
+// Get all user profiles
+app.get('/api/uba/profiles', (req, res) => {
+  try {
+    const profiles = getAllUserProfiles()
+    res.json({ success: true, data: profiles })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Record user activity
+app.post('/api/uba/activity/:userId', (req, res) => {
+  try {
+    const { userId } = req.params
+    const activity = req.body
+    if (!activity.type) {
+      return res.status(400).json({ success: false, message: 'activity type is required' })
+    }
+    const record = recordUserActivity(userId, activity)
+    res.json({ success: true, data: record })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get user recent activity
+app.get('/api/uba/activity/:userId', (req, res) => {
+  try {
+    const { userId } = req.params
+    const hours = req.query.hours ? parseInt(req.query.hours) : 24
+    const activities = getUserRecentActivity(userId, hours)
+    res.json({ success: true, data: activities })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Analyze user risk
+app.post('/api/uba/analyze/:userId', (req, res) => {
+  try {
+    const { userId } = req.params
+    const result = analyzeUserRisk(userId)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Batch analyze users
+app.post('/api/uba/analyze-batch', (req, res) => {
+  try {
+    const { userIds } = req.body
+    if (!userIds || !Array.isArray(userIds)) {
+      return res.status(400).json({ success: false, message: 'userIds array is required' })
+    }
+    const result = batchAnalyzeUsers(userIds)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get insider threats
+app.get('/api/uba/threats', (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit) : 100
+    const severity = req.query.severity || null
+    const threats = getInsiderThreats(limit, severity)
+    res.json({ success: true, data: threats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get high-risk users
+app.get('/api/uba/high-risk-users', (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit) : 20
+    const users = getHighRiskUsers(limit)
+    res.json({ success: true, data: users })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get user activity summary
+app.get('/api/uba/summary/:userId', (req, res) => {
+  try {
+    const { userId } = req.params
+    const summary = getUserActivitySummary(userId)
+    res.json({ success: true, data: summary })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get UBA statistics
+app.get('/api/uba/stats', (req, res) => {
+  try {
+    const stats = getUBAStatistics()
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Update user baseline
+app.put('/api/uba/profiles/:userId/baseline', (req, res) => {
+  try {
+    const { userId } = req.params
+    const baselineData = req.body
+    const profile = updateUserBaseline(userId, baselineData)
+    res.json({ success: true, data: profile })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Purge old activity records
+app.post('/api/uba/purge', (req, res) => {
+  try {
+    const { daysToKeep } = req.body
+    const result = purgeOldActivity(daysToKeep || 90)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Export UBA data
+app.get('/api/uba/export', (req, res) => {
+  try {
+    const data = exportUBAData()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
   }
 })
 
