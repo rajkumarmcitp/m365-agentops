@@ -1,5 +1,39 @@
 import { state, go } from '../app.js'
 
+const ICON_MAP = {
+  'ti-layout-dashboard': 'fas fa-chart-pie',
+  'ti-inbox': 'fas fa-inbox',
+  'ti-shield-exclamation': 'fas fa-exclamation-triangle',
+  'ti-alert-triangle': 'fas fa-exclamation-triangle',
+  'ti-shield-check': 'fas fa-shield-alt',
+  'ti-lock-check': 'fas fa-lock',
+  'ti-crown': 'fas fa-crown',
+  'ti-settings-2': 'fas fa-cog',
+  'ti-antenna': 'fas fa-broadcast-tower',
+  'ti-heartbeat': 'fas fa-heartbeat',
+  'ti-checkbox': 'fas fa-check-square',
+  'ti-app-window': 'fas fa-window-maximize',
+  'ti-device-laptop': 'fas fa-laptop',
+  'ti-license': 'fas fa-certificate',
+  'ti-robot': 'fas fa-robot',
+  'ti-user-circle': 'fas fa-user-circle',
+  'ti-grid-dots': 'fas fa-th',
+  'ti-list-check': 'fas fa-list-check',
+  'ti-message-circle': 'fas fa-comment-circle',
+  'ti-check-list': 'fas fa-tasks',
+  'ti-database-backup': 'fas fa-database',
+  'ti-settings-automation': 'fas fa-cogs',
+  'ti-database': 'fas fa-database',
+  'ti-adjustments-horizontal': 'fas fa-sliders-h',
+  'ti-sparkles': 'fas fa-magic',
+  'ti-api': 'fas fa-plug',
+  'ti-key': 'fas fa-key',
+}
+
+const getIcon = (tiClass) => {
+  return ICON_MAP[tiClass] || 'fas fa-circle'
+}
+
 const NAV_ITEMS = {
   admin: [
     { id: 'dashboard',  label: 'Dashboard',            icon: 'ti-layout-dashboard' },
@@ -60,7 +94,7 @@ export function renderNav() {
 
   let html = `
     <div class="nav-logo">
-      <div class="nav-logo-icon"><i class="ti ti-shield-bolt"></i></div>
+      <div class="nav-logo-icon"><i class="fas fa-shield-alt"></i></div>
       <div>
         <div class="nav-logo-text">M365 AgentOps</div>
         <div class="nav-logo-sub">${state.tenantDomain}</div>
@@ -72,7 +106,7 @@ export function renderNav() {
     .filter(it => access.includes(it.id))
     .map(it => `
       <div class="nav-item" id="n-${it.id}" data-page="${it.id}">
-        <i class="ti ${it.icon}"></i>
+        <i class="${getIcon(it.icon)}"></i>
         <span class="nav-label">${it.label}</span>
         ${it.badge ? `<span class="nav-badge ${it.badgeCls}">${it.badge}</span>` : ''}
       </div>

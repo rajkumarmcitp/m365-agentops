@@ -157,7 +157,7 @@ ul { list-style: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-secondary);
+  color: #333333 !important;
   font-size: 20px;
   transition: background var(--transition);
   position: relative;
@@ -167,7 +167,13 @@ ul { list-style: none; }
 .header-icon-btn:hover { background: var(--color-background-tertiary); }
 
 .header-icon-btn i {
-  font-size: 18px;
+  font-size: 18px !important;
+  color: #333333 !important;
+  display: inline-block !important;
+  line-height: 1;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
 }
 
 .bell-badge {
@@ -227,7 +233,7 @@ ul { list-style: none; }
 .signout-btn {
   border: none;
   background: transparent;
-  color: var(--color-text-secondary);
+  color: #333333 !important;
   border-radius: var(--border-radius-md);
   padding: 0;
   display: flex;
@@ -238,7 +244,7 @@ ul { list-style: none; }
   cursor: pointer;
   transition: background var(--transition);
   overflow: hidden;
-  font-size: 0 !important;
+  font-size: 18px;
   flex-shrink: 0;
 }
 .signout-btn:hover {
@@ -248,6 +254,12 @@ ul { list-style: none; }
   font-size: 20px !important;
   margin: 0;
   padding: 0;
+  color: #333333 !important;
+  display: inline-block !important;
+  line-height: 1;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
 }
 
 /* Manager alert bar */

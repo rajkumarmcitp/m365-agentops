@@ -11,18 +11,18 @@ export function renderHeader() {
     <div class="header-spacer"></div>
     <div class="header-actions">
       <button class="header-icon-btn" title="Notifications" id="notification-bell" style="position:relative">
-        <i class="ti ti-bell"></i>
+        <i class="fas fa-bell"></i>
         <span id="notification-badge" style="position:absolute;top:-4px;right:-4px;background:#ff4444;color:white;font-size:10px;font-weight:700;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;display:none">0</span>
       </button>
       <button class="header-icon-btn" title="Admin Settings" id="hdr-settings">
-        <i class="ti ti-settings"></i>
+        <i class="fas fa-cog"></i>
       </button>
       <div class="user-avatar" style="background:${u.color}" title="${u.name} — ${u.email}">
         <div class="avatar-initials">${u.initials}</div>
         <div class="avatar-role">${u.role}</div>
       </div>
       <button class="signout-btn" id="hdr-signout" title="Sign out">
-        <i class="ti ti-logout"></i>
+        <i class="fas fa-sign-out-alt"></i>
       </button>
     </div>
   `
