@@ -136,11 +136,16 @@ function renderZeroTrustNoData(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
+        <div class="page-title"><i class="fas fa-lock"></i> Zero Trust Compliance</div>
         <div class="page-subtitle">No assessment data found</div>
       </div>
-      <div class="page-actions">
-        <button class="btn btn-primary" id="zt-first-scan"><i class="ti ti-player-play"></i> Run First Scan</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="Implement Zero Trust security principles by validating device compliance, user identity, and access controls. Assess your organization's Zero Trust maturity.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions">
+          <button class="btn btn-primary" id="zt-first-scan"><i class="fas fa-play"></i> Run First Scan</button>
+        </div>
       </div>
     </div>
     <div class="card" style="text-align:center;padding:40px;color:var(--color-text-secondary)">

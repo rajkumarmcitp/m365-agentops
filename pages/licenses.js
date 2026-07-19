@@ -231,12 +231,17 @@ function renderDemoLicensesPage(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-license"></i> License Management Dashboard</div>
+        <div class="page-title"><i class="fas fa-certificate"></i> License Management Dashboard</div>
         <div class="page-subtitle">Enterprise-wide licensing health, utilization, and compliance</div>
       </div>
-      <div class="page-actions">
-        <button class="btn" id="license-refresh"><i class="ti ti-refresh"></i> Refresh</button>
-        <button class="btn btn-primary" id="license-export"><i class="ti ti-download"></i> Export</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="View Microsoft 365 license allocation, utilization rates, and compliance. Identify unused licenses and optimize license spending.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions">
+          <button class="btn" id="license-refresh"><i class="fas fa-sync"></i> Refresh</button>
+          <button class="btn btn-primary" id="license-export"><i class="fas fa-download"></i> Export</button>
+        </div>
       </div>
     </div>
 
@@ -588,12 +593,17 @@ function render(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-license"></i> License Management Dashboard</div>
+        <div class="page-title"><i class="fas fa-certificate"></i> License Management Dashboard</div>
         <div class="page-subtitle">Enterprise-wide licensing health, utilization, and compliance</div>
       </div>
-      <div class="page-actions">
-        <button class="btn" id="license-refresh"><i class="ti ti-refresh"></i> Refresh</button>
-        <button class="btn btn-primary" id="license-export"><i class="ti ti-download"></i> Export</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="View Microsoft 365 license allocation, utilization rates, and compliance. Identify unused licenses and optimize license spending.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions">
+          <button class="btn" id="license-refresh"><i class="fas fa-sync"></i> Refresh</button>
+          <button class="btn btn-primary" id="license-export"><i class="fas fa-download"></i> Export</button>
+        </div>
       </div>
     </div>
 

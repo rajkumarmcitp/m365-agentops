@@ -219,11 +219,16 @@ function renderDemoApplicationsPage(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-app-window"></i> Applications</div>
+        <div class="page-title"><i class="fas fa-window-maximize"></i> Applications</div>
         <div class="page-subtitle">Manage app registrations, permissions, and consent</div>
       </div>
-      <div class="page-actions">
-        <button class="btn"><i class="ti ti-refresh"></i> Refresh</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="View and manage Azure AD application registrations, permissions, and user consent settings. Monitor app security and access levels.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions">
+          <button class="btn"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
       </div>
     </div>
 

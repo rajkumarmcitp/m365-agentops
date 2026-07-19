@@ -111,12 +111,17 @@ function renderContent(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-shield-exclamation"></i> TenantGuard Security Monitoring</div>
+        <div class="page-title"><i class="fas fa-exclamation-triangle"></i> TenantGuard Security Monitoring</div>
         <div class="page-subtitle">Real-time threat detection & attack pattern analysis · ${liveIndicator} · Updated: ${lastUpdateStr}</div>
       </div>
-      <div class="page-actions" style="display:flex;gap:8px">
-        <button class="btn" id="tg-refresh" ${isRefreshing ? 'disabled' : ''}><i class="ti ti-refresh"></i> ${isRefreshing ? 'Updating...' : 'Refresh'}</button>
-        <button class="btn btn-primary" id="tg-export"><i class="ti ti-download"></i> Export</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="Monitor and investigate suspicious activities, attack chains, and correlations using AI-powered threat detection.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions" style="display:flex;gap:8px">
+          <button class="btn" id="tg-refresh" ${isRefreshing ? 'disabled' : ''}><i class="fas fa-sync"></i> ${isRefreshing ? 'Updating...' : 'Refresh'}</button>
+          <button class="btn btn-primary" id="tg-export"><i class="fas fa-download"></i> Export</button>
+        </div>
       </div>
     </div>
 

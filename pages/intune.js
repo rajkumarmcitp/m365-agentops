@@ -172,11 +172,16 @@ function renderDemoIntunePage(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-device-laptop"></i> Microsoft Intune Insights</div>
+        <div class="page-title"><i class="fas fa-laptop"></i> Microsoft Intune Insights</div>
         <div class="page-subtitle">Device Management & Security Assessment · ${demoSummary.totalDevices} devices managed · Last sync: Today 08:45</div>
       </div>
-      <div class="page-actions">
-        <button class="btn"><i class="ti ti-refresh"></i> Refresh</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="Monitor device compliance, security posture, and configuration status across your organization. Manage Intune policies and identify non-compliant devices.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions">
+          <button class="btn"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
       </div>
     </div>
 

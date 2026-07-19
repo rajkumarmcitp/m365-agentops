@@ -207,13 +207,18 @@ function renderDemoMain(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
+        <div class="page-title"><i class="fas fa-cog"></i> Microsoft 365 Configuration</div>
         <div class="page-subtitle">CIS Benchmark Compliance · ${stats.total} controls across 9 configuration areas</div>
       </div>
-      <div class="page-actions">
-        <button class="btn" id="cfg-validation-btn"><i class="ti ti-checklist"></i> Validation Report</button>
-        <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Run scan now</button>
-        <button class="btn btn-primary" id="cfg-agent-btn"><i class="ti ti-robot"></i> Config Agent</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="Assess and manage Microsoft 365 configuration settings against CIS Benchmarks. Validate compliance across Exchange, Teams, SharePoint, OneDrive, and more.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions">
+          <button class="btn" id="cfg-validation-btn"><i class="fas fa-check-square"></i> Validation Report</button>
+          <button class="btn" id="cfg-scan-now"><i class="fas fa-sync"></i> Run scan now</button>
+          <button class="btn btn-primary" id="cfg-agent-btn"><i class="fas fa-robot"></i> Config Agent</button>
+        </div>
       </div>
     </div>
 

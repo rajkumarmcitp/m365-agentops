@@ -113,8 +113,13 @@ function renderDemoUserInvestigation(el) {
 
   el.innerHTML = `
     <div class="page-header">
-      <div class="page-title"><i class="ti ti-shield-check"></i> User Investigation</div>
-      <div class="page-subtitle">Comprehensive user activity analysis and risk assessment</div>
+      <div>
+        <div class="page-title"><i class="fas fa-shield-alt"></i> User Investigation</div>
+        <div class="page-subtitle">Comprehensive user activity analysis and risk assessment</div>
+      </div>
+      <button class="page-help" title="Investigate user activity, assess risk factors, view sign-in locations, and analyze authentication patterns to identify suspicious behavior.">
+        <i class="fas fa-question-circle"></i>
+      </button>
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);margin-bottom:16px;font-size:10px;color:var(--color-text-tertiary)">

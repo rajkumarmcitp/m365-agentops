@@ -588,6 +588,28 @@ tr:hover td { background: var(--color-background-secondary); }
   gap: 8px;
 }
 
+.page-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--clr-info-text);
+  cursor: help;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  border: none;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.page-help:hover {
+  background: var(--clr-info-bg);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
 .page-title {
   font-size: 16px;
   font-weight: 700;
