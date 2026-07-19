@@ -8384,9 +8384,12 @@ Description: ${t.description}`;navigator.clipboard.writeText(S).then(()=>{})}),(
     `,Ti(e)))}async function Ti(e){try{const t=await P("/agents/all");if(!t.success||!t.data){console.warn("API returned invalid response:",t),ia(e);return}const i=t.data;Ip(e,i)}catch(t){console.error("Error loading agents:",t),ia(e)}}function ia(e){e.innerHTML=`
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-robot"></i> AI Agents</div>
+        <div class="page-title"><i class="fas fa-robot"></i> AI Agents</div>
         <div class="page-subtitle">Automated intelligence agents managing your M365 tenant</div>
       </div>
+      <button class="page-help" title="Deploy and manage automated AI agents that handle security monitoring, configuration compliance, approval workflows, and audit operations across your M365 tenant.">
+        <i class="fas fa-question-circle"></i>
+      </button>
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:8px;margin-bottom:16px;font-size:11px;color:var(--color-text-primary)">
@@ -8426,12 +8429,17 @@ Description: ${t.description}`;navigator.clipboard.writeText(S).then(()=>{})}),(
     `,t.appendChild(n)})}function Ip(e,t){e.innerHTML=`
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-robot"></i> AI Agents</div>
+        <div class="page-title"><i class="fas fa-robot"></i> AI Agents</div>
         <div class="page-subtitle">Automated intelligence agents managing your M365 tenant</div>
       </div>
-      <div class="page-actions">
-        <button class="btn btn-primary" id="configure-all-btn"><i class="ti ti-settings"></i> Configure</button>
-        <button class="btn btn-primary" id="refresh-agents-btn" style="margin-left:8px"><i class="ti ti-refresh"></i> Refresh</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="Deploy and manage automated AI agents that handle security monitoring, configuration compliance, approval workflows, and audit operations across your M365 tenant.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions">
+          <button class="btn btn-primary" id="configure-all-btn"><i class="fas fa-cog"></i> Configure</button>
+          <button class="btn btn-primary" id="refresh-agents-btn" style="margin-left:8px"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
       </div>
     </div>
 
