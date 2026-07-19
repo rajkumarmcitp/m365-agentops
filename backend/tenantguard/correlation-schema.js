@@ -4,6 +4,42 @@
  */
 
 export function createCorrelationTables(db) {
+  // Alerts table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS alerts (
+      id TEXT PRIMARY KEY,
+      priority TEXT,
+      severity TEXT,
+      headline TEXT NOT NULL,
+      description TEXT,
+      actor TEXT,
+      source TEXT,
+      action_timestamp DATETIME,
+      score INTEGER,
+      status TEXT,
+      dismissed INTEGER DEFAULT 0,
+      risk_assessment TEXT,
+      recommendations TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
+  // Index for faster alert queries
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_alerts_severity
+      ON alerts(severity)
+  `)
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_alerts_priority
+      ON alerts(priority)
+  `)
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_alerts_dismissed
+      ON alerts(dismissed)
+  `)
+
   // Correlated alert groups table
   db.exec(`
     CREATE TABLE IF NOT EXISTS alert_correlations (
