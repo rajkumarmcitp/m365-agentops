@@ -184,8 +184,15 @@ export function startCorrelationJobs() {
     createCorrelationTables(db)
 
     // Initialize demo data if empty
+    const existingAlerts = db.prepare('SELECT COUNT(*) as count FROM alerts').get()
     const existingCorrelations = db.prepare('SELECT COUNT(*) as count FROM alert_correlations').get()
-    if (!existingCorrelations || existingCorrelations.count === 0) {
+
+    if ((!existingAlerts || existingAlerts.count === 0) && (!existingCorrelations || existingCorrelations.count === 0)) {
+      console.log('📋 No demo data found, initializing...')
+      initializeDemoData(db)
+    } else if (!existingAlerts || existingAlerts.count === 0) {
+      console.log('⚠️ Alerts missing but correlations exist - reinitializing alerts only')
+      // Re-initialize alerts even if correlations exist
       initializeDemoData(db)
     }
 
