@@ -7,6 +7,7 @@ import fs from 'fs'
 import { join } from 'path'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
+import { logEvent } from './sharepoint-events-service.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -85,7 +86,7 @@ export function getAlertStatus(alertId) {
 /**
  * Set alert status with validation
  */
-export function setAlertStatus(alertId, newStatus, userId = 'system') {
+export async function setAlertStatus(alertId, newStatus, userId = 'system') {
   const statuses = loadStatuses()
   const history = loadHistory()
   const oldStatus = statuses[alertId] || 'NEW'
@@ -120,6 +121,17 @@ export function setAlertStatus(alertId, newStatus, userId = 'system') {
 
   saveHistory(history)
 
+  // Log to SharePoint for compliance and audit trail (non-blocking)
+  logEvent({
+    alertId,
+    eventType: 'STATUS_CHANGE',
+    previousStatus: oldStatus,
+    newStatus,
+    userId,
+    details: `Alert status changed from ${oldStatus} to ${newStatus}`,
+    severity: getSeverityFromStatus(newStatus)
+  }).catch(err => console.error('Failed to log to SharePoint:', err))
+
   return {
     alertId,
     oldStatus,
@@ -127,6 +139,17 @@ export function setAlertStatus(alertId, newStatus, userId = 'system') {
     timestamp: new Date().toISOString(),
     success: true
   }
+}
+
+function getSeverityFromStatus(status) {
+  const severityMap = {
+    'NEW': 'CRITICAL',
+    'UNDER_INVESTIGATION': 'HIGH',
+    'ACTION_TAKEN': 'MEDIUM',
+    'RESOLVED': 'LOW',
+    'FALSE_POSITIVE': 'INFO'
+  }
+  return severityMap[status] || 'INFO'
 }
 
 /**
@@ -223,13 +246,13 @@ export function getStatusMetrics() {
 /**
  * Bulk update statuses
  */
-export function bulkUpdateStatus(alertIds, newStatus, userId = 'system') {
+export async function bulkUpdateStatus(alertIds, newStatus, userId = 'system') {
   const results = []
   const errors = []
 
   for (const alertId of alertIds) {
     try {
-      results.push(setAlertStatus(alertId, newStatus, userId))
+      results.push(await setAlertStatus(alertId, newStatus, userId))
     } catch (error) {
       errors.push({
         alertId,

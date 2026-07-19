@@ -71,6 +71,9 @@ import {
   getAlertsByStatus, getStatusMetrics, bulkUpdateStatus, pruneHistory,
   exportAlertData, importAlertData
 } from './alert-status-service.js'
+import {
+  initializeListIfNeeded, logEvent, cleanupOldEvents, getEventStats, exportEvents
+} from './sharepoint-events-service.js'
 import { ExchangeCollector } from './collectors/exchange-collector.js'
 import { TeamsCollector } from './collectors/teams-collector.js'
 import { SharePointCollector } from './collectors/sharepoint-collector.js'
@@ -17984,6 +17987,25 @@ const server = app.listen(PORT, () => {
     console.error('❌ SharePoint auto-initialization failed:', err.message)
   })
 
+  // Initialize SharePoint events list with 30-day retention
+  initializeListIfNeeded().then(() => {
+    console.log('✅ SharePoint events list initialized')
+
+    // Schedule daily cleanup of events older than 30 days
+    setInterval(async () => {
+      try {
+        const result = await cleanupOldEvents()
+        if (result.success) {
+          console.log(`🧹 SharePoint events cleanup: Deleted ${result.deletedCount} old events`)
+        }
+      } catch (error) {
+        console.error('⚠️ SharePoint events cleanup error:', error.message)
+      }
+    }, 24 * 60 * 60 * 1000) // Daily (24 hours)
+  }).catch(err => {
+    console.warn('⚠️ SharePoint events initialization failed (non-critical):', err.message)
+  })
+
   // Initialize TenantGuard in background after server starts
   initializeTenantGuard().catch(err => {
     console.error('❌ TenantGuard initialization failed:', err.message)
@@ -20851,7 +20873,7 @@ app.get('/api/alert-status/:alertId', (req, res) => {
 })
 
 // Update alert status
-app.put('/api/alert-status/:alertId', (req, res) => {
+app.put('/api/alert-status/:alertId', async (req, res) => {
   try {
     const { alertId } = req.params
     const { status, userId } = req.body
@@ -20860,7 +20882,7 @@ app.put('/api/alert-status/:alertId', (req, res) => {
       return res.status(400).json({ success: false, message: 'Status is required' })
     }
 
-    const result = setAlertStatus(alertId, status, userId || 'system')
+    const result = await setAlertStatus(alertId, status, userId || 'system')
     res.json({ success: true, data: result })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
@@ -20910,7 +20932,7 @@ app.get('/api/alert-statuses/metrics', (req, res) => {
 })
 
 // Bulk update statuses
-app.post('/api/alert-statuses/bulk-update', (req, res) => {
+app.post('/api/alert-statuses/bulk-update', async (req, res) => {
   try {
     const { alertIds, status, userId } = req.body
 
@@ -20921,7 +20943,7 @@ app.post('/api/alert-statuses/bulk-update', (req, res) => {
       return res.status(400).json({ success: false, message: 'Status is required' })
     }
 
-    const result = bulkUpdateStatus(alertIds, status, userId || 'system')
+    const result = await bulkUpdateStatus(alertIds, status, userId || 'system')
     res.json({ success: true, data: result })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
@@ -20954,6 +20976,51 @@ app.post('/api/alert-statuses/import', (req, res) => {
   try {
     const result = importAlertData(req.body)
     res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// ============================================================
+// SharePoint Events API Endpoints (30-day retention)
+// ============================================================
+
+// Initialize SharePoint list for events
+app.post('/api/sharepoint/events/initialize', async (req, res) => {
+  try {
+    const listId = await initializeListIfNeeded()
+    res.json({ success: true, data: { listId, message: 'SharePoint events list initialized' } })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get event statistics
+app.get('/api/sharepoint/events/stats', async (req, res) => {
+  try {
+    const stats = await getEventStats()
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Cleanup events older than 30 days
+app.post('/api/sharepoint/events/cleanup', async (req, res) => {
+  try {
+    const result = await cleanupOldEvents()
+    res.json({ success: result.success, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Export events for compliance reporting
+app.get('/api/sharepoint/events/export', async (req, res) => {
+  try {
+    const days = req.query.days ? parseInt(req.query.days) : 30
+    const data = await exportEvents(days)
+    res.json({ success: true, data })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
   }
