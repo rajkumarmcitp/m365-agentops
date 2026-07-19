@@ -277,6 +277,64 @@ function exportForensicTimeline() {
   showToast('✅ Forensic report exported', 'success')
 }
 
+function exportAlertsAsCSV(alerts) {
+  const headers = ['ID', 'Headline', 'Description', 'Severity', 'Score', 'Status', 'Actor', 'Source', 'Timestamp']
+  const rows = alerts.map(alert => [
+    alert.id,
+    alert.headline,
+    alert.description,
+    getSeverityLevel(calculateSeverityScore(alert)),
+    calculateSeverityScore(alert),
+    getStatusInfo(getAlertStatus(alert.id)).label,
+    alert.actor,
+    alert.source,
+    new Date(alert.timestamp).toLocaleString()
+  ])
+
+  let csv = headers.join(',') + '\n'
+  csv += rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
+
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `alerts-export-${new Date().toISOString().split('T')[0]}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+
+  showToast(`✅ Exported ${alerts.length} alert(s) as CSV`, 'success')
+}
+
+function exportAlertsAsJSON(alerts) {
+  const exportData = {
+    exportDate: new Date().toISOString(),
+    alertCount: alerts.length,
+    alerts: alerts.map(alert => ({
+      id: alert.id,
+      headline: alert.headline,
+      description: alert.description,
+      severity: getSeverityLevel(calculateSeverityScore(alert)),
+      score: calculateSeverityScore(alert),
+      status: getStatusInfo(getAlertStatus(alert.id)).label,
+      actor: alert.actor,
+      source: alert.source,
+      timestamp: alert.timestamp,
+      events: alert.events || []
+    }))
+  }
+
+  const dataStr = JSON.stringify(exportData, null, 2)
+  const blob = new Blob([dataStr], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `alerts-export-${new Date().toISOString().split('T')[0]}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+
+  showToast(`✅ Exported ${alerts.length} alert(s) as JSON`, 'success')
+}
+
 function renderTabContent(riskScore, riskLevel) {
   switch (activeTab) {
     case 'dashboard':
@@ -302,23 +360,38 @@ function renderTabContent(riskScore, riskLevel) {
 
 function attachAlertsViewListeners() {
   const searchInput = document.getElementById('alert-search')
+  const dateRangeFilter = document.getElementById('alert-filter-daterange')
   const severityFilter = document.getElementById('alert-filter-severity')
   const statusFilter = document.getElementById('alert-filter-status')
   const sortSelect = document.getElementById('alert-sort')
   const container = document.getElementById('alerts-container')
   const statsDiv = document.getElementById('alerts-stats')
   const bulkBtn = document.getElementById('alerts-bulk-action')
+  const exportCsvBtn = document.getElementById('alerts-export-csv')
+  const exportJsonBtn = document.getElementById('alerts-export-json')
+  const clearFiltersBtn = document.getElementById('alerts-clear-filters')
 
   let selectedAlerts = new Set()
 
   function filterAndRenderAlerts() {
     const searchTerm = (searchInput?.value || '').toLowerCase()
+    const dateRangeVal = dateRangeFilter?.value || 'all'
     const severityVal = severityFilter?.value || ''
     const statusVal = statusFilter?.value || ''
     const sortVal = sortSelect?.value || 'recency'
 
+    // Calculate date range
+    const now = new Date()
+    let cutoffDate = null
+    if (dateRangeVal === '24h') cutoffDate = new Date(now - 24 * 60 * 60 * 1000)
+    else if (dateRangeVal === '7d') cutoffDate = new Date(now - 7 * 24 * 60 * 60 * 1000)
+    else if (dateRangeVal === '30d') cutoffDate = new Date(now - 30 * 24 * 60 * 60 * 1000)
+
     // Filter alerts
     let filtered = allAlerts.filter(alert => {
+      // Date range filter
+      if (cutoffDate && new Date(alert?.timestamp) < cutoffDate) return false
+
       // Search filter
       if (searchTerm) {
         const searchableText = [
@@ -440,9 +513,75 @@ function attachAlertsViewListeners() {
 
   // Event listeners
   searchInput?.addEventListener('input', filterAndRenderAlerts)
+  dateRangeFilter?.addEventListener('change', filterAndRenderAlerts)
   severityFilter?.addEventListener('change', filterAndRenderAlerts)
   statusFilter?.addEventListener('change', filterAndRenderAlerts)
   sortSelect?.addEventListener('change', filterAndRenderAlerts)
+
+  // Export handlers
+  exportCsvBtn?.addEventListener('click', () => {
+    const displayCount = document.getElementById('alerts-display-count')?.textContent || '0'
+    const alerts = allAlerts.filter(alert => {
+      const searchTerm = (searchInput?.value || '').toLowerCase()
+      const dateRangeVal = dateRangeFilter?.value || 'all'
+      const severityVal = severityFilter?.value || ''
+      const statusVal = statusFilter?.value || ''
+
+      const now = new Date()
+      let cutoffDate = null
+      if (dateRangeVal === '24h') cutoffDate = new Date(now - 24 * 60 * 60 * 1000)
+      else if (dateRangeVal === '7d') cutoffDate = new Date(now - 7 * 24 * 60 * 60 * 1000)
+      else if (dateRangeVal === '30d') cutoffDate = new Date(now - 30 * 24 * 60 * 60 * 1000)
+
+      if (cutoffDate && new Date(alert?.timestamp) < cutoffDate) return false
+      if (searchTerm) {
+        const searchableText = [alert?.headline || '', alert?.description || '', alert?.actor || '', alert?.source || ''].join(' ').toLowerCase()
+        if (!searchableText.includes(searchTerm)) return false
+      }
+      if (severityVal && alert?.severity !== severityVal) return false
+      if (statusVal && getAlertStatus(alert.id) !== statusVal) return false
+      return true
+    })
+
+    exportAlertsAsCSV(alerts)
+  })
+
+  exportJsonBtn?.addEventListener('click', () => {
+    const displayCount = document.getElementById('alerts-display-count')?.textContent || '0'
+    const alerts = allAlerts.filter(alert => {
+      const searchTerm = (searchInput?.value || '').toLowerCase()
+      const dateRangeVal = dateRangeFilter?.value || 'all'
+      const severityVal = severityFilter?.value || ''
+      const statusVal = statusFilter?.value || ''
+
+      const now = new Date()
+      let cutoffDate = null
+      if (dateRangeVal === '24h') cutoffDate = new Date(now - 24 * 60 * 60 * 1000)
+      else if (dateRangeVal === '7d') cutoffDate = new Date(now - 7 * 24 * 60 * 60 * 1000)
+      else if (dateRangeVal === '30d') cutoffDate = new Date(now - 30 * 24 * 60 * 60 * 1000)
+
+      if (cutoffDate && new Date(alert?.timestamp) < cutoffDate) return false
+      if (searchTerm) {
+        const searchableText = [alert?.headline || '', alert?.description || '', alert?.actor || '', alert?.source || ''].join(' ').toLowerCase()
+        if (!searchableText.includes(searchTerm)) return false
+      }
+      if (severityVal && alert?.severity !== severityVal) return false
+      if (statusVal && getAlertStatus(alert.id) !== statusVal) return false
+      return true
+    })
+
+    exportAlertsAsJSON(alerts)
+  })
+
+  clearFiltersBtn?.addEventListener('click', () => {
+    searchInput.value = ''
+    dateRangeFilter.value = 'all'
+    severityFilter.value = ''
+    statusFilter.value = ''
+    sortSelect.value = 'recency'
+    filterAndRenderAlerts()
+    showToast('✅ Filters cleared', 'success')
+  })
 
   // Bulk action handler
   bulkBtn?.addEventListener('click', () => {
@@ -755,10 +894,10 @@ function renderAlertsView() {
       </div>
 
       <!-- FILTERS & SEARCH -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px">
         <div>
           <label style="font-size:11px;color:var(--color-text-secondary);display:block;margin-bottom:4px">🔍 Search</label>
-          <input type="text" id="alert-search" placeholder="Alert name, actor, source..." style="
+          <input type="text" id="alert-search" placeholder="Alert name, actor..." style="
             padding:8px 10px;
             border:0.5px solid var(--color-border-secondary);
             border-radius:4px;
@@ -766,6 +905,24 @@ function renderAlertsView() {
             width:100%;
             box-sizing:border-box;
           ">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--color-text-secondary);display:block;margin-bottom:4px">📅 Date Range</label>
+          <select id="alert-filter-daterange" style="
+            padding:8px 10px;
+            border:0.5px solid var(--color-border-secondary);
+            border-radius:4px;
+            font-size:12px;
+            width:100%;
+            box-sizing:border-box;
+            background:var(--color-background-secondary);
+            color:var(--color-text-primary);
+          ">
+            <option value="all">All Time</option>
+            <option value="24h">Last 24 Hours</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="30d">Last 30 Days</option>
+          </select>
         </div>
         <div>
           <label style="font-size:11px;color:var(--color-text-secondary);display:block;margin-bottom:4px">⚠️ Severity</label>
@@ -779,7 +936,7 @@ function renderAlertsView() {
             background:var(--color-background-secondary);
             color:var(--color-text-primary);
           ">
-            <option value="">All Severities</option>
+            <option value="">All</option>
             <option value="CRITICAL">🔴 CRITICAL</option>
             <option value="HIGH">🟠 HIGH</option>
             <option value="MEDIUM">🟡 MEDIUM</option>
@@ -798,16 +955,16 @@ function renderAlertsView() {
             background:var(--color-background-secondary);
             color:var(--color-text-primary);
           ">
-            <option value="">All Statuses</option>
+            <option value="">All</option>
             <option value="NEW">🆕 New</option>
-            <option value="UNDER_INVESTIGATION">🔍 Under Investigation</option>
+            <option value="UNDER_INVESTIGATION">🔍 Investigating</option>
             <option value="ACTION_TAKEN">✅ Action Taken</option>
             <option value="RESOLVED">✔️ Resolved</option>
             <option value="FALSE_POSITIVE">⚠️ False Positive</option>
           </select>
         </div>
         <div>
-          <label style="font-size:11px;color:var(--color-text-secondary);display:block;margin-bottom:4px">📈 Sort By</label>
+          <label style="font-size:11px;color:var(--color-text-secondary);display:block;margin-bottom:4px">📈 Sort</label>
           <select id="alert-sort" style="
             padding:8px 10px;
             border:0.5px solid var(--color-border-secondary);
@@ -818,13 +975,20 @@ function renderAlertsView() {
             background:var(--color-background-secondary);
             color:var(--color-text-primary);
           ">
-            <option value="recency">⏰ Newest First</option>
-            <option value="severity">⚠️ Severity (High→Low)</option>
+            <option value="recency">⏰ Newest</option>
+            <option value="severity">⚠️ Severity</option>
             <option value="status">📊 Status</option>
             <option value="actor">👤 Actor</option>
             <option value="source">📡 Source</option>
           </select>
         </div>
+      </div>
+
+      <!-- ADVANCED ACTIONS -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <button id="alerts-export-csv" style="padding:8px 12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;color:var(--color-text-primary)">📊 Export CSV</button>
+        <button id="alerts-export-json" style="padding:8px 12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;color:var(--color-text-primary)">📋 Export JSON</button>
+        <button id="alerts-clear-filters" style="padding:8px 12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;color:var(--color-text-primary)">🔄 Reset Filters</button>
       </div>
 
       <!-- ALERTS LIST STATS -->

@@ -18,6 +18,7 @@ import { showToast } from '../components/toast.js'
 import { callAPI } from '../lib/api-client.js'
 import { ZT_PILLARS } from '../data/zt-pillars.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
+import { analyzeComplianceGaps, calculateComplianceScore, getComplianceLevel, getComplianceColor, generateRemediationRoadmap, getComplianceMetrics, generateComplianceReport } from '../lib/compliance-analyzer.js'
 
 let realValidations = null
 let realTrends = null
