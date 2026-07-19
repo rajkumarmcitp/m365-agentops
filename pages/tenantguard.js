@@ -789,6 +789,9 @@ function showIncidentDetailModal(incident) {
         }
       }
 
+      console.log('🔍 Looking for alerts:', alertIds)
+      console.log('📊 Available alerts in allAlerts:', allAlerts?.length || 0, allAlerts?.map(a => a.id) || [])
+
       if (!alertIds || alertIds.length === 0) {
         alertsContainer.innerHTML = '<div style="color: var(--color-text-secondary); text-align: center; padding: 12px">No events data available</div>'
         return
@@ -796,7 +799,11 @@ function showIncidentDetailModal(incident) {
 
       // Find matching alerts from allAlerts
       const relatedAlerts = alertIds
-        .map(id => allAlerts?.find(a => a.id === id || a.id?.includes(id)))
+        .map(id => {
+          const found = allAlerts?.find(a => a.id === id)
+          console.log(`  Alert ${id}: ${found ? 'FOUND' : 'NOT FOUND'}`)
+          return found
+        })
         .filter(Boolean)
 
       if (relatedAlerts.length === 0) {
