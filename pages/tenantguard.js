@@ -3,6 +3,7 @@ import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { renderTenantGuardSettings } from './tenantguard-settings.js'
 import { calculateSeverityScore, getSeverityLevel, getSeverityColors, getActionChecklist } from '../lib/severity-scoring.js'
+import { getPolicyRecommendations, getPriorityColor, getEffortColor } from '../lib/policy-recommendations.js'
 
 let activeTab = 'dashboard'
 let allAlerts = []
@@ -951,6 +952,7 @@ function showAlertDetail(el, alert) {
   const level = getSeverityLevel(severity)
   const colors = getSeverityColors(level)
   const actionChecklist = getActionChecklist(alert)
+  const policyRecommendations = getPolicyRecommendations(alert)
 
   const content = document.createElement('div')
   content.style.cssText = `
@@ -1081,6 +1083,31 @@ function showAlertDetail(el, alert) {
             <label style="cursor:pointer;flex:1">
               <span style="color:var(--color-text-secondary)">[${idx + 1}]</span> ${action}
             </label>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- POLICY RECOMMENDATIONS -->
+    <div class="card" style="margin-bottom:16px;padding:16px;background:var(--color-background-secondary);border-radius:8px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">🛡️ POLICY RECOMMENDATIONS - WHAT NEEDS TO CHANGE</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${policyRecommendations.map((rec, idx) => `
+          <div style="padding:12px;background:var(--color-background-primary);border-radius:6px;border-left:3px solid ${getPriorityColor(rec.priority)}">
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--color-text-primary)">${rec.policy}</div>
+                <div style="font-size:13px;font-weight:600;margin-top:4px">${rec.recommendation}</div>
+              </div>
+              <div style="display:flex;gap:6px;flex-direction:column;align-items:flex-end">
+                <span style="background:${getPriorityColor(rec.priority)};color:white;padding:3px 8px;border-radius:3px;font-size:10px;font-weight:600">${rec.priority}</span>
+                <span style="background:${getEffortColor(rec.effort)};color:white;padding:3px 8px;border-radius:3px;font-size:10px;font-weight:600">${rec.effort}</span>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px;line-height:1.5">
+              <div style="margin-bottom:6px"><strong>📋 How:</strong> ${rec.implementation}</div>
+              <div><strong>💡 Impact:</strong> ${rec.impact}</div>
+            </div>
           </div>
         `).join('')}
       </div>
