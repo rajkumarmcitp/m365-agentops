@@ -346,10 +346,7 @@ function renderUserInvestigation(el) {
 
     <!-- Investigation results -->
     <div id="investigation-results" style="display:none">
-      <!-- 1. EXECUTIVE VERDICT (Top Priority) -->
-      <div id="ai-analysis-section" style="margin-bottom:24px;border:2px solid var(--color-border);border-radius:8px;padding:20px;background:var(--color-bg-secondary)"></div>
-
-      <!-- 2. INVESTIGATION SCORECARD -->
+      <!-- 1. INVESTIGATION SCORECARD (Top Priority - KPIs) -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px">
         <div style="background:var(--color-bg-primary);border:1px solid var(--color-border);border-radius:6px;padding:12px">
           <div style="font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;margin-bottom:6px">Overall Risk</div>
@@ -376,6 +373,9 @@ function renderUserInvestigation(el) {
           <div style="font-size:20px;font-weight:700;color:var(--color-danger)" id="scorecard-risk-detections">0</div>
         </div>
       </div>
+
+      <!-- 2. EXECUTIVE VERDICT (AI Analysis) -->
+      <div id="ai-analysis-section" style="margin-bottom:24px;border:2px solid var(--color-border);border-radius:8px;padding:20px;background:var(--color-bg-secondary)"></div>
 
       <!-- 3. INVESTIGATION TABS -->
       <div style="border-bottom:1px solid var(--color-border);margin-bottom:20px">
