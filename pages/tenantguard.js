@@ -4,6 +4,7 @@ import { isDemoAccount } from '../lib/demo-account.js'
 import { renderTenantGuardSettings } from './tenantguard-settings.js'
 import { calculateSeverityScore, getSeverityLevel, getSeverityColors, getActionChecklist } from '../lib/severity-scoring.js'
 import { getPolicyRecommendations, getPriorityColor, getEffortColor } from '../lib/policy-recommendations.js'
+import { getAlertStatus, setAlertStatus, getStatusInfo, getNextStatuses, addStatusTransition, getAvailableStatuses, getStatusMetrics } from '../lib/alert-status-manager.js'
 
 let activeTab = 'dashboard'
 let allAlerts = []
@@ -282,6 +283,72 @@ function renderDashboard(riskScore, riskLevel) {
       </div>
     </div>
 
+    ${(() => {
+      const metrics = getStatusMetrics(allAlerts)
+      return `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card">
+            <div class="card-title">📊 INVESTIGATION PROGRESS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+              <div style="padding:12px;background:var(--color-background-secondary);border-radius:6px">
+                <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">🔍 Under Investigation</div>
+                <div style="font-size:20px;font-weight:700;color:#f57c00">${metrics.underInvestigation}</div>
+                <div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px">${metrics.percentUnderInvestigation}% of total</div>
+              </div>
+              <div style="padding:12px;background:var(--color-background-secondary);border-radius:6px">
+                <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">✅ Resolved</div>
+                <div style="font-size:20px;font-weight:700;color:#4caf50">${metrics.resolved}</div>
+                <div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px">${metrics.percentResolved}% of total</div>
+              </div>
+              <div style="padding:12px;background:var(--color-background-secondary);border-radius:6px">
+                <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">📌 New</div>
+                <div style="font-size:20px;font-weight:700;color:#1976d2">${metrics.new}</div>
+                <div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px">Not started</div>
+              </div>
+              <div style="padding:12px;background:var(--color-background-secondary);border-radius:6px">
+                <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">⏱️ Avg Resolution</div>
+                <div style="font-size:20px;font-weight:700;color:#388e3c">${metrics.averageResolutionTime}</div>
+                <div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px">Time to resolve</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">🛡️ STATUS DISTRIBUTION</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+              ${(() => {
+                const statuses = getAvailableStatuses()
+                const total = metrics.total
+                return statuses.map(status => {
+                  let count = 0
+                  if (status.key === 'NEW') count = metrics.new
+                  else if (status.key === 'UNDER_INVESTIGATION') count = metrics.underInvestigation
+                  else if (status.key === 'ACTION_TAKEN') count = metrics.actionTaken
+                  else if (status.key === 'RESOLVED') count = metrics.resolved
+                  else if (status.key === 'FALSE_POSITIVE') count = metrics.falsePositive
+
+                  const percentage = total > 0 ? Math.round((count / total) * 100) : 0
+                  const barWidth = Math.max(percentage, 5)
+
+                  return `
+                    <div>
+                      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                        <span style="font-size:11px;font-weight:600">${status.icon} ${status.label}</span>
+                        <span style="font-size:11px;font-weight:600;color:${status.color}">${count}</span>
+                      </div>
+                      <div style="height:8px;background:var(--color-background-primary);border-radius:4px;overflow:hidden">
+                        <div style="height:100%;width:${percentage}%;background:${status.color};transition:width 0.3s"></div>
+                      </div>
+                    </div>
+                  `
+                }).join('')
+              })()}
+            </div>
+          </div>
+        </div>
+      `
+    })()}
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
       <div class="card">
         <div class="card-title">🔴 CRITICAL ISSUES (Top Priorities)</div>
@@ -290,14 +357,21 @@ function renderDashboard(riskScore, riskLevel) {
             const severity = calculateSeverityScore(alert)
             const level = getSeverityLevel(severity)
             const colors = getSeverityColors(level)
+            const status = getAlertStatus(alert.id)
+            const statusInfo = getStatusInfo(status)
             return `
               <div style="padding:12px;background:${colors.bg};border-radius:6px;border-left:4px solid ${colors.border};cursor:pointer" data-alert-id="${alert?.id}">
                 <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px">
-                  <div style="font-size:12px;font-weight:600;color:${colors.text}">${colors.icon} ${(alert?.headline || 'Unknown Alert').substring(0, 40)}</div>
-                  <div style="font-size:13px;font-weight:700;color:${colors.text}">${severity}/100</div>
+                  <div style="flex:1">
+                    <div style="font-size:12px;font-weight:600;color:${colors.text}">${colors.icon} ${(alert?.headline || 'Unknown Alert').substring(0, 35)}</div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                    <span style="font-size:13px;font-weight:700;color:${colors.text}">${severity}/100</span>
+                    <span style="background:${statusInfo.color};color:white;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600;white-space:nowrap">${statusInfo.icon} ${statusInfo.label}</span>
+                  </div>
                 </div>
                 <div style="font-size:11px;color:var(--color-text-secondary)">${alert?.actor ? alert.actor + ' · ' : ''}${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</div>
-                <div style="font-size:10px;color:${colors.text};margin-top:4px;font-weight:500">⚠️ Click to view investigation checklist →</div>
+                <div style="font-size:10px;color:${colors.text};margin-top:4px;font-weight:500">⚠️ Click to update status →</div>
               </div>
             `
           }).join('')}
@@ -953,6 +1027,9 @@ function showAlertDetail(el, alert) {
   const colors = getSeverityColors(level)
   const actionChecklist = getActionChecklist(alert)
   const policyRecommendations = getPolicyRecommendations(alert)
+  const currentStatus = getAlertStatus(alert.id)
+  const statusInfo = getStatusInfo(currentStatus)
+  const nextStatuses = getNextStatuses(currentStatus)
 
   const content = document.createElement('div')
   content.style.cssText = `
@@ -991,6 +1068,31 @@ function showAlertDetail(el, alert) {
           <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">SEVERITY LEVEL</div>
           <div style="font-size:20px;font-weight:700;color:${colors.text}">${level}</div>
         </div>
+      </div>
+    </div>
+
+    <!-- STATUS TRACKING -->
+    <div class="card" style="margin-bottom:16px;padding:16px;background:var(--color-background-secondary);border-radius:8px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">📊 INVESTIGATION STATUS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div style="padding:12px;background:var(--color-background-primary);border-radius:6px;border-left:3px solid ${statusInfo.color}">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">CURRENT STATUS</div>
+          <div style="font-size:14px;font-weight:700;color:${statusInfo.color}">${statusInfo.icon} ${statusInfo.label}</div>
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">${statusInfo.description}</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-primary);border-radius:6px">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">NEXT ACTIONS</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+            ${nextStatuses.length > 0 ? nextStatuses.map(status => `
+              <button data-status="${status.key}" class="status-btn" style="padding:8px;background:${status.color};border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;color:white;text-align:left">
+                ${status.icon} ${status.label}
+              </button>
+            `).join('') : '<div style="font-size:11px;color:var(--color-text-secondary)">Alert is resolved</div>'}
+          </div>
+        </div>
+      </div>
+      <div id="status-message" style="display:none;padding:8px;background:var(--color-background-primary);border-radius:4px;font-size:11px;color:#4caf50;font-weight:600">
+        ✅ Status updated successfully
       </div>
     </div>
 
@@ -1133,6 +1235,39 @@ function showAlertDetail(el, alert) {
     showToast('Starting investigation workflow...', 'info')
     await startInvestigation(alert)
     modal.remove()
+  })
+
+  // Status transition handlers
+  content.querySelectorAll('.status-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const newStatus = btn.dataset.status
+      const oldStatus = currentStatus
+
+      if (setAlertStatus(alert.id, newStatus)) {
+        addStatusTransition(alert.id, oldStatus, newStatus)
+
+        // Show success message
+        const msgElement = content.querySelector('#status-message')
+        msgElement.style.display = 'block'
+        msgElement.textContent = `✅ Status updated: ${getStatusInfo(oldStatus).label} → ${getStatusInfo(newStatus).label}`
+
+        // Hide buttons and show resolved state if fully resolved
+        setTimeout(() => {
+          const statusBtns = content.querySelectorAll('.status-btn')
+          statusBtns.forEach(b => b.style.opacity = '0.5')
+
+          // Update next actions if no more statuses available
+          if (nextStatuses.length <= 1) {
+            const nextActionsDiv = content.querySelector('[style*="Next Actions"]')?.parentElement
+            if (nextActionsDiv) {
+              nextActionsDiv.innerHTML = '<div style="font-size:11px;color:var(--color-text-secondary)">✓ All actions completed</div>'
+            }
+          }
+        }, 500)
+
+        showToast(`Status updated to ${getStatusInfo(newStatus).label}`, 'success')
+      }
+    })
   })
 }
 
