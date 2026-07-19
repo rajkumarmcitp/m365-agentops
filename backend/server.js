@@ -74,6 +74,15 @@ import {
 import {
   initializeListIfNeeded, logEvent, cleanupOldEvents, getEventStats, exportEvents
 } from './sharepoint-events-service.js'
+import {
+  calculateCorrelationScore, detectAttackPatterns, groupAlertsIntoIncidents,
+  calculateIncidentRiskScore, analyzeIncidentTimeline, generateIncidentSummary
+} from './correlation-engine.js'
+import {
+  createIncident, getIncident, getAllIncidents, updateIncidentStatus,
+  addIncidentNote, tagIncident, getIncidentByAlertId, getIncidentsByStatus,
+  getIncidentsBySeverity, getIncidentStats, deleteIncident, exportIncidents
+} from './incident-service.js'
 import { ExchangeCollector } from './collectors/exchange-collector.js'
 import { TeamsCollector } from './collectors/teams-collector.js'
 import { SharePointCollector } from './collectors/sharepoint-collector.js'
@@ -21021,6 +21030,219 @@ app.get('/api/sharepoint/events/export', async (req, res) => {
     const days = req.query.days ? parseInt(req.query.days) : 30
     const data = await exportEvents(days)
     res.json({ success: true, data })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// ============================================================
+// Alert Correlation & Incident Management API Endpoints
+// ============================================================
+
+// Get all incidents (must be before :incidentId route)
+app.get('/api/incidents', (req, res) => {
+  try {
+    const incidents = getAllIncidents()
+    res.json({ success: true, data: incidents })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get incident statistics (must be before :incidentId route)
+app.get('/api/incidents/stats', (req, res) => {
+  try {
+    const stats = getIncidentStats()
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get incidents by status (must be before :incidentId route)
+app.get('/api/incidents/by-status/:status', (req, res) => {
+  try {
+    const incidents = getIncidentsByStatus(req.params.status)
+    res.json({ success: true, data: incidents })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get incidents by severity (must be before :incidentId route)
+app.get('/api/incidents/by-severity/:severity', (req, res) => {
+  try {
+    const incidents = getIncidentsBySeverity(req.params.severity)
+    res.json({ success: true, data: incidents })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Export incidents for compliance (must be before :incidentId route)
+app.get('/api/incidents/export', (req, res) => {
+  try {
+    const data = exportIncidents()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Create incident from correlated alerts
+app.post('/api/incidents/create', (req, res) => {
+  try {
+    const incident = createIncident(req.body)
+    res.json({ success: true, data: incident })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get incident by ID (generic, must be after specific routes)
+app.get('/api/incidents/:incidentId', (req, res) => {
+  try {
+    const incident = getIncident(req.params.incidentId)
+    res.json({ success: true, data: incident })
+  } catch (error) {
+    res.status(404).json({ success: false, message: error.message })
+  }
+})
+
+// Update incident status
+app.put('/api/incidents/:incidentId/status', (req, res) => {
+  try {
+    const { status } = req.body
+    if (!status) {
+      return res.status(400).json({ success: false, message: 'Status is required' })
+    }
+    const incident = updateIncidentStatus(req.params.incidentId, status)
+    res.json({ success: true, data: incident })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Add note to incident
+app.post('/api/incidents/:incidentId/notes', (req, res) => {
+  try {
+    const { note, author } = req.body
+    if (!note) {
+      return res.status(400).json({ success: false, message: 'Note is required' })
+    }
+    const incident = addIncidentNote(req.params.incidentId, note, author || 'system')
+    res.json({ success: true, data: incident })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Tag incident
+app.post('/api/incidents/:incidentId/tags', (req, res) => {
+  try {
+    const { tags } = req.body
+    if (!tags || !Array.isArray(tags)) {
+      return res.status(400).json({ success: false, message: 'Tags array is required' })
+    }
+    const incident = tagIncident(req.params.incidentId, tags)
+    res.json({ success: true, data: incident })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get incident by alert ID
+app.get('/api/alerts/:alertId/incident', (req, res) => {
+  try {
+    const incident = getIncidentByAlertId(req.params.alertId)
+    if (!incident) {
+      return res.json({ success: true, data: null })
+    }
+    res.json({ success: true, data: incident })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+
+// Correlate alerts and group into incidents
+app.post('/api/correlate/analyze', (req, res) => {
+  try {
+    const { alerts } = req.body
+    if (!alerts || !Array.isArray(alerts)) {
+      return res.status(400).json({ success: false, message: 'Alerts array is required' })
+    }
+
+    const incidents = groupAlertsIntoIncidents(alerts)
+
+    res.json({
+      success: true,
+      data: {
+        incidentsDetected: incidents.length,
+        incidents,
+        summary: {
+          totalAlerts: alerts.length,
+          correlatedAlerts: incidents.reduce((sum, i) => sum + i.alerts.length, 0),
+          patternsDetected: incidents.reduce((sum, i) => sum + (i.attackPatterns?.length || 0), 0)
+        }
+      }
+    })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Detect attack patterns in alerts
+app.post('/api/correlate/patterns', (req, res) => {
+  try {
+    const { alerts } = req.body
+    if (!alerts || !Array.isArray(alerts)) {
+      return res.status(400).json({ success: false, message: 'Alerts array is required' })
+    }
+
+    const patterns = detectAttackPatterns(alerts)
+
+    res.json({
+      success: true,
+      data: {
+        patternsDetected: patterns.length,
+        patterns,
+        summary: patterns.length > 0 ? `Detected ${patterns.length} attack pattern(s)` : 'No patterns detected'
+      }
+    })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Calculate correlation score between two alerts
+app.post('/api/correlate/score', (req, res) => {
+  try {
+    const { alert1, alert2 } = req.body
+    if (!alert1 || !alert2) {
+      return res.status(400).json({ success: false, message: 'Both alerts are required' })
+    }
+
+    const score = calculateCorrelationScore(alert1, alert2)
+
+    res.json({
+      success: true,
+      data: {
+        score: Math.round(score * 100) / 100,
+        percentage: Math.round(score * 100),
+        correlated: score >= 0.65
+      }
+    })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Delete incident
+app.delete('/api/incidents/:incidentId', (req, res) => {
+  try {
+    const result = deleteIncident(req.params.incidentId)
+    res.json({ success: true, data: result })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
   }
