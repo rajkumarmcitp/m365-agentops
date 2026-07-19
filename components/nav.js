@@ -42,6 +42,7 @@ const NAV_ITEMS = {
     { id: 'tenantguard',label: 'Tenant Guard',         icon: 'ti-alert-triangle',     badge: '4',  badgeCls: 'red' },
     { id: 'user-investigation',label: 'User Investigation',icon: 'ti-shield-check' },
     { id: 'zerotrust',  label: 'Zero Trust',           icon: 'ti-lock-check',         badge: '33', badgeCls: 'amber' },
+    { id: 'conditionalaccess', label: 'Conditional Access', icon: 'ti-shield-check',  badge: 'NEW', badgeCls: 'green' },
     { id: 'privaccts',  label: 'Privileged Accounts',  icon: 'ti-crown',              badge: '12', badgeCls: 'red' },
     { id: 'm365config', label: 'M365 Config',          icon: 'ti-settings-2',         badge: '8',  badgeCls: 'amber' },
     { id: 'msgcenter',      label: 'Change Intelligence',  icon: 'ti-antenna',        badge: '100',badgeCls: 'red' },
@@ -86,10 +87,11 @@ export function renderNav() {
     access = [...access, 'user-investigation']
   }
 
-  // Ensure backup pages are in access for super/admin users
+  // Ensure backup pages and conditional access are in access for super/admin users
   if (['super', 'admin'].includes(u.role)) {
     if (!access.includes('backup')) access = [...access, 'backup']
     if (!access.includes('backup-config')) access = [...access, 'backup-config']
+    if (!access.includes('conditionalaccess')) access = [...access, 'conditionalaccess']
   }
 
   let html = `

@@ -38,6 +38,7 @@ import { initApplications } from './pages/applications.js'
 import { initIntune } from './pages/intune.js'
 import { initMyAccount } from './pages/myaccount.js'
 import { initializeServiceHealth } from './lib/service-health-manager.js'
+import { initConditionalAccess } from './pages/conditional-access.js'
 
 // ============================================================
 // Help Icon Handler - Use event delegation
@@ -236,7 +237,7 @@ export function hasAccess(pageId) {
 
   // Administration pages - only available to admins and super admins
   const adminPages = [
-    'zerotrust', 'setup-wizard', 'applications', 'agents', 'audit', 'graphapi',
+    'zerotrust', 'conditionalaccess', 'setup-wizard', 'applications', 'agents', 'audit', 'graphapi',
     'intune', 'sso', 'approvals', 'security', 'tasks', 'm365config',
     'validation-settings', 'user-investigation', 'agent-details', 'tenantguard',
     'tenantguard-enhanced', 'privaccts', 'licenses', 'msgcenter', 'messages', 'settings',
@@ -270,6 +271,7 @@ const PAGE_INIT = {
   'tenantguard-enhanced': initTenantGuardEnhanced,
   'user-investigation': initUserInvestigation,
   zerotrust: initZeroTrust,
+  conditionalaccess: initConditionalAccess,
   m365config: initM365Config,
   privaccts: initPrivAccts,
   licenses: initLicenses,
@@ -621,7 +623,7 @@ function renderShell() {
 
 function renderAllPages() {
   const pages = [
-    'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','privaccts','m365config',
+    'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','conditionalaccess','privaccts','m365config',
     'msgcenter','messages','tasks','applications','intune','licenses','agents','agent-details','approvals','portal','myreqs','myaccount','chat',
     'graphapi','sso','setup-wizard','audit','settings','backup','backup-config'
   ]

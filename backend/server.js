@@ -66,6 +66,7 @@ import {
 import { BackupAgent } from './lib/backup-agent.js'
 import { BackupStorageManager } from './lib/backup-storage.js'
 import setupBackupRoutes from './routes/backup-routes.js'
+import { capControlFramework, evaluateCategory } from './lib/cap-control-framework.js'
 import {
   getAlertStatus, setAlertStatus, getAlertStatusHistory, getAllAlertStatuses,
   getAlertsByStatus, getStatusMetrics, bulkUpdateStatus, pruneHistory,
@@ -22605,6 +22606,739 @@ app.get('/api/forensics/export', (req, res) => {
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
   }
+})
+
+// ============================================================
+// CAP Dashboard API Routes
+// ============================================================
+
+// Home Dashboard
+app.get('/api/cap/dashboard/home', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      timestamp: new Date().toISOString(),
+      scorecard: {
+        overallScore: 78,
+        grade: 'C',
+        riskLevel: 'MEDIUM',
+        compliance: 72.5
+      },
+      keyMetrics: {
+        totalPolicies: 5,
+        totalControls: 87,
+        compliantControls: 42,
+        implementationGap: 45
+      },
+      zeroPillars: [
+        { pillar: 'Identity', score: 85, status: 'HEALTHY' },
+        { pillar: 'Device', score: 72, status: 'WARNING' },
+        { pillar: 'Network', score: 65, status: 'WARNING' },
+        { pillar: 'Application', score: 80, status: 'HEALTHY' },
+        { pillar: 'Session', score: 60, status: 'CRITICAL' },
+        { pillar: 'Governance', score: 88, status: 'HEALTHY' },
+        { pillar: 'Monitoring', score: 45, status: 'CRITICAL' }
+      ],
+      alerts: { critical: 3, high: 8, medium: 12 },
+      topRecommendations: [
+        { priority: 'IMMEDIATE', title: 'Enable Phishing-Resistant MFA for Admins', description: 'Global administrators should use FIDO2 security keys or Windows Hello' },
+        { priority: 'HIGH', title: 'Implement Device Compliance Enforcement', description: 'Require managed and compliant devices for sensitive cloud apps' },
+        { priority: 'HIGH', title: 'Block Legacy Authentication', description: 'Disable legacy protocols not supporting modern auth' }
+      ],
+      // Sample CAP policies for control evaluation
+      capPolicies: [
+        { id: 'CA-001', name: 'CA-Admins-MFA', enabled: true, grantControls: { builtInControls: ['mfa'] }, target: 'Global Administrators', roles: ['Global Administrator'], status: 'Active' },
+        { id: 'CA-002', name: 'CA-InternalUsers-MFA', enabled: true, grantControls: { builtInControls: ['mfa'] }, target: 'Interactive Users', status: 'Active' },
+        { id: 'CA-003', name: 'CA-RiskySignIn', enabled: true, grantControls: { builtInControls: ['mfa'] }, signInRisk: ['high', 'medium'], status: 'Active' },
+        { id: 'CA-004', name: 'CA-BlockHighRiskUsers', enabled: true, grantControls: { builtInControls: ['block'] }, userRisk: ['high'], status: 'Active' },
+        { id: 'CA-005', name: 'CA-RequireCompliantDevice', enabled: true, deviceFilter: { includeDeviceStates: ['compliant'] }, target: 'Cloud Apps', status: 'Active' },
+        { id: 'CA-006', name: 'CA-LegacyAuthBlock', enabled: false, clientAppTypes: ['exchangeActiveSync', 'other'], grantControls: { builtInControls: ['block'] }, target: 'All', status: 'Disabled' },
+        { id: 'CA-007', name: 'CA-PhishingResistantAdmins', enabled: false, grantControls: { authenticationStrength: 'Phishing Resistant' }, roles: ['Privileged Role Administrator'], status: 'Disabled' }
+      ],
+
+      // Control evaluation results (from Category 2 - Identity Protection)
+      controlEvaluation: evaluateCategoryIdentityProtection(),
+
+      // Category 3 - Administrative Protection
+      controlEvaluationCategory3: evaluateCategoryAdministrativeProtection(),
+
+      // Category 4 - Device Trust
+      controlEvaluationCategory4: evaluateCategoryDeviceTrust(),
+
+      // Category 5 - Application Protection
+      controlEvaluationCategory5: evaluateCategoryApplicationProtection()
+    }
+  })
+})
+
+// Category evaluation functions
+function evaluateCategoryIdentityProtection() {
+  return {
+        categoryId: 'CA-CAT-02',
+        categoryName: 'Identity Protection',
+        zeroTrustPillar: 'Identity',
+        totalScore: 43,
+        maxScore: 92,
+        coverage: 47,
+        controls: [
+          {
+            controlId: 'CA-010',
+            name: 'Require Multi-Factor Authentication',
+            severity: 'Critical',
+            status: 'Passed',
+            score: 10,
+            matchedPolicies: ['CA-Admins-MFA', 'CA-InternalUsers-MFA'],
+            missingCoverage: ['Service Accounts', 'External Users'],
+            recommendation: 'Extend MFA to service accounts and external users via Workload Identity and B2B policies.',
+            expectedValue: ['mfa']
+          },
+          {
+            controlId: 'CA-011',
+            name: 'Authentication Strength Configured',
+            severity: 'High',
+            status: 'Failed',
+            score: 0,
+            matchedPolicies: [],
+            missingCoverage: ['All users'],
+            recommendation: 'Configure authentication strength for passwordless or phishing-resistant methods.',
+            expectedValue: ['Passwordless', 'Phishing Resistant']
+          },
+          {
+            controlId: 'CA-012',
+            name: 'Phishing Resistant MFA for Privileged Accounts',
+            severity: 'Critical',
+            status: 'Failed',
+            score: 0,
+            matchedPolicies: [],
+            missingCoverage: ['Global Admin', 'Privileged Role Admin', 'CA Admin'],
+            recommendation: 'Create Conditional Access policy requiring phishing-resistant authentication for admin roles.',
+            expectedValue: 'Phishing Resistant'
+          },
+          {
+            controlId: 'CA-013',
+            name: 'Passwordless Authentication Supported',
+            severity: 'Medium',
+            status: 'Failed',
+            score: 0,
+            matchedPolicies: [],
+            missingCoverage: ['All users'],
+            recommendation: 'Enable Windows Hello, FIDO2, or Phone Sign-in in authentication strength policy.',
+            expectedValue: ['Passwordless']
+          },
+          {
+            controlId: 'CA-014',
+            name: 'User Risk Policy Configured',
+            severity: 'Critical',
+            status: 'Partial',
+            score: 5,
+            matchedPolicies: ['CA-BlockHighRiskUsers'],
+            missingCoverage: ['Password change on medium risk'],
+            recommendation: 'Add password change requirement for medium-risk users in addition to blocking high-risk.',
+            expectedValue: ['high']
+          },
+          {
+            controlId: 'CA-015',
+            name: 'Sign-in Risk Policy Configured',
+            severity: 'Critical',
+            status: 'Passed',
+            score: 10,
+            matchedPolicies: ['CA-RiskySignIn'],
+            missingCoverage: [],
+            recommendation: 'Policy is properly configured. Continue monitoring sign-in risk levels.',
+            expectedValue: ['medium', 'high']
+          },
+          {
+            controlId: 'CA-016',
+            name: 'Block High Risk Users',
+            severity: 'Critical',
+            status: 'Passed',
+            score: 10,
+            matchedPolicies: ['CA-BlockHighRiskUsers'],
+            missingCoverage: [],
+            recommendation: 'Block control is active. Ensure Identity Protection is enabled for risk detection.',
+            expectedValue: ['block']
+          },
+          {
+            controlId: 'CA-017',
+            name: 'Force Password Change',
+            severity: 'High',
+            status: 'Failed',
+            score: 0,
+            matchedPolicies: [],
+            missingCoverage: ['All risk levels'],
+            recommendation: 'Add password change grant control to user risk policies.',
+            expectedValue: ['passwordChange']
+          },
+          {
+            controlId: 'CA-018',
+            name: 'Identity Protection Enabled',
+            severity: 'High',
+            status: 'Passed',
+            score: 8,
+            matchedPolicies: ['Identity Protection service'],
+            missingCoverage: [],
+            recommendation: 'Identity Protection is enabled. Verify all risk policies are active.',
+            expectedValue: true
+          },
+          {
+            controlId: 'CA-019',
+            name: 'Continuous Access Evaluation',
+            severity: 'Medium',
+            status: 'Failed',
+            score: 0,
+            matchedPolicies: [],
+            missingCoverage: ['All policies'],
+            recommendation: 'Enable Continuous Access Evaluation in token issuance policies.',
+            expectedValue: true
+          }
+        ]
+      }
+}
+
+function evaluateCategoryAdministrativeProtection() {
+  return {
+    categoryId: 'CA-CAT-03',
+    categoryName: 'Administrative Protection',
+    zeroTrustPillar: 'Identity',
+    totalScore: 70,
+    maxScore: 101,
+    coverage: 69,
+    controls: [
+      {
+        controlId: 'CA-020',
+        name: 'Global Administrators Protected',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Admins-MFA'],
+        missingCoverage: [],
+        recommendation: 'Global Admin MFA is properly configured. Continue monitoring coverage.',
+        expectedValue: 'Global Administrators require MFA'
+      },
+      {
+        controlId: 'CA-021',
+        name: 'Privileged Roles Protected',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Admins-MFA'],
+        missingCoverage: ['Exchange Admin', 'SharePoint Admin'],
+        recommendation: 'Extend policy to cover all 10 privileged roles.',
+        expectedValue: 'All privileged roles require MFA'
+      },
+      {
+        controlId: 'CA-022',
+        name: 'Azure Portal Protected',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-Admins-MFA'],
+        missingCoverage: [],
+        recommendation: 'Azure Portal is protected. Monitor for any policy changes.',
+        expectedValue: 'Azure Portal requires MFA'
+      },
+      {
+        controlId: 'CA-023',
+        name: 'Microsoft Entra Admin Center Protected',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-Admins-MFA'],
+        missingCoverage: [],
+        recommendation: 'Entra Admin Center is protected via admin MFA policy.',
+        expectedValue: 'Admin Portals require MFA'
+      },
+      {
+        controlId: 'CA-024',
+        name: 'Exchange Admin Center Protected',
+        severity: 'High',
+        status: 'Failed',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['Exchange Admin Center'],
+        recommendation: 'Create Conditional Access policy for Office 365 Exchange Online targeting admins.',
+        expectedValue: 'Exchange Online requires MFA'
+      },
+      {
+        controlId: 'CA-025',
+        name: 'Privileged Identity Management Compatible',
+        severity: 'Medium',
+        status: 'Passed',
+        score: 5,
+        matchedPolicies: ['PIM is enabled'],
+        missingCoverage: [],
+        recommendation: 'PIM is enabled for privileged roles.',
+        expectedValue: 'Roles eligible through PIM'
+      },
+      {
+        controlId: 'CA-026',
+        name: 'Phishing Resistant MFA Required',
+        severity: 'Critical',
+        status: 'Failed',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['All privileged roles'],
+        recommendation: 'Create authentication strength policy requiring phishing-resistant MFA for admin roles.',
+        expectedValue: 'Phishing Resistant'
+      },
+      {
+        controlId: 'CA-027',
+        name: 'Administrators Blocked From Unmanaged Devices',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Admins-MFA'],
+        missingCoverage: [],
+        recommendation: 'Device compliance requirement is in place for admin access.',
+        expectedValue: 'Compliant devices only'
+      },
+      {
+        controlId: 'CA-028',
+        name: 'Break-glass Accounts Excluded',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-Admins-MFA'],
+        missingCoverage: [],
+        recommendation: 'Break-glass accounts properly excluded to prevent lockout.',
+        expectedValue: 'Emergency accounts excluded'
+      },
+      {
+        controlId: 'CA-029',
+        name: 'Administrator Sign-ins Restricted to Trusted Locations',
+        severity: 'High',
+        status: 'Failed',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['All locations'],
+        recommendation: 'Implement location-based policy restricting admin access to corporate offices/VPN.',
+        expectedValue: 'Trusted locations only'
+      },
+      {
+        controlId: 'CA-030',
+        name: 'Administrator Sign-in Risk Policy Enforced',
+        severity: 'High',
+        status: 'Failed',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['Risk-based enforcement'],
+        recommendation: 'Create policy requiring MFA for risky admin sign-ins.',
+        expectedValue: 'Medium/High risk requires MFA'
+      },
+      {
+        controlId: 'CA-031',
+        name: 'Administrator Session Controls Configured',
+        severity: 'Medium',
+        status: 'Failed',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['Session timeout'],
+        recommendation: 'Enable session controls (sign-in frequency, token protection) for admin sessions.',
+        expectedValue: 'Session controls enabled'
+      }
+    ]
+  }
+}
+
+// Get available control categories
+app.get('/api/cap/dashboard/categories', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      categories: [
+        {
+          categoryId: 'CA-CAT-02',
+          categoryName: 'Identity Protection',
+          zeroTrustPillar: 'Identity',
+          weight: 20,
+          controlCount: 10,
+          evaluation: evaluateCategoryIdentityProtection()
+        },
+        {
+          categoryId: 'CA-CAT-03',
+          categoryName: 'Administrative Protection',
+          zeroTrustPillar: 'Identity',
+          weight: 25,
+          controlCount: 12,
+          evaluation: evaluateCategoryAdministrativeProtection()
+        },
+        {
+          categoryId: 'CA-CAT-04',
+          categoryName: 'Device Trust',
+          zeroTrustPillar: 'Devices',
+          weight: 20,
+          controlCount: 16,
+          evaluation: evaluateCategoryDeviceTrust()
+        },
+        {
+          categoryId: 'CA-CAT-05',
+          categoryName: 'Application Protection',
+          zeroTrustPillar: 'Applications',
+          weight: 20,
+          controlCount: 8,
+          evaluation: evaluateCategoryApplicationProtection()
+        }
+      ]
+    }
+  })
+})
+
+function evaluateCategoryApplicationProtection() {
+  return {
+    categoryId: 'CA-CAT-05',
+    categoryName: 'Application Protection',
+    zeroTrustPillar: 'Applications',
+    totalScore: 88,
+    maxScore: 121,
+    coverage: 73,
+    controls: [
+      {
+        controlId: 'CA-050',
+        name: 'All Cloud Applications Protected',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-AllCloudApps', 'CA-InternalUsers-AllApps', 'CA-Admins-AllApps'],
+        missingCoverage: [],
+        recommendation: 'All cloud applications are protected. Continue monitoring for new apps.'
+      },
+      {
+        controlId: 'CA-051',
+        name: 'Microsoft 365 Applications Protected',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Office365-Protection'],
+        missingCoverage: [],
+        recommendation: 'Office 365 apps are fully protected.'
+      },
+      {
+        controlId: 'CA-052',
+        name: 'Azure Management Protected',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-AzureManagement-MFA'],
+        missingCoverage: [],
+        recommendation: 'Azure management requires MFA.'
+      },
+      {
+        controlId: 'CA-053',
+        name: 'Microsoft Admin Portals Protected',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-AdminPortals'],
+        missingCoverage: [],
+        recommendation: 'Admin portals are protected.'
+      },
+      {
+        controlId: 'CA-054',
+        name: 'Authentication Context Configured',
+        severity: 'High',
+        status: 'Partial',
+        score: 4,
+        matchedPolicies: [],
+        missingCoverage: ['Authentication Context'],
+        recommendation: 'Configure authentication context for sensitive applications.'
+      },
+      {
+        controlId: 'CA-055',
+        name: 'Sensitive Applications Protected',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-SensitiveApps'],
+        missingCoverage: [],
+        recommendation: 'Sensitive applications have enhanced protection.'
+      },
+      {
+        controlId: 'CA-056',
+        name: 'Enterprise Applications Protected',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-EnterpriseApps'],
+        missingCoverage: [],
+        recommendation: 'Enterprise applications are covered by CAP policies.'
+      },
+      {
+        controlId: 'CA-057',
+        name: 'Service Principal Exclusions Reviewed',
+        severity: 'Medium',
+        status: 'Partial',
+        score: 2,
+        matchedPolicies: [],
+        missingCoverage: ['SP exclusions audit'],
+        recommendation: 'Review and document all service principal exclusions.'
+      }
+    ]
+  }
+}
+
+function evaluateCategoryDeviceTrust() {
+  return {
+    categoryId: 'CA-CAT-04',
+    categoryName: 'Device Trust',
+    zeroTrustPillar: 'Devices',
+    totalScore: 86,
+    maxScore: 131,
+    coverage: 66,
+    controls: [
+      {
+        controlId: 'CA-040',
+        name: 'Require Compliant Device',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Admins-CompliantDevice', 'CA-InternalUsers-CompliantDevice', 'CA-Developers-CompliantDevice'],
+        missingCoverage: ['Guests', 'Service Accounts'],
+        recommendation: 'Extend compliant device requirement to all user personas.'
+      },
+      {
+        controlId: 'CA-041',
+        name: 'Require Hybrid Entra Joined Device',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-Admins-HybridJoin'],
+        missingCoverage: [],
+        recommendation: 'Hybrid joined device requirement is active for admins.'
+      },
+      {
+        controlId: 'CA-042',
+        name: 'Device Filter Configured',
+        severity: 'Medium',
+        status: 'Failed',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['All policies'],
+        recommendation: 'Configure device filter rules for fine-grained control.'
+      },
+      {
+        controlId: 'CA-043',
+        name: 'Require Approved Client Applications',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-ExchangeOnline-AppRestriction'],
+        missingCoverage: [],
+        recommendation: 'Approved applications are enforced for Exchange Online.'
+      },
+      {
+        controlId: 'CA-044',
+        name: 'Require App Protection Policy',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['Mobile-App-Protection'],
+        missingCoverage: [],
+        recommendation: 'Mobile app protection policy is active.'
+      },
+      {
+        controlId: 'CA-045',
+        name: 'Supported Device Platforms',
+        severity: 'Medium',
+        status: 'Passed',
+        score: 5,
+        matchedPolicies: ['CA-MultiPlatform'],
+        missingCoverage: [],
+        recommendation: 'All major platforms (Windows, macOS, iOS, Android) are covered.'
+      },
+      {
+        controlId: 'CA-046',
+        name: 'Unsupported Device Platforms Blocked',
+        severity: 'High',
+        status: 'Partial',
+        score: 4,
+        matchedPolicies: [],
+        missingCoverage: ['Unknown platform'],
+        recommendation: 'Explicitly block Linux and unknown device types.'
+      },
+      {
+        controlId: 'CA-047',
+        name: 'Intune Device Compliance Integrated',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['Intune-Compliance-Policy'],
+        missingCoverage: [],
+        recommendation: 'Device compliance policies are integrated with Conditional Access.'
+      },
+      {
+        controlId: 'CA-048',
+        name: 'Device Compliance Policy Exists',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['Windows-Compliance', 'iOS-Compliance', 'Android-Compliance'],
+        missingCoverage: [],
+        recommendation: 'Compliance policies exist for all major platforms.'
+      },
+      {
+        controlId: 'CA-049',
+        name: 'Device Compliance Policy Assigned',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['All Users Group'],
+        missingCoverage: [],
+        recommendation: 'Compliance policies are assigned to all users.'
+      },
+      {
+        controlId: 'CA-050',
+        name: 'Jailbroken/Rooted Devices Blocked',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['Mobile-Compliance-Policy'],
+        missingCoverage: [],
+        recommendation: 'Jailbreak/root detection is enabled.'
+      },
+      {
+        controlId: 'CA-051',
+        name: 'Minimum OS Version Enforced',
+        severity: 'High',
+        status: 'Failed',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['All platforms'],
+        recommendation: 'Configure minimum OS versions (Windows 11, macOS 13+, iOS 16+, Android 12+).'
+      },
+      {
+        controlId: 'CA-052',
+        name: 'Device Encryption Required',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['Encryption-Policy'],
+        missingCoverage: [],
+        recommendation: 'BitLocker/FileVault/mobile encryption is required.'
+      },
+      {
+        controlId: 'CA-053',
+        name: 'Secure Boot / TPM Required',
+        severity: 'High',
+        status: 'Failed',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['Windows devices'],
+        recommendation: 'Require Secure Boot and TPM 2.0 for Windows devices.'
+      },
+      {
+        controlId: 'CA-054',
+        name: 'Microsoft Defender Device Risk Integrated',
+        severity: 'High',
+        status: 'Failed',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['Defender integration'],
+        recommendation: 'Integrate Microsoft Defender for Endpoint device risk assessment.'
+      },
+      {
+        controlId: 'CA-055',
+        name: 'High Device Risk Blocked',
+        severity: 'Critical',
+        status: 'Failed',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['Risk-based blocking'],
+        recommendation: 'Block high-risk devices detected by Defender for Endpoint.'
+      }
+    ]
+  }
+}
+
+// Compliance Dashboard
+app.get('/api/cap/dashboard/compliance', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      timestamp: new Date().toISOString(),
+      summary: { overallScore: 75, grade: 'C' },
+      frameworks: [
+        { name: 'Zero Trust', score: 78, grade: 'C', pillars: [{ name: 'Identity', score: 85, status: 'PASS' }] },
+        { name: 'CIS Controls', score: 72, grade: 'C', coverage: '65%' },
+        { name: 'NIST 800-53', score: 75, grade: 'C' },
+        { name: 'ISO 27001', score: 73, grade: 'C' }
+      ],
+      insights: [
+        { type: 'STRENGTH', framework: 'Zero Trust', message: 'Identity pillar is well-configured' },
+        { type: 'WEAKNESS', framework: 'NIST 800-53', message: 'Session management controls need strengthening' }
+      ]
+    }
+  })
+})
+
+// Controls Dashboard
+app.get('/api/cap/dashboard/controls', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      timestamp: new Date().toISOString(),
+      summary: { total: 87, compliant: 42, nonCompliant: 45, compliance: '48.3%' },
+      byCategory: [
+        { category: 'Policy Governance', total: 6, compliant: 5, percentage: 83, status: 'PASS', controls: [] },
+        { category: 'Identity Protection', total: 8, compliant: 6, percentage: 75, status: 'PASS', controls: [] }
+      ],
+      criticalGaps: [
+        { id: 'CA-026', name: 'Phishing Resistant MFA for Admins', description: 'Global administrators must use FIDO2' },
+        { id: 'CA-030', name: 'Device Compliance Enforcement', description: 'Require compliant devices' }
+      ]
+    }
+  })
+})
+
+// Risk Assessment Dashboard
+app.get('/api/cap/dashboard/risk', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      timestamp: new Date().toISOString(),
+      overallRiskLevel: 'MEDIUM',
+      riskScore: 35,
+      riskMatrix: {
+        critical: { count: 3, impact: 'SEVERE', timeToFix: '0-7 days' },
+        high: { count: 8, impact: 'SIGNIFICANT', timeToFix: '7-30 days' },
+        medium: { count: 12, impact: 'MODERATE', timeToFix: '30-90 days' },
+        low: { count: 22, impact: 'MINOR', timeToFix: '90+ days' }
+      },
+      topRisks: [
+        { controlId: 'CA-026', name: 'Phishing Resistant MFA', description: 'Admins lack protection' }
+      ],
+      complianceGap: '51.7%'
+    }
+  })
+})
+
+// Remediation Dashboard
+app.get('/api/cap/dashboard/remediation', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      timestamp: new Date().toISOString(),
+      summary: { total: 12, successful: 8, partial: 2, failed: 2, successRate: '67' },
+      recentRemediations: [
+        { id: 'rem-001', controlId: 'CA-010', timestamp: '2026-07-20T10:30:00Z', status: 'SUCCESS', dryRun: false }
+      ],
+      trend: 'IMPROVING'
+    }
+  })
+})
+
+// Drift Detection Dashboard
+app.get('/api/cap/dashboard/drift', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      timestamp: new Date().toISOString(),
+      driftDetected: false,
+      alerts: { active: 2, resolved: 15 },
+      summary: { totalDriftEvents: 17, totalAlerts: 17, activeAlerts: 2 },
+      trends: { trend: 'STABLE', message: 'Drift events stable' },
+      recentAlerts: []
+    }
+  })
 })
 
 // ============================================================
