@@ -583,42 +583,20 @@ tr:hover td { background: var(--color-background-secondary); }
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--color-background-secondary);
+  background: transparent;
   color: var(--clr-info-text);
   cursor: help;
   transition: all 0.2s ease;
-  font-size: 16px;
+  font-size: 18px;
   position: relative;
   flex-shrink: 0;
+  border: none;
+  padding: 0;
 }
 
 .page-help:hover {
   background: var(--clr-info-bg);
-  color: var(--clr-info-text);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
-}
-
-.page-help[title] {
-  position: relative;
-}
-
-.page-help[title]:hover::after {
-  content: attr(title);
-  position: absolute;
-  right: 0;
-  bottom: 110%;
-  background: var(--color-text-primary);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: normal;
-  max-width: 280px;
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  pointer-events: none;
-  line-height: 1.4;
 }
 
 .page-title {
