@@ -27,9 +27,8 @@ export class InvestigationService {
 
     try {
       // For future use when @anthropic-ai/sdk is installed
-      // For now, return a mock object that indicates API is configured
-      console.log('✅ Claude API key configured (awaiting SDK installation)')
-      return { configured: true }
+      console.log('ℹ️ Claude API key configured (SDK awaiting installation)')
+      return null
     } catch (error) {
       console.error('⚠️ Failed to initialize Claude API:', error.message)
       return null
