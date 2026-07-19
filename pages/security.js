@@ -320,12 +320,17 @@ function render(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-shield-exclamation"></i> Security Command Center</div>
+        <div class="page-title"><i class="fas fa-exclamation-triangle"></i> Security Command Center</div>
         <div class="page-subtitle">Single-pane-of-glass across Identity, Email, Endpoint, Apps & Data · Last scan: Today 08:45</div>
       </div>
-      <div class="page-actions">
-        <button class="btn" id="sec-refresh"><i class="ti ti-refresh"></i> Refresh</button>
-        <button class="btn btn-primary" id="sec-report"><i class="ti ti-download"></i> Export report</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="Detect and respond to security threats, manage incidents, and track remediation actions across your M365 tenant.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions">
+          <button class="btn" id="sec-refresh"><i class="fas fa-sync"></i> Refresh</button>
+          <button class="btn btn-primary" id="sec-report"><i class="fas fa-download"></i> Export report</button>
+        </div>
       </div>
     </div>
 

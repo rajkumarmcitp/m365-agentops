@@ -40,6 +40,84 @@ import { initMyAccount } from './pages/myaccount.js'
 import { initializeServiceHealth } from './lib/service-health-manager.js'
 
 // ============================================================
+// Help Icon Handler - Use event delegation
+// ============================================================
+let helpIconListenerAttached = false
+
+function attachHelpIconListeners() {
+  // Only attach listener once using event delegation
+  if (helpIconListenerAttached) return
+  helpIconListenerAttached = true
+
+  document.addEventListener('click', (e) => {
+    const helpIcon = e.target.closest('.page-help')
+    if (!helpIcon) return
+
+    e.stopPropagation()
+    const helpText = helpIcon.getAttribute('title')
+    if (!helpText) return
+
+    // Remove any existing popover from this icon
+    const existingPopover = helpIcon.querySelector('.help-popover')
+    if (existingPopover) {
+      existingPopover.remove()
+      return
+    }
+
+    // Create and show popover
+    const popover = document.createElement('div')
+    popover.className = 'help-popover'
+    popover.textContent = helpText
+    helpIcon.appendChild(popover)
+
+    // Close on outside click
+    const closePopover = (clickEvent) => {
+      if (!helpIcon.contains(clickEvent.target)) {
+        popover.remove()
+        document.removeEventListener('click', closePopover)
+      }
+    }
+    setTimeout(() => {
+      document.addEventListener('click', closePopover)
+    }, 0)
+  }, true) // Use capture phase
+}
+
+// Add help icons to any page-header that doesn't have one yet
+function ensureHelpIcons() {
+  // Attach listener once on first call (uses event delegation for all help icons)
+  attachHelpIconListeners()
+
+  const pageHeaders = document.querySelectorAll('.page-header')
+  pageHeaders.forEach(header => {
+    // Check if already has a help icon
+    const existingHelp = header.querySelector('.page-help')
+    if (existingHelp) return
+
+    // Get the title from page-title
+    const titleEl = header.querySelector('.page-title')
+    if (!titleEl) return
+
+    // Create a wrapper div for help icon if it doesn't have page-actions
+    let actionWrapper = header.querySelector('[style*="display:flex"]')
+    if (!actionWrapper) {
+      actionWrapper = document.createElement('div')
+      actionWrapper.style.display = 'flex'
+      actionWrapper.style.gap = '8px'
+      actionWrapper.style.alignItems = 'center'
+      header.appendChild(actionWrapper)
+    }
+
+    // Create help icon with generic help text
+    const helpBtn = document.createElement('button')
+    helpBtn.className = 'page-help'
+    helpBtn.title = 'Get help about this page'
+    helpBtn.innerHTML = '<i class="fas fa-question-circle"></i>'
+    actionWrapper.insertBefore(helpBtn, actionWrapper.firstChild)
+  })
+}
+
+// ============================================================
 // Global application state
 // ============================================================
 export const state = {
@@ -244,6 +322,9 @@ export async function go(pageId) {
 
   // Call init function (handle both sync and async)
   if (PAGE_INIT[pageId]) await PAGE_INIT[pageId]()
+
+  // Ensure help icons are present and attach listeners
+  setTimeout(() => ensureHelpIcons(), 100)
 }
 
 // ============================================================

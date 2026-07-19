@@ -804,13 +804,18 @@ async function renderProductionMainWithCachedData(el, results, lastRun) {
     el.innerHTML = `
       <div class="page-header">
         <div>
-          <div class="page-title"><i class="ti ti-settings-2"></i> CIS Benchmark Controls</div>
+          <div class="page-title"><i class="fas fa-cog"></i> CIS Benchmark Controls</div>
           <div class="page-subtitle">${allStats.total} security controls · Last run: ${lastRun ? new Date(lastRun).toLocaleString() : 'Never'}</div>
         </div>
-        <div class="page-actions">
-          <button class="btn" id="cfg-validation-btn"><i class="ti ti-checklist"></i> Validation Report</button>
-          <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Re-run</button>
-          <button class="btn btn-primary" id="cfg-agent-btn"><i class="ti ti-robot"></i> Config Agent</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="page-help" title="Assess and manage Microsoft 365 configuration settings against CIS Benchmarks. Validate compliance across Exchange, Teams, SharePoint, OneDrive, and more.">
+            <i class="fas fa-question-circle"></i>
+          </button>
+          <div class="page-actions">
+            <button class="btn" id="cfg-validation-btn"><i class="fas fa-check-square"></i> Validation Report</button>
+            <button class="btn" id="cfg-scan-now"><i class="fas fa-sync"></i> Re-run</button>
+            <button class="btn btn-primary" id="cfg-agent-btn"><i class="fas fa-robot"></i> Config Agent</button>
+          </div>
         </div>
       </div>
 
@@ -943,13 +948,18 @@ async function renderProductionMainWithRealData(el) {
     el.innerHTML = `
       <div class="page-header">
         <div>
-          <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
+          <div class="page-title"><i class="fas fa-cog"></i> Microsoft 365 Configuration</div>
           <div class="page-subtitle">Real-time Zero Trust Validation · Security Posture Assessment</div>
         </div>
-        <div class="page-actions">
-          <button class="btn" id="cfg-validation-btn"><i class="ti ti-checklist"></i> Validation Report</button>
-          <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Refresh Now</button>
-          <button class="btn btn-primary" id="cfg-agent-btn"><i class="ti ti-robot"></i> Config Agent</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="page-help" title="Assess and manage Microsoft 365 configuration settings against CIS Benchmarks. Validate compliance across Exchange, Teams, SharePoint, OneDrive, and more.">
+            <i class="fas fa-question-circle"></i>
+          </button>
+          <div class="page-actions">
+            <button class="btn" id="cfg-validation-btn"><i class="fas fa-check-square"></i> Validation Report</button>
+            <button class="btn" id="cfg-scan-now"><i class="fas fa-sync"></i> Refresh Now</button>
+            <button class="btn btn-primary" id="cfg-agent-btn"><i class="fas fa-robot"></i> Config Agent</button>
+          </div>
         </div>
       </div>
       <div style="padding:40px;text-align:center"><span class="spinner dark"></span> Loading real validation data...</div>
@@ -1172,11 +1182,16 @@ function renderErrorState(el, errorMsg) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
+        <div class="page-title"><i class="fas fa-cog"></i> Microsoft 365 Configuration</div>
         <div class="page-subtitle">CIS Benchmark Compliance Assessment</div>
       </div>
-      <div class="page-actions">
-        <button class="btn" id="cfg-retry"><i class="ti ti-refresh"></i> Retry</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="Assess and manage Microsoft 365 configuration settings against CIS Benchmarks. Validate compliance across Exchange, Teams, SharePoint, OneDrive, and more.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions">
+          <button class="btn" id="cfg-retry"><i class="fas fa-sync"></i> Retry</button>
+        </div>
       </div>
     </div>
 
@@ -1203,11 +1218,16 @@ function renderBlankProductionState(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-settings-2"></i> Microsoft 365 Configuration</div>
+        <div class="page-title"><i class="fas fa-cog"></i> Microsoft 365 Configuration</div>
         <div class="page-subtitle">CIS Benchmark Compliance Assessment</div>
       </div>
-      <div class="page-actions">
-        <button class="btn" id="cfg-scan-now"><i class="ti ti-refresh"></i> Run scan</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="Assess and manage Microsoft 365 configuration settings against CIS Benchmarks. Validate compliance across Exchange, Teams, SharePoint, OneDrive, and more.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions">
+          <button class="btn" id="cfg-scan-now"><i class="fas fa-sync"></i> Run scan</button>
+        </div>
       </div>
     </div>
 

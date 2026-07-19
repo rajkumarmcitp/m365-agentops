@@ -168,18 +168,21 @@ function renderZeroTrustError(el, errorMsg) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
+        <div class="page-title"><i class="fas fa-lock"></i> Zero Trust Compliance</div>
         <div class="page-subtitle">Unable to load validation data</div>
       </div>
+      <button class="page-help" title="Implement Zero Trust security principles by validating device compliance, user identity, and access controls. Assess your organization's Zero Trust maturity.">
+        <i class="fas fa-question-circle"></i>
+      </button>
     </div>
 
     <div style="margin-top:20px">
       <div class="card" style="background:var(--color-background-secondary);border-left:3px solid var(--color-warning);padding:16px">
-        <div style="font-size:13px;font-weight:500;margin-bottom:8px"><i class="ti ti-alert-circle"></i> Failed to load Zero Trust data</div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:8px"><i class="fas fa-exclamation-circle"></i> Failed to load Zero Trust data</div>
         <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.6">
           ${errorMsg}
           <br><br>
-          <button class="btn btn-small" id="zt-retry"><i class="ti ti-refresh"></i> Retry</button>
+          <button class="btn btn-small" id="zt-retry"><i class="fas fa-sync"></i> Retry</button>
         </div>
       </div>
     </div>
@@ -349,12 +352,17 @@ function renderZeroTrustWithData(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
+        <div class="page-title"><i class="fas fa-lock"></i> Zero Trust Compliance</div>
         <div class="page-subtitle">${totalValidations} controls · Risk ${riskScore}/100 · Trend <span style="color:${trendColor};font-weight:600">${trendArrow} ${trendValue > 0 ? '+' : ''}${trendValue}%</span> · Last run: ${lastRunTime ? new Date(lastRunTime).toLocaleString() : 'Unknown'}</div>
       </div>
-      <div class="page-actions">
-        <button class="btn" id="zt-rescan"><i class="ti ti-refresh"></i> Refresh</button>
-        <button class="btn btn-primary"><i class="ti ti-download"></i> Export</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="Implement Zero Trust security principles by validating device compliance, user identity, and access controls. Assess your organization's Zero Trust maturity.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions">
+          <button class="btn" id="zt-rescan"><i class="fas fa-sync"></i> Refresh</button>
+          <button class="btn btn-primary"><i class="fas fa-download"></i> Export</button>
+        </div>
       </div>
     </div>
 
@@ -1799,12 +1807,17 @@ function renderZeroTrustWithDemoData(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-lock-check"></i> Zero Trust Compliance</div>
+        <div class="page-title"><i class="fas fa-lock"></i> Zero Trust Compliance</div>
         <div class="page-subtitle">${total} controls across ${ZT_PILLARS.length} pillars</div>
       </div>
-      <div class="page-actions">
-        <button class="btn" id="zt-rescan"><i class="ti ti-refresh"></i> Refresh</button>
-        <button class="btn btn-primary"><i class="ti ti-download"></i> Export</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="page-help" title="Implement Zero Trust security principles by validating device compliance, user identity, and access controls. Assess your organization's Zero Trust maturity.">
+          <i class="fas fa-question-circle"></i>
+        </button>
+        <div class="page-actions">
+          <button class="btn" id="zt-rescan"><i class="fas fa-sync"></i> Refresh</button>
+          <button class="btn btn-primary"><i class="fas fa-download"></i> Export</button>
+        </div>
       </div>
     </div>
 

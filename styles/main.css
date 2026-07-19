@@ -603,11 +603,29 @@ tr:hover td { background: var(--color-background-secondary); }
   border: none;
   padding: 0;
   flex-shrink: 0;
+  position: relative;
 }
 
 .page-help:hover {
   background: var(--clr-info-bg);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.help-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 280px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  z-index: 1000;
 }
 
 .page-title {

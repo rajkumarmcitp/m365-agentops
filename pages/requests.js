@@ -173,13 +173,16 @@ function renderErrorState(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-inbox"></i> Service Requests</div>
+        <div class="page-title"><i class="fas fa-inbox"></i> Service Requests</div>
         <div class="page-subtitle">Manage and approve all self-service requests</div>
       </div>
+      <button class="page-help" title="View and manage all self-service requests submitted by users. Approve or reject requests for Exchange, Teams, SharePoint, and other M365 services.">
+        <i class="fas fa-question-circle"></i>
+      </button>
     </div>
 
     <div class="card" style="padding:40px;text-align:center">
-      <i class="ti ti-alert-circle" style="font-size:32px;color:var(--clr-danger-text);margin-bottom:12px;display:block"></i>
+      <i class="fas fa-exclamation-circle" style="font-size:32px;color:var(--clr-danger-text);margin-bottom:12px;display:block"></i>
       <p style="color:var(--color-text-secondary)">Error loading requests. Please try again.</p>
     </div>
   `
@@ -201,9 +204,12 @@ function renderList(el) {
   el.innerHTML = `
     <div class="page-header">
       <div>
-        <div class="page-title"><i class="ti ti-inbox"></i> Service Requests</div>
+        <div class="page-title"><i class="fas fa-inbox"></i> Service Requests</div>
         <div class="page-subtitle">Manage and approve all self-service requests</div>
       </div>
+      <button class="page-help" title="View and manage all self-service requests submitted by users. Approve or reject requests for Exchange, Teams, SharePoint, and other M365 services.">
+        <i class="fas fa-question-circle"></i>
+      </button>
     </div>
 
     <!-- KPI Stats -->
@@ -717,7 +723,7 @@ function renderDetails(el) {
     <div class="page-header">
       <div style="display:flex;align-items:center;gap:12px">
         <button class="back-btn btn" style="padding:6px 12px;border:none;background:var(--color-background-secondary);color:var(--color-text-primary);cursor:pointer;border-radius:var(--border-radius-sm)">
-          <i class="ti ti-arrow-left"></i> Back
+          <i class="fas fa-arrow-left"></i> Back
         </button>
         <div>
           <div class="page-title">${req.requestId}</div>
