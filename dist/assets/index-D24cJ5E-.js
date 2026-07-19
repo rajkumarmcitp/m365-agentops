@@ -4274,147 +4274,147 @@ Current status: Secure Score 64/95 · ${_e.filter(l=>l.status!=="resolved").leng
       <!-- TAB: OVERVIEW -->
       <div class="investigation-tab-content active" data-tab="overview">
         <!-- AI Summary Narrative -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-brain"></i> Investigation Summary</div>
-          <div id="ai-narrative-section" style="font-size:11px;line-height:1.6;color:var(--color-text-primary)"></div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-brain"></i> Investigation Summary</div>
+          <div id="ai-narrative-section" style="font-size:13px;line-height:1.7;color:var(--color-text-primary);margin-top:12px"></div>
         </div>
 
         <!-- Findings by Severity -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-list-check"></i> Findings</div>
-          <div id="findings-section" style="font-size:11px"></div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="ti ti-list-check"></i> Findings</div>
+          <div id="findings-section" style="font-size:12px;margin-top:12px"></div>
         </div>
 
         <!-- Recommended Actions -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-bulb"></i> Recommended Actions</div>
-          <div id="recommendations-section" style="font-size:11px"></div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="ti ti-bulb"></i> Recommended Actions</div>
+          <div id="recommendations-section" style="font-size:12px;margin-top:12px"></div>
         </div>
       </div>
 
       <!-- TAB: TIMELINE (Most Important for Analysts) -->
       <div class="investigation-tab-content" data-tab="timeline" style="display:none">
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-timeline"></i> Investigation Timeline</div>
-          <div id="timeline-section" style="font-size:11px"></div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-timeline"></i> Investigation Timeline</div>
+          <div id="timeline-section" style="font-size:12px;margin-top:12px"></div>
         </div>
       </div>
 
       <!-- TAB: IDENTITY -->
       <div class="investigation-tab-content" data-tab="identity" style="display:none">
         <!-- Account Changes -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-clipboard-list"></i> Account Changes</div>
-          <div id="account-changes-section" style="font-size:11px;display:block"></div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-clipboard-list"></i> Account Changes</div>
+          <div id="account-changes-section" style="font-size:12px;margin-top:12px"></div>
         </div>
 
         <!-- Risk Detections -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-alert-triangle"></i> Risk Detections</div>
-          <div id="risk-detections-section" style="font-size:11px"></div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="ti ti-alert-triangle"></i> Risk Detections</div>
+          <div id="risk-detections-section" style="font-size:12px;margin-top:12px"></div>
         </div>
 
         <!-- Sign-in Activity -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-login"></i> Sign-in Activity</div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="ti ti-login"></i> Sign-in Activity</div>
 
           <!-- Sign-in Locations Map -->
-          <div style="margin-bottom:16px;display:block;width:100%">
-            <div style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--color-text-secondary)">📍 Sign-in Locations Map</div>
-            <div id="signin-locations-map" style="position:relative;width:100%;height:300px;border-radius:6px;background:var(--color-background-secondary);overflow:hidden;box-sizing:border-box"></div>
+          <div style="margin-top:16px;display:block;width:100%">
+            <div style="font-size:12px;font-weight:600;margin-bottom:12px;color:var(--color-text-primary)">📍 Sign-in Locations Map</div>
+            <div id="signin-locations-map" style="position:relative;width:100%;height:350px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden;box-sizing:border-box;border:1px solid var(--color-border)"></div>
           </div>
 
-          <div id="signin-logs-section" style="font-size:11px"></div>
+          <div id="signin-logs-section" style="font-size:12px;margin-top:16px"></div>
         </div>
 
         <!-- Security Alerts -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-bell-alert"></i> Security Alerts</div>
-          <div id="security-alerts-section" style="font-size:11px"></div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="ti ti-bell-alert"></i> Security Alerts</div>
+          <div id="security-alerts-section" style="font-size:12px;margin-top:12px"></div>
         </div>
       </div>
 
       <!-- TAB: PERMISSIONS -->
       <div class="investigation-tab-content" data-tab="permissions" style="display:none">
         <!-- Directory Roles -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-crown"></i> Directory Roles</div>
-          <div id="directory-roles-section" style="font-size:11px"></div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-crown"></i> Directory Roles</div>
+          <div id="directory-roles-section" style="font-size:12px;margin-top:12px"></div>
         </div>
 
         <!-- User Groups -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-users-group"></i> Group Memberships</div>
-          <div id="user-groups-section" style="font-size:11px"></div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="ti ti-users-group"></i> Group Memberships</div>
+          <div id="user-groups-section" style="font-size:12px;margin-top:12px"></div>
         </div>
 
         <!-- OAuth Permissions -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-key"></i> OAuth Permissions Granted</div>
-          <div id="oauth-consent-section" style="font-size:11px"></div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="ti ti-key"></i> OAuth Permissions Granted</div>
+          <div id="oauth-consent-section" style="font-size:12px;margin-top:12px"></div>
         </div>
 
         <!-- Authentication Methods -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-key"></i> Authentication Methods</div>
-          <div id="authentication-methods-section" style="font-size:11px"></div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="ti ti-key"></i> Authentication Methods</div>
+          <div id="authentication-methods-section" style="font-size:12px;margin-top:12px"></div>
         </div>
       </div>
 
       <!-- TAB: DEVICES -->
       <div class="investigation-tab-content" data-tab="devices" style="display:none">
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-device-laptop"></i> Devices Used</div>
-          <div id="devices-section" style="font-size:11px"></div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-device-laptop"></i> Devices Used</div>
+          <div id="devices-section" style="font-size:12px;margin-top:12px"></div>
         </div>
       </div>
 
       <!-- TAB: APPLICATIONS -->
       <div class="investigation-tab-content" data-tab="applications" style="display:none">
-        <div class="card mb-3">
-          <div class="card-title mb-3"><i class="ti ti-apps"></i> Application Access</div>
-          <div id="applications-section" style="font-size:11px"></div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-apps"></i> Application Access</div>
+          <div id="applications-section" style="font-size:12px;margin-top:12px"></div>
         </div>
 
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-app-window"></i> Enterprise Applications Owned</div>
-          <div id="enterprise-apps-section" style="font-size:11px"></div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="ti ti-app-window"></i> Enterprise Applications Owned</div>
+          <div id="enterprise-apps-section" style="font-size:12px;margin-top:12px"></div>
         </div>
       </div>
 
       <!-- TAB: ADMIN CHANGES -->
       <div class="investigation-tab-content" data-tab="admin-changes" style="display:none">
         <!-- Account Changes (Structured Table) -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-user-edit"></i> Administrative Changes</div>
-          <div id="account-changes-section" style="font-size:11px;display:block"></div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-user-edit"></i> Administrative Changes</div>
+          <div id="account-changes-section" style="font-size:12px;margin-top:12px;display:block"></div>
         </div>
 
         <!-- Actions on Other Accounts -->
-        <div class="card mb-3">
-          <div class="card-title mb-3"><i class="ti ti-users-group"></i> Actions on Other Accounts</div>
-          <div id="other-accounts-section" style="font-size:11px;display:block"></div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="ti ti-users-group"></i> Actions on Other Accounts</div>
+          <div id="other-accounts-section" style="font-size:12px;margin-top:12px;display:block"></div>
         </div>
 
         <!-- Mailbox Settings -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-mail"></i> Mailbox Settings</div>
-          <div id="mailbox-settings-section" style="font-size:11px"></div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="ti ti-mail"></i> Mailbox Settings</div>
+          <div id="mailbox-settings-section" style="font-size:12px;margin-top:12px"></div>
         </div>
       </div>
 
       <!-- TAB: RAW EVENTS -->
       <div class="investigation-tab-content" data-tab="raw-events" style="display:none">
         <!-- Audit Actions -->
-        <div class="card mb-3">
-          <div class="card-title mb-3"><i class="ti ti-clipboard-list"></i> All Audit Events</div>
-          <div id="audit-logs-section" style="font-size:11px"></div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-clipboard-list"></i> All Audit Events</div>
+          <div id="audit-logs-section" style="font-size:12px;margin-top:12px"></div>
         </div>
 
         <!-- Risky User Status -->
-        <div class="card mb-3">
-          <div class="card-title mb-3" style="font-size:12px"><i class="ti ti-alert-triangle"></i> Risky User Status</div>
-          <div id="risky-user-section" style="font-size:11px"></div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="ti ti-alert-triangle"></i> Risky User Status</div>
+          <div id="risky-user-section" style="font-size:12px;margin-top:12px"></div>
         </div>
       </div>
 
