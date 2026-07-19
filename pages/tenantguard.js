@@ -499,11 +499,110 @@ function renderAuditView() {
 
 function renderDemoTenantGuard(el) {
   const demoAlerts = [
-    { id: 'alert-1', priority: 'P0', severity: 'CRITICAL', headline: 'MFA Disabled for Global Admin', description: 'MFA requirement removed for global administrator', actor: 'security-admin@contoso.com', source: 'Entra ID', timestamp: new Date().toISOString(), score: 100, status: 'open' },
-    { id: 'alert-2', priority: 'P1', severity: 'CRITICAL', headline: 'Conditional Access Disabled', description: 'Critical CA policy was disabled', actor: 'cloud-admin@contoso.com', source: 'Entra ID', timestamp: new Date(Date.now() - 5*60000).toISOString(), score: 95, status: 'open' },
-    { id: 'alert-3', priority: 'P1', severity: 'CRITICAL', headline: 'OAuth Admin Consent Granted', description: 'OAuth app received admin consent', actor: 'system', source: 'Application', timestamp: new Date(Date.now() - 10*60000).toISOString(), score: 92, status: 'open' },
-    { id: 'alert-4', priority: 'P2', severity: 'HIGH', headline: 'External Forwarding Created', description: 'Email forwarding rule to external email', actor: 'user@contoso.com', source: 'Exchange', timestamp: new Date(Date.now() - 15*60000).toISOString(), score: 88, status: 'open' },
-    { id: 'alert-5', priority: 'P2', severity: 'HIGH', headline: 'Global Admin Assigned', description: 'New global admin role assignment', actor: 'admin@contoso.com', source: 'Entra ID', timestamp: new Date(Date.now() - 20*60000).toISOString(), score: 85, status: 'open' },
+    {
+      id: 'alert-1',
+      priority: 'P0',
+      severity: 'CRITICAL',
+      headline: 'MFA Disabled for Global Admin',
+      description: 'MFA requirement removed for global administrator',
+      actor: 'security-admin@contoso.com',
+      source: 'Entra ID',
+      timestamp: new Date().toISOString(),
+      score: 100,
+      status: 'open',
+      type: 'mfa_disabled',
+      userPrivilege: 'global_admin',
+      dataType: 'email',
+      events: [
+        { timestamp: new Date(Date.now() - 20*60000).toISOString(), type: 'sign_in', description: 'Sign-in from 203.45.67.89 (USA)', severity: 'INFO' },
+        { timestamp: new Date(Date.now() - 18*60000).toISOString(), type: 'policy_change', description: 'Accessed Azure Active Directory admin center', severity: 'MEDIUM', actionRequired: true },
+        { timestamp: new Date(Date.now() - 15*60000).toISOString(), type: 'policy_change', description: 'Modified MFA requirement policy for global admins', severity: 'CRITICAL', actionRequired: true },
+        { timestamp: new Date(Date.now() - 12*60000).toISOString(), type: 'sign_in', description: 'Sign-in attempt without MFA (unusual)', severity: 'HIGH', actionRequired: true },
+      ]
+    },
+    {
+      id: 'alert-2',
+      priority: 'P1',
+      severity: 'CRITICAL',
+      headline: 'Conditional Access Disabled',
+      description: 'Critical CA policy was disabled',
+      actor: 'cloud-admin@contoso.com',
+      source: 'Entra ID',
+      timestamp: new Date(Date.now() - 5*60000).toISOString(),
+      score: 95,
+      status: 'open',
+      type: 'permission_escalation',
+      userPrivilege: 'security_admin',
+      dataType: 'email',
+      events: [
+        { timestamp: new Date(Date.now() - 30*60000).toISOString(), type: 'sign_in', description: 'Sign-in from 192.168.1.100 (internal)', severity: 'INFO' },
+        { timestamp: new Date(Date.now() - 28*60000).toISOString(), type: 'resource_access', description: 'Accessed Azure Portal', severity: 'INFO' },
+        { timestamp: new Date(Date.now() - 25*60000).toISOString(), type: 'policy_change', description: 'Viewed Conditional Access policies', severity: 'MEDIUM', actionRequired: true },
+        { timestamp: new Date(Date.now() - 22*60000).toISOString(), type: 'policy_change', description: 'Disabled CA policy: Block legacy authentication', severity: 'CRITICAL', actionRequired: true },
+        { timestamp: new Date(Date.now() - 5*60000).toISOString(), type: 'sign_in', description: 'Legacy protocol sign-in detected (POP3)', severity: 'CRITICAL', actionRequired: true },
+      ]
+    },
+    {
+      id: 'alert-3',
+      priority: 'P1',
+      severity: 'CRITICAL',
+      headline: 'OAuth Admin Consent Granted',
+      description: 'OAuth app received admin consent',
+      actor: 'system',
+      source: 'Application',
+      timestamp: new Date(Date.now() - 10*60000).toISOString(),
+      score: 92,
+      status: 'open',
+      type: 'permission_escalation',
+      userPrivilege: 'standard_user',
+      dataType: 'email',
+      events: [
+        { timestamp: new Date(Date.now() - 40*60000).toISOString(), type: 'app_access', description: 'Unknown app requested permissions', severity: 'MEDIUM', actionRequired: true },
+        { timestamp: new Date(Date.now() - 38*60000).toISOString(), type: 'app_access', description: 'App requested admin consent for Directory.Read.All', severity: 'HIGH', actionRequired: true },
+        { timestamp: new Date(Date.now() - 35*60000).toISOString(), type: 'permission_grant', description: 'Admin consent granted to app', severity: 'CRITICAL', actionRequired: true },
+        { timestamp: new Date(Date.now() - 10*60000).toISOString(), type: 'data_access', description: 'App accessed directory listing', severity: 'HIGH', actionRequired: true },
+      ]
+    },
+    {
+      id: 'alert-4',
+      priority: 'P2',
+      severity: 'HIGH',
+      headline: 'External Forwarding Created',
+      description: 'Email forwarding rule to external email',
+      actor: 'user@contoso.com',
+      source: 'Exchange',
+      timestamp: new Date(Date.now() - 15*60000).toISOString(),
+      score: 88,
+      status: 'open',
+      type: 'forwarding_rule',
+      userPrivilege: 'standard_user',
+      dataType: 'email',
+      events: [
+        { timestamp: new Date(Date.now() - 60*60000).toISOString(), type: 'sign_in', description: 'Sign-in from 185.22.33.44 (Russia, VPN)', severity: 'HIGH', actionRequired: true },
+        { timestamp: new Date(Date.now() - 58*60000).toISOString(), type: 'mailbox_access', description: 'Accessed mailbox rules settings', severity: 'MEDIUM', actionRequired: true },
+        { timestamp: new Date(Date.now() - 55*60000).toISOString(), type: 'rule_creation', description: 'Created forwarding rule to external@protonmail.com', severity: 'CRITICAL', actionRequired: true },
+      ]
+    },
+    {
+      id: 'alert-5',
+      priority: 'P2',
+      severity: 'HIGH',
+      headline: 'Global Admin Assigned',
+      description: 'New global admin role assignment',
+      actor: 'admin@contoso.com',
+      source: 'Entra ID',
+      timestamp: new Date(Date.now() - 20*60000).toISOString(),
+      score: 85,
+      status: 'open',
+      type: 'permission_escalation',
+      userPrivilege: 'compliance_admin',
+      dataType: 'email',
+      events: [
+        { timestamp: new Date(Date.now() - 45*60000).toISOString(), type: 'sign_in', description: 'Sign-in successful', severity: 'INFO' },
+        { timestamp: new Date(Date.now() - 43*60000).toISOString(), type: 'resource_access', description: 'Accessed Azure AD admin center', severity: 'INFO' },
+        { timestamp: new Date(Date.now() - 40*60000).toISOString(), type: 'role_assignment', description: 'Assigned global admin role to inactive-user@contoso.com', severity: 'CRITICAL', actionRequired: true },
+      ]
+    },
   ]
 
   const demoCorrelations = [
@@ -912,6 +1011,35 @@ function showAlertDetail(el, alert) {
         <div style="padding:12px;background:var(--color-background-primary);border-radius:6px">
           <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">📊 SOURCE</div>
           <div style="font-size:12px">${alert?.source || 'Unknown Service'}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INVESTIGATION TIMELINE -->
+    <div class="card" style="margin-bottom:16px;padding:16px;background:var(--color-background-secondary);border-radius:8px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">📈 INVESTIGATION TIMELINE</div>
+      <div style="margin-top:12px;position:relative;padding-left:24px">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--color-border-primary)"></div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          ${(alert?.events || []).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).map(event => {
+            const eventColor = event.severity === 'CRITICAL' ? '#d32f2f' : event.severity === 'HIGH' ? '#f57c00' : event.severity === 'MEDIUM' ? '#1976d2' : '#666'
+            const eventIcon = event.type === 'sign_in' ? '🔐' : event.type === 'policy_change' ? '⚙️' : event.type === 'resource_access' ? '📁' : event.type === 'mailbox_access' ? '📧' : event.type === 'rule_creation' ? '📋' : event.type === 'role_assignment' ? '👤' : event.type === 'app_access' ? '🔗' : event.type === 'permission_grant' ? '✅' : event.type === 'data_access' ? '💾' : '📌'
+            return `
+              <div>
+                <div style="position:absolute;left:-11px;width:14px;height:14px;background:${eventColor};border:3px solid white;border-radius:50%;margin-top:2px"></div>
+                <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px">
+                  <div style="font-size:12px;font-weight:600">${eventIcon} ${event.type.replace(/_/g, ' ').toUpperCase()}</div>
+                  ${event.actionRequired ? '<span style="background:#d32f2f;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600">⚠️ ACTION</span>' : ''}
+                </div>
+                <div style="font-size:12px;color:var(--color-text-primary);margin-bottom:4px">${event.description}</div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary)">
+                  <span>📅 ${new Date(event.timestamp).toLocaleTimeString()}</span>
+                  <span style="color:${eventColor};font-weight:600">${event.severity}</span>
+                </div>
+              </div>
+            `
+          }).join('')}
+          ${(!alert?.events || alert.events.length === 0) ? '<div style="color:var(--color-text-secondary);text-align:center;padding:20px;font-size:12px">No timeline events available</div>' : ''}
         </div>
       </div>
     </div>
