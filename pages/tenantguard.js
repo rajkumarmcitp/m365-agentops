@@ -160,16 +160,20 @@ function renderContent(el) {
     })
   })
 
-  // Correlation details modal
+  // Correlation click - navigate to incidents tab
   document.querySelectorAll('.correlation-item').forEach(item => {
     item.addEventListener('click', () => {
-      const correlationId = item.dataset.correlationId
-      const correlation = allCorrelations.find(c => c.id === correlationId)
-      if (correlation) {
-        showCorrelationDetails(correlation)
-      }
+      activeTab = 'incidents'
+      renderContent(el)
+      // Wait for incidents view to render then attach detail listeners
+      setTimeout(() => {
+        attachIncidentDetailListeners()
+      }, 0)
     })
   })
+
+  // Attach incident detail listeners for incidents tab
+  attachIncidentDetailListeners()
 
   document.getElementById('tg-refresh')?.addEventListener('click', async () => {
     if (!isRefreshing) {
@@ -410,15 +414,16 @@ function renderIncidentsView() {
       <div class="card-title">Correlated Incidents (${allCorrelations.length})</div>
       <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
         ${allCorrelations.map(incident => `
-          <div style="padding:12px;border:0.5px solid var(--color-border-secondary);border-left:3px solid ${incident?.risk_level === 'CRITICAL' ? ALERT_PRIORITY.P1.color : ALERT_PRIORITY.P2.color};border-radius:6px">
+          <div class="incident-detail-btn" data-incident-id="${incident?.id}" style="padding:12px;border:0.5px solid var(--color-border-secondary);border-left:3px solid ${incident?.risk_level === 'CRITICAL' ? ALERT_PRIORITY.P1.color : ALERT_PRIORITY.P2.color};border-radius:6px;cursor:pointer;transition:all 0.2s;background:var(--color-background-secondary)">
             <div style="font-size:12px;font-weight:600;margin-bottom:6px">${incident?.description || 'Unknown'}</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;color:var(--color-text-secondary)">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;color:var(--color-text-secondary);margin-bottom:6px">
               <div>📊 ${incident?.alert_count || 0} events | Score: ${incident?.correlation_score || 0}/100</div>
               <div>🏷️ ${incident?.correlation_type || 'UNKNOWN'}</div>
             </div>
-            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px">
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">
               ${new Date(incident?.start_timestamp || Date.now()).toLocaleString()} → ${new Date(incident?.end_timestamp || Date.now()).toLocaleString()}
             </div>
+            <div style="font-size:10px;color:var(--clr-info-text);font-weight:500">📖 Click for details | 🔍 Investigate →</div>
           </div>
         `).join('')}
         ${allCorrelations.length === 0 ? '<div style="color:var(--color-text-secondary);text-align:center;padding:40px;font-size:12px">No correlated incidents</div>' : ''}
@@ -613,6 +618,156 @@ function getDemoCorrelations() {
   return [
     { id: 'corr-3', description: 'Multi-Stage: Admin compromise → Security bypass → Access', alert_count: 4, correlation_type: 'PATTERN', risk_level: 'CRITICAL', correlation_score: 95, start_timestamp: new Date(Date.now() - 20*60000).toISOString(), end_timestamp: new Date().toISOString() },
   ]
+}
+
+function attachIncidentDetailListeners() {
+  document.querySelectorAll('.incident-detail-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const incidentId = btn.dataset.incidentId
+      const incident = allCorrelations.find(c => c.id === incidentId)
+      if (incident) {
+        showIncidentDetailModal(incident)
+      }
+    })
+  })
+}
+
+async function startInvestigation(incident) {
+  try {
+    console.log('🔍 Starting investigation for incident:', incident.id)
+    showToast('🔍 Investigation started for: ' + incident.description.substring(0, 50), 'success')
+
+    // In a real system, this would:
+    // 1. Create an investigation record
+    // 2. Fetch related events
+    // 3. Run correlation analysis
+    // 4. Generate initial report
+
+    console.log('📊 Investigation data:', {
+      incident_id: incident.id,
+      description: incident.description,
+      events_count: incident.alert_count,
+      timeline_start: incident.start_timestamp,
+      timeline_end: incident.end_timestamp,
+      risk_level: incident.risk_level
+    })
+  } catch (error) {
+    console.error('❌ Investigation start failed:', error)
+    showToast('❌ Failed to start investigation', 'error')
+  }
+}
+
+function showIncidentDetailModal(incident) {
+  if (!incident) return
+
+  const modal = document.createElement('div')
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `
+
+  const content = document.createElement('div')
+  content.style.cssText = `
+    background: var(--color-background-primary);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 700px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  `
+
+  const riskColor = incident?.risk_level === 'CRITICAL' ? '#d32f2f' : incident?.risk_level === 'HIGH' ? '#f57c00' : '#fbc02d'
+
+  content.innerHTML = `
+    <div style="margin-bottom: 20px">
+      <div style="display: flex; justify-content: space-between; align-items: start; gap: 16px">
+        <div>
+          <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px">${incident?.description || 'Unknown Incident'}</div>
+          <div style="display: flex; gap: 12px; margin-bottom: 12px">
+            <span style="background: ${riskColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600">${incident?.risk_level || 'UNKNOWN'}</span>
+            <span style="background: var(--color-background-secondary); color: var(--color-text-secondary); padding: 4px 12px; border-radius: 20px; font-size: 12px">${incident?.correlation_type || 'PATTERN'}</span>
+          </div>
+        </div>
+        <button onclick="this.closest('[data-modal]').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--color-text-secondary)">✕</button>
+      </div>
+    </div>
+
+    <div style="background: var(--color-background-secondary); padding: 16px; border-radius: 6px; margin-bottom: 16px">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px">
+        <div>
+          <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px">CORRELATION SCORE</div>
+          <div style="font-size: 28px; font-weight: 700; color: ${riskColor}">${incident?.correlation_score || 0}/100</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px">EVENTS INVOLVED</div>
+          <div style="font-size: 28px; font-weight: 700; color: var(--clr-info-text)">${incident?.alert_count || 0}</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px">RISK LEVEL</div>
+          <div style="font-size: 20px; font-weight: 700; color: ${riskColor}">${incident?.risk_level || 'N/A'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 16px">
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--color-text-primary)">TIMELINE</div>
+      <div style="background: var(--color-background-secondary); padding: 12px; border-radius: 6px; font-size: 13px">
+        <div style="margin-bottom: 6px">
+          <span style="color: var(--color-text-secondary)">📅 Start:</span> ${new Date(incident?.start_timestamp || Date.now()).toLocaleString()}
+        </div>
+        <div>
+          <span style="color: var(--color-text-secondary)">📅 End:</span> ${new Date(incident?.end_timestamp || Date.now()).toLocaleString()}
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 16px">
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--color-text-primary)">INCIDENT DETAILS</div>
+      <div style="background: var(--color-background-secondary); padding: 12px; border-radius: 6px; font-size: 13px; line-height: 1.6; color: var(--color-text-secondary)">
+        <p style="margin: 0 0 8px 0">
+          <strong>📌 Incident ID:</strong> ${incident?.id || 'N/A'}
+        </p>
+        <p style="margin: 0 0 8px 0">
+          <strong>🏷️ Type:</strong> ${incident?.correlation_type || 'N/A'}
+        </p>
+        <p style="margin: 0 0 8px 0">
+          <strong>⚠️ Risk Level:</strong> ${incident?.risk_level || 'N/A'}
+        </p>
+        <p style="margin: 0">
+          <strong>📊 Description:</strong> ${incident?.description || 'N/A'}
+        </p>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px">
+      <button onclick="this.closest('[data-modal]').remove()" style="flex: 1; padding: 10px; background: var(--color-background-secondary); border: 1px solid var(--color-border-primary); border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--color-text-primary)">Close</button>
+      <button id="investigate-btn" style="flex: 1; padding: 10px; background: var(--clr-info-bg); border: 1px solid var(--clr-info-text); border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--clr-info-text)">🔍 Start Investigation</button>
+    </div>
+  `
+
+  modal.setAttribute('data-modal', 'true')
+  modal.appendChild(content)
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove()
+  })
+
+  // Attach investigate button handler
+  const investigateBtn = content.querySelector('#investigate-btn')
+  investigateBtn.addEventListener('click', async () => {
+    await startInvestigation(incident)
+    modal.remove()
+  })
+
+  document.body.appendChild(modal)
 }
 
 function showCorrelationDetails(correlation) {
