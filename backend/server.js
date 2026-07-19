@@ -86,11 +86,19 @@ import {
 import {
   createPlaybook, getPlaybook, getAllPlaybooks, getPlaybooksByTrigger,
   updatePlaybook, togglePlaybook, deletePlaybook, getPlaybookStats,
-  getExecutionHistory, getExecution, validatePlaybook, exportPlaybooks, importPlaybooks
+  getExecutionHistory as getPlaybookExecutionHistory, getExecution as getPlaybookExecution, validatePlaybook, exportPlaybooks, importPlaybooks
 } from './playbook-service.js'
 import {
   executePlaybook, getAvailableActions, getTriggerTypes
 } from './playbook-executor.js'
+import {
+  evaluateRule, createAlertFromRule, getAvailableOperators, getAvailableFields, validateRule
+} from './rules-engine.js'
+import {
+  createRule, getRule, getAllRules, getEnabledRules, updateRule, toggleRule,
+  deleteRule, getExecutionHistory as getRuleExecutionHistory, getExecution as getRuleExecution, getRuleStats, searchRules,
+  exportRules, importRules, duplicateRule, logExecution
+} from './rules-service.js'
 import { ExchangeCollector } from './collectors/exchange-collector.js'
 import { TeamsCollector } from './collectors/teams-collector.js'
 import { SharePointCollector } from './collectors/sharepoint-collector.js'
@@ -21323,7 +21331,7 @@ app.get('/api/playbooks/by-trigger/:triggerType', (req, res) => {
 // Get execution by ID (must be before :playbookId route)
 app.get('/api/playbooks/executions/:executionId', (req, res) => {
   try {
-    const execution = getExecution(req.params.executionId)
+    const execution = getPlaybookExecution(req.params.executionId)
     res.json({ success: true, data: execution })
   } catch (error) {
     res.status(404).json({ success: false, message: error.message })
@@ -21419,10 +21427,212 @@ app.post('/api/playbooks/:playbookId/execute', async (req, res) => {
 app.get('/api/playbooks/:playbookId/executions', (req, res) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit) : 50
-    const executions = getExecutionHistory(req.params.playbookId, limit)
+    const executions = getPlaybookExecutionHistory(req.params.playbookId, limit)
     res.json({ success: true, data: executions })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// ============================================================
+// Custom Alert Rules Engine API Endpoints
+// ============================================================
+
+// Get available operators
+app.get('/api/rules/operators', (req, res) => {
+  try {
+    const operators = getAvailableOperators()
+    res.json({ success: true, data: operators })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get available fields
+app.get('/api/rules/fields', (req, res) => {
+  try {
+    const fields = getAvailableFields()
+    res.json({ success: true, data: fields })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get rule statistics
+app.get('/api/rules/stats', (req, res) => {
+  try {
+    const stats = getRuleStats()
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get all rules
+app.get('/api/rules', (req, res) => {
+  try {
+    const rules = getAllRules()
+    res.json({ success: true, data: rules })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Search rules
+app.get('/api/rules/search', (req, res) => {
+  try {
+    const query = req.query.q || ''
+    const results = searchRules(query)
+    res.json({ success: true, data: results })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get enabled rules only
+app.get('/api/rules/enabled', (req, res) => {
+  try {
+    const rules = getEnabledRules()
+    res.json({ success: true, data: rules })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Export rules
+app.get('/api/rules/export', (req, res) => {
+  try {
+    const data = exportRules()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Create rule
+app.post('/api/rules', (req, res) => {
+  try {
+    const validation = validateRule(req.body)
+    if (!validation.valid) {
+      return res.status(400).json({ success: false, message: validation.errors.join(', ') })
+    }
+    const rule = createRule(req.body)
+    res.json({ success: true, data: rule })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Import rules
+app.post('/api/rules/import', (req, res) => {
+  try {
+    const result = importRules(req.body)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get rule by ID
+app.get('/api/rules/:ruleId', (req, res) => {
+  try {
+    const rule = getRule(req.params.ruleId)
+    res.json({ success: true, data: rule })
+  } catch (error) {
+    res.status(404).json({ success: false, message: error.message })
+  }
+})
+
+// Update rule
+app.put('/api/rules/:ruleId', (req, res) => {
+  try {
+    const rule = updateRule(req.params.ruleId, req.body)
+    res.json({ success: true, data: rule })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Toggle rule
+app.put('/api/rules/:ruleId/toggle', (req, res) => {
+  try {
+    const { enabled } = req.body
+    if (enabled === undefined) {
+      return res.status(400).json({ success: false, message: 'enabled field is required' })
+    }
+    const rule = toggleRule(req.params.ruleId, enabled)
+    res.json({ success: true, data: rule })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Duplicate rule
+app.post('/api/rules/:ruleId/duplicate', (req, res) => {
+  try {
+    const rule = duplicateRule(req.params.ruleId)
+    res.json({ success: true, data: rule })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Delete rule
+app.delete('/api/rules/:ruleId', (req, res) => {
+  try {
+    const result = deleteRule(req.params.ruleId)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Test rule against alert
+app.post('/api/rules/:ruleId/test', (req, res) => {
+  try {
+    const { alert, allAlerts } = req.body
+    if (!alert) {
+      return res.status(400).json({ success: false, message: 'alert is required' })
+    }
+
+    const rule = getRule(req.params.ruleId)
+    const result = evaluateRule(rule, alert, allAlerts || [])
+
+    // Log execution
+    logExecution({
+      ruleId: rule.id,
+      ruleName: rule.name,
+      alert,
+      matched: result.matched,
+      matchDetails: result.details,
+      generatedAlert: result.matched ? createAlertFromRule(rule, alert) : null,
+      executionTimeMs: 1
+    })
+
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get rule execution history
+app.get('/api/rules/:ruleId/executions', (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit) : 100
+    const executions = getRuleExecutionHistory(req.params.ruleId, limit)
+    res.json({ success: true, data: executions })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get execution by ID
+app.get('/api/rules/executions/:executionId', (req, res) => {
+  try {
+    const execution = getRuleExecution(req.params.executionId)
+    res.json({ success: true, data: execution })
+  } catch (error) {
+    res.status(404).json({ success: false, message: error.message })
   }
 })
 
