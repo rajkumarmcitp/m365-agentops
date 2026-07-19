@@ -114,14 +114,9 @@ function renderContent(el) {
         <div class="page-title"><i class="ti ti-shield-exclamation"></i> TenantGuard Security Monitoring</div>
         <div class="page-subtitle">Real-time threat detection & attack pattern analysis · ${liveIndicator} · Updated: ${lastUpdateStr}</div>
       </div>
-      <div style="display:flex;gap:12px;align-items:center">
-        <div class="page-help" title="Monitor and investigate suspicious activities, attack chains, and correlations using AI-powered threat detection">
-          <i class="ti ti-help-circle"></i>
-        </div>
-        <div class="page-actions" style="display:flex;gap:8px">
-          <button class="btn" id="tg-refresh" ${isRefreshing ? 'disabled' : ''}><i class="ti ti-refresh"></i> ${isRefreshing ? 'Updating...' : 'Refresh'}</button>
-          <button class="btn btn-primary" id="tg-export"><i class="ti ti-download"></i> Export</button>
-        </div>
+      <div class="page-actions" style="display:flex;gap:8px">
+        <button class="btn" id="tg-refresh" ${isRefreshing ? 'disabled' : ''}><i class="ti ti-refresh"></i> ${isRefreshing ? 'Updating...' : 'Refresh'}</button>
+        <button class="btn btn-primary" id="tg-export"><i class="ti ti-download"></i> Export</button>
       </div>
     </div>
 

@@ -64,9 +64,6 @@
         <div class="page-title"><i class="ti ti-layout-dashboard"></i> M365 AgentOps Dashboard</div>
         <div class="page-subtitle">Enterprise tenant administration and monitoring</div>
       </div>
-      <div class="page-help" title="Real-time overview of your Microsoft 365 tenant health, security posture, and critical alerts. Monitor compliance status, identify risks, and track active incidents.">
-        <i class="ti ti-help-circle"></i>
-      </div>
     </div>
 
     <!-- SETUP BANNER -->
@@ -1507,13 +1504,9 @@ Filter for: signInActivity/lastSignInDateTime <= [90 days ago]`},{keywords:["con
         <div class="page-title"><i class="ti ti-shield-exclamation"></i> Security Command Center</div>
         <div class="page-subtitle">Single-pane-of-glass across Identity, Email, Endpoint, Apps & Data · Loading...</div>
       </div>
-      <div style="display:flex;gap:12px;align-items:center">
-        <div class="page-help" title="Detect and respond to security threats, manage incidents, and track remediation actions across your M365 tenant">
-          <i class="ti ti-help-circle"></i>
-        </div>
-          <button class="btn" disabled><i class="ti ti-refresh"></i> Refresh</button>
+      <div class="page-actions" style="display:flex;gap:8px">
+        <button class="btn" disabled><i class="ti ti-refresh"></i> Refresh</button>
         <button class="btn btn-primary" disabled><i class="ti ti-download"></i> Export report</button>
-      </div>
       </div>
     </div>
 
@@ -3047,14 +3040,9 @@ Current status: Secure Score 64/95 · ${Ge.filter(l=>l.status!=="resolved").leng
         <div class="page-title"><i class="ti ti-shield-exclamation"></i> TenantGuard Security Monitoring</div>
         <div class="page-subtitle">Real-time threat detection & attack pattern analysis · ${n} · Updated: ${l}</div>
       </div>
-      <div style="display:flex;gap:12px;align-items:center">
-        <div class="page-help" title="Monitor and investigate suspicious activities, attack chains, and correlations using AI-powered threat detection">
-          <i class="ti ti-help-circle"></i>
-        </div>
-        <div class="page-actions" style="display:flex;gap:8px">
-          <button class="btn" id="tg-refresh" ${ut?"disabled":""}><i class="ti ti-refresh"></i> ${ut?"Updating...":"Refresh"}</button>
-          <button class="btn btn-primary" id="tg-export"><i class="ti ti-download"></i> Export</button>
-        </div>
+      <div class="page-actions" style="display:flex;gap:8px">
+        <button class="btn" id="tg-refresh" ${ut?"disabled":""}><i class="ti ti-refresh"></i> ${ut?"Updating...":"Refresh"}</button>
+        <button class="btn btn-primary" id="tg-export"><i class="ti ti-download"></i> Export</button>
       </div>
     </div>
 

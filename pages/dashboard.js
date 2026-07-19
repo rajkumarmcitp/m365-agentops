@@ -42,9 +42,6 @@ function renderDashboardSkeleton(el) {
         <div class="page-title"><i class="ti ti-layout-dashboard"></i> M365 AgentOps Dashboard</div>
         <div class="page-subtitle">Enterprise tenant administration and monitoring</div>
       </div>
-      <div class="page-help" title="Real-time overview of your Microsoft 365 tenant health, security posture, and critical alerts. Monitor compliance status, identify risks, and track active incidents.">
-        <i class="ti ti-help-circle"></i>
-      </div>
     </div>
 
     <!-- SETUP BANNER -->
