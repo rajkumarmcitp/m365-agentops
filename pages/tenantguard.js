@@ -160,6 +160,17 @@ function renderContent(el) {
     })
   })
 
+  // Correlation details modal
+  document.querySelectorAll('.correlation-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const correlationId = item.dataset.correlationId
+      const correlation = allCorrelations.find(c => c.id === correlationId)
+      if (correlation) {
+        showCorrelationDetails(correlation)
+      }
+    })
+  })
+
   document.getElementById('tg-refresh')?.addEventListener('click', async () => {
     if (!isRefreshing) {
       isRefreshing = true
@@ -278,9 +289,10 @@ function renderDashboard(riskScore, riskLevel) {
         <div class="card-title">ACTIVE ATTACK CHAINS</div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
           ${allCorrelations.slice(0, 5).map(incident => `
-            <div style="padding:10px;background:var(--color-background-secondary);border-radius:6px;border-left:3px solid ${incident?.risk_level === 'CRITICAL' ? ALERT_PRIORITY.P1.color : ALERT_PRIORITY.P2.color}">
+            <div class="correlation-item" data-correlation-id="${incident?.id}" style="padding:10px;background:var(--color-background-secondary);border-radius:6px;border-left:3px solid ${incident?.risk_level === 'CRITICAL' ? ALERT_PRIORITY.P1.color : ALERT_PRIORITY.P2.color};cursor:pointer;transition:all 0.2s;hover:opacity:0.8">
               <div style="font-size:12px;font-weight:600;margin-bottom:4px">${(incident?.description || 'Unknown Incident').substring(0, 45)}</div>
-              <div style="font-size:11px;color:var(--color-text-secondary)">${incident?.alert_count || 0} events · Score: ${incident?.correlation_score || 0}/100</div>
+              <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:6px">${incident?.alert_count || 0} events · Score: ${incident?.correlation_score || 0}/100</div>
+              <div style="font-size:10px;color:var(--clr-info-text);font-weight:500">📖 Click to view details →</div>
             </div>
           `).join('')}
           ${allCorrelations.length === 0 ? '<div style="color:var(--color-text-secondary);font-size:12px;text-align:center;padding:20px">No active chains</div>' : ''}
@@ -601,6 +613,104 @@ function getDemoCorrelations() {
   return [
     { id: 'corr-3', description: 'Multi-Stage: Admin compromise → Security bypass → Access', alert_count: 4, correlation_type: 'PATTERN', risk_level: 'CRITICAL', correlation_score: 95, start_timestamp: new Date(Date.now() - 20*60000).toISOString(), end_timestamp: new Date().toISOString() },
   ]
+}
+
+function showCorrelationDetails(correlation) {
+  if (!correlation) return
+
+  const modal = document.createElement('div')
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `
+
+  const content = document.createElement('div')
+  content.style.cssText = `
+    background: var(--color-background-primary);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  `
+
+  const riskColor = correlation?.risk_level === 'CRITICAL' ? '#d32f2f' : correlation?.risk_level === 'HIGH' ? '#f57c00' : '#fbc02d'
+
+  content.innerHTML = `
+    <div style="margin-bottom: 20px">
+      <div style="display: flex; justify-content: space-between; align-items: start; gap: 16px">
+        <div>
+          <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px">${correlation?.description || 'Unknown Correlation'}</div>
+          <div style="display: flex; gap: 12px; margin-bottom: 12px">
+            <span style="background: ${riskColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600">${correlation?.risk_level || 'UNKNOWN'}</span>
+            <span style="background: var(--color-background-secondary); color: var(--color-text-secondary); padding: 4px 12px; border-radius: 20px; font-size: 12px">${correlation?.correlation_type || 'PATTERN'}</span>
+          </div>
+        </div>
+        <button onclick="this.closest('[data-modal]').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--color-text-secondary)">✕</button>
+      </div>
+    </div>
+
+    <div style="background: var(--color-background-secondary); padding: 16px; border-radius: 6px; margin-bottom: 16px">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
+        <div>
+          <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px">CORRELATION SCORE</div>
+          <div style="font-size: 28px; font-weight: 700; color: ${riskColor}">${correlation?.correlation_score || 0}/100</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px">EVENTS INVOLVED</div>
+          <div style="font-size: 28px; font-weight: 700; color: var(--clr-info-text)">${correlation?.alert_count || 0}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 16px">
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--color-text-primary)">TIMELINE</div>
+      <div style="background: var(--color-background-secondary); padding: 12px; border-radius: 6px; font-size: 13px">
+        <div style="margin-bottom: 6px">
+          <span style="color: var(--color-text-secondary)">Start:</span> ${new Date(correlation?.start_timestamp || Date.now()).toLocaleString()}
+        </div>
+        <div>
+          <span style="color: var(--color-text-secondary)">End:</span> ${new Date(correlation?.end_timestamp || Date.now()).toLocaleString()}
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 16px">
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--color-text-primary)">DETAILS</div>
+      <div style="background: var(--color-background-secondary); padding: 12px; border-radius: 6px; font-size: 13px; line-height: 1.6; color: var(--color-text-secondary)">
+        <p style="margin: 0 0 8px 0">
+          <strong>ID:</strong> ${correlation?.id || 'N/A'}
+        </p>
+        <p style="margin: 0 0 8px 0">
+          <strong>Type:</strong> ${correlation?.correlation_type || 'N/A'}
+        </p>
+        <p style="margin: 0">
+          <strong>Risk Level:</strong> ${correlation?.risk_level || 'N/A'}
+        </p>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px">
+      <button onclick="this.closest('[data-modal]').remove()" style="flex: 1; padding: 10px; background: var(--color-background-secondary); border: 1px solid var(--color-border-primary); border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--color-text-primary)">Close</button>
+      <button onclick="console.log('Investigate:', ${JSON.stringify(correlation).replace(/"/g, '&quot;')}); this.closest('[data-modal]').remove(); showToast('Investigation started', 'info')" style="flex: 1; padding: 10px; background: var(--clr-info-bg); border: 1px solid var(--clr-info-text); border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--clr-info-text)">📊 Investigate</button>
+    </div>
+  `
+
+  modal.setAttribute('data-modal', 'true')
+  modal.appendChild(content)
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove()
+  })
+  document.body.appendChild(modal)
 }
 
 function showAlertDetail(parentEl, alert) {
