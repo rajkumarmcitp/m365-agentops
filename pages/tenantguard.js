@@ -546,36 +546,40 @@ async function refreshData() {
       }),
     ])
 
-    // Process alerts with field name normalization
+    // Process alerts with field name normalization - REAL DATA ONLY
     if (alertsRes?.data && Array.isArray(alertsRes.data) && alertsRes.data.length > 0) {
-      console.log(`📊 Raw alert data (first item):`, alertsRes.data[0])
-      console.log(`📊 Alert source: ${alertsRes.source || 'unknown'}`)
-
+      console.log(`✅ Loaded ${alertsRes.data.length} real alerts`)
       allAlerts = alertsRes.data.map(normalizeAlert).filter(a => a)
-      console.log(`✅ Loaded ${allAlerts.length} real alerts`)
-      console.log(`📊 Normalized alert (first):`, allAlerts[0])
-    } else if (alertsRes?.success === false || !alertsRes?.data) {
-      allAlerts = getDemoAlerts()
-      console.log('⚠️ No real alerts from API, using demo data')
+      console.log(`✅ Normalized ${allAlerts.length} alerts`)
+    } else if (alertsRes?.success === false) {
+      console.error('❌ API Error:', alertsRes.error || 'Unknown error')
+      allAlerts = []
     } else {
-      allAlerts = getDemoAlerts()
-      console.log('⚠️ Empty alerts response, using demo data')
+      console.log('ℹ️ No alerts available (empty response)')
+      allAlerts = []
     }
 
-    // Process correlations with field name normalization
+    // Process correlations with field name normalization - REAL DATA ONLY
     if (correlationsRes?.data && Array.isArray(correlationsRes.data) && correlationsRes.data.length > 0) {
       allCorrelations = correlationsRes.data.map(normalizeCorrelation).filter(c => c)
-      console.log(`✅ Loaded ${allCorrelations.length} correlations`)
+      console.log(`✅ Loaded ${allCorrelations.length} real correlations`)
+    } else if (correlationsRes?.success === false) {
+      console.error('❌ Correlations API Error:', correlationsRes.error || 'Unknown error')
+      allCorrelations = []
     } else {
-      allCorrelations = getDemoCorrelations()
-      console.log('⚠️ No correlations from API, using demo data')
+      console.log('ℹ️ No correlations available')
+      allCorrelations = []
     }
 
-    // Process patterns
+    // Process patterns - REAL DATA ONLY
     if (patternsRes?.data && Array.isArray(patternsRes.data) && patternsRes.data.length > 0) {
       allPatterns = patternsRes.data
-      console.log(`✅ Loaded ${allPatterns.length} patterns`)
+      console.log(`✅ Loaded ${allPatterns.length} real patterns`)
+    } else if (patternsRes?.success === false) {
+      console.error('❌ Patterns API Error:', patternsRes.error || 'Unknown error')
+      allPatterns = []
     } else {
+      console.log('ℹ️ No patterns available')
       allPatterns = []
     }
   } catch (error) {
