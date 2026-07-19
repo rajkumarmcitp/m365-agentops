@@ -215,6 +215,13 @@ function renderContent(el) {
       }
     })
   })
+
+  // Attach alerts view listeners if on alerts tab
+  if (activeTab === 'alerts') {
+    setTimeout(() => {
+      attachAlertsViewListeners()
+    }, 100)
+  }
 }
 
 function renderTabContent(riskScore, riskLevel) {
@@ -234,6 +241,250 @@ function renderTabContent(riskScore, riskLevel) {
     default:
       return ''
   }
+}
+
+function attachAlertsViewListeners() {
+  const searchInput = document.getElementById('alert-search')
+  const severityFilter = document.getElementById('alert-filter-severity')
+  const statusFilter = document.getElementById('alert-filter-status')
+  const sortSelect = document.getElementById('alert-sort')
+  const container = document.getElementById('alerts-container')
+  const statsDiv = document.getElementById('alerts-stats')
+  const bulkBtn = document.getElementById('alerts-bulk-action')
+
+  let selectedAlerts = new Set()
+
+  function filterAndRenderAlerts() {
+    const searchTerm = (searchInput?.value || '').toLowerCase()
+    const severityVal = severityFilter?.value || ''
+    const statusVal = statusFilter?.value || ''
+    const sortVal = sortSelect?.value || 'recency'
+
+    // Filter alerts
+    let filtered = allAlerts.filter(alert => {
+      // Search filter
+      if (searchTerm) {
+        const searchableText = [
+          alert?.headline || '',
+          alert?.description || '',
+          alert?.actor || '',
+          alert?.source || ''
+        ].join(' ').toLowerCase()
+
+        if (!searchableText.includes(searchTerm)) return false
+      }
+
+      // Severity filter
+      if (severityVal && alert?.severity !== severityVal) return false
+
+      // Status filter
+      if (statusVal && getAlertStatus(alert.id) !== statusVal) return false
+
+      return true
+    })
+
+    // Sort alerts
+    filtered.sort((a, b) => {
+      switch (sortVal) {
+        case 'severity':
+          return (calculateSeverityScore(b) || 0) - (calculateSeverityScore(a) || 0)
+        case 'status':
+          return getStatusInfo(getAlertStatus(a.id)).order - getStatusInfo(getAlertStatus(b.id)).order
+        case 'actor':
+          return (a?.actor || '').localeCompare(b?.actor || '')
+        case 'source':
+          return (a?.source || '').localeCompare(b?.source || '')
+        case 'recency':
+        default:
+          return new Date(b?.timestamp || 0) - new Date(a?.timestamp || 0)
+      }
+    })
+
+    // Render alerts
+    const alertsHTML = filtered.map((alert, idx) => {
+      const severity = calculateSeverityScore(alert)
+      const level = getSeverityLevel(severity)
+      const colors = getSeverityColors(level)
+      const status = getAlertStatus(alert.id)
+      const statusInfo = getStatusInfo(status)
+      const isSelected = selectedAlerts.has(alert.id)
+
+      return `
+        <div class="alert-item-container" data-alert-id="${alert?.id}" style="
+          display:flex;
+          align-items:start;
+          padding:14px;
+          border-bottom:0.5px solid var(--color-border-secondary);
+          cursor:pointer;
+          background:${isSelected ? colors.bg : 'transparent'};
+          transition:background 0.2s;
+        " onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+          <input type="checkbox" class="alert-checkbox" style="margin-right:12px;margin-top:2px;cursor:pointer" ${isSelected ? 'checked' : ''}>
+          <div style="flex:1">
+            <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;align-items:center">
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600;color:var(--color-text-primary)">${alert?.headline || 'Unknown'}</div>
+                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px">${alert?.description || 'No description'}</div>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0">
+                <span style="background:${colors.bg};color:${colors.text};padding:4px 8px;border-radius:3px;font-size:11px;font-weight:600;border:1px solid ${colors.border}">${colors.icon} ${severity}/100</span>
+                <span style="background:${statusInfo.color};color:white;padding:4px 8px;border-radius:3px;font-size:11px;font-weight:600;white-space:nowrap">${statusInfo.icon} ${statusInfo.label}</span>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary);margin-top:6px">
+              <div>
+                <span style="display:inline-block;margin-right:12px">📡 ${alert?.source || 'Unknown'}</span>
+                <span style="display:inline-block;margin-right:12px">👤 ${alert?.actor || 'System'}</span>
+              </div>
+              <span>📅 ${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</span>
+            </div>
+          </div>
+        </div>
+      `
+    }).join('')
+
+    container.innerHTML = alertsHTML || '<div style="text-align:center;padding:40px;color:var(--color-text-secondary);font-size:12px">No alerts match your filters</div>'
+
+    // Update stats
+    const avgSeverity = filtered.length > 0
+      ? Math.round(filtered.reduce((sum, a) => sum + (calculateSeverityScore(a) || 0), 0) / filtered.length)
+      : 0
+
+    document.getElementById('alerts-display-count').textContent = filtered.length
+    document.getElementById('alerts-severity-avg').textContent = avgSeverity > 0 ? `${avgSeverity}/100` : '—'
+    document.getElementById('alerts-selected-count').textContent = selectedAlerts.size
+
+    // Bulk action button visibility
+    bulkBtn.style.display = selectedAlerts.size > 0 ? 'block' : 'none'
+
+    // Attach checkbox and detail listeners
+    container.querySelectorAll('.alert-item-container').forEach(item => {
+      const checkbox = item.querySelector('.alert-checkbox')
+      const alertId = item.dataset.alertId
+
+      checkbox.addEventListener('click', (e) => {
+        e.stopPropagation()
+        if (selectedAlerts.has(alertId)) {
+          selectedAlerts.delete(alertId)
+        } else {
+          selectedAlerts.add(alertId)
+        }
+        filterAndRenderAlerts()
+      })
+
+      item.addEventListener('click', () => {
+        const alert = allAlerts.find(a => a.id === alertId)
+        if (alert) {
+          showAlertDetail(document.getElementById('page-tenantguard'), alert)
+        }
+      })
+    })
+  }
+
+  // Event listeners
+  searchInput?.addEventListener('input', filterAndRenderAlerts)
+  severityFilter?.addEventListener('change', filterAndRenderAlerts)
+  statusFilter?.addEventListener('change', filterAndRenderAlerts)
+  sortSelect?.addEventListener('change', filterAndRenderAlerts)
+
+  // Bulk action handler
+  bulkBtn?.addEventListener('click', () => {
+    const selectedIds = Array.from(selectedAlerts)
+    if (selectedIds.length === 0) return
+
+    showBulkStatusUpdateModal(selectedIds, () => {
+      selectedAlerts.clear()
+      filterAndRenderAlerts()
+    })
+  })
+
+  // Initial render
+  filterAndRenderAlerts()
+}
+
+function showBulkStatusUpdateModal(alertIds, onComplete) {
+  const modal = document.createElement('div')
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+  `
+
+  const content = document.createElement('div')
+  content.style.cssText = `
+    background: var(--color-background-primary);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  `
+
+  const statuses = getAvailableStatuses()
+
+  content.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:20px">
+      <div>
+        <div style="font-size:18px;font-weight:700">🔄 Bulk Status Update</div>
+        <div style="font-size:13px;color:var(--color-text-secondary);margin-top:4px">Update status for ${alertIds.length} selected alert(s)</div>
+      </div>
+      <button onclick="this.closest('[data-modal]').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--color-text-secondary)">✕</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
+      ${statuses.map(status => `
+        <button data-status="${status.key}" class="bulk-status-btn" style="
+          padding:12px;
+          background:${status.color};
+          color:white;
+          border:none;
+          border-radius:6px;
+          cursor:pointer;
+          font-weight:600;
+          font-size:12px;
+          transition:opacity 0.2s;
+        " onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+          ${status.icon} ${status.label}
+        </button>
+      `).join('')}
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button onclick="this.closest('[data-modal]').remove()" style="flex:1;padding:12px;background:var(--color-background-secondary);border:1px solid var(--color-border-primary);border-radius:6px;cursor:pointer;font-weight:600;color:var(--color-text-primary)">Cancel</button>
+    </div>
+  `
+
+  modal.setAttribute('data-modal', 'true')
+  modal.appendChild(content)
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove()
+  })
+
+  document.body.appendChild(modal)
+
+  content.querySelectorAll('.bulk-status-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const newStatus = btn.dataset.status
+      const oldStatuses = alertIds.map(id => getAlertStatus(id))
+
+      alertIds.forEach((alertId, idx) => {
+        setAlertStatus(alertId, newStatus)
+        addStatusTransition(alertId, oldStatuses[idx], newStatus)
+      })
+
+      showToast(`✅ Updated ${alertIds.length} alert(s) to ${getStatusInfo(newStatus).label}`, 'success')
+      modal.remove()
+      if (onComplete) onComplete()
+    })
+  })
 }
 
 function renderDashboard(riskScore, riskLevel) {
@@ -439,38 +690,105 @@ function renderDashboard(riskScore, riskLevel) {
 function renderAlertsView() {
   return `
     <div class="card">
-      <div class="card-title">All Alerts (${allAlerts.length})</div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;margin-top:12px">
-        <input type="text" id="alert-search" placeholder="Search alerts..." style="
-          padding:8px 12px;
-          border:0.5px solid var(--color-border-secondary);
-          border-radius:4px;
-          font-size:12px;
-          flex:1;
-          min-width:250px;
-        ">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="card-title" style="margin:0">📋 All Alerts (${allAlerts.length})</div>
+        <button id="alerts-bulk-action" style="padding:8px 12px;background:var(--color-background-secondary);border:1px solid var(--color-border-primary);border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;color:var(--color-text-primary);display:none">
+          🔄 Batch Update Status
+        </button>
       </div>
 
-      <div style="max-height:600px;overflow-y:auto">
-        ${allAlerts.map(alert => `
-          <div style="padding:12px;border-bottom:0.5px solid var(--color-border-secondary);cursor:pointer" data-alert-id="${alert?.id}" onmouseover="this.style.background='var(--color-background-secondary)'" onmouseout="this.style.background='transparent'">
-            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px">
-              <div>
-                <div style="font-size:13px;font-weight:600">${alert?.headline || 'Unknown'}</div>
-                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px">${alert?.description || 'No description'}</div>
-              </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <span style="background:${ALERT_PRIORITY[alert?.priority]?.bg};color:${ALERT_PRIORITY[alert?.priority]?.color};padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600">${alert?.priority || 'P3'}</span>
-                <span style="background:${ALERT_PRIORITY[alert?.severity]?.bg};color:${SEVERITY_COLOR[alert?.severity]};padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600">${alert?.severity || 'MEDIUM'}</span>
-              </div>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary)">
-              <span>${alert?.source || 'Unknown'}${alert?.actor ? ' · ' + alert.actor : ''}</span>
-              <span>${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</span>
-            </div>
-          </div>
-        `).join('')}
-        ${allAlerts.length === 0 ? '<div style="color:var(--color-text-secondary);text-align:center;padding:40px;font-size:12px">No alerts found</div>' : ''}
+      <!-- FILTERS & SEARCH -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+        <div>
+          <label style="font-size:11px;color:var(--color-text-secondary);display:block;margin-bottom:4px">🔍 Search</label>
+          <input type="text" id="alert-search" placeholder="Alert name, actor, source..." style="
+            padding:8px 10px;
+            border:0.5px solid var(--color-border-secondary);
+            border-radius:4px;
+            font-size:12px;
+            width:100%;
+            box-sizing:border-box;
+          ">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--color-text-secondary);display:block;margin-bottom:4px">⚠️ Severity</label>
+          <select id="alert-filter-severity" style="
+            padding:8px 10px;
+            border:0.5px solid var(--color-border-secondary);
+            border-radius:4px;
+            font-size:12px;
+            width:100%;
+            box-sizing:border-box;
+            background:var(--color-background-secondary);
+            color:var(--color-text-primary);
+          ">
+            <option value="">All Severities</option>
+            <option value="CRITICAL">🔴 CRITICAL</option>
+            <option value="HIGH">🟠 HIGH</option>
+            <option value="MEDIUM">🟡 MEDIUM</option>
+            <option value="LOW">🟢 LOW</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--color-text-secondary);display:block;margin-bottom:4px">📊 Status</label>
+          <select id="alert-filter-status" style="
+            padding:8px 10px;
+            border:0.5px solid var(--color-border-secondary);
+            border-radius:4px;
+            font-size:12px;
+            width:100%;
+            box-sizing:border-box;
+            background:var(--color-background-secondary);
+            color:var(--color-text-primary);
+          ">
+            <option value="">All Statuses</option>
+            <option value="NEW">🆕 New</option>
+            <option value="UNDER_INVESTIGATION">🔍 Under Investigation</option>
+            <option value="ACTION_TAKEN">✅ Action Taken</option>
+            <option value="RESOLVED">✔️ Resolved</option>
+            <option value="FALSE_POSITIVE">⚠️ False Positive</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--color-text-secondary);display:block;margin-bottom:4px">📈 Sort By</label>
+          <select id="alert-sort" style="
+            padding:8px 10px;
+            border:0.5px solid var(--color-border-secondary);
+            border-radius:4px;
+            font-size:12px;
+            width:100%;
+            box-sizing:border-box;
+            background:var(--color-background-secondary);
+            color:var(--color-text-primary);
+          ">
+            <option value="recency">⏰ Newest First</option>
+            <option value="severity">⚠️ Severity (High→Low)</option>
+            <option value="status">📊 Status</option>
+            <option value="actor">👤 Actor</option>
+            <option value="source">📡 Source</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ALERTS LIST STATS -->
+      <div id="alerts-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+        <div style="padding:8px;background:var(--color-background-secondary);border-radius:4px;text-align:center">
+          <div style="font-size:11px;color:var(--color-text-secondary)">Displaying</div>
+          <div style="font-size:16px;font-weight:700;color:var(--color-text-primary)" id="alerts-display-count">0</div>
+        </div>
+        <div style="padding:8px;background:var(--color-background-secondary);border-radius:4px;text-align:center">
+          <div style="font-size:11px;color:var(--color-text-secondary)">Severity Avg</div>
+          <div style="font-size:16px;font-weight:700;color:var(--color-text-primary)" id="alerts-severity-avg">—</div>
+        </div>
+        <div style="padding:8px;background:var(--color-background-secondary);border-radius:4px;text-align:center">
+          <div style="font-size:11px;color:var(--color-text-secondary)">Selected</div>
+          <div style="font-size:16px;font-weight:700;color:var(--color-text-primary)" id="alerts-selected-count">0</div>
+        </div>
+      </div>
+
+      <!-- ALERTS CONTAINER -->
+      <div id="alerts-container" style="max-height:800px;overflow-y:auto;border:0.5px solid var(--color-border-secondary);border-radius:4px;background:var(--color-background-secondary)">
+        <div style="text-align:center;padding:40px;color:var(--color-text-secondary);font-size:12px">Loading alerts...</div>
       </div>
     </div>
   `
