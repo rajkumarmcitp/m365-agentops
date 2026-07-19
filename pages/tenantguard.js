@@ -492,8 +492,8 @@ function renderDemoTenantGuard(el) {
   ]
 
   const demoCorrelations = [
-    { id: 'corr-1', description: 'Coordinated Admin Compromise - MFA bypass + Forwarding', alert_count: 3, correlation_type: 'ACTOR', risk_level: 'CRITICAL', correlation_score: 96, start_timestamp: new Date(Date.now() - 20*60000).toISOString(), end_timestamp: new Date().toISOString() },
-    { id: 'corr-2', description: 'OAuth Backdoor - Admin consent + Directory access', alert_count: 2, correlation_type: 'TARGET', risk_level: 'CRITICAL', correlation_score: 92, start_timestamp: new Date(Date.now() - 15*60000).toISOString(), end_timestamp: new Date().toISOString() },
+    { id: 'corr-1', description: 'Coordinated Admin Compromise - MFA bypass + Forwarding', alert_count: 3, correlation_type: 'ACTOR', risk_level: 'CRITICAL', correlation_score: 96, start_timestamp: new Date(Date.now() - 20*60000).toISOString(), end_timestamp: new Date().toISOString(), alert_ids: JSON.stringify(['alert-1', 'alert-2', 'alert-4']) },
+    { id: 'corr-2', description: 'OAuth Backdoor - Admin consent + Directory access', alert_count: 2, correlation_type: 'TARGET', risk_level: 'CRITICAL', correlation_score: 92, start_timestamp: new Date(Date.now() - 15*60000).toISOString(), end_timestamp: new Date().toISOString(), alert_ids: JSON.stringify(['alert-3', 'alert-5']) },
   ]
 
   allAlerts = demoAlerts
