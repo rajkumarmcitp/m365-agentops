@@ -127,6 +127,12 @@ import {
   getHighRiskUsers, getUserActivitySummary, getUBAStatistics, purgeOldActivity,
   exportUBAData, updateUserBaseline
 } from './user-behavior-service.js'
+import {
+  createCase, getCase, getAllCases, addEvidence, getEvidence, getCaseEvidence,
+  updateEvidenceCustody, reconstructCaseTimeline, correlateCaseEvidence,
+  generateCaseReport, getReport, getCaseReport, validateCaseChainOfCustody,
+  closeCase, getForensicStats, exportForensicData
+} from './forensic-service.js'
 import { ExchangeCollector } from './collectors/exchange-collector.js'
 import { TeamsCollector } from './collectors/teams-collector.js'
 import { SharePointCollector } from './collectors/sharepoint-collector.js'
@@ -22394,6 +22400,207 @@ app.post('/api/uba/purge', (req, res) => {
 app.get('/api/uba/export', (req, res) => {
   try {
     const data = exportUBAData()
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// ============================================================
+// Forensic Investigation Tools API Endpoints
+// ============================================================
+
+// Create investigation case
+app.post('/api/forensics/cases', (req, res) => {
+  try {
+    const { name, description, type, severity, investigator, tags } = req.body
+    if (!name || !investigator) {
+      return res.status(400).json({ success: false, message: 'name and investigator are required' })
+    }
+    const caseRecord = createCase({ name, description, type, severity, investigator, tags })
+    res.json({ success: true, data: caseRecord })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get case
+app.get('/api/forensics/cases/:caseId', (req, res) => {
+  try {
+    const { caseId } = req.params
+    const caseRecord = getCase(caseId)
+    res.json({ success: true, data: caseRecord })
+  } catch (error) {
+    res.status(404).json({ success: false, message: error.message })
+  }
+})
+
+// Get all cases
+app.get('/api/forensics/cases', (req, res) => {
+  try {
+    const cases = getAllCases()
+    res.json({ success: true, data: cases })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Add evidence to case
+app.post('/api/forensics/cases/:caseId/evidence', (req, res) => {
+  try {
+    const { caseId } = req.params
+    const { description, type, source, data, collectedBy, location, tags } = req.body
+    if (!description || !collectedBy) {
+      return res.status(400).json({ success: false, message: 'description and collectedBy are required' })
+    }
+    const evidence = addEvidence(caseId, { description, type, source, data, collectedBy, location, tags })
+    res.json({ success: true, data: evidence })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get case evidence
+app.get('/api/forensics/cases/:caseId/evidence', (req, res) => {
+  try {
+    const { caseId } = req.params
+    const evidence = getCaseEvidence(caseId)
+    res.json({ success: true, data: evidence })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get evidence
+app.get('/api/forensics/evidence/:evidenceId', (req, res) => {
+  try {
+    const { evidenceId } = req.params
+    const evidence = getEvidence(evidenceId)
+    res.json({ success: true, data: evidence })
+  } catch (error) {
+    res.status(404).json({ success: false, message: error.message })
+  }
+})
+
+// Update evidence chain of custody
+app.post('/api/forensics/evidence/:evidenceId/custody', (req, res) => {
+  try {
+    const { evidenceId } = req.params
+    const { action, actor, location, notes } = req.body
+    if (!action || !actor) {
+      return res.status(400).json({ success: false, message: 'action and actor are required' })
+    }
+    const evidence = updateEvidenceCustody(evidenceId, { action, actor, location, notes })
+    res.json({ success: true, data: evidence })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Reconstruct timeline
+app.post('/api/forensics/cases/:caseId/timeline', (req, res) => {
+  try {
+    const { caseId } = req.params
+    const { events } = req.body
+    if (!events || !Array.isArray(events)) {
+      return res.status(400).json({ success: false, message: 'events array is required' })
+    }
+    const timeline = reconstructCaseTimeline(caseId, events)
+    res.json({ success: true, data: timeline })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Correlate evidence
+app.post('/api/forensics/cases/:caseId/correlate', (req, res) => {
+  try {
+    const { caseId } = req.params
+    const { events, threshold } = req.body
+    if (!events || !Array.isArray(events)) {
+      return res.status(400).json({ success: false, message: 'events array is required' })
+    }
+    const correlations = correlateCaseEvidence(caseId, events, threshold || 0.6)
+    res.json({ success: true, data: correlations })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Generate report
+app.post('/api/forensics/cases/:caseId/report', (req, res) => {
+  try {
+    const { caseId } = req.params
+    const { events } = req.body
+    if (!events || !Array.isArray(events)) {
+      return res.status(400).json({ success: false, message: 'events array is required' })
+    }
+    const report = generateCaseReport(caseId, events)
+    res.json({ success: true, data: report })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get report
+app.get('/api/forensics/reports/:reportId', (req, res) => {
+  try {
+    const { reportId } = req.params
+    const report = getReport(reportId)
+    res.json({ success: true, data: report })
+  } catch (error) {
+    res.status(404).json({ success: false, message: error.message })
+  }
+})
+
+// Get case report
+app.get('/api/forensics/cases/:caseId/report', (req, res) => {
+  try {
+    const { caseId } = req.params
+    const report = getCaseReport(caseId)
+    res.json({ success: true, data: report })
+  } catch (error) {
+    res.status(404).json({ success: false, message: error.message })
+  }
+})
+
+// Validate chain of custody
+app.get('/api/forensics/cases/:caseId/chain-of-custody', (req, res) => {
+  try {
+    const { caseId } = req.params
+    const validation = validateCaseChainOfCustody(caseId)
+    res.json({ success: true, data: validation })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Close case
+app.post('/api/forensics/cases/:caseId/close', (req, res) => {
+  try {
+    const { caseId } = req.params
+    const { findings } = req.body
+    const caseRecord = closeCase(caseId, findings)
+    res.json({ success: true, data: caseRecord })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Get forensic statistics
+app.get('/api/forensics/stats', (req, res) => {
+  try {
+    const stats = getForensicStats()
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// Export forensic data
+app.get('/api/forensics/export', (req, res) => {
+  try {
+    const data = exportForensicData()
     res.json({ success: true, data })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
