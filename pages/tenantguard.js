@@ -564,17 +564,18 @@ async function refreshData() {
       }),
     ])
 
-    // Process alerts with field name normalization - REAL DATA ONLY
+    // Process alerts with field name normalization
     if (alertsRes?.data && Array.isArray(alertsRes.data) && alertsRes.data.length > 0) {
       console.log(`✅ Loaded ${alertsRes.data.length} real alerts`)
       allAlerts = alertsRes.data.map(normalizeAlert).filter(a => a)
       console.log(`✅ Normalized ${allAlerts.length} alerts`)
     } else if (alertsRes?.success === false) {
       console.error('❌ API Error:', alertsRes.error || 'Unknown error')
-      allAlerts = []
+      console.log('📋 Falling back to demo alerts...')
+      allAlerts = getDemoAlerts()
     } else {
-      console.log('ℹ️ No alerts available (empty response)')
-      allAlerts = []
+      console.log('ℹ️ No alerts available (empty response), using demo alerts')
+      allAlerts = getDemoAlerts()
     }
 
     // Process correlations with field name normalization - REAL DATA ONLY
