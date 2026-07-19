@@ -60,13 +60,21 @@ export class InvestigationService {
       let severity = 'MEDIUM'
 
       if (correlationId) {
+        console.log(`📋 Building context for correlation: ${correlationId}`)
         context = this.contextBuilder.buildCorrelationContext(correlationId)
-        if (!context) throw new Error('Correlation not found')
-        severity = context.correlation.severity
-        title = title || `Investigation: ${context.correlation.pattern}`
+        if (!context) {
+          console.error(`❌ Correlation not found: ${correlationId}`)
+          throw new Error(`Correlation not found: ${correlationId}`)
+        }
+        severity = context.correlation.severity || 'MEDIUM'
+        title = title || `Investigation: ${context.correlation.pattern || 'Unknown'}`
       } else if (alertId) {
+        console.log(`📋 Building context for alert: ${alertId}`)
         context = this.contextBuilder.buildAlertContext(alertId)
-        if (!context) throw new Error('Alert not found')
+        if (!context) {
+          console.error(`❌ Alert not found: ${alertId}`)
+          throw new Error(`Alert not found: ${alertId}`)
+        }
         severity = context.alert.severity
         title = title || `Investigation: ${context.alert.headline}`
       } else {

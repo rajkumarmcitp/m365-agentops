@@ -9569,10 +9569,14 @@ app.post('/api/tenantguard/investigate', async (req, res) => {
     }
 
     const { alertId, correlationId, title } = req.body
+    console.log('🔍 Investigate request:', { alertId, correlationId, title })
 
     const investigation = await investigationService.startInvestigation(alertId, correlationId, title)
+    console.log('✅ Investigation created:', investigation.id)
     res.json({ success: true, data: investigation })
   } catch (error) {
+    console.error('❌ Investigation error:', error.message)
+    console.error('Stack:', error.stack)
     res.status(500).json({ success: false, error: error.message })
   }
 })
