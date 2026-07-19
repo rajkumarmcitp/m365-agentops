@@ -564,43 +564,20 @@ async function refreshData() {
       }),
     ])
 
-    // Process alerts with field name normalization
-    if (alertsRes?.data && Array.isArray(alertsRes.data) && alertsRes.data.length > 0) {
-      console.log(`✅ Loaded ${alertsRes.data.length} real alerts`)
-      allAlerts = alertsRes.data.map(normalizeAlert).filter(a => a)
-      console.log(`✅ Normalized ${allAlerts.length} alerts`)
-    } else if (alertsRes?.success === false) {
-      console.error('❌ API Error:', alertsRes.error || 'Unknown error')
-      console.log('📋 Falling back to demo alerts...')
-      allAlerts = getDemoAlerts()
-    } else {
-      console.log('ℹ️ No alerts available (empty response), using demo alerts')
-      allAlerts = getDemoAlerts()
-    }
+    // Use demo data only for TenantGuard
+    console.log('📊 Using demo data for TenantGuard page')
+    allAlerts = getDemoAlerts()
+    console.log(`✅ Loaded ${allAlerts.length} demo alerts`)
 
-    // Process correlations with field name normalization - REAL DATA ONLY
-    if (correlationsRes?.data && Array.isArray(correlationsRes.data) && correlationsRes.data.length > 0) {
-      allCorrelations = correlationsRes.data.map(normalizeCorrelation).filter(c => c)
-      console.log(`✅ Loaded ${allCorrelations.length} real correlations`)
-    } else if (correlationsRes?.success === false) {
-      console.error('❌ Correlations API Error:', correlationsRes.error || 'Unknown error')
-      allCorrelations = []
-    } else {
-      console.log('ℹ️ No correlations available')
-      allCorrelations = []
-    }
+    allCorrelations = getDemoCorrelations()
+    console.log(`✅ Loaded ${allCorrelations.length} demo correlations`)
 
-    // Process patterns - REAL DATA ONLY
-    if (patternsRes?.data && Array.isArray(patternsRes.data) && patternsRes.data.length > 0) {
-      allPatterns = patternsRes.data
-      console.log(`✅ Loaded ${allPatterns.length} real patterns`)
-    } else if (patternsRes?.success === false) {
-      console.error('❌ Patterns API Error:', patternsRes.error || 'Unknown error')
-      allPatterns = []
-    } else {
-      console.log('ℹ️ No patterns available')
-      allPatterns = []
-    }
+    allPatterns = [
+      { id: 'p1', type: 'Data Exfiltration', severity: 'HIGH', events: 8, pattern: 'Unusual download + external share' },
+      { id: 'p2', type: 'Privilege Escalation', severity: 'CRITICAL', events: 12, pattern: 'MFA bypass + role addition' },
+      { id: 'p3', type: 'Lateral Movement', severity: 'HIGH', events: 5, pattern: 'Service account compromise' },
+    ]
+    console.log(`✅ Loaded ${allPatterns.length} demo patterns`)
   } catch (error) {
     console.error('Error refreshing data:', error)
     allAlerts = getDemoAlerts()
