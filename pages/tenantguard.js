@@ -539,7 +539,8 @@ function normalizeCorrelation(corr) {
     risk_level: corr.risk_level || corr.riskLevel || 'HIGH',
     correlation_score: corr.correlation_score || corr.correlationScore || corr.score || 50,
     start_timestamp: corr.start_timestamp || corr.startTime || corr.startedAt || new Date().toISOString(),
-    end_timestamp: corr.end_timestamp || corr.endTime || corr.endedAt || new Date().toISOString()
+    end_timestamp: corr.end_timestamp || corr.endTime || corr.endedAt || new Date().toISOString(),
+    alert_ids: corr.alert_ids || corr.alertIds || []
   }
 }
 
@@ -742,6 +743,13 @@ function showIncidentDetailModal(incident) {
       </div>
     </div>
 
+    <div style="margin-bottom: 16px">
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--color-text-primary)">CORRELATED EVENTS</div>
+      <div id="related-alerts-container" style="background: var(--color-background-secondary); padding: 12px; border-radius: 6px; font-size: 12px">
+        <div style="color: var(--color-text-secondary); text-align: center; padding: 16px">Loading events...</div>
+      </div>
+    </div>
+
     <div style="display: flex; gap: 8px">
       <button onclick="this.closest('[data-modal]').remove()" style="flex: 1; padding: 10px; background: var(--color-background-secondary); border: 1px solid var(--color-border-primary); border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--color-text-primary)">Close</button>
       <button id="investigate-btn" style="flex: 1; padding: 10px; background: var(--clr-info-bg); border: 1px solid var(--clr-info-text); border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--clr-info-text)">🔍 Start Investigation</button>
@@ -762,6 +770,61 @@ function showIncidentDetailModal(incident) {
   })
 
   document.body.appendChild(modal)
+
+  // Load and display related alerts
+  setTimeout(() => {
+    const alertsContainer = content.querySelector('#related-alerts-container')
+    if (!alertsContainer) return
+
+    try {
+      // Parse alert IDs from incident data
+      let alertIds = []
+      if (incident?.alert_ids) {
+        // Try to parse as JSON array
+        try {
+          alertIds = JSON.parse(incident.alert_ids)
+        } catch {
+          // If not JSON, treat as comma-separated
+          alertIds = incident.alert_ids.split(',').map(id => id.trim())
+        }
+      }
+
+      if (!alertIds || alertIds.length === 0) {
+        alertsContainer.innerHTML = '<div style="color: var(--color-text-secondary); text-align: center; padding: 12px">No events data available</div>'
+        return
+      }
+
+      // Find matching alerts from allAlerts
+      const relatedAlerts = alertIds
+        .map(id => allAlerts?.find(a => a.id === id || a.id?.includes(id)))
+        .filter(Boolean)
+
+      if (relatedAlerts.length === 0) {
+        alertsContainer.innerHTML = `<div style="color: var(--color-text-secondary); padding: 12px">
+          <div style="margin-bottom: 4px">📊 ${alertIds.length} event(s) involved:</div>
+          ${alertIds.map(id => `<div style="padding: 4px 0; font-family: monospace; font-size: 11px">${id}</div>`).join('')}
+        </div>`
+        return
+      }
+
+      // Display alert details
+      alertsContainer.innerHTML = relatedAlerts.map((alert, idx) => `
+        <div style="padding: 8px; margin-bottom: 8px; border-left: 3px solid ${alert?.severity === 'CRITICAL' ? '#d32f2f' : '#f57c00'}; background: var(--color-background-primary); border-radius: 4px">
+          <div style="font-weight: 600; margin-bottom: 4px">${idx + 1}. ${alert?.headline || alert?.title || 'Unknown Alert'}</div>
+          <div style="color: var(--color-text-secondary); font-size: 11px; margin-bottom: 3px">
+            🆔 ${alert?.id || 'N/A'}
+          </div>
+          <div style="color: var(--color-text-secondary); font-size: 11px; margin-bottom: 3px">
+            ${alert?.severity ? `⚠️ ${alert.severity}` : ''} ${alert?.action_timestamp ? `| 📅 ${new Date(alert.action_timestamp).toLocaleString()}` : ''}
+          </div>
+          ${alert?.description ? `<div style="color: var(--color-text-secondary); font-size: 11px">${alert.description}</div>` : ''}
+        </div>
+      `).join('')
+    } catch (error) {
+      console.error('Error loading related alerts:', error)
+      alertsContainer.innerHTML = '<div style="color: #f57c00; padding: 12px">Error loading events</div>'
+    }
+  }, 100)
 }
 
 function showCorrelationDetails(correlation) {
