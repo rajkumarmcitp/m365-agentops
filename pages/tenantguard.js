@@ -610,9 +610,11 @@ async function refreshData() {
 
 function getDemoAlerts() {
   return [
-    { id: 'alert-6', priority: 'P1', severity: 'CRITICAL', headline: 'MFA Disabled', description: 'MFA disabled organization-wide', actor: 'security-admin@contoso.com', source: 'Entra ID', timestamp: new Date(Date.now() - 2*60000).toISOString(), score: 94 },
-    { id: 'alert-7', priority: 'P1', severity: 'CRITICAL', headline: 'CA Policy Modified', description: 'Policy blocking high-risk sign-ins disabled', actor: 'cloud-admin@contoso.com', source: 'Entra ID', timestamp: new Date(Date.now() - 5*60000).toISOString(), score: 93 },
-    { id: 'alert-8', priority: 'P2', severity: 'HIGH', headline: 'OAuth Consent Granted', description: 'OAuth app received admin consent', actor: 'admin@contoso.com', source: 'Application', timestamp: new Date(Date.now() - 10*60000).toISOString(), score: 88 },
+    { id: 'alert-1', priority: 'P0', severity: 'CRITICAL', headline: 'MFA Disabled for Global Admin', description: 'MFA requirement removed for global administrator', actor: 'security-admin@contoso.com', source: 'Entra ID', timestamp: new Date().toISOString(), score: 100, status: 'open' },
+    { id: 'alert-2', priority: 'P1', severity: 'CRITICAL', headline: 'Conditional Access Disabled', description: 'Critical CA policy was disabled', actor: 'cloud-admin@contoso.com', source: 'Entra ID', timestamp: new Date(Date.now() - 5*60000).toISOString(), score: 95, status: 'open' },
+    { id: 'alert-3', priority: 'P1', severity: 'CRITICAL', headline: 'OAuth Admin Consent Granted', description: 'OAuth app received admin consent', actor: 'system', source: 'Application', timestamp: new Date(Date.now() - 10*60000).toISOString(), score: 92, status: 'open' },
+    { id: 'alert-4', priority: 'P2', severity: 'HIGH', headline: 'External Forwarding Created', description: 'Email forwarding rule to external email', actor: 'user@contoso.com', source: 'Exchange', timestamp: new Date(Date.now() - 15*60000).toISOString(), score: 88, status: 'open' },
+    { id: 'alert-5', priority: 'P2', severity: 'HIGH', headline: 'Global Admin Assigned', description: 'New global admin role assignment', actor: 'admin@contoso.com', source: 'Entra ID', timestamp: new Date(Date.now() - 20*60000).toISOString(), score: 85, status: 'open' },
   ]
 }
 
