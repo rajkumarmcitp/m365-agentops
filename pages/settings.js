@@ -17,83 +17,94 @@ function renderSettings(el) {
 
   el.innerHTML = `
     <div class="page-header">
-      <div class="page-title"><i class="ti ti-adjustments-horizontal"></i> Admin Settings</div>
-      <div class="page-subtitle">Setup wizard organized by implementation phases</div>
+      <div>
+        <div class="page-title"><i class="fas fa-cog"></i> Admin Settings</div>
+        <div class="page-subtitle">Setup wizard organized by implementation phases</div>
+      </div>
+      <button class="page-help" title="Configure platform display settings, agent scan schedules, authentication, and SharePoint integration. Complete all phases to fully enable the M365 OpsAgent system.">
+        <i class="fas fa-question-circle"></i>
+      </button>
     </div>
 
     <!-- PHASE 1: INITIAL SETUP -->
-    <div style="margin-bottom:28px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+    <div style="margin-bottom:32px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
         <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px">1</div>
         <div style="font-size:14px;font-weight:600;color:var(--color-text-primary)">Phase 1: Initial Setup</div>
       </div>
 
-      <!-- Platform display -->
-      <div class="card mb-3">
-        <div class="card-title mb-3"><i class="ti ti-layout-dashboard"></i> Platform Display</div>
-        <div id="settings-graph-health-wrap" style="margin-bottom:14px"></div>
-        <div id="settings-zt-score-wrap" style="margin-bottom:14px"></div>
-        <div id="settings-cfg-score-wrap" style="margin-bottom:4px"></div>
-      </div>
+      <!-- Two-column grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <!-- Platform display -->
+        <div class="card">
+          <div class="card-title mb-3"><i class="fas fa-chart-pie"></i> Platform Display</div>
+          <div id="settings-graph-health-wrap" style="margin-bottom:14px"></div>
+          <div id="settings-zt-score-wrap" style="margin-bottom:14px"></div>
+          <div id="settings-cfg-score-wrap" style="margin-bottom:4px"></div>
+        </div>
 
-      <!-- M365 Config display preferences -->
-      <div class="card mb-3">
-        <div class="card-title mb-3"><i class="ti ti-settings-2"></i> M365 Config — Display Preferences</div>
-        <div id="settings-ps-wrap" style="margin-bottom:14px"></div>
-        <div id="settings-result-wrap" style="margin-bottom:14px"></div>
-        <div id="settings-expand-wrap" style="margin-bottom:4px"></div>
+        <!-- M365 Config display preferences -->
+        <div class="card">
+          <div class="card-title mb-3"><i class="fas fa-sliders-h"></i> M365 Config — Display</div>
+          <div id="settings-ps-wrap" style="margin-bottom:14px"></div>
+          <div id="settings-result-wrap" style="margin-bottom:14px"></div>
+          <div id="settings-expand-wrap" style="margin-bottom:4px"></div>
+        </div>
       </div>
     </div>
 
     <!-- PHASE 2: CORE AGENT CONFIGURATION -->
-    <div style="margin-bottom:28px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+    <div style="margin-bottom:32px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
         <div style="background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%);color:white;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px">2</div>
         <div style="font-size:14px;font-weight:600;color:var(--color-text-primary)">Phase 2: Core Agent Configuration</div>
       </div>
 
-      <!-- Config Agent -->
-      <div class="card mb-3">
-        <div class="card-title mb-3"><i class="ti ti-robot"></i> Config Agent — Scan Settings</div>
-        <div class="form-group">
-          <label class="form-label">Scan frequency</label>
-          <select class="form-select" id="settings-schedule">
-            <option value="daily-0800" ${s.agentSchedule === 'daily-0800' ? 'selected' : ''}>Daily at 08:00</option>
-            <option value="every-6h" ${s.agentSchedule === 'every-6h' ? 'selected' : ''}>Every 6 hours</option>
-            <option value="weekly" ${s.agentSchedule === 'weekly' ? 'selected' : ''}>Weekly</option>
-          </select>
-        </div>
-        <div id="settings-alert-fail-wrap" style="margin-bottom:10px"></div>
-        <div class="form-group">
-          <label class="form-label">Alert email</label>
-          <input type="email" class="form-input" id="settings-alert-email" value="${s.agentAlertEmail}">
-        </div>
-      </div>
-
-      <!-- Validation Scheduler -->
-      <div class="card mb-3">
-        <div class="card-title mb-3"><i class="ti ti-clock"></i> Validation Scheduler</div>
-        <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px;margin-bottom:12px">
-          <div style="display:grid;gap:10px">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border-primary)">
-              <div>
-                <strong style="font-size:11px;color:var(--color-text-primary)">🌙 Last Run</strong>
-                <div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px" id="settings-last-run">Loading...</div>
-              </div>
-              <span id="settings-last-run-time" style="font-size:12px;font-weight:600;color:var(--color-text-primary)">—</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
-              <div>
-                <strong style="font-size:11px;color:var(--color-text-primary)">📅 Next Run</strong>
-                <div style="font-size:10px;color:var(--color-text-secondary);margin-top:2px">Scheduled nightly @ 2 AM</div>
-              </div>
-              <span id="settings-next-run-time" style="font-size:12px;font-weight:600;color:var(--clr-info-text)">2:00 AM</span>
-            </div>
+      <!-- Two-column grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <!-- Config Agent -->
+        <div class="card">
+          <div class="card-title mb-3"><i class="fas fa-robot"></i> Config Agent — Scan Settings</div>
+          <div class="form-group">
+            <label class="form-label">Scan frequency</label>
+            <select class="form-select" id="settings-schedule">
+              <option value="daily-0800" ${s.agentSchedule === 'daily-0800' ? 'selected' : ''}>Daily at 08:00</option>
+              <option value="every-6h" ${s.agentSchedule === 'every-6h' ? 'selected' : ''}>Every 6 hours</option>
+              <option value="weekly" ${s.agentSchedule === 'weekly' ? 'selected' : ''}>Weekly</option>
+            </select>
+          </div>
+          <div id="settings-alert-fail-wrap" style="margin-bottom:10px"></div>
+          <div class="form-group">
+            <label class="form-label">Alert email</label>
+            <input type="email" class="form-input" id="settings-alert-email" value="${s.agentAlertEmail}">
           </div>
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-primary" id="settings-validation-run-now" style="flex:1"><i class="ti ti-player-play"></i> Run Now</button>
-          <button class="btn" id="settings-validation-refresh" style="flex:1"><i class="ti ti-refresh"></i> Refresh Status</button>
+
+        <!-- Validation Scheduler -->
+        <div class="card">
+          <div class="card-title mb-3"><i class="fas fa-clock"></i> Validation Scheduler</div>
+          <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;margin-bottom:12px">
+            <div style="display:grid;gap:8px">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--color-border-primary)">
+                <div>
+                  <strong style="font-size:11px;color:var(--color-text-primary)">🌙 Last Run</strong>
+                  <div style="font-size:10px;color:var(--color-text-secondary);margin-top:1px" id="settings-last-run">Loading...</div>
+                </div>
+                <span id="settings-last-run-time" style="font-size:11px;font-weight:600;color:var(--color-text-primary)">—</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">
+                <div>
+                  <strong style="font-size:11px;color:var(--color-text-primary)">📅 Next Run</strong>
+                  <div style="font-size:10px;color:var(--color-text-secondary);margin-top:1px">Nightly @ 2 AM</div>
+                </div>
+                <span id="settings-next-run-time" style="font-size:11px;font-weight:600;color:var(--clr-info-text)">2:00 AM</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-primary" id="settings-validation-run-now" style="flex:1;font-size:11px"><i class="fas fa-play"></i> Run Now</button>
+            <button class="btn" id="settings-validation-refresh" style="flex:1;font-size:11px"><i class="fas fa-sync"></i> Refresh</button>
+          </div>
         </div>
       </div>
     </div>
