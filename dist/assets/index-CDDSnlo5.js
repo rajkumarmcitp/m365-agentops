@@ -4276,19 +4276,19 @@ Current status: Secure Score 64/95 · ${_e.filter(l=>l.status!=="resolved").leng
         <!-- AI Summary Narrative -->
         <div class="card">
           <div class="card-title"><i class="ti ti-brain"></i> Investigation Summary</div>
-          <div id="ai-narrative-section" style="font-size:13px;line-height:1.7;color:var(--color-text-primary);margin-top:12px"></div>
+          <div id="ai-narrative-section" style="font-size:13px;line-height:1.7;color:var(--color-text-primary);margin-top:12px;min-height:60px;padding:12px;background:var(--color-background-secondary);border-radius:6px"></div>
         </div>
 
         <!-- Findings by Severity -->
         <div class="card" style="margin-top:16px">
           <div class="card-title"><i class="ti ti-list-check"></i> Findings</div>
-          <div id="findings-section" style="font-size:12px;margin-top:12px"></div>
+          <div id="findings-section" style="font-size:12px;margin-top:12px;min-height:60px;padding:12px;background:var(--color-background-secondary);border-radius:6px"></div>
         </div>
 
         <!-- Recommended Actions -->
         <div class="card" style="margin-top:16px">
           <div class="card-title"><i class="ti ti-bulb"></i> Recommended Actions</div>
-          <div id="recommendations-section" style="font-size:12px;margin-top:12px"></div>
+          <div id="recommendations-section" style="font-size:12px;margin-top:12px;min-height:60px;padding:12px;background:var(--color-background-secondary);border-radius:6px"></div>
         </div>
       </div>
 
@@ -4296,7 +4296,7 @@ Current status: Secure Score 64/95 · ${_e.filter(l=>l.status!=="resolved").leng
       <div class="investigation-tab-content" data-tab="timeline" style="display:none">
         <div class="card">
           <div class="card-title"><i class="ti ti-timeline"></i> Investigation Timeline</div>
-          <div id="timeline-section" style="font-size:12px;margin-top:12px"></div>
+          <div id="timeline-section" style="font-size:12px;margin-top:12px;min-height:80px;padding:12px;background:var(--color-background-secondary);border-radius:6px"></div>
         </div>
       </div>
 
@@ -4305,13 +4305,13 @@ Current status: Secure Score 64/95 · ${_e.filter(l=>l.status!=="resolved").leng
         <!-- Account Changes -->
         <div class="card">
           <div class="card-title"><i class="ti ti-clipboard-list"></i> Account Changes</div>
-          <div id="account-changes-section" style="font-size:12px;margin-top:12px"></div>
+          <div id="account-changes-section" style="font-size:12px;margin-top:12px;min-height:60px;padding:12px;background:var(--color-background-secondary);border-radius:6px"></div>
         </div>
 
         <!-- Risk Detections -->
         <div class="card" style="margin-top:16px">
           <div class="card-title"><i class="ti ti-alert-triangle"></i> Risk Detections</div>
-          <div id="risk-detections-section" style="font-size:12px;margin-top:12px"></div>
+          <div id="risk-detections-section" style="font-size:12px;margin-top:12px;min-height:60px;padding:12px;background:var(--color-background-secondary);border-radius:6px"></div>
         </div>
 
         <!-- Sign-in Activity -->
@@ -4324,13 +4324,13 @@ Current status: Secure Score 64/95 · ${_e.filter(l=>l.status!=="resolved").leng
             <div id="signin-locations-map" style="position:relative;width:100%;height:350px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden;box-sizing:border-box;border:1px solid var(--color-border)"></div>
           </div>
 
-          <div id="signin-logs-section" style="font-size:12px;margin-top:16px"></div>
+          <div id="signin-logs-section" style="font-size:12px;margin-top:16px;min-height:60px;padding:12px;background:var(--color-background-secondary);border-radius:6px"></div>
         </div>
 
         <!-- Security Alerts -->
         <div class="card" style="margin-top:16px">
           <div class="card-title"><i class="ti ti-bell-alert"></i> Security Alerts</div>
-          <div id="security-alerts-section" style="font-size:12px;margin-top:12px"></div>
+          <div id="security-alerts-section" style="font-size:12px;margin-top:12px;min-height:60px;padding:12px;background:var(--color-background-secondary);border-radius:6px"></div>
         </div>
       </div>
 
