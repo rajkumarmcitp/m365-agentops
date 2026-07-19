@@ -2,6 +2,7 @@ import { getAlertSummary, getAlerts, dismissAlert, getCorrelations, getPatterns,
 import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { renderTenantGuardSettings } from './tenantguard-settings.js'
+import { calculateSeverityScore, getSeverityLevel, getSeverityColors, getActionChecklist } from '../lib/severity-scoring.js'
 
 let activeTab = 'dashboard'
 let allAlerts = []
@@ -282,15 +283,24 @@ function renderDashboard(riskScore, riskLevel) {
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
       <div class="card">
-        <div class="card-title">TOP RECENT ALERTS</div>
+        <div class="card-title">🔴 CRITICAL ISSUES (Top Priorities)</div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
-          ${allAlerts.slice(0, 5).map(alert => `
-            <div style="padding:10px;background:var(--color-background-secondary);border-radius:6px;border-left:3px solid ${ALERT_PRIORITY[alert?.priority]?.color || '#999'};cursor:pointer" data-alert-id="${alert?.id}">
-              <div style="font-size:12px;font-weight:600;margin-bottom:4px">${(alert?.headline || 'Unknown Alert').substring(0, 45)}</div>
-              <div style="font-size:11px;color:var(--color-text-secondary)">${alert?.actor ? alert.actor + ' · ' : ''}${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</div>
-            </div>
-          `).join('')}
-          ${allAlerts.length === 0 ? '<div style="color:var(--color-text-secondary);font-size:12px;text-align:center;padding:20px">No alerts</div>' : ''}
+          ${allAlerts.slice(0, 5).map(alert => {
+            const severity = calculateSeverityScore(alert)
+            const level = getSeverityLevel(severity)
+            const colors = getSeverityColors(level)
+            return `
+              <div style="padding:12px;background:${colors.bg};border-radius:6px;border-left:4px solid ${colors.border};cursor:pointer" data-alert-id="${alert?.id}">
+                <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px">
+                  <div style="font-size:12px;font-weight:600;color:${colors.text}">${colors.icon} ${(alert?.headline || 'Unknown Alert').substring(0, 40)}</div>
+                  <div style="font-size:13px;font-weight:700;color:${colors.text}">${severity}/100</div>
+                </div>
+                <div style="font-size:11px;color:var(--color-text-secondary)">${alert?.actor ? alert.actor + ' · ' : ''}${new Date(alert?.timestamp || Date.now()).toLocaleTimeString()}</div>
+                <div style="font-size:10px;color:${colors.text};margin-top:4px;font-weight:500">⚠️ Click to view investigation checklist →</div>
+              </div>
+            `
+          }).join('')}
+          ${allAlerts.length === 0 ? '<div style="color:var(--color-text-secondary);font-size:12px;text-align:center;padding:20px">✅ No critical issues</div>' : ''}
         </div>
       </div>
 
@@ -819,6 +829,131 @@ function showIncidentDetailModal(incident) {
   }, 100)
 }
 
+function showAlertDetail(el, alert) {
+  if (!alert) return
+
+  const modal = document.createElement('div')
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    overflow-y: auto;
+    padding: 20px;
+  `
+
+  const severity = calculateSeverityScore(alert)
+  const level = getSeverityLevel(severity)
+  const colors = getSeverityColors(level)
+  const actionChecklist = getActionChecklist(alert)
+
+  const content = document.createElement('div')
+  content.style.cssText = `
+    background: var(--color-background-primary);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 800px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    border-left: 4px solid ${colors.border};
+  `
+
+  content.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:20px">
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:${colors.text};margin-bottom:8px">
+          ${colors.icon} ${level}
+        </div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px">${alert?.headline || 'Unknown Alert'}</div>
+        <div style="font-size:13px;color:var(--color-text-secondary)">
+          ${alert?.description || 'No description available'}
+        </div>
+      </div>
+      <button onclick="this.closest('[data-modal]').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--color-text-secondary);flex-shrink:0">✕</button>
+    </div>
+
+    <!-- SEVERITY SCORE BREAKDOWN -->
+    <div class="card" style="margin-bottom:16px;background:${colors.bg};padding:16px;border-radius:8px;border:1px solid ${colors.border}">
+      <div style="font-size:14px;font-weight:600;color:${colors.text};margin-bottom:12px">SEVERITY SCORE BREAKDOWN</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:6px">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">OVERALL SCORE</div>
+          <div style="font-size:32px;font-weight:700;color:${colors.text}">${severity}/100</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:6px">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">SEVERITY LEVEL</div>
+          <div style="font-size:20px;font-weight:700;color:${colors.text}">${level}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALERT DETAILS -->
+    <div class="card" style="margin-bottom:16px;padding:16px;background:var(--color-background-secondary);border-radius:8px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">ALERT DETAILS</div>
+      <div style="display:grid;gap:12px">
+        <div style="padding:12px;background:var(--color-background-primary);border-radius:6px">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">🆔 ALERT ID</div>
+          <div style="font-size:12px;font-family:monospace">${alert?.id || 'N/A'}</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-primary);border-radius:6px">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">👤 AFFECTED USER</div>
+          <div style="font-size:12px;font-weight:600">${alert?.actor || 'Unknown'}</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-primary);border-radius:6px">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">📅 DETECTED</div>
+          <div style="font-size:12px">${new Date(alert?.timestamp || Date.now()).toLocaleString()}</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-primary);border-radius:6px">
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">📊 SOURCE</div>
+          <div style="font-size:12px">${alert?.source || 'Unknown Service'}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTION CHECKLIST -->
+    <div class="card" style="margin-bottom:16px;padding:16px;background:var(--color-background-secondary);border-radius:8px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">📋 WHAT NEEDS TO CHANGE - ACTION CHECKLIST</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${actionChecklist.map((action, idx) => `
+          <div style="display:flex;gap:8px;padding:10px;background:var(--color-background-primary);border-radius:6px;font-size:12px">
+            <input type="checkbox" style="flex-shrink:0;margin-top:2px" title="Mark action as completed">
+            <label style="cursor:pointer;flex:1">
+              <span style="color:var(--color-text-secondary)">[${idx + 1}]</span> ${action}
+            </label>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div style="display:flex;gap:8px">
+      <button onclick="this.closest('[data-modal]').remove()" style="flex:1;padding:12px;background:var(--color-background-secondary);border:1px solid var(--color-border-primary);border-radius:6px;cursor:pointer;font-weight:600;color:var(--color-text-primary)">Close</button>
+      <button id="start-investigation-btn" style="flex:1;padding:12px;background:${colors.border};border:none;border-radius:6px;cursor:pointer;font-weight:600;color:white">🔍 Start Investigation</button>
+    </div>
+  `
+
+  modal.setAttribute('data-modal', 'true')
+  modal.appendChild(content)
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove()
+  })
+
+  document.body.appendChild(modal)
+
+  // Start investigation handler
+  content.querySelector('#start-investigation-btn').addEventListener('click', async () => {
+    showToast('Starting investigation workflow...', 'info')
+    await startInvestigation(alert)
+    modal.remove()
+  })
+}
+
 function showCorrelationDetails(correlation) {
   if (!correlation) return
 
@@ -917,109 +1052,6 @@ function showCorrelationDetails(correlation) {
   document.body.appendChild(modal)
 }
 
-function showAlertDetail(parentEl, alert) {
-  if (!alert) return
-
-  const modal = document.createElement('div')
-  modal.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  `
-
-  const content = document.createElement('div')
-  content.style.cssText = `
-    background: var(--color-background-primary);
-    border: 1px solid var(--color-border-secondary);
-    border-radius: 8px;
-    padding: 24px;
-    max-width: 600px;
-    width: 90%;
-    max-height: 80vh;
-    overflow-y: auto;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  `
-
-  const severityColor = SEVERITY_COLOR[alert?.severity] || '#666'
-  const priorityColor = ALERT_PRIORITY[alert?.priority]?.color || '#666'
-
-  content.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
-      <div>
-        <h2 style="margin:0;font-size:18px;color:var(--color-text-primary)">${alert?.headline || 'Alert Details'}</h2>
-        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px">${alert?.category || 'Alert'}</div>
-      </div>
-      <button onclick="this.closest('div').parentElement.parentElement.remove()" style="
-        background:transparent;
-        border:none;
-        font-size:24px;
-        cursor:pointer;
-        color:var(--color-text-secondary);
-      ">×</button>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
-        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">PRIORITY</div>
-        <div style="font-size:14px;font-weight:600;color:${priorityColor}">${alert?.priority || 'P3'}</div>
-      </div>
-      <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
-        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">SEVERITY</div>
-        <div style="font-size:14px;font-weight:600;color:${severityColor}">${alert?.severity || 'MEDIUM'}</div>
-      </div>
-      <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
-        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">RISK SCORE</div>
-        <div style="font-size:14px;font-weight:600;color:${alert?.score >= 70 ? severityColor : '#666'}">${Math.round(alert?.score || 0)}/100</div>
-      </div>
-      <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
-        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">STATUS</div>
-        <div style="font-size:14px;font-weight:600">${alert?.status || 'open'}</div>
-      </div>
-    </div>
-
-    <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px;margin-bottom:16px">
-      <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px;font-weight:600">DESCRIPTION</div>
-      <div style="font-size:13px;color:var(--color-text-primary);line-height:1.5">${alert?.description || 'No description available'}</div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
-        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:600">SOURCE</div>
-        <div style="font-size:13px;color:var(--color-text-primary)">${alert?.source || 'Unknown'}</div>
-      </div>
-      <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
-        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:600">ACTOR</div>
-        <div style="font-size:13px;color:var(--color-text-primary)">${alert?.actor || 'System'}</div>
-      </div>
-    </div>
-
-    <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px;margin-bottom:16px">
-      <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:600">TIMESTAMP</div>
-      <div style="font-size:13px;color:var(--color-text-primary)">${new Date(alert?.timestamp).toLocaleString()}</div>
-    </div>
-
-    <div style="background:var(--color-background-secondary);padding:12px;border-radius:6px">
-      <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:600">ALERT ID</div>
-      <div style="font-size:12px;color:var(--color-text-primary);font-family:monospace;word-break:break-all">${alert?.id || 'unknown'}</div>
-    </div>
-  `
-
-  modal.appendChild(content)
-  document.body.appendChild(modal)
-
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.remove()
-    }
-  })
-}
 
 window.switchTab = (tab) => {
   activeTab = tab
