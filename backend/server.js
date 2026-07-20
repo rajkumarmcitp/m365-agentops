@@ -22666,7 +22666,10 @@ app.get('/api/cap/dashboard/home', (req, res) => {
       controlEvaluationCategory4: evaluateCategoryDeviceTrust(),
 
       // Category 5 - Application Protection
-      controlEvaluationCategory5: evaluateCategoryApplicationProtection()
+      controlEvaluationCategory5: evaluateCategoryApplicationProtection(),
+
+      // Category 6 - Network Protection
+      controlEvaluationCategory6: evaluateCategoryNetworkProtection()
     }
   })
 })
@@ -23244,6 +23247,89 @@ function evaluateCategoryDeviceTrust() {
         matchedPolicies: [],
         missingCoverage: ['Risk-based blocking'],
         recommendation: 'Block high-risk devices detected by Defender for Endpoint.'
+      }
+    ]
+  }
+}
+
+function evaluateCategoryNetworkProtection() {
+  return {
+    categoryId: 'CA-CAT-06',
+    categoryName: 'Network Protection',
+    zeroTrustPillar: 'Network',
+    totalScore: 54,
+    maxScore: 66,
+    coverage: 82,
+    controls: [
+      {
+        controlId: 'CA-060',
+        name: 'Named Locations Configured',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-NamedLocations-Corporate', 'CA-NamedLocations-Trusted'],
+        missingCoverage: [],
+        recommendation: 'Named locations are properly configured for trusted and untrusted networks.'
+      },
+      {
+        controlId: 'CA-061',
+        name: 'Trusted Locations Configured',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-TrustedLocations'],
+        missingCoverage: [],
+        recommendation: 'Trusted locations are defined for known office networks.'
+      },
+      {
+        controlId: 'CA-062',
+        name: 'Trusted Locations Excluded Where Appropriate',
+        severity: 'Medium',
+        status: 'Passed',
+        score: 5,
+        matchedPolicies: ['CA-TrustedLocationExclusions'],
+        missingCoverage: [],
+        recommendation: 'Trusted locations are appropriately excluded from certain policies.'
+      },
+      {
+        controlId: 'CA-063',
+        name: 'High Risk Countries Restricted',
+        severity: 'Critical',
+        status: 'Failed',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['All regions'],
+        recommendation: 'Configure country-based restrictions for high-risk nations (North Korea, Iran, Syria, etc.).'
+      },
+      {
+        controlId: 'CA-064',
+        name: 'Anonymous IP Addresses Restricted',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-RiskDetection-AnonymousIP'],
+        missingCoverage: [],
+        recommendation: 'Anonymous IP detection is active in risk-based Conditional Access.'
+      },
+      {
+        controlId: 'CA-065',
+        name: 'TOR / VPN Access Controlled',
+        severity: 'Medium',
+        status: 'Warning',
+        score: 3,
+        matchedPolicies: [],
+        missingCoverage: ['VPN/TOR blocking'],
+        recommendation: 'No explicit protection against VPN/TOR traffic. Consider location-based policies.'
+      },
+      {
+        controlId: 'CA-066',
+        name: 'Location-based Conditional Access Implemented',
+        severity: 'High',
+        status: 'Passed',
+        score: 20,
+        matchedPolicies: ['CA-LocationBased-Internal', 'CA-LocationBased-External', 'CA-LocationBased-MFA'],
+        missingCoverage: [],
+        recommendation: 'Location-based conditions are actively used in multiple policies.'
       }
     ]
   }

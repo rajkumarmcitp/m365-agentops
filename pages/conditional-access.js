@@ -132,6 +132,9 @@ function renderCAP(el) {
       <button class="category-selector" data-category="CA-CAT-05" style="background:transparent;color:var(--color-text-primary);padding:8px 14px;border-radius:4px;border:0.5px solid var(--color-border-tertiary);cursor:pointer;font-weight:600;font-size:12px">
         <i class="fas fa-cube"></i> Application Protection
       </button>
+      <button class="category-selector" data-category="CA-CAT-06" style="background:transparent;color:var(--color-text-primary);padding:8px 14px;border-radius:4px;border:0.5px solid var(--color-border-tertiary);cursor:pointer;font-weight:600;font-size:12px">
+        <i class="fas fa-globe"></i> Network Protection
+      </button>
     </div>
 
     <div id="cap-content" class="cap-content"></div>
@@ -785,5 +788,6 @@ function getControlEvaluation(data) {
   if (currentCategory === 'CA-CAT-03') return data.controlEvaluationCategory3
   if (currentCategory === 'CA-CAT-04') return data.controlEvaluationCategory4
   if (currentCategory === 'CA-CAT-05') return data.controlEvaluationCategory5
+  if (currentCategory === 'CA-CAT-06') return data.controlEvaluationCategory6
   return null
 }

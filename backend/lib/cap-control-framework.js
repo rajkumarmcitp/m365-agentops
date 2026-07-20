@@ -1,10 +1,161 @@
 /**
  * Conditional Access Control Framework
- * Defines 87+ controls organized by category with validation rules
+ * Defines 53 controls across 5 categories (identity, admin, device, application, network)
  * Used for Zero Trust assessment, compliance mapping, and remediation
  */
 
 export const capControlFramework = {
+  // Category 6 - Network Protection
+  "CA-CAT-06": {
+    categoryId: "CA-CAT-06",
+    categoryName: "Network Protection",
+    zeroTrustPillar: "Network",
+    weight: 15,
+    controls: [
+      {
+        controlId: "CA-060",
+        name: "Named Locations Configured",
+        severity: "Critical",
+        priority: 1,
+        description: "Trusted and untrusted locations are configured for Conditional Access.",
+        graphResource: "/identity/conditionalAccess/namedLocations",
+        graphProperty: "displayName",
+        expectedValue: "At least one Named Location",
+        validation: {
+          namedLocations: { exists: true }
+        },
+        score: 10,
+        autoRemediation: false,
+        compliance: {
+          ZeroTrust: "Network",
+          CIS: ["4.4"],
+          NIST80053: ["AC-3", "AC-4"],
+          ISO27001: ["A.9.1", "A.9.2"]
+        }
+      },
+      {
+        controlId: "CA-061",
+        name: "Trusted Locations Configured",
+        severity: "High",
+        priority: 2,
+        description: "Trusted locations are configured to allow known locations.",
+        graphResource: "/identity/conditionalAccess/namedLocations",
+        graphProperty: "isTrusted",
+        expectedValue: "Trusted locations defined",
+        validation: {
+          trustedLocations: { exists: true }
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Network",
+          CIS: ["4.4"],
+          NIST80053: ["AC-3"],
+          ISO27001: ["A.9.1"]
+        }
+      },
+      {
+        controlId: "CA-062",
+        name: "Trusted Locations Excluded Where Appropriate",
+        severity: "Medium",
+        priority: 3,
+        description: "Trusted locations are referenced in CAP policies to exclude them.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.locations.excludeLocations",
+        expectedValue: "Trusted locations referenced",
+        validation: {
+          trustedLocationsReferenced: true
+        },
+        score: 5,
+        compliance: {
+          ZeroTrust: "Network",
+          CIS: ["4.4"],
+          NIST80053: ["AC-3"],
+          ISO27001: ["A.9.1"]
+        }
+      },
+      {
+        controlId: "CA-063",
+        name: "High Risk Countries Restricted",
+        severity: "Critical",
+        priority: 4,
+        description: "Conditional Access blocks access from high-risk countries.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.locations.includeLocations",
+        expectedValue: "Country-based restrictions configured",
+        validation: {
+          blockedCountries: { exists: true }
+        },
+        score: 10,
+        autoRemediation: true,
+        compliance: {
+          ZeroTrust: "Network",
+          CIS: ["4.4"],
+          NIST80053: ["AC-4"],
+          ISO27001: ["A.9.2"]
+        }
+      },
+      {
+        controlId: "CA-064",
+        name: "Anonymous IP Addresses Restricted",
+        severity: "High",
+        priority: 5,
+        description: "Conditional Access restricts access from anonymous IPs.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.riskLevels",
+        expectedValue: "Anonymous IP risk handled",
+        validation: {
+          riskSignals: ["anonymousIPAddress"]
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Network",
+          CIS: ["4.4"],
+          NIST80053: ["AC-3", "AC-4"],
+          ISO27001: ["A.9.2"]
+        }
+      },
+      {
+        controlId: "CA-065",
+        name: "TOR / VPN Access Controlled",
+        severity: "Medium",
+        priority: 6,
+        description: "VPN and TOR network traffic is controlled or restricted.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.riskLevels",
+        expectedValue: "Network risk protection enabled",
+        validation: {
+          networkRiskProtection: true
+        },
+        score: 5,
+        compliance: {
+          ZeroTrust: "Network",
+          CIS: ["4.4"],
+          NIST80053: ["AC-3"],
+          ISO27001: ["A.9.2"]
+        }
+      },
+      {
+        controlId: "CA-066",
+        name: "Location-based Conditional Access Implemented",
+        severity: "High",
+        priority: 7,
+        description: "Location conditions are configured in Conditional Access policies.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.locations.includeLocations",
+        expectedValue: "Location-based conditions active",
+        validation: {
+          conditions: { locations: { includeLocations: true } }
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Network",
+          CIS: ["4.4"],
+          NIST80053: ["AC-3", "AC-4"],
+          ISO27001: ["A.9.2"]
+        }
+      }
+    ]
+  },
   // Category 5 - Application Protection
   "CA-CAT-05": {
     categoryId: "CA-CAT-05",
