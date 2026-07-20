@@ -354,11 +354,11 @@ function renderCategoryAssessmentTab(el, data) {
     return
   }
 
-  const eval = getControlEvaluation(data)
+  const categoryEval = getControlEvaluation(data)
   el.innerHTML = `
     <div class="card">
       <div class="card-header">
-        <div class="card-title"><i class="fas fa-tasks"></i> ${eval.categoryName} - Control Assessment</div>
+        <div class="card-title"><i class="fas fa-tasks"></i> ${categoryEval.categoryName} - Control Assessment</div>
       </div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:11px">
@@ -374,7 +374,7 @@ function renderCategoryAssessmentTab(el, data) {
             </tr>
           </thead>
           <tbody>
-            ${eval.controls.map((control, i) => `
+            ${categoryEval.controls.map((control, i) => `
               <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${i % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
                 <td style="padding:10px;color:var(--color-text-primary);font-weight:700;font-family:monospace;vertical-align:top">${control.controlId}</td>
                 <td style="padding:10px;color:var(--color-text-primary);font-weight:500;vertical-align:top">${control.name}</td>
@@ -404,21 +404,21 @@ function renderCategoryAssessmentTab(el, data) {
       <div style="margin-top:16px;padding:12px;background:var(--color-background-secondary);border-radius:4px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;border:1px solid var(--color-border-tertiary)">
         <div style="font-size:12px">
           <div style="color:var(--color-text-secondary);margin-bottom:6px;font-weight:600">Category Score</div>
-          <div style="font-size:20px;font-weight:700;color:var(--clr-primary)">${eval.totalScore}/${eval.maxScore}</div>
-          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${Math.round(eval.totalScore / eval.maxScore * 100)}% of max</div>
+          <div style="font-size:20px;font-weight:700;color:var(--clr-primary)">${categoryEval.totalScore}/${categoryEval.maxScore}</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${Math.round(categoryEval.totalScore / categoryEval.maxScore * 100)}% of max</div>
         </div>
         <div style="font-size:12px">
           <div style="color:var(--color-text-secondary);margin-bottom:6px;font-weight:600">Controls Status</div>
           <div style="font-size:16px;font-weight:700">
-            <span style="color:var(--clr-success-text);margin-right:8px">✓ ${eval.controls.filter(c => c.status === 'Passed').length}</span>
-            <span style="color:var(--clr-danger-text)">✗ ${eval.controls.filter(c => c.status === 'Failed').length}</span>
+            <span style="color:var(--clr-success-text);margin-right:8px">✓ ${categoryEval.controls.filter(c => c.status === 'Passed').length}</span>
+            <span style="color:var(--clr-danger-text)">✗ ${categoryEval.controls.filter(c => c.status === 'Failed').length}</span>
           </div>
-          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${eval.controls.length} total controls</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${categoryEval.controls.length} total controls</div>
         </div>
         <div style="font-size:12px">
           <div style="color:var(--color-text-secondary);margin-bottom:6px;font-weight:600">Coverage</div>
-          <div style="font-size:20px;font-weight:700;color:${eval.coverage >= 70 ? 'var(--clr-success-text)' : eval.coverage >= 50 ? 'var(--clr-warning-text)' : 'var(--clr-danger-text)'}">${eval.coverage}%</div>
-          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${eval.coverage >= 80 ? '🟢 Healthy' : eval.coverage >= 60 ? '🟡 At Risk' : '🔴 Critical'}</div>
+          <div style="font-size:20px;font-weight:700;color:${categoryEval.coverage >= 70 ? 'var(--clr-success-text)' : categoryEval.coverage >= 50 ? 'var(--clr-warning-text)' : 'var(--clr-danger-text)'}">${categoryEval.coverage}%</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${categoryEval.coverage >= 80 ? '🟢 Healthy' : categoryEval.coverage >= 60 ? '🟡 At Risk' : '🔴 Critical'}</div>
         </div>
       </div>
     </div>
