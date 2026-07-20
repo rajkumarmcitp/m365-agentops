@@ -1,10 +1,180 @@
 /**
  * Conditional Access Control Framework
- * Defines 99 controls across 11 categories (identity, admin, device, application, network, client app, session, guest, workload, developer, governance)
+ * Defines 107 controls across 12 categories (foundation, identity, admin, device, application, network, client app, session, guest, workload, developer, governance)
  * Used for Zero Trust assessment, compliance mapping, and remediation
  */
 
 export const capControlFramework = {
+  // Category 1 - Policy Foundation & Governance (Foundational)
+  "CA-CAT-01": {
+    categoryId: "CA-CAT-01",
+    categoryName: "Policy Foundation & Governance",
+    zeroTrustPillar: "Governance",
+    weight: 15,
+    controls: [
+      {
+        controlId: "CA-001",
+        name: "Conditional Access Enabled",
+        severity: "Critical",
+        priority: 1,
+        description: "Conditional Access is enabled within Microsoft Entra ID.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "state",
+        expectedValue: "One or more enabled policies",
+        validation: {
+          minimumPolicies: 1
+        },
+        score: 10,
+        autoRemediation: false,
+        compliance: {
+          ZeroTrust: "Governance",
+          CIS: ["1.1"],
+          NIST80053: ["AC-2"],
+          ISO27001: ["A.5.1"]
+        }
+      },
+      {
+        controlId: "CA-002",
+        name: "Production Policies Enabled",
+        severity: "Critical",
+        priority: 2,
+        description: "All production Conditional Access policies are in enabled state.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "state",
+        expectedValue: "All policies enabled",
+        validation: {
+          state: ["enabled"]
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Governance",
+          CIS: ["1.1"],
+          NIST80053: ["AC-2", "CM-2"],
+          ISO27001: ["A.5.1"]
+        }
+      },
+      {
+        controlId: "CA-003",
+        name: "Report-only Policies Reviewed",
+        severity: "Medium",
+        priority: 3,
+        description: "Report-only policies are regularly reviewed and transitioned to enforcement.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "state",
+        expectedValue: "Report-only policies reviewed",
+        validation: {
+          reportOnlyPoliciesReviewed: true
+        },
+        score: 5,
+        compliance: {
+          ZeroTrust: "Governance",
+          CIS: ["1.1"],
+          NIST80053: ["CM-3"],
+          ISO27001: ["A.12.5"]
+        }
+      },
+      {
+        controlId: "CA-004",
+        name: "Policy Naming Standard",
+        severity: "Low",
+        priority: 4,
+        description: "Policies follow organizational naming conventions for clarity.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "displayName",
+        expectedValue: "Naming convention compliant",
+        validation: {
+          policyNamingConvention: true
+        },
+        score: 3,
+        compliance: {
+          ZeroTrust: "Governance",
+          CIS: ["1.1"],
+          NIST80053: ["CM-2"],
+          ISO27001: ["A.5.1"]
+        }
+      },
+      {
+        controlId: "CA-005",
+        name: "Policy Description Available",
+        severity: "Low",
+        priority: 5,
+        description: "Each policy has a clear description documenting its purpose.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "displayName",
+        expectedValue: "Description available",
+        validation: {
+          policyDescriptionExists: true
+        },
+        score: 3,
+        compliance: {
+          ZeroTrust: "Governance",
+          CIS: ["1.1"],
+          NIST80053: ["CM-2"],
+          ISO27001: ["A.5.1"]
+        }
+      },
+      {
+        controlId: "CA-006",
+        name: "Policy Ownership Assigned",
+        severity: "Medium",
+        priority: 6,
+        description: "Clear ownership is assigned to each Conditional Access policy.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "metadata",
+        expectedValue: "Owner assigned",
+        validation: {
+          policyOwnerAssigned: true
+        },
+        score: 5,
+        compliance: {
+          ZeroTrust: "Governance",
+          CIS: ["1.1"],
+          NIST80053: ["CM-3"],
+          ISO27001: ["A.6.1"]
+        }
+      },
+      {
+        controlId: "CA-007",
+        name: "Break Glass Accounts Excluded",
+        severity: "Critical",
+        priority: 7,
+        description: "Emergency access (break-glass) accounts are excluded from restrictive policies.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.users.excludeUsers",
+        expectedValue: "Break-glass accounts excluded",
+        validation: {
+          breakGlassAccountsExcluded: true
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Governance",
+          CIS: ["5.3"],
+          NIST80053: ["AC-6"],
+          ISO27001: ["A.9.4"]
+        }
+      },
+      {
+        controlId: "CA-008",
+        name: "Policy Change Auditing Enabled",
+        severity: "Critical",
+        priority: 8,
+        description: "All Conditional Access policy changes are audited and logged.",
+        graphResource: "/auditLogs/directoryAudits",
+        graphProperty: "activity",
+        expectedValue: "Auditing active",
+        validation: {
+          auditLoggingEnabled: true
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Governance",
+          CIS: ["6.2"],
+          NIST80053: ["AU-2", "AU-12"],
+          ISO27001: ["A.12.4"]
+        }
+      }
+    ]
+  },
   // Category 12 - Monitoring, Operations & Governance
   "CA-CAT-12": {
     categoryId: "CA-CAT-12",

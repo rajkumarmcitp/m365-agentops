@@ -22656,6 +22656,9 @@ app.get('/api/cap/dashboard/home', (req, res) => {
         { id: 'CA-007', name: 'CA-PhishingResistantAdmins', enabled: false, grantControls: { authenticationStrength: 'Phishing Resistant' }, roles: ['Privileged Role Administrator'], status: 'Disabled' }
       ],
 
+      // Category 1 - Policy Foundation & Governance
+      controlEvaluationCategory1: evaluateCategoryPolicyFoundationGovernance(),
+
       // Control evaluation results (from Category 2 - Identity Protection)
       controlEvaluation: evaluateCategoryIdentityProtection(),
 
@@ -22693,6 +22696,100 @@ app.get('/api/cap/dashboard/home', (req, res) => {
 })
 
 // Category evaluation functions
+
+function evaluateCategoryPolicyFoundationGovernance() {
+  return {
+    categoryId: 'CA-CAT-01',
+    categoryName: 'Policy Foundation & Governance',
+    zeroTrustPillar: 'Governance',
+    totalScore: 46,
+    maxScore: 50,
+    coverage: 92,
+    controls: [
+      {
+        controlId: 'CA-001',
+        name: 'Conditional Access Enabled',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: [],
+        missingCoverage: [],
+        recommendation: '48 Conditional Access policies have been discovered and enabled.'
+      },
+      {
+        controlId: 'CA-002',
+        name: 'Production Policies Enabled',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: [],
+        missingCoverage: [],
+        recommendation: 'All production Conditional Access policies are properly enabled.'
+      },
+      {
+        controlId: 'CA-003',
+        name: 'Report-only Policies Reviewed',
+        severity: 'Medium',
+        status: 'Warning',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['5 policies'],
+        recommendation: '5 report-only policies have not been reviewed in the last 90 days. Review and transition to enforcement.'
+      },
+      {
+        controlId: 'CA-004',
+        name: 'Policy Naming Standard',
+        severity: 'Low',
+        status: 'Passed',
+        score: 3,
+        matchedPolicies: [],
+        missingCoverage: [],
+        recommendation: 'Policy naming conventions are properly applied.'
+      },
+      {
+        controlId: 'CA-005',
+        name: 'Policy Description Available',
+        severity: 'Low',
+        status: 'Warning',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['8 policies'],
+        recommendation: '8 policies do not contain descriptions. Add descriptions to document policy purpose and scope.'
+      },
+      {
+        controlId: 'CA-006',
+        name: 'Policy Ownership Assigned',
+        severity: 'Medium',
+        status: 'Passed',
+        score: 5,
+        matchedPolicies: [],
+        missingCoverage: [],
+        recommendation: 'Policy ownership is clearly assigned and documented.'
+      },
+      {
+        controlId: 'CA-007',
+        name: 'Break Glass Accounts Excluded',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: [],
+        missingCoverage: [],
+        recommendation: 'Emergency access (break-glass) accounts are properly excluded from restrictive policies.'
+      },
+      {
+        controlId: 'CA-008',
+        name: 'Policy Change Auditing Enabled',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: [],
+        missingCoverage: [],
+        recommendation: 'Audit logging is enabled for all Conditional Access policy changes.'
+      }
+    ]
+  }
+}
+
 function evaluateCategoryIdentityProtection() {
   return {
         categoryId: 'CA-CAT-02',

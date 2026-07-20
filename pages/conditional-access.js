@@ -120,6 +120,9 @@ function renderCAP(el) {
 
     <!-- Control Category Selector (Persistent) -->
     <div id="cap-category-selector" style="display:flex;gap:8px;margin-bottom:16px;margin-top:16px;flex-wrap:wrap;padding:12px;background:var(--color-background-secondary);border-radius:4px;border:0.5px solid var(--color-border-tertiary)">
+      <button class="category-selector" data-category="CA-CAT-01" style="background:transparent;color:var(--color-text-primary);padding:8px 14px;border-radius:4px;border:0.5px solid var(--color-border-tertiary);cursor:pointer;font-weight:600;font-size:12px">
+        <i class="fas fa-foundation"></i> Policy Foundation
+      </button>
       <button class="category-selector" data-category="CA-CAT-02" style="background:var(--clr-primary);color:white;padding:8px 14px;border-radius:4px;border:none;cursor:pointer;font-weight:600;font-size:12px">
         <i class="fas fa-shield-alt"></i> Identity Protection
       </button>
@@ -802,6 +805,7 @@ function getMaxScore(severity) {
 
 function getControlEvaluation(data) {
   if (!data) return null
+  if (currentCategory === 'CA-CAT-01') return data.controlEvaluationCategory1
   if (currentCategory === 'CA-CAT-02') return data.controlEvaluation
   if (currentCategory === 'CA-CAT-03') return data.controlEvaluationCategory3
   if (currentCategory === 'CA-CAT-04') return data.controlEvaluationCategory4
