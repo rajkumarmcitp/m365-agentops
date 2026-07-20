@@ -22675,7 +22675,10 @@ app.get('/api/cap/dashboard/home', (req, res) => {
       controlEvaluationCategory7: evaluateCategoryClientApplicationProtection(),
 
       // Category 8 - Session Protection
-      controlEvaluationCategory8: evaluateCategorySessionProtection()
+      controlEvaluationCategory8: evaluateCategorySessionProtection(),
+
+      // Category 9 - Guest & External User Protection
+      controlEvaluationCategory9: evaluateCategoryGuestExternalUserProtection()
     }
   })
 })
@@ -23253,6 +23256,99 @@ function evaluateCategoryDeviceTrust() {
         matchedPolicies: [],
         missingCoverage: ['Risk-based blocking'],
         recommendation: 'Block high-risk devices detected by Defender for Endpoint.'
+      }
+    ]
+  }
+}
+
+function evaluateCategoryGuestExternalUserProtection() {
+  return {
+    categoryId: 'CA-CAT-09',
+    categoryName: 'Guest & External User Protection',
+    zeroTrustPillar: 'Identity',
+    totalScore: 54,
+    maxScore: 62,
+    coverage: 87,
+    controls: [
+      {
+        controlId: 'CA-090',
+        name: 'Guest Users Require MFA',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Guests-MFA', 'CA-B2B-MFA'],
+        missingCoverage: [],
+        recommendation: 'Guest users are required to use MFA for all access.'
+      },
+      {
+        controlId: 'CA-091',
+        name: 'Guest Risk-Based Access',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-GuestRisk-Block'],
+        missingCoverage: [],
+        recommendation: 'High-risk guest access is blocked appropriately.'
+      },
+      {
+        controlId: 'CA-092',
+        name: 'Guest Device Requirements',
+        severity: 'High',
+        status: 'Warning',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['Compliant device requirement'],
+        recommendation: 'Guest users are not required to use compliant devices. Consider requiring compliant devices or approved applications.'
+      },
+      {
+        controlId: 'CA-093',
+        name: 'Guest Session Controls',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-Guest-SessionControl'],
+        missingCoverage: [],
+        recommendation: 'Session controls are applied to guest access policies.'
+      },
+      {
+        controlId: 'CA-094',
+        name: 'Guest Access Limited to Approved Applications',
+        severity: 'High',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Guest-AppRestriction', 'CA-B2B-AppRestriction'],
+        missingCoverage: [],
+        recommendation: 'Guest access is properly limited to approved applications.'
+      },
+      {
+        controlId: 'CA-095',
+        name: 'Guest Administrators Protected',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-GuestAdmin-Protection'],
+        missingCoverage: [],
+        recommendation: 'Guest administrators are protected with strong authentication requirements.'
+      },
+      {
+        controlId: 'CA-096',
+        name: 'Cross-Tenant Access Policies Configured',
+        severity: 'High',
+        status: 'Warning',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['Cross-tenant policies'],
+        recommendation: 'Cross-tenant access policies are not configured. Configure to restrict external organization access.'
+      },
+      {
+        controlId: 'CA-097',
+        name: 'External Collaboration Protected',
+        severity: 'Medium',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-B2B-Governance'],
+        missingCoverage: [],
+        recommendation: 'B2B collaboration policies are configured and enforced.'
       }
     ]
   }

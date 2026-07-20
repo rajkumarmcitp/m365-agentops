@@ -1,10 +1,182 @@
 /**
  * Conditional Access Control Framework
- * Defines 67 controls across 7 categories (identity, admin, device, application, network, client app, session)
+ * Defines 75 controls across 8 categories (identity, admin, device, application, network, client app, session, guest)
  * Used for Zero Trust assessment, compliance mapping, and remediation
  */
 
 export const capControlFramework = {
+  // Category 9 - Guest & External User Protection
+  "CA-CAT-09": {
+    categoryId: "CA-CAT-09",
+    categoryName: "Guest & External User Protection",
+    zeroTrustPillar: "Identity",
+    weight: 15,
+    controls: [
+      {
+        controlId: "CA-090",
+        name: "Guest Users Require MFA",
+        severity: "Critical",
+        priority: 1,
+        description: "All guest users must satisfy multifactor authentication before accessing tenant resources.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.users.includeGuestsOrExternalUsers",
+        expectedValue: "MFA Required",
+        validation: {
+          users: { includeGuestsOrExternalUsers: true },
+          grantControls: { contains: ["mfa"] }
+        },
+        score: 10,
+        autoRemediation: true,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["IA-2", "AC-2"],
+          ISO27001: ["A.5.17", "A.9.2"]
+        }
+      },
+      {
+        controlId: "CA-091",
+        name: "Guest Risk-Based Access",
+        severity: "Critical",
+        priority: 2,
+        description: "High-risk guest activities are blocked or require additional authentication.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.riskLevels",
+        expectedValue: "High-risk blocked",
+        validation: {
+          userRiskLevels: ["high"],
+          grantControls: { contains: ["block"] }
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2", "AC-3"],
+          ISO27001: ["A.9.2"]
+        }
+      },
+      {
+        controlId: "CA-092",
+        name: "Guest Device Requirements",
+        severity: "High",
+        priority: 3,
+        description: "Guest users require compliant devices, approved applications, or app protection policies.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "grantControls.builtInControls",
+        expectedValue: "Device/app protection required",
+        validation: {
+          grantControls: { containsAny: ["compliantDevice", "approvedApplication", "appProtectionPolicy"] }
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["2.1"],
+          NIST80053: ["AC-2"],
+          ISO27001: ["A.5.17"]
+        }
+      },
+      {
+        controlId: "CA-093",
+        name: "Guest Session Controls",
+        severity: "High",
+        priority: 4,
+        description: "Session controls (sign-in frequency, browser persistence) are applied to guest policies.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "sessionControls",
+        expectedValue: "Session controls enabled",
+        validation: {
+          sessionControls: { exists: true }
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-12"],
+          ISO27001: ["A.9.3"]
+        }
+      },
+      {
+        controlId: "CA-094",
+        name: "Guest Access Limited to Approved Applications",
+        severity: "High",
+        priority: 5,
+        description: "Guest users can only access approved cloud applications.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.applications.includeApplications",
+        expectedValue: "Apps restricted",
+        validation: {
+          applicationsRestricted: true
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["2.2"],
+          NIST80053: ["AC-2", "AC-3"],
+          ISO27001: ["A.5.17"]
+        }
+      },
+      {
+        controlId: "CA-095",
+        name: "Guest Administrators Protected",
+        severity: "Critical",
+        priority: 6,
+        description: "Guest administrators require strong authentication and additional protections.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "includeRoles",
+        expectedValue: "Admin protection enabled",
+        validation: {
+          guestAdminsRequireStrongAuthentication: true
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.3"],
+          NIST80053: ["AC-2", "IA-2"],
+          ISO27001: ["A.9.4"]
+        }
+      },
+      {
+        controlId: "CA-096",
+        name: "Cross-Tenant Access Policies Configured",
+        severity: "High",
+        priority: 7,
+        description: "Cross-tenant access policies define how external organizations can access resources.",
+        graphResource: "/policies/crossTenantAccessPolicy",
+        graphProperty: "default",
+        expectedValue: "Policies configured",
+        validation: {
+          crossTenantAccessPolicy: true
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-3"],
+          ISO27001: ["A.9.1"]
+        }
+      },
+      {
+        controlId: "CA-097",
+        name: "External Collaboration Protected",
+        severity: "Medium",
+        priority: 8,
+        description: "B2B collaboration policies are configured to protect external partnerships.",
+        graphResource: "/policies/crossTenantAccessPolicy",
+        graphProperty: "b2bCollaborationRestrictions",
+        expectedValue: "B2B policies active",
+        validation: {
+          b2bPoliciesConfigured: true
+        },
+        score: 5,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-3"],
+          ISO27001: ["A.9.2"]
+        }
+      }
+    ]
+  },
   // Category 8 - Session Protection
   "CA-CAT-08": {
     categoryId: "CA-CAT-08",
