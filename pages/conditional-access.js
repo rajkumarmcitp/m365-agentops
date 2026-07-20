@@ -138,6 +138,9 @@ function renderCAP(el) {
       <button class="category-selector" data-category="CA-CAT-07" style="background:transparent;color:var(--color-text-primary);padding:8px 14px;border-radius:4px;border:0.5px solid var(--color-border-tertiary);cursor:pointer;font-weight:600;font-size:12px">
         <i class="fas fa-mobile-alt"></i> Client Application Protection
       </button>
+      <button class="category-selector" data-category="CA-CAT-08" style="background:transparent;color:var(--color-text-primary);padding:8px 14px;border-radius:4px;border:0.5px solid var(--color-border-tertiary);cursor:pointer;font-weight:600;font-size:12px">
+        <i class="fas fa-hourglass-end"></i> Session Protection
+      </button>
     </div>
 
     <div id="cap-content" class="cap-content"></div>
@@ -793,5 +796,6 @@ function getControlEvaluation(data) {
   if (currentCategory === 'CA-CAT-05') return data.controlEvaluationCategory5
   if (currentCategory === 'CA-CAT-06') return data.controlEvaluationCategory6
   if (currentCategory === 'CA-CAT-07') return data.controlEvaluationCategory7
+  if (currentCategory === 'CA-CAT-08') return data.controlEvaluationCategory8
   return null
 }

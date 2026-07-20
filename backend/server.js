@@ -22672,7 +22672,10 @@ app.get('/api/cap/dashboard/home', (req, res) => {
       controlEvaluationCategory6: evaluateCategoryNetworkProtection(),
 
       // Category 7 - Client Application Protection
-      controlEvaluationCategory7: evaluateCategoryClientApplicationProtection()
+      controlEvaluationCategory7: evaluateCategoryClientApplicationProtection(),
+
+      // Category 8 - Session Protection
+      controlEvaluationCategory8: evaluateCategorySessionProtection()
     }
   })
 })
@@ -23250,6 +23253,99 @@ function evaluateCategoryDeviceTrust() {
         matchedPolicies: [],
         missingCoverage: ['Risk-based blocking'],
         recommendation: 'Block high-risk devices detected by Defender for Endpoint.'
+      }
+    ]
+  }
+}
+
+function evaluateCategorySessionProtection() {
+  return {
+    categoryId: 'CA-CAT-08',
+    categoryName: 'Session Protection',
+    zeroTrustPillar: 'Identity',
+    totalScore: 52,
+    maxScore: 62,
+    coverage: 84,
+    controls: [
+      {
+        controlId: 'CA-080',
+        name: 'Sign-in Frequency Configured',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Admins-SignInFrequency', 'CA-Internals-SignInFrequency'],
+        missingCoverage: [],
+        recommendation: 'Sign-in frequency is properly configured for periodic reauthentication.'
+      },
+      {
+        controlId: 'CA-081',
+        name: 'Persistent Browser Session Controlled',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-BrowserSession-Control'],
+        missingCoverage: [],
+        recommendation: 'Persistent browser sessions are controlled and limited.'
+      },
+      {
+        controlId: 'CA-082',
+        name: 'Application Enforced Restrictions Enabled',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-AppEnforced-Restrictions'],
+        missingCoverage: [],
+        recommendation: 'Applications enforce additional restrictions on sessions.'
+      },
+      {
+        controlId: 'CA-083',
+        name: 'Microsoft Defender for Cloud Apps Session Control',
+        severity: 'Critical',
+        status: 'Warning',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['Cloud Apps Session Control'],
+        recommendation: 'Configure Microsoft Defender for Cloud Apps session controls for real-time monitoring and restriction of risky behaviors.'
+      },
+      {
+        controlId: 'CA-084',
+        name: 'Continuous Access Evaluation Enabled',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-CAE-Enabled'],
+        missingCoverage: [],
+        recommendation: 'Continuous Access Evaluation is enabled for real-time access decisions.'
+      },
+      {
+        controlId: 'CA-085',
+        name: 'Token Protection Enabled',
+        severity: 'Critical',
+        status: 'Failed',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['Token Protection'],
+        recommendation: 'Enable Token Protection to prevent token exfiltration and replay attacks. Configure in Conditional Access policies.'
+      },
+      {
+        controlId: 'CA-086',
+        name: 'Session Controls Applied to High Value Applications',
+        severity: 'High',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-HighValueApps-SessionControl', 'CA-Exchange-SessionControl', 'CA-SharePoint-SessionControl'],
+        missingCoverage: [],
+        recommendation: 'Session controls are applied to all high-value applications.'
+      },
+      {
+        controlId: 'CA-087',
+        name: 'Administrative Sessions Protected',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-GlobalAdmin-SessionControl', 'CA-PrivilegedRole-SessionControl'],
+        missingCoverage: [],
+        recommendation: 'Administrative sessions are protected with session controls.'
       }
     ]
   }

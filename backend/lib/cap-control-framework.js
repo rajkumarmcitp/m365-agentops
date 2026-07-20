@@ -1,10 +1,182 @@
 /**
  * Conditional Access Control Framework
- * Defines 59 controls across 6 categories (identity, admin, device, application, network, client app)
+ * Defines 67 controls across 7 categories (identity, admin, device, application, network, client app, session)
  * Used for Zero Trust assessment, compliance mapping, and remediation
  */
 
 export const capControlFramework = {
+  // Category 8 - Session Protection
+  "CA-CAT-08": {
+    categoryId: "CA-CAT-08",
+    categoryName: "Session Protection",
+    zeroTrustPillar: "Identity",
+    weight: 15,
+    controls: [
+      {
+        controlId: "CA-080",
+        name: "Sign-in Frequency Configured",
+        severity: "Critical",
+        priority: 1,
+        description: "Users must periodically reauthenticate based on configured sign-in frequency.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "sessionControls.signInFrequency",
+        expectedValue: "Sign-in Frequency Enabled",
+        validation: {
+          sessionControls: { signInFrequency: { enabled: true } }
+        },
+        score: 10,
+        autoRemediation: true,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["IA-4", "AC-12"],
+          ISO27001: ["A.5.18", "A.9.3"]
+        }
+      },
+      {
+        controlId: "CA-081",
+        name: "Persistent Browser Session Controlled",
+        severity: "High",
+        priority: 2,
+        description: "Browser sessions do not persist indefinitely.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "sessionControls.persistentBrowser",
+        expectedValue: "Persistent Browser Control Enabled",
+        validation: {
+          sessionControls: { persistentBrowser: { enabled: true } }
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-12"],
+          ISO27001: ["A.9.3"]
+        }
+      },
+      {
+        controlId: "CA-082",
+        name: "Application Enforced Restrictions Enabled",
+        severity: "High",
+        priority: 3,
+        description: "Applications enforce additional restrictions on sessions.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "sessionControls.applicationEnforcedRestrictions",
+        expectedValue: "App Enforced Restrictions Active",
+        validation: {
+          sessionControls: { applicationEnforcedRestrictions: true }
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2"],
+          ISO27001: ["A.5.17"]
+        }
+      },
+      {
+        controlId: "CA-083",
+        name: "Microsoft Defender for Cloud Apps Session Control",
+        severity: "Critical",
+        priority: 4,
+        description: "Microsoft Defender for Cloud Apps session controls are configured.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "sessionControls.cloudAppSecurity",
+        expectedValue: "Cloud App Security Session Control Enabled",
+        validation: {
+          sessionControls: { cloudAppSecurity: { exists: true } }
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["3.2"],
+          NIST80053: ["AC-4", "AU-6"],
+          ISO27001: ["A.6.2", "A.9.3"]
+        }
+      },
+      {
+        controlId: "CA-084",
+        name: "Continuous Access Evaluation Enabled",
+        severity: "High",
+        priority: 5,
+        description: "Real-time access evaluation based on risk signals and compliance changes.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "sessionControls.continuousAccessEvaluation",
+        expectedValue: "CAE Enabled",
+        validation: {
+          sessionControls: { continuousAccessEvaluation: true }
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2", "AU-6"],
+          ISO27001: ["A.9.3", "A.12.4"]
+        }
+      },
+      {
+        controlId: "CA-085",
+        name: "Token Protection Enabled",
+        severity: "Critical",
+        priority: 6,
+        description: "Tokens are protected against exfiltration and misuse.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "sessionControls.tokenProtection",
+        expectedValue: "Token Protection Active",
+        validation: {
+          sessionControls: { tokenProtection: true }
+        },
+        score: 10,
+        autoRemediation: true,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["IA-4", "SC-7"],
+          ISO27001: ["A.9.2", "A.10.1"]
+        }
+      },
+      {
+        controlId: "CA-086",
+        name: "Session Controls Applied to High Value Applications",
+        severity: "High",
+        priority: 7,
+        description: "High-value applications have session controls configured.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.applications",
+        expectedValue: "High-value apps have session controls",
+        validation: {
+          highValueApplications: true,
+          sessionControlsConfigured: true
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["2.2"],
+          NIST80053: ["AC-2", "AC-12"],
+          ISO27001: ["A.5.17", "A.9.3"]
+        }
+      },
+      {
+        controlId: "CA-087",
+        name: "Administrative Sessions Protected",
+        severity: "Critical",
+        priority: 8,
+        description: "Administrative sessions have session controls enabled.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "includeRoles",
+        expectedValue: "Admin sessions protected",
+        validation: {
+          adminPoliciesContainSessionControls: true
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.3"],
+          NIST80053: ["AC-2", "AC-12"],
+          ISO27001: ["A.9.3", "A.9.4"]
+        }
+      }
+    ]
+  },
   // Category 7 - Client Application Protection
   "CA-CAT-07": {
     categoryId: "CA-CAT-07",
