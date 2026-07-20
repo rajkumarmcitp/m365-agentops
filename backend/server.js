@@ -22669,7 +22669,10 @@ app.get('/api/cap/dashboard/home', (req, res) => {
       controlEvaluationCategory5: evaluateCategoryApplicationProtection(),
 
       // Category 6 - Network Protection
-      controlEvaluationCategory6: evaluateCategoryNetworkProtection()
+      controlEvaluationCategory6: evaluateCategoryNetworkProtection(),
+
+      // Category 7 - Client Application Protection
+      controlEvaluationCategory7: evaluateCategoryClientApplicationProtection()
     }
   })
 })
@@ -23247,6 +23250,79 @@ function evaluateCategoryDeviceTrust() {
         matchedPolicies: [],
         missingCoverage: ['Risk-based blocking'],
         recommendation: 'Block high-risk devices detected by Defender for Endpoint.'
+      }
+    ]
+  }
+}
+
+function evaluateCategoryClientApplicationProtection() {
+  return {
+    categoryId: 'CA-CAT-07',
+    categoryName: 'Client Application Protection',
+    zeroTrustPillar: 'Applications',
+    totalScore: 56,
+    maxScore: 62,
+    coverage: 90,
+    controls: [
+      {
+        controlId: 'CA-070',
+        name: 'Legacy Authentication Blocked',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Block-LegacyAuth'],
+        missingCoverage: [],
+        recommendation: 'Legacy authentication is properly blocked across all protocols.'
+      },
+      {
+        controlId: 'CA-071',
+        name: 'Browser Access Protected',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Browser-MFA', 'CA-Browser-Compliance'],
+        missingCoverage: [],
+        recommendation: 'Browser access is properly protected with MFA and device compliance.'
+      },
+      {
+        controlId: 'CA-072',
+        name: 'Mobile Applications Protected',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Mobile-AppProtection', 'CA-Desktop-MFA'],
+        missingCoverage: [],
+        recommendation: 'Mobile and desktop client protection is active.'
+      },
+      {
+        controlId: 'CA-073',
+        name: 'Exchange ActiveSync Restricted',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-Block-EAS'],
+        missingCoverage: [],
+        recommendation: 'Exchange ActiveSync is properly restricted.'
+      },
+      {
+        controlId: 'CA-074',
+        name: 'Modern Authentication Enforced',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['Global-LegacyAuthBlock'],
+        missingCoverage: [],
+        recommendation: 'Modern authentication is enforced globally.'
+      },
+      {
+        controlId: 'CA-075',
+        name: 'Desktop Clients Protected',
+        severity: 'High',
+        status: 'Warning',
+        score: 10,
+        matchedPolicies: ['CA-Desktop-Protection'],
+        missingCoverage: ['Compliant device requirement'],
+        recommendation: 'Desktop clients require MFA but do not require compliant devices. Consider adding device compliance requirement.'
       }
     ]
   }

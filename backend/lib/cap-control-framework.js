@@ -1,10 +1,145 @@
 /**
  * Conditional Access Control Framework
- * Defines 53 controls across 5 categories (identity, admin, device, application, network)
+ * Defines 59 controls across 6 categories (identity, admin, device, application, network, client app)
  * Used for Zero Trust assessment, compliance mapping, and remediation
  */
 
 export const capControlFramework = {
+  // Category 7 - Client Application Protection
+  "CA-CAT-07": {
+    categoryId: "CA-CAT-07",
+    categoryName: "Client Application Protection",
+    zeroTrustPillar: "Applications",
+    weight: 15,
+    controls: [
+      {
+        controlId: "CA-070",
+        name: "Legacy Authentication Blocked",
+        severity: "Critical",
+        priority: 1,
+        description: "Block all legacy authentication protocols (IMAP, POP3, SMTP, etc.).",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.clientAppTypes",
+        expectedValue: "Legacy Auth Blocked",
+        validation: {
+          clientAppTypes: ["exchangeActiveSync", "other"],
+          grantControls: { contains: ["block"] }
+        },
+        score: 10,
+        autoRemediation: true,
+        compliance: {
+          ZeroTrust: "Applications",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2", "IA-2"],
+          ISO27001: ["A.5.17", "A.9.2"]
+        }
+      },
+      {
+        controlId: "CA-071",
+        name: "Browser Access Protected",
+        severity: "Critical",
+        priority: 2,
+        description: "Browser-based access requires MFA, device compliance, or approved applications.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.clientAppTypes",
+        expectedValue: "Browser protection active",
+        validation: {
+          clientAppTypes: ["browser"],
+          grantControls: { containsAny: ["mfa", "compliantDevice", "approvedApplication"] }
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Applications",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2", "IA-2"],
+          ISO27001: ["A.5.17"]
+        }
+      },
+      {
+        controlId: "CA-072",
+        name: "Mobile Applications Protected",
+        severity: "Critical",
+        priority: 3,
+        description: "Mobile and desktop client access requires MFA, approved apps, or protection policies.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.clientAppTypes",
+        expectedValue: "Mobile protection active",
+        validation: {
+          clientAppTypes: ["mobileAppsAndDesktopClients"],
+          grantControls: { containsAny: ["mfa", "approvedApplication", "appProtectionPolicy"] }
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Applications",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2"],
+          ISO27001: ["A.5.17"]
+        }
+      },
+      {
+        controlId: "CA-073",
+        name: "Exchange ActiveSync Restricted",
+        severity: "High",
+        priority: 4,
+        description: "Exchange ActiveSync must be blocked or restricted via Conditional Access.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.clientAppTypes",
+        expectedValue: "EAS restricted",
+        validation: {
+          clientAppTypes: ["exchangeActiveSync"],
+          grantControls: { contains: ["block"] }
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Applications",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2"],
+          ISO27001: ["A.5.17"]
+        }
+      },
+      {
+        controlId: "CA-074",
+        name: "Modern Authentication Enforced",
+        severity: "High",
+        priority: 5,
+        description: "Legacy authentication paths are disabled globally.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "legacyAuthenticationBlocked",
+        expectedValue: "Legacy auth disabled",
+        validation: {
+          legacyAuthenticationBlocked: true
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Applications",
+          CIS: ["5.2"],
+          NIST80053: ["IA-2"],
+          ISO27001: ["A.5.17"]
+        }
+      },
+      {
+        controlId: "CA-075",
+        name: "Desktop Clients Protected",
+        severity: "High",
+        priority: 6,
+        description: "Desktop client applications require appropriate grant controls.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.clientAppTypes",
+        expectedValue: "Desktop clients protected",
+        validation: {
+          clientAppTypes: ["mobileAppsAndDesktopClients"],
+          grantControls: { exists: true }
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Applications",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2"],
+          ISO27001: ["A.5.17"]
+        }
+      }
+    ]
+  },
   // Category 6 - Network Protection
   "CA-CAT-06": {
     categoryId: "CA-CAT-06",
