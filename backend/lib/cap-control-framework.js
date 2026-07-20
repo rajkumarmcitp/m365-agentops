@@ -1,10 +1,180 @@
 /**
  * Conditional Access Control Framework
- * Defines 75 controls across 8 categories (identity, admin, device, application, network, client app, session, guest)
+ * Defines 83 controls across 9 categories (identity, admin, device, application, network, client app, session, guest, workload)
  * Used for Zero Trust assessment, compliance mapping, and remediation
  */
 
 export const capControlFramework = {
+  // Category 10 - Workload Identity Protection
+  "CA-CAT-10": {
+    categoryId: "CA-CAT-10",
+    categoryName: "Workload Identity Protection",
+    zeroTrustPillar: "Identity",
+    weight: 15,
+    controls: [
+      {
+        controlId: "CA-100",
+        name: "Workload Identity Conditional Access Enabled",
+        severity: "Critical",
+        priority: 1,
+        description: "Conditional Access policies protect workload identities such as service principals and managed identities.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.clientApplications",
+        expectedValue: "Enabled",
+        validation: {
+          conditions: { clientApplications: ["servicePrincipal"] }
+        },
+        score: 10,
+        autoRemediation: false,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2", "IA-2"],
+          ISO27001: ["A.5.17", "A.9.2"]
+        }
+      },
+      {
+        controlId: "CA-101",
+        name: "Service Principals Protected",
+        severity: "Critical",
+        priority: 2,
+        description: "All service principals are protected by Conditional Access policies.",
+        graphResource: "/servicePrincipals",
+        graphProperty: "conditionalAccessCovered",
+        expectedValue: "Protected",
+        validation: {
+          servicePrincipalPolicies: true
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2"],
+          ISO27001: ["A.5.17"]
+        }
+      },
+      {
+        controlId: "CA-102",
+        name: "Managed Identities Protected",
+        severity: "High",
+        priority: 3,
+        description: "Managed identities are covered by appropriate access controls.",
+        graphResource: "/servicePrincipals",
+        graphProperty: "managedIdentities",
+        expectedValue: "Protected",
+        validation: {
+          managedIdentitiesCovered: true
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2"],
+          ISO27001: ["A.5.17"]
+        }
+      },
+      {
+        controlId: "CA-103",
+        name: "High Privilege Workload Identities Protected",
+        severity: "Critical",
+        priority: 4,
+        description: "Service principals with privileged roles are protected with additional controls.",
+        graphResource: "/roleManagement/directory/roleAssignments",
+        graphProperty: "servicePrincipalId",
+        expectedValue: "Protected",
+        validation: {
+          privilegedServicePrincipalsProtected: true
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.3"],
+          NIST80053: ["AC-2", "AC-3"],
+          ISO27001: ["A.9.4"]
+        }
+      },
+      {
+        controlId: "CA-104",
+        name: "Authentication Context Applied",
+        severity: "Medium",
+        priority: 5,
+        description: "Authentication context is applied to workload identities for step-up authentication.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.applications.includeAuthenticationContextClassReferences",
+        expectedValue: "Assigned",
+        validation: {
+          authenticationContextAssigned: true
+        },
+        score: 5,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["IA-2"],
+          ISO27001: ["A.5.17"]
+        }
+      },
+      {
+        controlId: "CA-105",
+        name: "Risk-Based Protection Configured",
+        severity: "High",
+        priority: 6,
+        description: "Workload identity risk policies detect and respond to anomalous behavior.",
+        graphResource: "/identityProtection/riskyServicePrincipals",
+        graphProperty: "riskDetection",
+        expectedValue: "Configured",
+        validation: {
+          workloadIdentityRiskPolicies: true
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AU-6", "SI-4"],
+          ISO27001: ["A.12.4"]
+        }
+      },
+      {
+        controlId: "CA-106",
+        name: "High-Risk Workload Identities Blocked",
+        severity: "Critical",
+        priority: 7,
+        description: "Conditional Access blocks high-risk workload identity access.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "grantControls.builtInControls",
+        expectedValue: "Blocked",
+        validation: {
+          blockHighRiskWorkloadIdentities: true
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2", "AC-3"],
+          ISO27001: ["A.9.2"]
+        }
+      },
+      {
+        controlId: "CA-107",
+        name: "Workload Identity Policies Enabled",
+        severity: "Medium",
+        priority: 8,
+        description: "All workload identity protection policies are enabled.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "state",
+        expectedValue: "Enabled",
+        validation: {
+          policyState: "enabled"
+        },
+        score: 5,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2"],
+          ISO27001: ["A.5.17"]
+        }
+      }
+    ]
+  },
   // Category 9 - Guest & External User Protection
   "CA-CAT-09": {
     categoryId: "CA-CAT-09",

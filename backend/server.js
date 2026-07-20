@@ -22678,7 +22678,10 @@ app.get('/api/cap/dashboard/home', (req, res) => {
       controlEvaluationCategory8: evaluateCategorySessionProtection(),
 
       // Category 9 - Guest & External User Protection
-      controlEvaluationCategory9: evaluateCategoryGuestExternalUserProtection()
+      controlEvaluationCategory9: evaluateCategoryGuestExternalUserProtection(),
+
+      // Category 10 - Workload Identity Protection
+      controlEvaluationCategory10: evaluateCategoryWorkloadIdentityProtection()
     }
   })
 })
@@ -23256,6 +23259,99 @@ function evaluateCategoryDeviceTrust() {
         matchedPolicies: [],
         missingCoverage: ['Risk-based blocking'],
         recommendation: 'Block high-risk devices detected by Defender for Endpoint.'
+      }
+    ]
+  }
+}
+
+function evaluateCategoryWorkloadIdentityProtection() {
+  return {
+    categoryId: 'CA-CAT-10',
+    categoryName: 'Workload Identity Protection',
+    zeroTrustPillar: 'Identity',
+    totalScore: 53,
+    maxScore: 61,
+    coverage: 86,
+    controls: [
+      {
+        controlId: 'CA-100',
+        name: 'Workload Identity Conditional Access Enabled',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-WorkloadIdentity-Risk', 'CA-ServicePrincipal-Protection'],
+        missingCoverage: [],
+        recommendation: 'Workload identity Conditional Access is properly enabled and protecting service principals.'
+      },
+      {
+        controlId: 'CA-101',
+        name: 'Service Principals Protected',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-ServicePrincipal-CAP'],
+        missingCoverage: [],
+        recommendation: 'All service principals are covered by Conditional Access policies.'
+      },
+      {
+        controlId: 'CA-102',
+        name: 'Managed Identities Protected',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-ManagedIdentity-Protection'],
+        missingCoverage: [],
+        recommendation: 'Managed identities are properly protected by access controls.'
+      },
+      {
+        controlId: 'CA-103',
+        name: 'High Privilege Workload Identities Protected',
+        severity: 'Critical',
+        status: 'Warning',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['3 privileged service principals'],
+        recommendation: 'Three privileged service principals are not covered by Conditional Access. Add them to a privileged identity protection policy.'
+      },
+      {
+        controlId: 'CA-104',
+        name: 'Authentication Context Applied',
+        severity: 'Medium',
+        status: 'Passed',
+        score: 5,
+        matchedPolicies: ['CA-AuthContext-Workload'],
+        missingCoverage: [],
+        recommendation: 'Authentication context is applied to workload identities for step-up authentication.'
+      },
+      {
+        controlId: 'CA-105',
+        name: 'Risk-Based Protection Configured',
+        severity: 'High',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-WorkloadRisk-Detection'],
+        missingCoverage: [],
+        recommendation: 'Risk-based protection is configured for workload identities with anomaly detection.'
+      },
+      {
+        controlId: 'CA-106',
+        name: 'High-Risk Workload Identities Blocked',
+        severity: 'Critical',
+        status: 'Warning',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['Blocking policy'],
+        recommendation: 'High-risk workload identities are reported but no blocking policy is configured. Add blocking action to risk policies.'
+      },
+      {
+        controlId: 'CA-107',
+        name: 'Workload Identity Policies Enabled',
+        severity: 'Medium',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-WorkloadIdentity-Policies'],
+        missingCoverage: [],
+        recommendation: 'All workload identity protection policies are enabled and active.'
       }
     ]
   }
