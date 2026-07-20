@@ -22681,7 +22681,10 @@ app.get('/api/cap/dashboard/home', (req, res) => {
       controlEvaluationCategory9: evaluateCategoryGuestExternalUserProtection(),
 
       // Category 10 - Workload Identity Protection
-      controlEvaluationCategory10: evaluateCategoryWorkloadIdentityProtection()
+      controlEvaluationCategory10: evaluateCategoryWorkloadIdentityProtection(),
+
+      // Category 11 - Developer Protection
+      controlEvaluationCategory11: evaluateCategoryDeveloperProtection()
     }
   })
 })
@@ -23259,6 +23262,99 @@ function evaluateCategoryDeviceTrust() {
         matchedPolicies: [],
         missingCoverage: ['Risk-based blocking'],
         recommendation: 'Block high-risk devices detected by Defender for Endpoint.'
+      }
+    ]
+  }
+}
+
+function evaluateCategoryDeveloperProtection() {
+  return {
+    categoryId: 'CA-CAT-11',
+    categoryName: 'Developer Protection',
+    zeroTrustPillar: 'Identity',
+    totalScore: 56,
+    maxScore: 64,
+    coverage: 89,
+    controls: [
+      {
+        controlId: 'CA-110',
+        name: 'Developers Require MFA',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Developers-MFA'],
+        missingCoverage: [],
+        recommendation: 'MFA is properly enforced for all developer accounts.'
+      },
+      {
+        controlId: 'CA-111',
+        name: 'Developer Authentication Strength',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Developer-AuthStrength'],
+        missingCoverage: [],
+        recommendation: 'Strong authentication is enforced for developer access.'
+      },
+      {
+        controlId: 'CA-112',
+        name: 'Developer Compliant Devices Required',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Developer-DeviceCompliance'],
+        missingCoverage: [],
+        recommendation: 'Compliant device requirement is enforced for developers.'
+      },
+      {
+        controlId: 'CA-113',
+        name: 'Developer Sign-in Risk Policy',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-Developer-SignInRisk'],
+        missingCoverage: [],
+        recommendation: 'Sign-in risk detection is active for developer accounts.'
+      },
+      {
+        controlId: 'CA-114',
+        name: 'Developer User Risk Policy',
+        severity: 'High',
+        status: 'Warning',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['2 developer groups'],
+        recommendation: 'Developer user risk policy is configured but excludes two developer groups. Update policy to include all developer groups.'
+      },
+      {
+        controlId: 'CA-115',
+        name: 'Developer Session Controls',
+        severity: 'Medium',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: ['CA-Developer-SessionControl'],
+        missingCoverage: [],
+        recommendation: 'Session controls are properly configured for developer access.'
+      },
+      {
+        controlId: 'CA-116',
+        name: 'Developer Cloud Applications Protected',
+        severity: 'High',
+        status: 'Warning',
+        score: 0,
+        matchedPolicies: ['CA-Developer-Azure', 'CA-Developer-ADO'],
+        missingCoverage: ['GitHub Enterprise'],
+        recommendation: 'GitHub Enterprise is not covered by Conditional Access. Add GitHub Enterprise to developer protection policies.'
+      },
+      {
+        controlId: 'CA-117',
+        name: 'Developer Conditional Access Policies Enabled',
+        severity: 'Medium',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: ['CA-Developer-Policies'],
+        missingCoverage: [],
+        recommendation: 'All developer protection policies are enabled and actively enforced.'
       }
     ]
   }

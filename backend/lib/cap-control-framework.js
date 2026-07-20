@@ -1,10 +1,181 @@
 /**
  * Conditional Access Control Framework
- * Defines 83 controls across 9 categories (identity, admin, device, application, network, client app, session, guest, workload)
+ * Defines 91 controls across 10 categories (identity, admin, device, application, network, client app, session, guest, workload, developer)
  * Used for Zero Trust assessment, compliance mapping, and remediation
  */
 
 export const capControlFramework = {
+  // Category 11 - Developer Protection
+  "CA-CAT-11": {
+    categoryId: "CA-CAT-11",
+    categoryName: "Developer Protection",
+    zeroTrustPillar: "Identity",
+    weight: 15,
+    controls: [
+      {
+        controlId: "CA-110",
+        name: "Developers Require MFA",
+        severity: "Critical",
+        priority: 1,
+        description: "All developer accounts require multifactor authentication before accessing development resources.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.users.includeGroups",
+        expectedValue: "MFA Required",
+        validation: {
+          users: { includeGroups: ["Developers"] },
+          grantControls: { contains: ["mfa"] }
+        },
+        score: 10,
+        autoRemediation: true,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["IA-2", "AC-2"],
+          ISO27001: ["A.5.17", "A.9.2"]
+        }
+      },
+      {
+        controlId: "CA-111",
+        name: "Developer Authentication Strength",
+        severity: "Critical",
+        priority: 2,
+        description: "Developers must use strong authentication methods (passwordless or phishing-resistant MFA).",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "grantControls.authenticationStrength",
+        expectedValue: "Strong Auth Enabled",
+        validation: {
+          authenticationStrength: true
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["IA-2"],
+          ISO27001: ["A.5.17"]
+        }
+      },
+      {
+        controlId: "CA-112",
+        name: "Developer Compliant Devices Required",
+        severity: "Critical",
+        priority: 3,
+        description: "Developers must use compliant devices for accessing development resources.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "grantControls.builtInControls",
+        expectedValue: "Compliant Device Required",
+        validation: {
+          grantControls: { contains: ["compliantDevice"] }
+        },
+        score: 10,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["2.1"],
+          NIST80053: ["AC-2"],
+          ISO27001: ["A.5.17", "A.10.1"]
+        }
+      },
+      {
+        controlId: "CA-113",
+        name: "Developer Sign-in Risk Policy",
+        severity: "High",
+        priority: 4,
+        description: "Developer sign-in risk policies monitor and respond to risky sign-in patterns.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.riskLevels",
+        expectedValue: "Risk Policy Active",
+        validation: {
+          signInRiskLevels: ["medium", "high"]
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2", "AU-6"],
+          ISO27001: ["A.9.2"]
+        }
+      },
+      {
+        controlId: "CA-114",
+        name: "Developer User Risk Policy",
+        severity: "High",
+        priority: 5,
+        description: "Developer user risk policies block access from high-risk user states.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.userRiskLevels",
+        expectedValue: "User Risk Policy Active",
+        validation: {
+          userRiskLevels: ["high"]
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2", "AC-3"],
+          ISO27001: ["A.9.2"]
+        }
+      },
+      {
+        controlId: "CA-115",
+        name: "Developer Session Controls",
+        severity: "Medium",
+        priority: 6,
+        description: "Session controls are applied to developer access for sign-in frequency and browser persistence.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "sessionControls",
+        expectedValue: "Session Controls Enabled",
+        validation: {
+          sessionControls: { exists: true }
+        },
+        score: 5,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-12"],
+          ISO27001: ["A.9.3"]
+        }
+      },
+      {
+        controlId: "CA-116",
+        name: "Developer Cloud Applications Protected",
+        severity: "High",
+        priority: 7,
+        description: "Development applications (Azure DevOps, GitHub, Azure Portal) are protected by Conditional Access.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "conditions.applications.includeApplications",
+        expectedValue: "Dev Apps Protected",
+        validation: {
+          applications: ["Azure DevOps", "GitHub Enterprise", "Azure Portal"]
+        },
+        score: 8,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["2.2"],
+          NIST80053: ["AC-2", "AC-3"],
+          ISO27001: ["A.5.17"]
+        }
+      },
+      {
+        controlId: "CA-117",
+        name: "Developer Conditional Access Policies Enabled",
+        severity: "Medium",
+        priority: 8,
+        description: "All developer protection policies are enabled and actively enforced.",
+        graphResource: "/identity/conditionalAccess/policies",
+        graphProperty: "state",
+        expectedValue: "Enabled",
+        validation: {
+          policyState: "enabled"
+        },
+        score: 5,
+        compliance: {
+          ZeroTrust: "Identity",
+          CIS: ["5.2"],
+          NIST80053: ["AC-2"],
+          ISO27001: ["A.5.17"]
+        }
+      }
+    ]
+  },
   // Category 10 - Workload Identity Protection
   "CA-CAT-10": {
     categoryId: "CA-CAT-10",
