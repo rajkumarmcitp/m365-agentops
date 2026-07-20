@@ -111,6 +111,7 @@ function renderCAP(el) {
 
     <div class="cap-tabs">
       <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="assessment">Category Assessment</button>
       <button class="tab-btn" data-tab="compliance">Compliance</button>
       <button class="tab-btn" data-tab="controls">Controls</button>
       <button class="tab-btn" data-tab="risk">Risk</button>
@@ -118,8 +119,8 @@ function renderCAP(el) {
       <button class="tab-btn" data-tab="drift">Drift</button>
     </div>
 
-    <!-- Control Category Selector (Persistent) -->
-    <div id="cap-category-selector" style="display:flex;gap:8px;margin-bottom:16px;margin-top:16px;flex-wrap:wrap;padding:12px;background:var(--color-background-secondary);border-radius:4px;border:0.5px solid var(--color-border-tertiary)">
+    <!-- Control Category Selector (Only shown in Category Assessment tab) -->
+    <div id="cap-category-selector" style="display:none;gap:8px;margin-bottom:16px;margin-top:16px;flex-wrap:wrap;padding:12px;background:var(--color-background-secondary);border-radius:4px;border:0.5px solid var(--color-border-tertiary)">
       <button class="category-selector" data-category="CA-CAT-01" style="background:transparent;color:var(--color-text-primary);padding:8px 14px;border-radius:4px;border:0.5px solid var(--color-border-tertiary);cursor:pointer;font-weight:600;font-size:12px">
         <i class="fas fa-foundation"></i> Policy Foundation
       </button>
@@ -185,9 +186,18 @@ function renderTabContent(el, tab) {
     return
   }
 
+  // Show/hide category selector based on tab
+  const categorySelector = el.querySelector('#cap-category-selector')
+  if (categorySelector) {
+    categorySelector.style.display = tab === 'assessment' ? 'flex' : 'none'
+  }
+
   switch (tab) {
     case 'overview':
       renderOverviewTab(contentEl, dashboardData.home)
+      break
+    case 'assessment':
+      renderCategoryAssessmentTab(contentEl, dashboardData.home)
       break
     case 'compliance':
       renderComplianceTab(contentEl, dashboardData.compliance)
@@ -330,75 +340,88 @@ function renderOverviewTab(el, data) {
         `).join('')}
       </div>
     </div>
+  `
+}
 
-    ${getControlEvaluation(data) ? `
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title"><i class="fas fa-tasks"></i> ${getControlEvaluation(data).categoryName} - Control Assessment</div>
-        </div>
-        <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:11px">
-            <thead>
-              <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-tertiary)">
-                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:80px">Control ID</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Control Name</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:70px">Severity</th>
-                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:80px">Status</th>
-                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:60px">Score</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Matched Policies</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Gap/Recommendation</th>
+function renderCategoryAssessmentTab(el, data) {
+  if (!data || !getControlEvaluation(data)) {
+    el.innerHTML = `
+      <div class="card" style="background:var(--clr-danger-bg);border-left:3px solid var(--clr-danger-text);padding:16px">
+        <div style="font-size:13px;font-weight:500"><i class="fas fa-exclamation-circle"></i> No category data available</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:8px">Select a category above to view control assessment details.</div>
+      </div>
+    `
+    return
+  }
+
+  const eval = getControlEvaluation(data)
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-tasks"></i> ${eval.categoryName} - Control Assessment</div>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead>
+            <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-tertiary)">
+              <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:80px">Control ID</th>
+              <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Control Name</th>
+              <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:70px">Severity</th>
+              <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:80px">Status</th>
+              <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:60px">Score</th>
+              <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Matched Policies</th>
+              <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Gap/Recommendation</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${eval.controls.map((control, i) => `
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${i % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
+                <td style="padding:10px;color:var(--color-text-primary);font-weight:700;font-family:monospace;vertical-align:top">${control.controlId}</td>
+                <td style="padding:10px;color:var(--color-text-primary);font-weight:500;vertical-align:top">${control.name}</td>
+                <td style="padding:10px;vertical-align:top">
+                  <span style="display:inline-block;padding:3px 6px;border-radius:3px;font-size:10px;font-weight:600;background:${getSeverityBg(control.severity)};color:${getSeverityText(control.severity)}">
+                    ${control.severity}
+                  </span>
+                </td>
+                <td style="padding:10px;text-align:center;vertical-align:top">
+                  <span style="display:inline-block;padding:4px 10px;border-radius:3px;font-size:10px;font-weight:600;background:${getStatusBg(control.status)};color:${getStatusText(control.status)}">
+                    ${control.status}
+                  </span>
+                </td>
+                <td style="padding:10px;text-align:center;font-weight:700;color:var(--color-text-primary);vertical-align:top">${control.score}/${getMaxScore(control.severity)}</td>
+                <td style="padding:10px;font-size:10px;color:var(--color-text-secondary);vertical-align:top">
+                  ${control.matchedPolicies.length > 0 ? control.matchedPolicies.map(p => `<span style="display:inline-block;background:var(--clr-success-bg);color:var(--clr-success-text);padding:3px 8px;border-radius:3px;margin-right:4px;margin-bottom:4px;font-weight:600">${p}</span>`).join('') : '<span style="color:var(--clr-danger-text);font-style:italic">No policies configured</span>'}
+                </td>
+                <td style="padding:10px;font-size:10px;line-height:1.5;color:var(--color-text-secondary);vertical-align:top">
+                  ${control.missingCoverage.length > 0 ? `<div style="margin-bottom:6px"><strong style="color:var(--clr-danger-text)">Gap:</strong> ${control.missingCoverage.join(', ')}</div>` : '<div style="margin-bottom:6px"><strong style="color:var(--clr-success-text)">✓ No gaps</strong></div>'}
+                  <div><strong style="color:var(--color-text-primary)">➜ ${control.recommendation}</strong></div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              ${getControlEvaluation(data).controls.map((control, i) => `
-                <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${i % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
-                  <td style="padding:10px;color:var(--color-text-primary);font-weight:700;font-family:monospace;vertical-align:top">${control.controlId}</td>
-                  <td style="padding:10px;color:var(--color-text-primary);font-weight:500;vertical-align:top">${control.name}</td>
-                  <td style="padding:10px;vertical-align:top">
-                    <span style="display:inline-block;padding:3px 6px;border-radius:3px;font-size:10px;font-weight:600;background:${getSeverityBg(control.severity)};color:${getSeverityText(control.severity)}">
-                      ${control.severity}
-                    </span>
-                  </td>
-                  <td style="padding:10px;text-align:center;vertical-align:top">
-                    <span style="display:inline-block;padding:4px 10px;border-radius:3px;font-size:10px;font-weight:600;background:${getStatusBg(control.status)};color:${getStatusText(control.status)}">
-                      ${control.status}
-                    </span>
-                  </td>
-                  <td style="padding:10px;text-align:center;font-weight:700;color:var(--color-text-primary);vertical-align:top">${control.score}/${getMaxScore(control.severity)}</td>
-                  <td style="padding:10px;font-size:10px;color:var(--color-text-secondary);vertical-align:top">
-                    ${control.matchedPolicies.length > 0 ? control.matchedPolicies.map(p => `<span style="display:inline-block;background:var(--clr-success-bg);color:var(--clr-success-text);padding:3px 8px;border-radius:3px;margin-right:4px;margin-bottom:4px;font-weight:600">${p}</span>`).join('') : '<span style="color:var(--clr-danger-text);font-style:italic">No policies configured</span>'}
-                  </td>
-                  <td style="padding:10px;font-size:10px;line-height:1.5;color:var(--color-text-secondary);vertical-align:top">
-                    ${control.missingCoverage.length > 0 ? `<div style="margin-bottom:6px"><strong style="color:var(--clr-danger-text)">Gap:</strong> ${control.missingCoverage.join(', ')}</div>` : '<div style="margin-bottom:6px"><strong style="color:var(--clr-success-text)">✓ No gaps</strong></div>'}
-                    <div><strong style="color:var(--color-text-primary)">➜ ${control.recommendation}</strong></div>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:var(--color-background-secondary);border-radius:4px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;border:1px solid var(--color-border-tertiary)">
+        <div style="font-size:12px">
+          <div style="color:var(--color-text-secondary);margin-bottom:6px;font-weight:600">Category Score</div>
+          <div style="font-size:20px;font-weight:700;color:var(--clr-primary)">${eval.totalScore}/${eval.maxScore}</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${Math.round(eval.totalScore / eval.maxScore * 100)}% of max</div>
         </div>
-        <div style="margin-top:16px;padding:12px;background:var(--color-background-secondary);border-radius:4px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;border:1px solid var(--color-border-tertiary)">
-          <div style="font-size:12px">
-            <div style="color:var(--color-text-secondary);margin-bottom:6px;font-weight:600">Category Score</div>
-            <div style="font-size:20px;font-weight:700;color:var(--clr-primary)">${getControlEvaluation(data).totalScore}/${getControlEvaluation(data).maxScore}</div>
-            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${Math.round(getControlEvaluation(data).totalScore / getControlEvaluation(data).maxScore * 100)}% of max</div>
+        <div style="font-size:12px">
+          <div style="color:var(--color-text-secondary);margin-bottom:6px;font-weight:600">Controls Status</div>
+          <div style="font-size:16px;font-weight:700">
+            <span style="color:var(--clr-success-text);margin-right:8px">✓ ${eval.controls.filter(c => c.status === 'Passed').length}</span>
+            <span style="color:var(--clr-danger-text)">✗ ${eval.controls.filter(c => c.status === 'Failed').length}</span>
           </div>
-          <div style="font-size:12px">
-            <div style="color:var(--color-text-secondary);margin-bottom:6px;font-weight:600">Controls Status</div>
-            <div style="font-size:16px;font-weight:700">
-              <span style="color:var(--clr-success-text);margin-right:8px">✓ ${getControlEvaluation(data).controls.filter(c => c.status === 'Passed').length}</span>
-              <span style="color:var(--clr-danger-text)">✗ ${getControlEvaluation(data).controls.filter(c => c.status === 'Failed').length}</span>
-            </div>
-            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${getControlEvaluation(data).controls.length} total controls</div>
-          </div>
-          <div style="font-size:12px">
-            <div style="color:var(--color-text-secondary);margin-bottom:6px;font-weight:600">Coverage</div>
-            <div style="font-size:20px;font-weight:700;color:${getControlEvaluation(data).coverage >= 70 ? 'var(--clr-success-text)' : getControlEvaluation(data).coverage >= 50 ? 'var(--clr-warning-text)' : 'var(--clr-danger-text)'}">${getControlEvaluation(data).coverage}%</div>
-            <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${getControlEvaluation(data).coverage >= 80 ? '🟢 Healthy' : getControlEvaluation(data).coverage >= 60 ? '🟡 At Risk' : '🔴 Critical'}</div>
-          </div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${eval.controls.length} total controls</div>
+        </div>
+        <div style="font-size:12px">
+          <div style="color:var(--color-text-secondary);margin-bottom:6px;font-weight:600">Coverage</div>
+          <div style="font-size:20px;font-weight:700;color:${eval.coverage >= 70 ? 'var(--clr-success-text)' : eval.coverage >= 50 ? 'var(--clr-warning-text)' : 'var(--clr-danger-text)'}">${eval.coverage}%</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">${eval.coverage >= 80 ? '🟢 Healthy' : eval.coverage >= 60 ? '🟡 At Risk' : '🔴 Critical'}</div>
         </div>
       </div>
-    ` : ''}
+    </div>
   `
 }
 
