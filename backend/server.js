@@ -22684,7 +22684,10 @@ app.get('/api/cap/dashboard/home', (req, res) => {
       controlEvaluationCategory10: evaluateCategoryWorkloadIdentityProtection(),
 
       // Category 11 - Developer Protection
-      controlEvaluationCategory11: evaluateCategoryDeveloperProtection()
+      controlEvaluationCategory11: evaluateCategoryDeveloperProtection(),
+
+      // Category 12 - Monitoring, Operations & Governance
+      controlEvaluationCategory12: evaluateCategoryMonitoringOperationsGovernance()
     }
   })
 })
@@ -23262,6 +23265,99 @@ function evaluateCategoryDeviceTrust() {
         matchedPolicies: [],
         missingCoverage: ['Risk-based blocking'],
         recommendation: 'Block high-risk devices detected by Defender for Endpoint.'
+      }
+    ]
+  }
+}
+
+function evaluateCategoryMonitoringOperationsGovernance() {
+  return {
+    categoryId: 'CA-CAT-12',
+    categoryName: 'Monitoring, Operations & Governance',
+    zeroTrustPillar: 'Governance',
+    totalScore: 57,
+    maxScore: 64,
+    coverage: 91,
+    controls: [
+      {
+        controlId: 'CA-120',
+        name: 'Conditional Access Policies Enabled',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: [],
+        missingCoverage: [],
+        recommendation: '52 Conditional Access policies are enabled and actively enforced.'
+      },
+      {
+        controlId: 'CA-121',
+        name: 'Report-only Policies Reviewed',
+        severity: 'Medium',
+        status: 'Passed',
+        score: 5,
+        matchedPolicies: [],
+        missingCoverage: [],
+        recommendation: 'Report-only policies are properly reviewed before enforcement.'
+      },
+      {
+        controlId: 'CA-122',
+        name: 'Policy Naming Standard',
+        severity: 'Low',
+        status: 'Warning',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['7 policies'],
+        recommendation: 'Seven policies do not follow the approved naming convention. Rename policies to match organizational standards.'
+      },
+      {
+        controlId: 'CA-123',
+        name: 'Policy Ownership Assigned',
+        severity: 'Medium',
+        status: 'Passed',
+        score: 5,
+        matchedPolicies: [],
+        missingCoverage: [],
+        recommendation: 'Policy ownership is clearly assigned and documented.'
+      },
+      {
+        controlId: 'CA-124',
+        name: 'Policy Change Monitoring',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 10,
+        matchedPolicies: [],
+        missingCoverage: [],
+        recommendation: 'Audit logging is enabled for all Conditional Access policy changes.'
+      },
+      {
+        controlId: 'CA-125',
+        name: 'Conditional Access Insights & Reporting Enabled',
+        severity: 'High',
+        status: 'Passed',
+        score: 8,
+        matchedPolicies: [],
+        missingCoverage: [],
+        recommendation: 'Conditional Access Insights workbook is actively used for monitoring and analysis.'
+      },
+      {
+        controlId: 'CA-126',
+        name: 'Policy Conflict Detection',
+        severity: 'High',
+        status: 'Warning',
+        score: 0,
+        matchedPolicies: [],
+        missingCoverage: ['2 policies'],
+        recommendation: 'Two Conditional Access policies contain overlapping assignments. Review and consolidate policies to eliminate conflicts.'
+      },
+      {
+        controlId: 'CA-127',
+        name: 'Emergency Access Accounts Validated',
+        severity: 'Critical',
+        status: 'Passed',
+        score: 14,
+        matchedPolicies: [],
+        missingCoverage: [],
+        recommendation: 'Emergency access (break-glass) accounts are verified and properly excluded from restrictive policies.'
       }
     ]
   }
