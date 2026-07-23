@@ -827,6 +827,15 @@ tr:hover td { background: var(--color-background-secondary); }
   box-shadow: 0 2px 8px rgba(0,102,204,0.2);
 }
 
+.tab-btn.active span {
+  color: white !important;
+  font-size: 13px;
+}
+
+.tab-btn.active i {
+  color: white !important;
+}
+
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
