@@ -37,17 +37,19 @@
 }
 
 .tab-btn.active {
-  color: var(--clr-primary);
+  color: var(--color-text-primary);
   border-bottom-color: var(--clr-primary);
+  font-weight: 600;
 }
 
 .tab-btn.active span {
-  color: var(--clr-primary) !important;
+  color: var(--color-text-primary) !important;
   font-size: 13px;
+  font-weight: 600;
 }
 
 .tab-btn.active i {
-  color: var(--clr-primary) !important;
+  color: var(--color-text-primary) !important;
 }
 
 /* Content Area */
