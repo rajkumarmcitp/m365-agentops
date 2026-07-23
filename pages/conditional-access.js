@@ -655,13 +655,78 @@ function renderDriftTab(el, data) {
     <div class="cap-grid">
       <div class="card" style="background:var(--clr-danger-bg);border-color:var(--clr-danger-border)">
         <div style="font-size:20px;font-weight:700;color:var(--clr-danger-text);margin-bottom:2px">${data.alerts.active}</div>
-        <div style="font-size:12px;color:var(--clr-danger-text)">Active</div>
+        <div style="font-size:12px;color:var(--clr-danger-text)">Active Drifts</div>
       </div>
       <div class="card" style="background:var(--clr-success-bg);border-color:var(--clr-success-border)">
-        <div style="font-size:20px;font-weight:700;color:var(--clr-success-text);margin-bottom:2px">${data.alerts.resolved}</div>
-        <div style="font-size:12px;color:var(--clr-success-text)">Resolved</div>
+        <div style="font-size:20px;font-weight:700;color:var(--clr-success-text);margin-bottom:2px">${data.policies ? data.policies.length : 0}</div>
+        <div style="font-size:12px;color:var(--clr-success-text)">Total Policies</div>
       </div>
     </div>
+
+    ${data.policies && data.policies.length > 0 ? `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-layer-group"></i> Conditional Access Policies - Configuration & Drift</div>
+        </div>
+        <div style="overflow-x:auto;font-size:11px">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-tertiary)">
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:180px">Policy Name</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Configuration</th>
+                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:120px">Drift Status</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:150px">Changed Control</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.policies.map((policy, idx) => `
+                <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${idx % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
+                  <td style="padding:10px;vertical-align:top;font-weight:600;color:var(--color-text-primary)">
+                    <div>${policy.displayName}</div>
+                    <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:3px">${policy.policyId}</div>
+                  </td>
+                  <td style="padding:10px;vertical-align:top;color:var(--color-text-secondary)">
+                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                      ${Object.entries(policy.configuration).map(([key, value]) => `
+                        <span style="display:inline-block;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);padding:4px 8px;border-radius:3px;font-size:10px;white-space:nowrap">
+                          <strong>${key}:</strong> ${String(value).substring(0, 30)}${String(value).length > 30 ? '...' : ''}
+                        </span>
+                      `).join('')}
+                    </div>
+                  </td>
+                  <td style="padding:10px;text-align:center;vertical-align:top">
+                    ${policy.driftDetected ? `
+                      <span style="display:inline-block;background:var(--clr-danger-bg);color:var(--clr-danger-text);padding:4px 8px;border-radius:3px;font-weight:600;font-size:10px">
+                        <i class="fas fa-exclamation-circle"></i> Drift
+                      </span>
+                    ` : `
+                      <span style="display:inline-block;background:var(--clr-success-bg);color:var(--clr-success-text);padding:4px 8px;border-radius:3px;font-weight:600;font-size:10px">
+                        <i class="fas fa-check-circle"></i> Synced
+                      </span>
+                    `}
+                  </td>
+                  <td style="padding:10px;vertical-align:top;color:var(--color-text-secondary)">
+                    ${policy.changedControl ? `
+                      <div style="background:var(--clr-warning-bg);border-left:3px solid var(--clr-warning-text);padding:6px;border-radius:3px">
+                        <div style="font-weight:600;color:var(--clr-warning-text);font-size:10px;margin-bottom:3px">
+                          ${policy.changedControl}
+                        </div>
+                        <div style="font-size:9px;color:var(--color-text-secondary)">
+                          <div><strong>Previous:</strong> ${policy.previousValue}</div>
+                          <div><strong>Current:</strong> ${policy.currentValue}</div>
+                        </div>
+                      </div>
+                    ` : `
+                      <span style="color:var(--color-text-tertiary);font-style:italic">No changes</span>
+                    `}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ` : ''}
 
     ${data.recentAlerts && data.recentAlerts.length > 0 ? `
       <div class="card">
