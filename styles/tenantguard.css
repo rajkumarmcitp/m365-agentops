@@ -40,6 +40,15 @@
   border-bottom-color: var(--clr-primary);
 }
 
+.tenantguard-tab-btn.active span {
+  color: var(--clr-primary) !important;
+  font-size: 11px;
+}
+
+.tenantguard-tab-btn.active i {
+  color: var(--clr-primary) !important;
+}
+
 .tenantguard-tab-btn .badge {
   margin-left: 4px;
 }

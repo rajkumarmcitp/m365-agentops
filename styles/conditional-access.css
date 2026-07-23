@@ -38,6 +38,15 @@
   border-bottom-color: var(--clr-primary);
 }
 
+.tab-btn.active span {
+  color: var(--clr-primary) !important;
+  font-size: 13px;
+}
+
+.tab-btn.active i {
+  color: var(--clr-primary) !important;
+}
+
 /* Content Area */
 .cap-content {
   min-height: 400px;
