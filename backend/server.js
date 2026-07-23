@@ -67,6 +67,7 @@ import { BackupAgent } from './lib/backup-agent.js'
 import { BackupStorageManager } from './lib/backup-storage.js'
 import setupBackupRoutes from './routes/backup-routes.js'
 import { capControlFramework, evaluateCategory } from './lib/cap-control-framework.js'
+import { loadPolicies } from './policy-loader.js'
 import {
   getAlertStatus, setAlertStatus, getAlertStatusHistory, getAllAlertStatuses,
   getAlertsByStatus, getStatusMetrics, bulkUpdateStatus, pruneHistory,
@@ -24066,18 +24067,153 @@ app.get('/api/cap/dashboard/remediation', (req, res) => {
 })
 
 // Drift Detection Dashboard
-app.get('/api/cap/dashboard/drift', (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      timestamp: new Date().toISOString(),
-      driftDetected: false,
-      alerts: { active: 2, resolved: 15 },
-      summary: { totalDriftEvents: 17, totalAlerts: 17, activeAlerts: 2 },
-      trends: { trend: 'STABLE', message: 'Drift events stable' },
-      recentAlerts: []
+// Helper function to normalize policy configuration for display
+function extractPolicyConfiguration(policy) {
+  const config = {}
+
+  if (policy.state) config['State'] = policy.state
+
+  if (policy.conditions) {
+    if (policy.conditions.users) {
+      if (policy.conditions.users.includeUsers?.length) {
+        config['Users.Include'] = policy.conditions.users.includeUsers.join(', ')
+      }
+      if (policy.conditions.users.includeRoles?.length) {
+        config['Roles.Include'] = policy.conditions.users.includeRoles.join(', ')
+      }
+      if (policy.conditions.users.excludeUsers?.length) {
+        config['Users.Exclude'] = policy.conditions.users.excludeUsers.slice(0, 3).join(', ') + (policy.conditions.users.excludeUsers.length > 3 ? '...' : '')
+      }
     }
-  })
+
+    if (policy.conditions.applications?.includeApplications?.length) {
+      config['Apps.Include'] = policy.conditions.applications.includeApplications.join(', ')
+    }
+
+    if (policy.conditions.clientAppTypes?.length) {
+      config['ClientAppTypes'] = policy.conditions.clientAppTypes.join(', ')
+    }
+
+    if (policy.conditions.devicePlatforms?.length) {
+      config['Platforms'] = policy.conditions.devicePlatforms.join(', ')
+    }
+
+    if (policy.conditions.locations?.length) {
+      config['Locations'] = policy.conditions.locations.join(', ')
+    }
+  }
+
+  if (policy.grantControls) {
+    if (policy.grantControls.builtInControls?.length) {
+      config['GrantControls'] = policy.grantControls.builtInControls.join(', ')
+    }
+    if (policy.grantControls.authenticationStrength) {
+      config['AuthStrength'] = policy.grantControls.authenticationStrength
+    }
+  }
+
+  if (policy.sessionControls) {
+    const sessionKeys = Object.keys(policy.sessionControls).filter(k => policy.sessionControls[k])
+    if (sessionKeys.length > 0) {
+      config['SessionControls'] = sessionKeys.join(', ')
+    }
+  }
+
+  return config
+}
+
+app.get('/api/cap/dashboard/drift', async (req, res) => {
+  try {
+    const realPolicies = await loadPolicies()
+
+    const policyBaselines = {
+      'MFA - All Cloud Apps': {
+        expectedState: 'enabled',
+        expectedControls: ['mfa'],
+        criticality: 'high'
+      },
+      'Global Admin - Phishing Resistant MFA': {
+        expectedState: 'enabled',
+        expectedControls: ['Phishing Resistant'],
+        criticality: 'critical'
+      },
+      'Device Compliance Required': {
+        expectedState: 'enabled',
+        expectedControls: ['compliantDevice', 'hybridJoinedDevice'],
+        criticality: 'high'
+      },
+      'Block Legacy Authentication': {
+        expectedState: 'enabled',
+        expectedControls: ['block'],
+        criticality: 'high'
+      }
+    }
+
+    const processedPolicies = realPolicies.map(policy => {
+      const baseline = policyBaselines[policy.displayName]
+      const config = extractPolicyConfiguration(policy)
+
+      let driftDetected = false
+      let changedControl = null
+      let previousValue = null
+      let currentValue = null
+
+      if (baseline && policy.state !== baseline.expectedState) {
+        driftDetected = true
+        changedControl = 'State'
+        previousValue = baseline.expectedState
+        currentValue = policy.state
+      }
+
+      if (baseline && !driftDetected && policy.grantControls) {
+        const controls = policy.grantControls.builtInControls || []
+        const authStrength = policy.grantControls.authenticationStrength
+        const actualControls = [...controls, authStrength].filter(Boolean)
+
+        const expectedStr = baseline.expectedControls.sort().join(',')
+        const actualStr = actualControls.sort().join(',')
+
+        if (expectedStr !== actualStr) {
+          driftDetected = true
+          changedControl = 'Grant Controls'
+          previousValue = baseline.expectedControls.join(', ')
+          currentValue = actualControls.join(', ')
+        }
+      }
+
+      return {
+        policyId: policy.id,
+        displayName: policy.displayName,
+        state: policy.state,
+        configuration: config,
+        driftDetected,
+        changedControl,
+        previousValue,
+        currentValue,
+        lastModified: new Date().toISOString(),
+        criticality: baseline?.criticality || 'medium'
+      }
+    })
+
+    const driftDetected = processedPolicies.some(p => p.driftDetected)
+    const activeDrifts = processedPolicies.filter(p => p.driftDetected).length
+
+    res.json({
+      success: true,
+      data: {
+        timestamp: new Date().toISOString(),
+        driftDetected,
+        alerts: { active: activeDrifts, resolved: 5 },
+        summary: { totalPolicies: processedPolicies.length, totalDriftEvents: activeDrifts, activeAlerts: activeDrifts },
+        trends: { trend: driftDetected ? 'DEGRADING' : 'STABLE', message: driftDetected ? 'Drift detected in policies' : 'All policies in sync' },
+        policies: processedPolicies,
+        recentAlerts: []
+      }
+    })
+  } catch (error) {
+    console.error('Error in drift endpoint:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
 })
 
 // ============================================================
