@@ -439,6 +439,49 @@ function renderComplianceTab(el, data) {
       </div>
     ` : ''}
 
+    ${selectedFramework.controls ? `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-list-check"></i> CIS Control Details (${selectedFramework.met}/${selectedFramework.total} Met)</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead>
+              <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-tertiary)">
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:80px">CIS ID</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Control Name</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:70px">Severity</th>
+                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:60px">Status</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Policy</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${selectedFramework.controls.map((control, i) => `
+                <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${i % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
+                  <td style="padding:10px;color:var(--color-text-primary);font-weight:700;font-family:monospace;vertical-align:top">${control.cisId}</td>
+                  <td style="padding:10px;color:var(--color-text-primary);font-weight:500;vertical-align:top">
+                    <div>${control.name}</div>
+                    <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${control.description}</div>
+                  </td>
+                  <td style="padding:10px;vertical-align:top">
+                    <span style="display:inline-block;padding:3px 6px;border-radius:3px;font-size:10px;font-weight:600;background:${control.severity === 'Critical' ? 'var(--clr-danger-bg)' : control.severity === 'High' ? 'var(--clr-warning-bg)' : 'var(--color-background-tertiary)'};color:${control.severity === 'Critical' ? 'var(--clr-danger-text)' : control.severity === 'High' ? 'var(--clr-warning-text)' : 'var(--color-text-secondary)'}">
+                      ${control.severity}
+                    </span>
+                  </td>
+                  <td style="padding:10px;text-align:center;vertical-align:top">
+                    ${control.met ? '<i class="fas fa-check-circle" style="color:var(--clr-success-text);font-size:14px"></i>' : '<i class="fas fa-times-circle" style="color:var(--clr-danger-text);font-size:14px"></i>'}
+                  </td>
+                  <td style="padding:10px;font-size:10px;color:var(--color-text-secondary);vertical-align:top">
+                    ${control.policy ? `<span style="display:inline-block;background:var(--clr-success-bg);color:var(--clr-success-text);padding:3px 8px;border-radius:3px;font-weight:600">${control.policy.name}</span>` : '<span style="color:var(--clr-danger-text);font-style:italic">Not Found</span>'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ` : ''}
+
     ${data.insights ? `
       <div class="card">
         <div class="card-header">
