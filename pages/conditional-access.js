@@ -445,12 +445,12 @@ function renderComplianceTab(el, data) {
           <div class="card-title">Framework Insights</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          ${data.insights.filter(i => i.framework === selectedFramework.name).map(insight => `
+          ${data.insights.filter(i => i.framework === selectedFramework.name).length > 0 ? data.insights.filter(i => i.framework === selectedFramework.name).map(insight => `
             <div style="padding:12px;background:var(--color-background-secondary);border-left:3px solid ${insight.type === 'STRENGTH' ? 'var(--clr-success-text)' : 'var(--clr-warning-text)'};border-radius:4px;font-size:12px">
               <div style="font-weight:600;color:var(--color-text-primary);margin-bottom:4px"><i class="fas fa-${insight.type === 'STRENGTH' ? 'check-circle' : 'exclamation-circle'}"></i> ${insight.type}</div>
               <div style="color:var(--color-text-secondary)">${insight.message}</div>
             </div>
-          `).join('')}
+          `).join('') : '<div style="padding:12px;text-align:center;color:var(--color-text-secondary);font-size:12px">No specific insights available for this framework</div>'}
         </div>
       </div>
     ` : ''}
