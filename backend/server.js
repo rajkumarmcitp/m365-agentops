@@ -24212,11 +24212,23 @@ app.get('/api/cap/dashboard/controls', async (req, res) => {
 app.get('/api/cap/dashboard/risk', async (req, res) => {
   try {
     const realPolicies = await loadPolicies()
+    const cisResults = validateCISControls(realPolicies)
     const enabledCount = realPolicies.filter(p => p.state === 'enabled').length
     const totalCount = realPolicies.length
     const compliancePercentage = totalCount > 0 ? Math.round((enabledCount / totalCount) * 100) : 0
     const riskPercentage = 100 - compliancePercentage
     const overallRiskLevel = riskPercentage >= 40 ? 'HIGH' : riskPercentage >= 20 ? 'MEDIUM' : 'LOW'
+
+    // Map controls to risk level based on whether they're met
+    const controlsWithRisk = cisResults.map(control => ({
+      ...control,
+      riskLevel: !control.met ? control.severity : 'LOW',
+      riskScore: !control.met ? (control.severity === 'Critical' ? 90 : control.severity === 'High' ? 70 : 50) : 10,
+      impactArea: control.severity === 'Critical' ? 'SEVERE - Immediate action required' : control.severity === 'High' ? 'SIGNIFICANT - Address within 30 days' : 'MODERATE - Schedule for review'
+    }))
+
+    const criticalRisks = controlsWithRisk.filter(c => !c.met && c.severity === 'Critical')
+    const highRisks = controlsWithRisk.filter(c => !c.met && c.severity === 'High')
 
     res.json({
       success: true,
@@ -24225,15 +24237,20 @@ app.get('/api/cap/dashboard/risk', async (req, res) => {
         overallRiskLevel: overallRiskLevel,
         riskScore: riskPercentage,
         riskMatrix: {
-          critical: { count: totalCount - enabledCount > 0 ? Math.max(1, totalCount - enabledCount) : 0, impact: 'SEVERE', timeToFix: '0-7 days' },
-          high: { count: Math.max(0, Math.floor((totalCount - enabledCount) * 0.5)), impact: 'SIGNIFICANT', timeToFix: '7-30 days' },
-          medium: { count: 12, impact: 'MODERATE', timeToFix: '30-90 days' },
-          low: { count: 22, impact: 'MINOR', timeToFix: '90+ days' }
+          critical: { count: criticalRisks.length, impact: 'SEVERE', timeToFix: '0-7 days' },
+          high: { count: highRisks.length, impact: 'SIGNIFICANT', timeToFix: '7-30 days' },
+          medium: { count: controlsWithRisk.filter(c => !c.met && c.severity === 'Medium').length, impact: 'MODERATE', timeToFix: '30-90 days' },
+          low: { count: controlsWithRisk.filter(c => c.met).length, impact: 'MINOR', timeToFix: 'N/A' }
         },
-        topRisks: [
-          { controlId: 'CA-026', name: 'Phishing Resistant MFA', description: 'Admins lack protection' }
-        ],
-        complianceGap: riskPercentage + '%'
+        topRisks: criticalRisks.slice(0, 5).map(c => ({
+          controlId: c.cisId,
+          name: c.name,
+          description: c.description,
+          riskScore: c.riskScore,
+          impactArea: c.impactArea
+        })),
+        complianceGap: riskPercentage + '%',
+        controls: controlsWithRisk
       }
     })
   } catch (error) {

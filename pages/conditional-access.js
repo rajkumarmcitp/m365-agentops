@@ -663,18 +663,61 @@ function renderRiskTab(el, data) {
       </div>
     </div>
 
-    ${data.topRisks.length > 0 ? `
+    ${data.topRisks && data.topRisks.length > 0 ? `
       <div class="card">
         <div class="card-header">
-          <div class="card-title">Top Risks</div>
+          <div class="card-title"><i class="fas fa-exclamation-triangle"></i> Top Risks (${data.topRisks.length})</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:12px">
           ${data.topRisks.map(risk => `
-            <div style="padding:12px;background:var(--color-background-secondary);border-left:3px solid var(--clr-danger-text);border-radius:4px">
-              <div style="font-weight:600;font-size:13px;color:var(--color-text-primary);margin-bottom:4px">${risk.controlId}: ${risk.name}</div>
-              <div style="font-size:12px;color:var(--color-text-secondary)">${risk.description}</div>
+            <div style="padding:12px;background:var(--clr-danger-bg);border-left:3px solid var(--clr-danger-text);border-radius:4px">
+              <div style="font-weight:600;font-size:13px;color:var(--clr-danger-text);margin-bottom:4px">${risk.controlId}: ${risk.name}</div>
+              <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px">${risk.description}</div>
+              <div style="font-size:11px;color:var(--clr-danger-text);padding:6px;background:rgba(220, 38, 38, 0.1);border-radius:3px">${risk.impactArea}</div>
             </div>
           `).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    ${data.controls ? `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-shield-alt"></i> Control Risk Assessment</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead>
+              <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-tertiary)">
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:80px">Control ID</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Control Name</th>
+                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:80px">Risk Level</th>
+                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:70px">Risk Score</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Impact Area</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Policy</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.controls.map((control, i) => `
+                <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${i % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
+                  <td style="padding:10px;color:var(--color-text-primary);font-weight:700;font-family:monospace;vertical-align:top">${control.cisId}</td>
+                  <td style="padding:10px;color:var(--color-text-primary);font-weight:500;vertical-align:top">
+                    <div>${control.name}</div>
+                  </td>
+                  <td style="padding:10px;text-align:center;vertical-align:top">
+                    <span style="display:inline-block;padding:4px 8px;border-radius:3px;font-size:10px;font-weight:600;background:${control.riskLevel === 'Critical' ? 'var(--clr-danger-bg)' : control.riskLevel === 'High' ? 'var(--clr-warning-bg)' : control.riskLevel === 'Medium' ? '#fef3c7' : 'var(--clr-success-bg)'};color:${control.riskLevel === 'Critical' ? 'var(--clr-danger-text)' : control.riskLevel === 'High' ? 'var(--clr-warning-text)' : control.riskLevel === 'Medium' ? '#92400e' : 'var(--clr-success-text)'}">
+                      ${control.riskLevel}
+                    </span>
+                  </td>
+                  <td style="padding:10px;text-align:center;font-weight:700;color:${control.riskScore >= 80 ? 'var(--clr-danger-text)' : control.riskScore >= 60 ? 'var(--clr-warning-text)' : 'var(--clr-success-text)'};vertical-align:top">${control.riskScore}</td>
+                  <td style="padding:10px;font-size:10px;color:var(--color-text-secondary);vertical-align:top">${control.impactArea}</td>
+                  <td style="padding:10px;font-size:10px;color:var(--color-text-secondary);vertical-align:top">
+                    ${control.policy ? `<span style="display:inline-block;background:var(--clr-success-bg);color:var(--clr-success-text);padding:3px 6px;border-radius:3px;font-weight:600">${control.policy.name}</span>` : '<span style="color:var(--clr-danger-text);font-style:italic">Not Configured</span>'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         </div>
       </div>
     ` : ''}
