@@ -260,7 +260,7 @@ function renderOverviewTab(el, data) {
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:16px;margin-bottom:16px">
       <div class="card">
         <div style="font-size:24px;font-weight:700;color:var(--clr-primary);margin-bottom:4px">${data.keyMetrics.totalPolicies}</div>
         <div style="font-size:12px;color:var(--color-text-secondary)">Total Policies</div>
@@ -269,9 +269,6 @@ function renderOverviewTab(el, data) {
         <div style="font-size:24px;font-weight:700;color:var(--clr-primary);margin-bottom:4px">${data.keyMetrics.totalControls}</div>
         <div style="font-size:12px;color:var(--color-text-secondary)">Total Controls</div>
       </div>
-    </div>
-
-    <div class="cap-grid">
       <div class="card" style="background:var(--clr-success-bg);border-color:var(--clr-success-border)">
         <div style="font-size:24px;font-weight:700;color:var(--clr-success-text);margin-bottom:4px">${data.keyMetrics.compliantControls}</div>
         <div style="font-size:12px;color:var(--clr-success-text)">Compliant</div>
