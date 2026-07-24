@@ -67,6 +67,7 @@ import { BackupAgent } from './lib/backup-agent.js'
 import { BackupStorageManager } from './lib/backup-storage.js'
 import setupBackupRoutes from './routes/backup-routes.js'
 import { capControlFramework, evaluateCategory } from './lib/cap-control-framework.js'
+import { extractControlsFromPolicies, calculateControlCoverage } from './control-extractor.js'
 import { loadPolicies } from './policy-loader.js'
 import {
   getAlertStatus, setAlertStatus, getAlertStatusHistory, getAllAlertStatuses,
@@ -24153,52 +24154,50 @@ app.get('/api/cap/dashboard/compliance', async (req, res) => {
 app.get('/api/cap/dashboard/controls', async (req, res) => {
   try {
     const realPolicies = await loadPolicies()
-    const cisResults = validateCISControls(realPolicies)
-    const enabledCount = realPolicies.filter(p => p.state === 'enabled').length
-    const totalCount = realPolicies.length
-    const compliancePercentage = totalCount > 0 ? Math.round((enabledCount / totalCount) * 100) : 0
-    const compliantControls = cisResults.filter(c => c.met).length
-    const nonCompliantControls = cisResults.filter(c => !c.met).length
+    const extractedControls = extractControlsFromPolicies(realPolicies)
+    const coverage = calculateControlCoverage(extractedControls)
 
     res.json({
       success: true,
       data: {
         timestamp: new Date().toISOString(),
         summary: {
-          total: cisResults.length,
-          compliant: compliantControls,
-          nonCompliant: nonCompliantControls,
-          compliance: Math.round((compliantControls / cisResults.length) * 100) + '%'
+          total: extractedControls.length,
+          compliant: extractedControls.filter(c => c.met).length,
+          nonCompliant: extractedControls.filter(c => !c.met).length,
+          compliance: coverage.percentage + '%'
         },
         byCategory: [
           {
             category: 'Critical Controls',
-            total: cisResults.filter(c => c.severity === 'Critical').length,
-            compliant: cisResults.filter(c => c.severity === 'Critical' && c.met).length,
-            percentage: Math.round((cisResults.filter(c => c.severity === 'Critical' && c.met).length / cisResults.filter(c => c.severity === 'Critical').length) * 100),
-            status: cisResults.filter(c => c.severity === 'Critical' && c.met).length >= cisResults.filter(c => c.severity === 'Critical').length * 0.8 ? 'PASS' : 'WARN'
+            total: extractedControls.filter(c => c.severity === 'Critical').length,
+            compliant: extractedControls.filter(c => c.severity === 'Critical' && c.met).length,
+            percentage: extractedControls.filter(c => c.severity === 'Critical').length > 0 ? Math.round((extractedControls.filter(c => c.severity === 'Critical' && c.met).length / extractedControls.filter(c => c.severity === 'Critical').length) * 100) : 0,
+            status: extractedControls.filter(c => c.severity === 'Critical').length > 0 && extractedControls.filter(c => c.severity === 'Critical' && c.met).length >= extractedControls.filter(c => c.severity === 'Critical').length * 0.8 ? 'PASS' : 'WARN'
           },
           {
             category: 'High Priority Controls',
-            total: cisResults.filter(c => c.severity === 'High').length,
-            compliant: cisResults.filter(c => c.severity === 'High' && c.met).length,
-            percentage: Math.round((cisResults.filter(c => c.severity === 'High' && c.met).length / cisResults.filter(c => c.severity === 'High').length) * 100),
-            status: Math.round((cisResults.filter(c => c.severity === 'High' && c.met).length / cisResults.filter(c => c.severity === 'High').length) * 100) >= 70 ? 'PASS' : 'WARN'
+            total: extractedControls.filter(c => c.severity === 'High').length,
+            compliant: extractedControls.filter(c => c.severity === 'High' && c.met).length,
+            percentage: extractedControls.filter(c => c.severity === 'High').length > 0 ? Math.round((extractedControls.filter(c => c.severity === 'High' && c.met).length / extractedControls.filter(c => c.severity === 'High').length) * 100) : 0,
+            status: extractedControls.filter(c => c.severity === 'High').length > 0 && Math.round((extractedControls.filter(c => c.severity === 'High' && c.met).length / extractedControls.filter(c => c.severity === 'High').length) * 100) >= 70 ? 'PASS' : 'WARN'
           },
           {
             category: 'Medium Priority Controls',
-            total: cisResults.filter(c => c.severity === 'Medium').length,
-            compliant: cisResults.filter(c => c.severity === 'Medium' && c.met).length,
-            percentage: Math.round((cisResults.filter(c => c.severity === 'Medium' && c.met).length / cisResults.filter(c => c.severity === 'Medium').length) * 100),
-            status: Math.round((cisResults.filter(c => c.severity === 'Medium' && c.met).length / cisResults.filter(c => c.severity === 'Medium').length) * 100) >= 70 ? 'PASS' : 'WARN'
+            total: extractedControls.filter(c => c.severity === 'Medium').length,
+            compliant: extractedControls.filter(c => c.severity === 'Medium' && c.met).length,
+            percentage: extractedControls.filter(c => c.severity === 'Medium').length > 0 ? Math.round((extractedControls.filter(c => c.severity === 'Medium' && c.met).length / extractedControls.filter(c => c.severity === 'Medium').length) * 100) : 0,
+            status: extractedControls.filter(c => c.severity === 'Medium').length > 0 && Math.round((extractedControls.filter(c => c.severity === 'Medium' && c.met).length / extractedControls.filter(c => c.severity === 'Medium').length) * 100) >= 70 ? 'PASS' : 'WARN'
           }
         ],
-        controls: cisResults,
-        criticalGaps: cisResults.filter(c => !c.met && c.severity === 'Critical').slice(0, 3).map(c => ({
-          id: c.cisId,
+        controls: extractedControls,
+        cisMapping: { percentage: coverage.cisPercentage, description: `${coverage.withCIS} of ${coverage.total} controls mapped to CIS` },
+        criticalGaps: extractedControls.filter(c => !c.met && c.severity === 'Critical').slice(0, 3).map(c => ({
+          id: c.id,
           name: c.name,
           description: c.description,
-          severity: c.severity
+          severity: c.severity,
+          cisControls: c.cisControls
         }))
       }
     })
