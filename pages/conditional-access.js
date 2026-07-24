@@ -8,6 +8,7 @@ import { callAPI } from '../lib/api-client.js'
 
 let currentTab = 'overview'
 let currentCategory = 'CA-CAT-02' // Default to Identity Protection
+let currentFramework = 'Zero Trust' // Default compliance framework
 let dashboardData = null
 let autoRefreshInterval = null
 
@@ -383,24 +384,60 @@ function renderComplianceTab(el, data) {
     return
   }
 
+  const selectedFramework = data.frameworks.find(f => f.name === currentFramework) || data.frameworks[0]
+
   el.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;padding:12px;background:var(--color-background-secondary);border-radius:4px">
+      ${data.frameworks.map(fw => `
+        <button class="compliance-framework-btn" data-framework="${fw.name}" style="padding:8px 16px;border-radius:4px;border:0.5px solid var(--color-border-tertiary);background:${fw.name === currentFramework ? 'var(--clr-primary)' : 'transparent'};color:${fw.name === currentFramework ? 'white' : 'var(--color-text-primary)'};cursor:pointer;font-weight:600;font-size:12px;transition:all var(--transition)">${fw.name}</button>
+      `).join('')}
+    </div>
+
     <div class="card">
       <div class="card-header">
-        <div class="card-title">Multi-Framework Compliance</div>
+        <div class="card-title">${selectedFramework.name} - Compliance Details</div>
       </div>
-      <div class="cap-grid">
-        ${data.frameworks.map(fw => `
-          <div style="padding:16px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:4px">
-            <div style="font-weight:600;font-size:13px;color:var(--color-text-primary);margin-bottom:8px">${fw.name}</div>
-            <div style="font-size:24px;font-weight:700;color:var(--clr-primary);margin-bottom:4px">${fw.score}</div>
-            <div style="font-size:12px;padding:4px 8px;background:${getGradeBackground(fw.grade)};color:${getGradeText(fw.grade)};border-radius:3px;width:fit-content;margin-bottom:8px;font-weight:600">${fw.grade}</div>
-            <div class="score-bar">
-              <div class="score-fill" style="width: ${fw.score}%"></div>
-            </div>
+      <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:16px;margin-bottom:16px">
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:4px">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-primary);margin-bottom:4px">${selectedFramework.score}</div>
+          <div style="font-size:12px;color:var(--color-text-secondary)">Compliance Score</div>
+        </div>
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:4px">
+          <div style="font-size:24px;font-weight:700;color:var(--clr-primary);margin-bottom:4px">${selectedFramework.grade}</div>
+          <div style="font-size:12px;color:var(--color-text-secondary)">Grade</div>
+        </div>
+        ${selectedFramework.coverage ? `
+          <div style="padding:12px;background:var(--color-background-secondary);border-radius:4px">
+            <div style="font-size:24px;font-weight:700;color:var(--clr-primary);margin-bottom:4px">${selectedFramework.coverage}</div>
+            <div style="font-size:12px;color:var(--color-text-secondary)">Coverage</div>
           </div>
-        `).join('')}
+        ` : ''}
+      </div>
+      <div class="score-bar" style="height:6px;margin-bottom:12px">
+        <div class="score-fill" style="width: ${selectedFramework.score}%;height:100%"></div>
       </div>
     </div>
+
+    ${selectedFramework.pillars ? `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-layer-group"></i> Security Pillars Alignment</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          ${selectedFramework.pillars.map(pillar => `
+            <div style="padding:12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:4px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div style="font-weight:600;font-size:13px;color:var(--color-text-primary)">${pillar.name}</div>
+                <div style="font-size:16px;font-weight:700;color:var(--clr-primary)">${pillar.score}</div>
+              </div>
+              <div class="score-bar">
+                <div class="score-fill" style="width: ${pillar.score}%;background:${pillar.status === 'PASS' ? 'var(--clr-success-text)' : 'var(--clr-warning-text)'}"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
 
     ${data.insights ? `
       <div class="card">
@@ -408,13 +445,27 @@ function renderComplianceTab(el, data) {
           <div class="card-title">Framework Insights</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          ${data.insights.map(insight => `
-            <div style="padding:8px;background:var(--color-background-secondary);border-left:3px solid var(--clr-primary);border-radius:4px;font-size:12px;color:var(--color-text-secondary)">${insight.message}</div>
+          ${data.insights.filter(i => i.framework === selectedFramework.name).map(insight => `
+            <div style="padding:12px;background:var(--color-background-secondary);border-left:3px solid ${insight.type === 'STRENGTH' ? 'var(--clr-success-text)' : 'var(--clr-warning-text)'};border-radius:4px;font-size:12px">
+              <div style="font-weight:600;color:var(--color-text-primary);margin-bottom:4px"><i class="fas fa-${insight.type === 'STRENGTH' ? 'check-circle' : 'exclamation-circle'}"></i> ${insight.type}</div>
+              <div style="color:var(--color-text-secondary)">${insight.message}</div>
+            </div>
           `).join('')}
         </div>
       </div>
     ` : ''}
   `
+
+  // Add framework tab click handlers
+  setTimeout(() => {
+    const frameworkBtns = el.querySelectorAll('.compliance-framework-btn')
+    frameworkBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentFramework = btn.dataset.framework
+        renderTabContent(document.querySelector('#page-conditionalaccess'), 'compliance')
+      })
+    })
+  }, 0)
 }
 
 function renderControlsTab(el, data) {
