@@ -233,18 +233,6 @@ function renderOverviewTab(el, data) {
   const scoreColor = data.scorecard.score >= 80 ? 'var(--clr-success-text)' : data.scorecard.score >= 60 ? 'var(--clr-warning-text)' : 'var(--clr-danger-text)'
 
   el.innerHTML = `
-    <div class="card" style="background:var(--clr-info-bg);border-left:3px solid var(--clr-info-text);padding:16px;margin-bottom:16px">
-      <div style="display:flex;gap:12px;align-items:flex-start">
-        <i class="fas fa-info-circle" style="color:var(--clr-info-text);margin-top:2px;flex-shrink:0"></i>
-        <div>
-          <div style="font-weight:600;color:var(--clr-info-text);margin-bottom:4px">Zero Trust Pillars</div>
-          <div style="font-size:12px;color:var(--clr-info-text);line-height:1.5">
-            Seven security domains that verify every access request. Scores reflect CAP implementation across Identity, Device, Network, Application, Session, Governance, and Monitoring.
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="card">
       <div class="card-header">
         <div class="card-title">Security Scorecard</div>
@@ -288,42 +276,6 @@ function renderOverviewTab(el, data) {
       <div class="card" style="background:var(--clr-danger-bg);border-color:var(--clr-danger-border)">
         <div style="font-size:24px;font-weight:700;color:var(--clr-danger-text);margin-bottom:4px">${data.keyMetrics.implementationGap}</div>
         <div style="font-size:12px;color:var(--clr-danger-text)">Gap</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title"><i class="fas fa-layer-group"></i> Security Pillars</div>
-      </div>
-      <div class="cap-grid">
-        ${data.zeroPillars.map(pillar => `
-          <div style="padding:12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-left:3px solid ${getPillarBorderColor(pillar.status)};border-radius:4px;cursor:help;position:relative;group" title="${getPillarDescription(pillar.pillar)}">
-            <div style="font-weight:600;font-size:13px;color:var(--color-text-primary);margin-bottom:6px;display:flex;align-items:center;gap:6px">
-              ${pillar.pillar}
-              <i class="fas fa-question-circle" style="font-size:11px;color:var(--color-text-tertiary)"></i>
-            </div>
-            <div style="font-size:20px;font-weight:700;color:var(--clr-primary);margin-bottom:4px">${pillar.score}</div>
-            <div class="score-bar">
-              <div class="score-fill" style="width: ${pillar.score}%; background: ${getPillarBorderColor(pillar.status)}"></div>
-            </div>
-            <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:6px;line-height:1.3">${getPillarDescription(pillar.pillar)}</div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
-    <div class="cap-grid">
-      <div class="card" style="background:var(--clr-danger-bg);border-color:var(--clr-danger-border)">
-        <div style="font-size:20px;font-weight:700;color:var(--clr-danger-text);margin-bottom:2px">${data.alerts.critical}</div>
-        <div style="font-size:12px;color:var(--clr-danger-text)">Critical</div>
-      </div>
-      <div class="card" style="background:var(--clr-warning-bg);border-color:var(--clr-warning-border)">
-        <div style="font-size:20px;font-weight:700;color:var(--clr-warning-text);margin-bottom:2px">${data.alerts.high}</div>
-        <div style="font-size:12px;color:var(--clr-warning-text)">High</div>
-      </div>
-      <div class="card" style="background:#fef3c7;border-color:#fcd34d">
-        <div style="font-size:20px;font-weight:700;color:#92400e;margin-bottom:2px">${data.alerts.medium}</div>
-        <div style="font-size:12px;color:#92400e">Medium</div>
       </div>
     </div>
 
