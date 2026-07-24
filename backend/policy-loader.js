@@ -208,6 +208,156 @@ export function getDefaultMockPolicies() {
         builtInControls: []
       },
       sessionControls: {}
+    },
+    {
+      id: 'policy-011',
+      displayName: 'Session Control - Admin Sign-in Frequency',
+      state: 'enabled',
+      conditions: {
+        applications: {
+          includeApplications: ['All']
+        },
+        users: {
+          includeRoles: ['Global Administrator', 'Security Administrator', 'Privileged Role Administrator']
+        }
+      },
+      grantControls: {
+        operator: 'AND',
+        builtInControls: ['mfa']
+      },
+      sessionControls: {
+        signInFrequency: {
+          value: 1,
+          type: 'hours',
+          isEnabled: true
+        },
+        persistentBrowserMode: {
+          isEnabled: false
+        }
+      }
+    },
+    {
+      id: 'policy-012',
+      displayName: 'User Risk - Medium and High Block',
+      state: 'enabled',
+      conditions: {
+        applications: {
+          includeApplications: ['All']
+        },
+        userRiskLevels: ['high', 'medium']
+      },
+      grantControls: {
+        operator: 'AND',
+        builtInControls: ['block']
+      },
+      sessionControls: {}
+    },
+    {
+      id: 'policy-013',
+      displayName: 'Device Code Flow - Block',
+      state: 'enabled',
+      conditions: {
+        applications: {
+          includeApplications: ['All']
+        },
+        clientAppTypes: ['mobileAppsAndDesktopClients']
+      },
+      grantControls: {
+        operator: 'AND',
+        builtInControls: ['block']
+      },
+      sessionControls: {}
+    },
+    {
+      id: 'policy-014',
+      displayName: 'Intune Enrollment - Every Time Auth',
+      state: 'enabled',
+      conditions: {
+        applications: {
+          includeApplications: ['Microsoft Intune Enrollment']
+        }
+      },
+      grantControls: {
+        operator: 'AND',
+        builtInControls: ['mfa']
+      },
+      sessionControls: {
+        signInFrequency: {
+          value: 1,
+          type: 'hours',
+          isEnabled: true
+        }
+      }
+    },
+    {
+      id: 'policy-015',
+      displayName: 'MFA Registration - Device Compliance Required',
+      state: 'enabled',
+      conditions: {
+        applications: {
+          includeApplications: ['Azure MFA']
+        },
+        userActions: ['urn:user:registersecurityinfo']
+      },
+      grantControls: {
+        operator: 'AND',
+        builtInControls: ['compliantDevice']
+      },
+      sessionControls: {}
+    },
+    {
+      id: 'policy-016',
+      displayName: 'Token Protection - Require',
+      state: 'enabled',
+      conditions: {
+        applications: {
+          includeApplications: ['All']
+        }
+      },
+      grantControls: {
+        operator: 'AND',
+        builtInControls: ['mfa']
+      },
+      sessionControls: {
+        protectTokenProtection: {
+          isEnabled: true
+        }
+      }
+    },
+    {
+      id: 'policy-017',
+      displayName: 'Authentication Transfer - Block',
+      state: 'enabled',
+      conditions: {
+        applications: {
+          includeApplications: ['All']
+        }
+      },
+      grantControls: {
+        operator: 'AND',
+        builtInControls: []
+      },
+      sessionControls: {
+        transferBlockProtection: {
+          isEnabled: true
+        }
+      }
+    },
+    {
+      id: 'policy-018',
+      displayName: 'Geographic Restrictions - High Risk Countries',
+      state: 'enabled',
+      conditions: {
+        applications: {
+          includeApplications: ['All']
+        },
+        locations: ['BlockedCountries']
+      },
+      grantControls: {
+        operator: 'AND',
+        builtInControls: ['block']
+      },
+      sessionControls: {}
     }
   ]
 }
