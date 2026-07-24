@@ -24069,11 +24069,17 @@ app.get('/api/cap/dashboard/compliance', async (req, res) => {
         ],
         insights: [
           { type: 'STRENGTH', framework: 'Zero Trust', message: enabledCount + ' policies are active and enforced across all security pillars' },
-          { type: 'STRENGTH', framework: 'CIS Controls', message: 'Access Control and Asset Management controls are well-implemented' },
-          { type: 'WEAKNESS', framework: 'NIST 800-53', message: 'Audit & Accountability (AU) controls need strengthening for compliance' },
-          { type: 'WEAKNESS', framework: 'ISO 27001', message: 'Incident Management procedures need enhancement and testing' },
           { type: 'STRENGTH', framework: 'Zero Trust', message: 'Identity and Governance pillars demonstrate strong policy enforcement' },
-          { type: 'WEAKNESS', framework: 'Zero Trust', message: totalCount - enabledCount + ' policies require review and activation' }
+          { type: 'WEAKNESS', framework: 'Zero Trust', message: totalCount - enabledCount + ' policies require review and activation' },
+          { type: 'STRENGTH', framework: 'CIS Controls', message: 'Access Control and Asset Management controls are well-implemented' },
+          { type: 'STRENGTH', framework: 'CIS Controls', message: 'Asset Management practices align with CIS Control V8 requirements' },
+          { type: 'WEAKNESS', framework: 'CIS Controls', message: 'Implement automated logging and monitoring to meet CIS Control requirements' },
+          { type: 'STRENGTH', framework: 'NIST 800-53', message: 'Access Control (AC) family requirements are properly documented' },
+          { type: 'WEAKNESS', framework: 'NIST 800-53', message: 'Audit & Accountability (AU) controls need strengthening for compliance' },
+          { type: 'WEAKNESS', framework: 'NIST 800-53', message: 'Configuration Management (CM) controls require enhancement' },
+          { type: 'STRENGTH', framework: 'ISO 27001', message: 'Access Control measures align with ISO 27001 requirements' },
+          { type: 'WEAKNESS', framework: 'ISO 27001', message: 'Incident Management procedures need enhancement and testing' },
+          { type: 'WEAKNESS', framework: 'ISO 27001', message: 'Cryptographic controls require regular review and testing' }
         ]
       }
     })
