@@ -23999,6 +23999,44 @@ function evaluateCategoryNetworkProtection() {
   }
 }
 
+// CIS Controls Mapping for Conditional Access
+const cisControlsMapping = [
+  { cisId: '5.2.2.1', name: 'Admin MFA', description: 'Ensure multifactor authentication is enabled for all users in administrative roles', severity: 'Critical', policyPattern: 'admin|administrator' },
+  { cisId: '5.2.2.2', name: 'User MFA', description: 'Ensure multifactor authentication is enabled for all users', severity: 'Critical', policyPattern: 'mfa|multifactor' },
+  { cisId: '5.2.2.3', name: 'Legacy Authentication', description: 'Enable Conditional Access policies to block legacy authentication', severity: 'Critical', policyPattern: 'legacy|oauth|basic' },
+  { cisId: '5.2.2.4', name: 'Session Control', description: 'Ensure Sign-in frequency is enabled and browser sessions are not persistent for Administrative users', severity: 'High', policyPattern: 'session|frequency' },
+  { cisId: '5.2.2.5', name: 'Authentication Strength', description: 'Ensure Phishing-resistant MFA strength is required for Administrators', severity: 'Critical', policyPattern: 'phishing|fido|passkey' },
+  { cisId: '5.2.2.6', name: 'User Risk', description: 'Enable Identity Protection user risk policies', severity: 'High', policyPattern: 'user.*risk|risk.*user' },
+  { cisId: '5.2.2.7', name: 'Sign-in Risk', description: 'Enable Identity Protection sign-in risk policies', severity: 'High', policyPattern: 'sign.*risk|signin.*risk' },
+  { cisId: '5.2.2.8', name: 'Risk Response', description: 'Ensure sign-in risk is blocked for medium and high risk', severity: 'Critical', policyPattern: 'block.*risk|risk.*block' },
+  { cisId: '5.2.2.9', name: 'Device Compliance', description: 'Ensure a managed device is required for authentication', severity: 'High', policyPattern: 'device|compliant' },
+  { cisId: '5.2.2.10', name: 'Security Info Registration', description: 'Ensure a managed device is required to register security information', severity: 'High', policyPattern: 'security.*info|mfa.*register' },
+  { cisId: '5.2.2.11', name: 'Intune Enrollment', description: 'Ensure sign-in frequency for Intune Enrollment is set to Every time', severity: 'Medium', policyPattern: 'intune|enrollment' },
+  { cisId: '5.2.2.12', name: 'Device Code Flow', description: 'Ensure the device code sign-in flow is blocked', severity: 'High', policyPattern: 'device.*code|block.*device' },
+  { cisId: '5.2.2.13', name: 'Session Control', description: 'Ensure periodic reauthentication is required for all users', severity: 'Medium', policyPattern: 'reauthenticate|periodic' },
+  { cisId: '5.2.2.14', name: 'Named Locations', description: 'Ensure trusted named locations are defined', severity: 'Medium', policyPattern: 'location|geography|country' },
+  { cisId: '5.2.2.15', name: 'Location Policy', description: 'Ensure exclusionary geographic access controls are utilized', severity: 'High', policyPattern: 'geography|country|location' },
+  { cisId: '5.2.2.16', name: 'Token Protection', description: 'Ensure Token Protection is enforced for session tokens', severity: 'High', policyPattern: 'token|protect' },
+  { cisId: '5.2.2.17', name: 'Authentication Transfer', description: 'Ensure authentication transfer is blocked', severity: 'High', policyPattern: 'transfer|auth.*transfer' }
+]
+
+function validateCISControls(policies) {
+  const results = []
+  cisControlsMapping.forEach(control => {
+    const regex = new RegExp(control.policyPattern, 'i')
+    const matchedPolicy = policies.find(p => regex.test(p.displayName) && p.state === 'enabled')
+    results.push({
+      cisId: control.cisId,
+      name: control.name,
+      description: control.description,
+      severity: control.severity,
+      met: !!matchedPolicy,
+      policy: matchedPolicy ? { id: matchedPolicy.id, name: matchedPolicy.displayName } : null
+    })
+  })
+  return results
+}
+
 // Compliance Dashboard
 app.get('/api/cap/dashboard/compliance', async (req, res) => {
   try {
@@ -24008,7 +24046,11 @@ app.get('/api/cap/dashboard/compliance', async (req, res) => {
     const compliancePercentage = totalCount > 0 ? Math.round((enabledCount / totalCount) * 100) : 0
     const grade = compliancePercentage >= 80 ? 'A' : compliancePercentage >= 70 ? 'B' : compliancePercentage >= 60 ? 'C' : 'D'
 
-    const cisScore = Math.max(0, compliancePercentage - 5)
+    // Validate CIS Controls
+    const cisResults = validateCISControls(realPolicies)
+    const cisMet = cisResults.filter(r => r.met).length
+    const cisCriticalMet = cisResults.filter(r => r.met && r.severity === 'Critical').length
+    const cisScore = Math.round((cisMet / cisResults.length) * 100)
     const nistScore = Math.max(0, compliancePercentage - 3)
     const isoScore = Math.max(0, compliancePercentage - 2)
 
@@ -24037,12 +24079,15 @@ app.get('/api/cap/dashboard/compliance', async (req, res) => {
             name: 'CIS Controls',
             score: cisScore,
             grade: cisScore >= 80 ? 'A' : cisScore >= 70 ? 'B' : cisScore >= 60 ? 'C' : 'D',
-            coverage: Math.max(30, compliancePercentage - 20) + '%',
+            coverage: Math.round((cisMet / cisResults.length) * 100) + '%',
+            met: cisMet,
+            total: cisResults.length,
             pillars: [
-              { name: 'Asset Management', score: Math.max(0, cisScore - 5), status: Math.max(0, cisScore - 5) >= 70 ? 'PASS' : 'FAIL' },
-              { name: 'Access Control', score: cisScore, status: cisScore >= 70 ? 'PASS' : 'FAIL' },
-              { name: 'Data Protection', score: Math.max(0, cisScore - 10), status: Math.max(0, cisScore - 10) >= 70 ? 'PASS' : 'FAIL' }
-            ]
+              { name: 'Critical Controls', score: Math.round((cisCriticalMet / cisResults.filter(r => r.severity === 'Critical').length) * 100), status: cisCriticalMet >= cisResults.filter(r => r.severity === 'Critical').length * 0.8 ? 'PASS' : 'FAIL' },
+              { name: 'High Priority Controls', score: cisScore, status: cisScore >= 70 ? 'PASS' : 'FAIL' },
+              { name: 'Implementation Rate', score: cisScore, status: cisScore >= 60 ? 'PASS' : 'FAIL' }
+            ],
+            controls: cisResults
           },
           {
             name: 'NIST 800-53',
