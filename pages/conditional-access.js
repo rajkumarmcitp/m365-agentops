@@ -391,7 +391,10 @@ function renderComplianceTab(el, data) {
     insightsCount: data.insights ? data.insights.length : 0,
     allInsightFrameworks: data.insights ? data.insights.map(i => i.framework) : [],
     matchingInsightsCount: matchingInsights.length,
-    matchingInsights: matchingInsights
+    matchingInsights: matchingInsights,
+    hasControls: !!selectedFramework.controls,
+    controlsCount: selectedFramework.controls ? selectedFramework.controls.length : 0,
+    selectedFramework: selectedFramework
   })
 
   el.innerHTML = `
