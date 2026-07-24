@@ -385,6 +385,7 @@ function renderComplianceTab(el, data) {
   }
 
   const selectedFramework = data.frameworks.find(f => f.name === currentFramework) || data.frameworks[0]
+  console.log('📊 Compliance Tab Data:', { selectedFramework: selectedFramework.name, insightsCount: data.insights ? data.insights.length : 0, matchingInsights: data.insights ? data.insights.filter(i => i.framework === selectedFramework.name).length : 0 })
 
   el.innerHTML = `
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;padding:12px;background:var(--color-background-secondary);border-radius:4px">
