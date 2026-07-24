@@ -230,7 +230,7 @@ function renderOverviewTab(el, data) {
     return
   }
 
-  const scoreColor = data.scorecard.score >= 80 ? 'var(--clr-success-text)' : data.scorecard.score >= 60 ? 'var(--clr-warning-text)' : 'var(--clr-danger-text)'
+  const scoreColor = data.scorecard.overallScore >= 80 ? 'var(--clr-success-text)' : data.scorecard.overallScore >= 60 ? 'var(--clr-warning-text)' : 'var(--clr-danger-text)'
 
   el.innerHTML = `
     <div class="card">
@@ -239,10 +239,10 @@ function renderOverviewTab(el, data) {
       </div>
       <div class="scorecard">
         <div class="score-item">
-          <div class="score-value" style="color: ${scoreColor}">${data.scorecard.score}</div>
+          <div class="score-value" style="color: ${scoreColor}">${data.scorecard.overallScore}</div>
           <div class="score-label">Score</div>
           <div class="score-bar">
-            <div class="score-fill" style="width: ${data.scorecard.score}%"></div>
+            <div class="score-fill" style="width: ${data.scorecard.overallScore}%"></div>
           </div>
         </div>
         <div class="score-item">
