@@ -24153,23 +24153,53 @@ app.get('/api/cap/dashboard/compliance', async (req, res) => {
 app.get('/api/cap/dashboard/controls', async (req, res) => {
   try {
     const realPolicies = await loadPolicies()
+    const cisResults = validateCISControls(realPolicies)
     const enabledCount = realPolicies.filter(p => p.state === 'enabled').length
     const totalCount = realPolicies.length
     const compliancePercentage = totalCount > 0 ? Math.round((enabledCount / totalCount) * 100) : 0
+    const compliantControls = cisResults.filter(c => c.met).length
+    const nonCompliantControls = cisResults.filter(c => !c.met).length
 
     res.json({
       success: true,
       data: {
         timestamp: new Date().toISOString(),
-        summary: { total: 87, compliant: enabledCount * 2, nonCompliant: (totalCount - enabledCount) * 2, compliance: compliancePercentage + '%' },
+        summary: {
+          total: cisResults.length,
+          compliant: compliantControls,
+          nonCompliant: nonCompliantControls,
+          compliance: Math.round((compliantControls / cisResults.length) * 100) + '%'
+        },
         byCategory: [
-          { category: 'Policy Governance', total: 6, compliant: Math.max(1, 5), percentage: Math.max(50, compliancePercentage), status: compliancePercentage >= 70 ? 'PASS' : 'WARN', controls: [] },
-          { category: 'Identity Protection', total: 8, compliant: Math.max(1, 6), percentage: Math.max(50, compliancePercentage), status: compliancePercentage >= 70 ? 'PASS' : 'WARN', controls: [] }
+          {
+            category: 'Critical Controls',
+            total: cisResults.filter(c => c.severity === 'Critical').length,
+            compliant: cisResults.filter(c => c.severity === 'Critical' && c.met).length,
+            percentage: Math.round((cisResults.filter(c => c.severity === 'Critical' && c.met).length / cisResults.filter(c => c.severity === 'Critical').length) * 100),
+            status: cisResults.filter(c => c.severity === 'Critical' && c.met).length >= cisResults.filter(c => c.severity === 'Critical').length * 0.8 ? 'PASS' : 'WARN'
+          },
+          {
+            category: 'High Priority Controls',
+            total: cisResults.filter(c => c.severity === 'High').length,
+            compliant: cisResults.filter(c => c.severity === 'High' && c.met).length,
+            percentage: Math.round((cisResults.filter(c => c.severity === 'High' && c.met).length / cisResults.filter(c => c.severity === 'High').length) * 100),
+            status: Math.round((cisResults.filter(c => c.severity === 'High' && c.met).length / cisResults.filter(c => c.severity === 'High').length) * 100) >= 70 ? 'PASS' : 'WARN'
+          },
+          {
+            category: 'Medium Priority Controls',
+            total: cisResults.filter(c => c.severity === 'Medium').length,
+            compliant: cisResults.filter(c => c.severity === 'Medium' && c.met).length,
+            percentage: Math.round((cisResults.filter(c => c.severity === 'Medium' && c.met).length / cisResults.filter(c => c.severity === 'Medium').length) * 100),
+            status: Math.round((cisResults.filter(c => c.severity === 'Medium' && c.met).length / cisResults.filter(c => c.severity === 'Medium').length) * 100) >= 70 ? 'PASS' : 'WARN'
+          }
         ],
-        criticalGaps: [
-          { id: 'CA-026', name: 'Phishing Resistant MFA for Admins', description: 'Global administrators must use FIDO2' },
-          { id: 'CA-030', name: 'Device Compliance Enforcement', description: 'Require compliant devices' }
-        ]
+        controls: cisResults,
+        criticalGaps: cisResults.filter(c => !c.met && c.severity === 'Critical').slice(0, 3).map(c => ({
+          id: c.cisId,
+          name: c.name,
+          description: c.description,
+          severity: c.severity
+        }))
       }
     })
   } catch (error) {

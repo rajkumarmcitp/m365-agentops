@@ -532,7 +532,7 @@ function renderControlsTab(el, data) {
     <div class="cap-grid">
       <div class="card">
         <div style="font-size:20px;font-weight:700;color:var(--clr-primary);margin-bottom:2px">${data.summary.total}</div>
-        <div style="font-size:12px;color:var(--color-text-secondary)">Total</div>
+        <div style="font-size:12px;color:var(--color-text-secondary)">Total Controls</div>
       </div>
       <div class="card" style="background:var(--clr-success-bg);border-color:var(--clr-success-border)">
         <div style="font-size:20px;font-weight:700;color:var(--clr-success-text);margin-bottom:2px">${data.summary.compliant}</div>
@@ -542,31 +542,78 @@ function renderControlsTab(el, data) {
         <div style="font-size:20px;font-weight:700;color:var(--clr-danger-text);margin-bottom:2px">${data.summary.nonCompliant}</div>
         <div style="font-size:12px;color:var(--clr-danger-text)">Non-Compliant</div>
       </div>
+      <div class="card">
+        <div style="font-size:20px;font-weight:700;color:var(--clr-primary);margin-bottom:2px">${data.summary.compliance}</div>
+        <div style="font-size:12px;color:var(--color-text-secondary)">Compliance %</div>
+      </div>
     </div>
 
     <div class="card">
       <div class="card-header">
-        <div class="card-title">By Category</div>
+        <div class="card-title">By Severity</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px">
         ${data.byCategory.map(cat => `
           <div style="padding:12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:4px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
               <div style="font-weight:600;font-size:13px;color:var(--color-text-primary)">${cat.category}</div>
-              <div style="font-size:12px;color:var(--color-text-secondary)">${cat.compliant}/${cat.total}</div>
+              <div style="font-size:12px;color:var(--color-text-secondary)">${cat.compliant}/${cat.total} (${cat.percentage}%)</div>
             </div>
             <div class="score-bar">
-              <div class="score-fill" style="width: ${(cat.compliant / cat.total * 100)}%; background: ${cat.status === 'PASS' ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'}"></div>
+              <div class="score-fill" style="width: ${cat.percentage}%; background: ${cat.status === 'PASS' ? 'var(--clr-success-text)' : 'var(--clr-warning-text)'}"></div>
             </div>
           </div>
         `).join('')}
       </div>
     </div>
 
-    ${data.criticalGaps.length > 0 ? `
+    ${data.controls ? `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-list-check"></i> All Controls Details</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead>
+              <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-tertiary)">
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:80px">Control ID</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Control Name</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:70px">Severity</th>
+                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:80px">Status</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">CA Policy Implementation</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.controls.map((control, i) => `
+                <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${i % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
+                  <td style="padding:10px;color:var(--color-text-primary);font-weight:700;font-family:monospace;vertical-align:top">${control.cisId}</td>
+                  <td style="padding:10px;color:var(--color-text-primary);font-weight:500;vertical-align:top">
+                    <div>${control.name}</div>
+                    <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${control.description}</div>
+                  </td>
+                  <td style="padding:10px;vertical-align:top">
+                    <span style="display:inline-block;padding:3px 6px;border-radius:3px;font-size:10px;font-weight:600;background:${control.severity === 'Critical' ? 'var(--clr-danger-bg)' : control.severity === 'High' ? 'var(--clr-warning-bg)' : 'var(--color-background-tertiary)'};color:${control.severity === 'Critical' ? 'var(--clr-danger-text)' : control.severity === 'High' ? 'var(--clr-warning-text)' : 'var(--color-text-secondary)'}">
+                      ${control.severity}
+                    </span>
+                  </td>
+                  <td style="padding:10px;text-align:center;vertical-align:top">
+                    ${control.met ? '<i class="fas fa-check-circle" style="color:var(--clr-success-text);font-size:14px"></i><div style="font-size:10px;color:var(--clr-success-text);margin-top:4px">Compliant</div>' : '<i class="fas fa-times-circle" style="color:var(--clr-danger-text);font-size:14px"></i><div style="font-size:10px;color:var(--clr-danger-text);margin-top:4px">Not Met</div>'}
+                  </td>
+                  <td style="padding:10px;font-size:10px;color:var(--color-text-secondary);vertical-align:top">
+                    ${control.policy ? `<span style="display:inline-block;background:var(--clr-success-bg);color:var(--clr-success-text);padding:4px 8px;border-radius:3px;font-weight:600">${control.policy.name}</span>` : '<span style="color:var(--clr-danger-text);font-style:italic">Policy Not Configured</span>'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ` : ''}
+
+    ${data.criticalGaps && data.criticalGaps.length > 0 ? `
       <div class="card" style="border-left:3px solid var(--clr-danger-text)">
         <div class="card-header">
-          <div class="card-title"><i class="fas fa-exclamation-triangle"></i> Critical Gaps</div>
+          <div class="card-title"><i class="fas fa-exclamation-triangle"></i> Critical Gaps (${data.criticalGaps.length})</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:12px">
           ${data.criticalGaps.map(gap => `
