@@ -37,13 +37,13 @@ export class RiskAssessmentAgent {
     this.isRunning = false
   }
 
-  runAssessment() {
+  async runAssessment() {
     try {
       const store = this.db.getStore()
 
       // Score each pillar
       const complianceScore = this.scoreCompliance(store)
-      const threatScore = this.scoreThreats(store)
+      const threatScore = await this.scoreThreats(store)
       const postureScore = this.scorePosture(store)
 
       // Calculate overall score
@@ -53,14 +53,14 @@ export class RiskAssessmentAgent {
       const riskLevel = this.getRiskLevel(overallScore)
 
       // Build top factors
-      const factors = this.buildFactors(store, { complianceScore, threatScore, postureScore })
+      const factors = await this.buildFactors(store, { complianceScore, threatScore, postureScore })
 
       // Get historical data for trend
       const previousAssessment = this.getPreviousAssessment(store)
       const trend = this.calculateTrend(overallScore, previousAssessment?.overall_score)
 
       // Count metrics
-      const metricsData = this.extractMetrics(store)
+      const metricsData = await this.extractMetrics(store)
 
       // Build assessment record
       const assessment = {
@@ -112,8 +112,21 @@ export class RiskAssessmentAgent {
     return Math.min(score, 40)
   }
 
-  scoreThreats(store) {
-    const alerts = Object.values(store.alerts || {})
+  async scoreThreats(store) {
+    let alerts = []
+
+    // Try to fetch alerts from Graph API (same source as alerts endpoint)
+    try {
+      const alertsRes = await fetch('http://localhost:3000/api/tenantguard/alerts?limit=1000').then(r => r.json()).catch(e => ({ success: false, data: [] }))
+      if (alertsRes.success && alertsRes.data) {
+        alerts = alertsRes.data
+      }
+    } catch (e) {
+      console.warn('Could not fetch alerts from Graph API:', e.message)
+      // Fall back to store alerts if available
+      alerts = Object.values(store.alerts || {})
+    }
+
     const investigations = Object.values(store.agentInvestigations || {})
 
     let score = 0
@@ -124,6 +137,19 @@ export class RiskAssessmentAgent {
 
     const p1Alerts = alerts.filter(a => a.priority === 'P1' && !a.dismissed)
     score += p1Alerts.length * 5
+
+    const p2Alerts = alerts.filter(a => a.priority === 'P2' && !a.dismissed)
+    score += p2Alerts.length * 2
+
+    // Also score by severity for Graph API alerts
+    const criticalAlerts = alerts.filter(a => a.severity === 'CRITICAL' && !a.dismissed)
+    score += criticalAlerts.length * 8
+
+    const highAlerts = alerts.filter(a => a.severity === 'HIGH' && !a.dismissed)
+    score += highAlerts.length * 4
+
+    const mediumAlerts = alerts.filter(a => a.severity === 'MEDIUM' && !a.dismissed)
+    score += Math.ceil(mediumAlerts.length * 0.1) // 50 medium = +5 points
 
     // Score true-positive verdicts
     const truePositives = investigations.filter(i => i.verdict === 'true_positive')
@@ -143,7 +169,7 @@ export class RiskAssessmentAgent {
     return Math.min((failRate / 100) * 25, 25)
   }
 
-  buildFactors(store, scores) {
+  async buildFactors(store, scores) {
     const factors = []
 
     const drifts = Object.values(store.complianceDrifts || {})
@@ -169,9 +195,23 @@ export class RiskAssessmentAgent {
       })
     }
 
-    const alerts = Object.values(store.alerts || {})
+    // Fetch alerts from Graph API
+    let alerts = []
+    try {
+      const alertsRes = await fetch('http://localhost:3000/api/tenantguard/alerts?limit=1000').then(r => r.json()).catch(e => ({ success: false, data: [] }))
+      if (alertsRes.success && alertsRes.data) {
+        alerts = alertsRes.data
+      }
+    } catch (e) {
+      console.warn('Could not fetch alerts for factors:', e.message)
+      alerts = Object.values(store.alerts || {})
+    }
+
     const p0Alerts = alerts.filter(a => a.priority === 'P0' && !a.dismissed)
     const p1Alerts = alerts.filter(a => a.priority === 'P1' && !a.dismissed)
+    const p2Alerts = alerts.filter(a => a.priority === 'P2' && !a.dismissed)
+    const criticalAlerts = alerts.filter(a => a.severity === 'CRITICAL' && !a.dismissed)
+    const mediumAlerts = alerts.filter(a => a.severity === 'MEDIUM' && !a.dismissed)
 
     if (p0Alerts.length > 0) {
       factors.push({
@@ -188,6 +228,24 @@ export class RiskAssessmentAgent {
         title: `${p1Alerts.length} High-Priority Alert${p1Alerts.length > 1 ? 's' : ''}`,
         impact: 'HIGH',
         detail: p1Alerts[0]?.headline || 'Security alert requiring attention'
+      })
+    }
+
+    if (criticalAlerts.length > 0) {
+      factors.push({
+        category: 'Threats',
+        title: `${criticalAlerts.length} Critical Severity Alert${criticalAlerts.length > 1 ? 's' : ''}`,
+        impact: 'CRITICAL',
+        detail: criticalAlerts[0]?.headline || 'Critical threat detected'
+      })
+    }
+
+    if (p2Alerts.length > 0 && mediumAlerts.length > 0) {
+      factors.push({
+        category: 'Threats',
+        title: `${p2Alerts.length} Medium-Priority Alert${p2Alerts.length > 1 ? 's' : ''} from Audit Logs`,
+        impact: 'MEDIUM',
+        detail: `${mediumAlerts[0]?.headline || 'Activity detected'}`
       })
     }
 
@@ -241,12 +299,24 @@ export class RiskAssessmentAgent {
     return assessments.sort((a, b) => new Date(b.assessed_at) - new Date(a.assessed_at))[0]
   }
 
-  extractMetrics(store) {
+  async extractMetrics(store) {
     const drifts = Object.values(store.complianceDrifts || {})
     const openDrifts = drifts.filter(d => !d.drift_resolved_at)
 
-    const alerts = Object.values(store.alerts || {})
-    const criticalAlerts = alerts.filter(a => a.priority === 'P0' && !a.dismissed).length
+    // Fetch alerts from Graph API
+    let alerts = []
+    try {
+      const alertsRes = await fetch('http://localhost:3000/api/tenantguard/alerts?limit=1000').then(r => r.json()).catch(e => ({ success: false, data: [] }))
+      if (alertsRes.success && alertsRes.data) {
+        alerts = alertsRes.data
+      }
+    } catch (e) {
+      console.warn('Could not fetch alerts for metrics:', e.message)
+      alerts = Object.values(store.alerts || {})
+    }
+
+    // Count critical/high severity alerts
+    const criticalAlerts = alerts.filter(a => (a.priority === 'P0' || a.severity === 'CRITICAL') && !a.dismissed).length
 
     const investigations = Object.values(store.agentInvestigations || {})
     const truePositives = investigations.filter(i => i.verdict === 'true_positive').length

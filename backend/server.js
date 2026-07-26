@@ -7200,28 +7200,31 @@ app.get('/api/tenantguard/alerts', async (req, res) => {
 
 /**
  * GET /api/tenantguard/alerts/summary
- * Returns alert counts by severity
+ * Returns alert counts by severity (from same source as alerts endpoint)
  */
 app.get('/api/tenantguard/alerts/summary', async (req, res) => {
   try {
-    // Try SharePoint first, fall back to in-memory if not available
-    try {
-      const summary = await getAlertSummary()
-      console.log('✅ Alerts summary from SharePoint')
-      return res.json({ success: true, data: summary })
-    } catch (spError) {
-      console.log('⚠️ SharePoint unavailable, using in-memory:', spError.message)
-      // Fall back to in-memory database
-      const db = getDatabase()
+    // Use same data source as /api/tenantguard/alerts endpoint
+    const alertsRes = await fetch(`http://localhost:3000/api/tenantguard/alerts?limit=1000`).then(r => r.json()).catch(e => ({
+      success: false, data: []
+    }))
+
+    if (alertsRes.success && alertsRes.data && alertsRes.data.length > 0) {
+      // Count by severity
       const summary = {
-        critical: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'CRITICAL' AND dismissed = 0").get().count,
-        high: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'HIGH' AND dismissed = 0").get().count,
-        medium: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'MEDIUM' AND dismissed = 0").get().count,
-        info: db.prepare("SELECT COUNT(*) as count FROM alerts WHERE severity = 'INFO' AND dismissed = 0").get().count,
+        critical: alertsRes.data.filter(a => a.severity === 'CRITICAL').length,
+        high: alertsRes.data.filter(a => a.severity === 'HIGH').length,
+        medium: alertsRes.data.filter(a => a.severity === 'MEDIUM').length,
+        info: alertsRes.data.filter(a => a.severity === 'INFO').length,
+        total: alertsRes.data.length
       }
-      summary.total = summary.critical + summary.high + summary.medium + summary.info
+      console.log(`✅ Alerts summary: ${summary.critical} critical, ${summary.high} high, ${summary.medium} medium, ${summary.info} info`)
       return res.json({ success: true, data: summary })
     }
+
+    // Fallback to empty if no alerts
+    const summary = { critical: 0, high: 0, medium: 0, info: 0, total: 0 }
+    return res.json({ success: true, data: summary })
   } catch (error) {
     console.error('Error fetching summary:', error)
     res.status(500).json({ success: false, error: error.message })
