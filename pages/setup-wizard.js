@@ -1094,6 +1094,28 @@ function renderServiceConfigStep() {
           </div>
         </div>
 
+        <!-- Auto-Remediation Configuration -->
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--color-border-primary)">
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px">Compliance Auto-Remediation</div>
+          <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:6px;padding:10px;font-size:11px;color:#92400E;margin-bottom:12px">
+            ⚠️ Requires <strong>Policy.ReadWrite.ConditionalAccess</strong> and <strong>Policy.ReadWrite.AuthenticationMethod</strong> on Azure AD app
+          </div>
+          <label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--color-border-primary);border-radius:6px;cursor:pointer;margin-bottom:8px;onchange='document.getElementById(\"wizard-approval-group\").style.display=this.checked?\"flex\":\"none\"'">
+            <input type="checkbox" id="wizard-auto-remediation" style="cursor:pointer;width:18px;height:18px" onchange="document.getElementById('wizard-approval-group').style.display=this.checked?'flex':'none'">
+            <div>
+              <div style="font-weight:500;font-size:13px">Enable Auto-Remediation</div>
+              <div style="font-size:11px;color:var(--color-text-tertiary)">Automatically apply fixes for supported CIS controls after drift detection</div>
+            </div>
+          </label>
+          <label id="wizard-approval-group" style="display:none;align-items:center;gap:12px;padding:12px;border:1px solid var(--color-border-primary);border-radius:6px;cursor:pointer">
+            <input type="checkbox" id="wizard-requires-approval" checked style="cursor:pointer;width:18px;height:18px">
+            <div>
+              <div style="font-weight:500;font-size:13px">Require Admin Approval Before Fixing</div>
+              <div style="font-size:11px;color:var(--color-text-tertiary)">When on: you approve first, then the fix runs. When off: fix runs immediately on drift detection.</div>
+            </div>
+          </label>
+        </div>
+
         <div class="form-section" style="border-top:1px solid var(--color-border-primary);padding-top:20px;margin-top:20px">
           <h3 style="margin-top:0;font-size:14px">Continue to List Initialization</h3>
           <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:14px">Click below to auto-create SharePoint lists and columns for the selected services.</p>
@@ -1768,13 +1790,31 @@ function runVerification() {
   }, 3500)
 }
 
-function saveServiceConfigStep() {
+async function saveServiceConfigStep() {
   // Get selected services from checkboxes
   const checkboxes = document.querySelectorAll('.service-checkbox:checked')
   const selectedServices = Array.from(checkboxes).map(cb => cb.dataset.service)
 
   // Update wizard state
   wizardState.formData.selectedServices = selectedServices
+
+  // Get and save auto-remediation settings
+  wizardState.formData.autoRemediation = document.getElementById('wizard-auto-remediation')?.checked || false
+  wizardState.formData.remediationRequiresApproval = document.getElementById('wizard-requires-approval')?.checked ?? true
+
+  // Persist remediation settings to backend
+  try {
+    await fetch(`${API_URL}/api/tenantguard/settings/remediation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        enabled: wizardState.formData.autoRemediation,
+        requiresApproval: wizardState.formData.remediationRequiresApproval
+      })
+    })
+  } catch (e) {
+    console.warn('Could not save remediation settings:', e.message)
+  }
 
   // Show selected services in next step
   const statusDiv = document.getElementById('selected-services-list')

@@ -20,6 +20,7 @@ import { ZT_PILLARS } from '../data/zt-pillars.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
 import { analyzeComplianceGaps, calculateComplianceScore, getComplianceLevel, getComplianceColor, generateRemediationRoadmap, getComplianceMetrics, generateComplianceReport } from '../lib/compliance-analyzer.js'
 import { getOpenDrifts, getDriftHistory, getRecommendation, approveRecommendation, rejectRecommendation, markDriftResolved } from '../lib/compliance-drift-client.js'
+import { getRemediationSettings } from '../lib/remediation-settings-client.js'
 
 let realValidations = null
 let realTrends = null
@@ -29,6 +30,7 @@ let activeTab = 'overview'
 let lazyLoadedPillars = {}
 let complianceDrifts = {}  // Map of controlId -> [drifts]
 let selectedDriftControlId = null  // Track which control's drift is being viewed
+let remediationSettings = { enabled: false, requiresApproval: true }  // Auto-remediation config
 
 export function initZeroTrust() {
   const el = document.getElementById('page-zerotrust')
@@ -1826,6 +1828,9 @@ window.showDriftDetails = async function(controlId) {
   const rec = await getRecommendation(drift.id)
   const history = await getDriftHistory(controlId)
 
+  // Load remediation settings
+  remediationSettings = await getRemediationSettings().catch(() => ({ enabled: false, requiresApproval: true }))
+
   const modal = document.createElement('div')
   modal.style.cssText = `
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -1836,7 +1841,7 @@ window.showDriftDetails = async function(controlId) {
 
   modal.innerHTML = `
     <div style="background: white; border-radius: 12px; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 95%">
-      ${renderDriftDetailModal(controlId, drift, rec, history)}
+      ${renderDriftDetailModal(controlId, drift, rec, history, remediationSettings)}
     </div>
   `
 
@@ -1855,10 +1860,19 @@ window.showDriftDetails = async function(controlId) {
 /**
  * Render drift detail modal content
  */
-function renderDriftDetailModal(controlId, drift, rec, history) {
+function renderDriftDetailModal(controlId, drift, rec, history, remSettings = {}) {
   const driftTimeAgo = formatTimeAgo(drift.drift_detected_at)
   const isDriftOpen = !drift.drift_resolved_at
   const isApproved = rec?.approval_status === 'approved'
+
+  // Conditional button label based on auto-remediation settings
+  const autoFixEnabled = remSettings?.enabled
+  const btnLabel = autoFixEnabled && remSettings?.requiresApproval
+    ? '⚡ Approve + Auto-Fix'
+    : '✓ Approve'
+  const autoFixBadge = autoFixEnabled && remSettings?.requiresApproval
+    ? `<div style="font-size:11px;color:#1D4ED8;margin-bottom:8px">⚡ Fix will be applied automatically after approval</div>`
+    : ''
 
   return `
     <div style="padding: 24px">
@@ -1919,13 +1933,16 @@ function renderDriftDetailModal(controlId, drift, rec, history) {
 
           <!-- Action Buttons -->
           ${rec.approval_status === 'pending' ? `
-            <div style="margin-top: 12px; display: flex; gap: 8px">
-              <button class="drift-approve-btn" data-rec-id="${rec.id}" style="flex: 1; padding: 8px; background: #E6F1FB; color: #0C447C; border: 1px solid #0C447C; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600">
-                ✓ Approve
-              </button>
-              <button class="drift-reject-btn" data-rec-id="${rec.id}" style="flex: 1; padding: 8px; background: #FFF3CD; color: #854F0B; border: 1px solid #854F0B; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600">
-                ✗ Reject
-              </button>
+            <div style="margin-top: 12px">
+              ${autoFixBadge}
+              <div style="display: flex; gap: 8px">
+                <button class="drift-approve-btn" data-rec-id="${rec.id}" style="flex: 1; padding: 8px; background: #E6F1FB; color: #0C447C; border: 1px solid #0C447C; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600">
+                  ${btnLabel}
+                </button>
+                <button class="drift-reject-btn" data-rec-id="${rec.id}" style="flex: 1; padding: 8px; background: #FFF3CD; color: #854F0B; border: 1px solid #854F0B; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600">
+                  ✗ Reject
+                </button>
+              </div>
             </div>
           ` : rec.approval_status === 'approved' && isDriftOpen ? `
             <div style="margin-top: 12px">
@@ -1980,7 +1997,10 @@ function attachDriftModalListeners(driftId, recId) {
       const notes = prompt('Optional note:')
       try {
         await approveRecommendation(recId, notes || '')
-        showToast('Recommendation approved', 'success')
+        const autoMsg = remediationSettings?.enabled && remediationSettings?.requiresApproval
+          ? '⚡ Auto-fix will be applied shortly'
+          : 'Recommendation approved'
+        showToast(autoMsg, 'success')
         document.getElementById('drift-modal').remove()
         await loadComplianceDrifts()
       } catch (err) {

@@ -7,6 +7,7 @@
 import './styles/tenantguard-settings.css'
 import emailSettings from '../lib/email-settings-manager.js'
 import { api } from '../lib/api-client.js'
+import { getRemediationSettings, saveRemediationSettings } from '../lib/remediation-settings-client.js'
 
 export function renderTenantGuardSettings(el) {
   try {
@@ -26,6 +27,41 @@ export function renderTenantGuardSettings(el) {
       </div>
 
       <div class="settings-grid">
+        <!-- Auto-Remediation Section -->
+        <section class="settings-section" id="auto-remediation-section">
+          <h2>Auto-Remediation</h2>
+
+          <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:6px;padding:12px;margin-bottom:16px;font-size:12px;color:#92400E">
+            ⚠️ Requires <strong>Policy.ReadWrite.ConditionalAccess</strong> and
+            <strong>Policy.ReadWrite.AuthenticationMethod</strong> on the Azure AD app registration.
+            Leave disabled if write permissions are not granted.
+          </div>
+
+          <div class="form-group">
+            <label class="settings-label">Enable Auto-Remediation</label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="auto-remediation-enabled" style="width:18px;height:18px;cursor:pointer">
+              <span style="font-size:13px">Automatically apply fixes for supported controls after a drift is detected</span>
+            </label>
+          </div>
+
+          <div class="form-group" id="requires-approval-group" style="display:none">
+            <label class="settings-label">Require Admin Approval Before Fixing</label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="remediation-requires-approval" checked style="width:18px;height:18px;cursor:pointer">
+              <span style="font-size:13px">Admin must approve the recommendation before the fix is applied automatically</span>
+            </label>
+          </div>
+
+          <div style="font-size:11px;color:var(--color-text-secondary);margin:12px 0;padding:10px;background:var(--color-bg-tertiary);border-radius:4px">
+            <strong>Auto-fixable controls:</strong> Legacy Auth Block · Conditional Access · MFA Policy · Security Defaults<br>
+            All other controls always require manual remediation regardless of this setting.
+          </div>
+
+          <button class="btn btn-primary" id="save-remediation-settings">Save Remediation Settings</button>
+          <span id="remediation-save-status" style="font-size:12px;margin-left:10px"></span>
+        </section>
+
         <!-- Email Configuration Section -->
         <section class="settings-section">
           <div class="section-header">
@@ -347,6 +383,26 @@ export function renderTenantGuardSettings(el) {
 }
 
 function attachEventListeners() {
+  // Auto-Remediation
+  const enabledCb = document.getElementById('auto-remediation-enabled')
+  const approvalGroup = document.getElementById('requires-approval-group')
+  enabledCb?.addEventListener('change', () => {
+    approvalGroup.style.display = enabledCb.checked ? 'block' : 'none'
+  })
+
+  document.getElementById('save-remediation-settings')?.addEventListener('click', async () => {
+    const enabled = document.getElementById('auto-remediation-enabled')?.checked || false
+    const requiresApproval = document.getElementById('remediation-requires-approval')?.checked ?? true
+    try {
+      await saveRemediationSettings({ enabled, requiresApproval })
+      const statusEl = document.getElementById('remediation-save-status')
+      statusEl.textContent = '✅ Saved'
+      setTimeout(() => { statusEl.textContent = '' }, 3000)
+    } catch (err) {
+      document.getElementById('remediation-save-status').textContent = '❌ Save failed'
+    }
+  })
+
   // Email configuration
   document.getElementById('btn-test-email')?.addEventListener('click', handleTestEmail)
   document.getElementById('btn-save-email')?.addEventListener('click', handleSaveEmail)
@@ -632,6 +688,16 @@ async function handleRefreshStats() {
 
 async function loadSettings() {
   try {
+    // Load remediation settings
+    const remSettings = await getRemediationSettings()
+    const enabledCb = document.getElementById('auto-remediation-enabled')
+    if (enabledCb) {
+      enabledCb.checked = remSettings.enabled
+      document.getElementById('requires-approval-group').style.display = remSettings.enabled ? 'block' : 'none'
+    }
+    const approvalCb = document.getElementById('remediation-requires-approval')
+    if (approvalCb) approvalCb.checked = remSettings.requiresApproval
+
     // Load recipients from global settings manager
     const recipients = emailSettings.getRecipients()
     const container = document.getElementById('recipients-list')
