@@ -2785,7 +2785,7 @@ function renderZTDriftsTab() {
 
 async function loadDriftTabStats() {
   try {
-    const data = await callAPI('/api/tenantguard/compliance/stats')
+    const data = await callAPI('/tenantguard/compliance/stats')
     const el = document.getElementById('drift-resolved-count')
     if (el && data?.data) {
       el.textContent = data.data.resolvedDrifts || 0
