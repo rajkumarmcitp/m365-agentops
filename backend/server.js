@@ -10447,9 +10447,8 @@ app.post('/api/tenantguard/compliance/recommendations/:recId/approve', async (re
         try {
           // Get the recommendation details to find the control ID and drift info
           const db = getDatabase()
-          const rec = db.prepare(
-            'SELECT control_id, drift_id FROM compliance_recommendations WHERE id = ?'
-          ).get(req.params.recId)
+          const store = db.getStore()
+          const rec = store.complianceRecommendations?.[req.params.recId]
 
           if (rec) {
             autoFixResult = await autoFixAgent.executeRemediation(rec.control_id, { id: rec.drift_id })
@@ -10547,6 +10546,63 @@ app.get('/api/tenantguard/compliance/stats', (req, res) => {
     res.json({ success: true, data: stats })
   } catch (err) {
     console.error('Get stats error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/test/create-drift
+ * Create a test drift for Day 2 approval testing
+ */
+app.post('/api/tenantguard/test/create-drift', (req, res) => {
+  try {
+    const db = getDatabase()
+    const driftId = 'drift_test_' + Date.now()
+    const recId = 'rec_test_' + Date.now()
+
+    // Create test drift in store
+    const store = db.getStore()
+    store.complianceDrifts = store.complianceDrifts || {}
+    store.complianceDrifts[driftId] = {
+      id: driftId,
+      control_id: 'CIS-1.3.1',
+      control_name: 'Ensure that only cloud apps are allowed in Microsoft 365',
+      severity: 'HIGH',
+      description: 'Test drift for Day 2 approval workflow',
+      current_value: 'Third-party apps enabled',
+      expected_value: 'Third-party apps disabled',
+      created_at: new Date().toISOString(),
+      drift_resolved_at: null
+    }
+
+    // Create test recommendation
+    store.complianceRecommendations = store.complianceRecommendations || {}
+    store.complianceRecommendations[recId] = {
+      id: recId,
+      drift_id: driftId,
+      control_id: 'CIS-1.3.1',
+      recommendation: 'Block third-party app access in Azure AD',
+      remediation_steps: 'Navigate to Azure AD > Enterprise Applications > Disable third-party app access',
+      auto_fixable: true,
+      created_at: new Date().toISOString(),
+      approved_at: null,
+      rejected_at: null,
+      status: 'pending'
+    }
+
+    console.log(`✅ Test drift created: ${driftId}`)
+    res.json({
+      success: true,
+      data: {
+        driftId,
+        recId,
+        controlId: 'CIS-1.3.1',
+        severity: 'HIGH',
+        message: `Test drift created. Approve it at: /api/tenantguard/compliance/recommendations/${recId}/approve`
+      }
+    })
+  } catch (err) {
+    console.error('Create test drift error:', err.message)
     res.status(500).json({ success: false, error: err.message })
   }
 })
