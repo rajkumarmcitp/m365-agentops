@@ -58,6 +58,9 @@ import {
   getSchedulerStatus as getThreatAgentStatus,
   shutdownScheduler as shutdownThreatAgent
 } from './tenantguard/agent-scheduler.js'
+import { initializeEventBus, getEventBus } from './tenantguard/agent-event-bus.js'
+import { initializeContextStore, getContextStore } from './tenantguard/agent-context-store.js'
+import { AgentOrchestrator, setOrchestrator, getOrchestrator } from './tenantguard/agent-orchestrator.js'
 import {
   checkPowerShellAvailable,
   checkInstalledModules,
@@ -790,6 +793,14 @@ async function initializeTenantGuard() {
     // Initialize autonomous threat investigation agent scheduler
     initializeThreatAgentScheduler(graphClient)
     console.log('✅ Autonomous Threat Investigation Agent initialized')
+
+    // Initialize multi-agent orchestration layer
+    const eventBus = initializeEventBus()
+    const contextStore = initializeContextStore()
+    const orchestrator = new AgentOrchestrator(eventBus, contextStore, db)
+    setOrchestrator(orchestrator)
+    orchestrator.startHealthMonitoring()
+    console.log('✅ Multi-Agent Orchestration Layer initialized')
 
     // if (graphClient) {
     //   startAuditCollectionJob(graphClient)
@@ -10190,6 +10201,142 @@ app.post('/api/tenantguard/agent/resume', (req, res) => {
     res.json({ success: true, data: { paused: false } })
   } catch (err) {
     console.error('Resume error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * ============================================================
+ * Multi-Agent Orchestrator Endpoints
+ * ============================================================
+ */
+
+/**
+ * GET /api/orchestrator/status
+ * Get orchestrator status (agents, queue, events, conflicts)
+ */
+app.get('/api/orchestrator/status', (req, res) => {
+  try {
+    const orchestrator = getOrchestrator()
+    if (!orchestrator) {
+      return res.status(503).json({ success: false, error: 'Orchestrator not initialized' })
+    }
+    const status = orchestrator.getStatus()
+    res.json({ success: true, data: status })
+  } catch (err) {
+    console.error('Orchestrator status error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * GET /api/orchestrator/tasks
+ * Get task queue (pending + completed)
+ */
+app.get('/api/orchestrator/tasks', (req, res) => {
+  try {
+    const orchestrator = getOrchestrator()
+    if (!orchestrator) {
+      return res.status(503).json({ success: false, error: 'Orchestrator not initialized' })
+    }
+    const status = orchestrator.getStatus()
+    res.json({ success: true, data: { queue: status.queue } })
+  } catch (err) {
+    console.error('Orchestrator tasks error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * POST /api/orchestrator/task
+ * Submit a new task { type, payload, priority }
+ */
+app.post('/api/orchestrator/task', (req, res) => {
+  try {
+    const orchestrator = getOrchestrator()
+    if (!orchestrator) {
+      return res.status(503).json({ success: false, error: 'Orchestrator not initialized' })
+    }
+
+    const { type, payload, priority = 'P2' } = req.body
+    if (!type || !payload) {
+      return res.status(400).json({ success: false, error: 'Missing type or payload' })
+    }
+
+    const taskId = orchestrator.submitTask(type, payload, priority, 'api')
+    res.json({ success: true, data: { taskId } })
+  } catch (err) {
+    console.error('Submit task error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * GET /api/orchestrator/events
+ * Get recent event log
+ */
+app.get('/api/orchestrator/events', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50
+    const eventBus = getEventBus()
+    const events = eventBus.getRecentEvents(limit)
+    res.json({ success: true, data: events })
+  } catch (err) {
+    console.error('Get events error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * POST /api/orchestrator/pause-all
+ * Pause all agents
+ */
+app.post('/api/orchestrator/pause-all', (req, res) => {
+  try {
+    const orchestrator = getOrchestrator()
+    if (!orchestrator) {
+      return res.status(503).json({ success: false, error: 'Orchestrator not initialized' })
+    }
+    orchestrator.pauseAll()
+    res.json({ success: true, data: { allPaused: true } })
+  } catch (err) {
+    console.error('Pause all error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * POST /api/orchestrator/resume-all
+ * Resume all agents
+ */
+app.post('/api/orchestrator/resume-all', (req, res) => {
+  try {
+    const orchestrator = getOrchestrator()
+    if (!orchestrator) {
+      return res.status(503).json({ success: false, error: 'Orchestrator not initialized' })
+    }
+    orchestrator.resumeAll()
+    res.json({ success: true, data: { allPaused: false } })
+  } catch (err) {
+    console.error('Resume all error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * GET /api/orchestrator/conflicts
+ * Get conflict log
+ */
+app.get('/api/orchestrator/conflicts', (req, res) => {
+  try {
+    const orchestrator = getOrchestrator()
+    if (!orchestrator) {
+      return res.status(503).json({ success: false, error: 'Orchestrator not initialized' })
+    }
+    const status = orchestrator.getStatus()
+    res.json({ success: true, data: { conflicts: status.conflicts } })
+  } catch (err) {
+    console.error('Get conflicts error:', err.message)
     res.status(500).json({ success: false, error: err.message })
   }
 })

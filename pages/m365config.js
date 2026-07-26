@@ -23,6 +23,173 @@ const TOPIC_COLOURS = {
   t9: { bg: '#E0F5F4', color: '#0D6B68' },
 }
 
+// Global function to open control modal
+window.openControlModal = (jsonStr) => {
+  try {
+    const ctrl = JSON.parse(jsonStr)
+
+    // Create modal HTML
+    const modalHtml = `
+      <div id="control-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000" onclick="if(event.target.id === 'control-modal') this.remove()">
+        <div style="background:var(--color-background-primary);border:1px solid var(--color-border-secondary);border-radius:8px;max-width:800px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+          <!-- Modal Header -->
+          <div style="padding:20px;border-bottom:1px solid var(--color-border-secondary);display:flex;justify-content:space-between;align-items:center;background:var(--color-background-secondary)">
+            <div>
+              <div style="font-size:16px;font-weight:700;color:var(--color-text-primary)">${ctrl.id || 'Control'}</div>
+              <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px">${ctrl.title || ctrl.desc || ''}</div>
+            </div>
+            <button onclick="document.getElementById('control-modal').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--color-text-secondary);padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center">×</button>
+          </div>
+
+          <!-- Modal Content -->
+          <div style="padding:24px;display:flex;flex-direction:column;gap:24px">
+            <!-- Status Section -->
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Status</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="display:inline-block;padding:6px 12px;border-radius:4px;font-size:12px;font-weight:600;width:fit-content;background:${
+                  ctrl.status === 'pass' ? 'var(--clr-success-bg)' :
+                  ctrl.status === 'fail' ? 'var(--clr-danger-bg)' :
+                  'var(--clr-warning-bg)'
+                };color:${
+                  ctrl.status === 'pass' ? 'var(--clr-success-text)' :
+                  ctrl.status === 'fail' ? 'var(--clr-danger-text)' :
+                  'var(--clr-warning-text)'
+                }">
+                  ${ctrl.status === 'pass' ? '✓ Pass' : ctrl.status === 'fail' ? '✗ Fail' : '⚠ Warn'}
+                </span>
+                ${ctrl.validationMethod ? `
+                <div style="font-size:11px;color:var(--color-text-secondary)">
+                  <strong>Validation Method:</strong> ${ctrl.validationMethod.charAt(0).toUpperCase() + ctrl.validationMethod.slice(1)}
+                  ${ctrl.fallbackUsed ? `<div style="color:var(--clr-warning-text);margin-top:4px">⚠️ Fallback used: ${ctrl.fallbackReason || 'Method unavailable'}</div>` : ''}
+                </div>
+                ` : ''}
+              </div>
+            </div>
+
+            <!-- Current Value -->
+            ${ctrl.value ? `
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Current Value</div>
+              <div style="font-size:13px;color:var(--color-text-primary);background:var(--color-background-secondary);padding:12px;border-radius:4px;border:1px solid var(--color-border-tertiary)">${ctrl.value}</div>
+            </div>
+            ` : ''}
+
+            <!-- Description -->
+            ${ctrl.desc || ctrl.title ? `
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Description</div>
+              <div style="font-size:13px;color:var(--color-text-primary);line-height:1.6">${ctrl.desc || ctrl.title}</div>
+            </div>
+            ` : ''}
+
+            <!-- Remediation -->
+            ${ctrl.remediation ? `
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Remediation Steps</div>
+              <div style="font-size:12px;color:var(--color-text-primary);background:var(--color-background-secondary);padding:12px;border-radius:4px;border:1px solid var(--color-border-tertiary);white-space:pre-wrap;line-height:1.6">${ctrl.remediation}</div>
+            </div>
+            ` : ''}
+
+            <!-- PowerShell Command -->
+            ${ctrl.ps ? `
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">PowerShell Command</div>
+              <div style="font-size:11px;color:var(--color-text-primary);background:var(--color-background-secondary);padding:12px;border-radius:4px;border:1px solid var(--color-border-tertiary);font-family:monospace;white-space:pre-wrap;word-break:break-word;line-height:1.4;max-height:300px;overflow-y:auto">${ctrl.ps}</div>
+            </div>
+            ` : ''}
+
+            <!-- Graph API Details -->
+            ${ctrl.graphApiDetails?.steps?.length > 0 ? `
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Graph API Queries</div>
+              <div style="font-size:12px;color:var(--color-text-primary);background:var(--color-background-secondary);padding:12px;border-radius:4px;border:1px solid var(--color-border-tertiary);line-height:1.6">${
+                ctrl.graphApiDetails.steps.map((step, i) => {
+                  if (typeof step === 'string') return step
+                  if (typeof step === 'object') {
+                    return `${i + 1}. ${step.endpoint || step.query || JSON.stringify(step)}`
+                  }
+                  return String(step)
+                }).join('<br>')
+              }</div>
+            </div>
+            ` : ''}
+
+            <!-- Validation Output -->
+            ${ctrl.psOutputDisplay ? `
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Validation Details & Account Information</div>
+              <div style="font-size:11px;color:var(--color-text-primary);background:var(--color-background-secondary);padding:12px;border-radius:4px;border:1px solid var(--color-border-tertiary);font-family:monospace;white-space:pre-wrap;word-break:break-word;line-height:1.6;max-height:500px;overflow-y:auto">${
+                ctrl.psOutputDisplay
+                  .split('\n')
+                  .map(line => {
+                    if (!line.trim()) return ''
+                    if (line.includes('✓ PASS') || line.includes('✓')) return `<span style="color:var(--clr-success-text);font-weight:600">${line}</span>`
+                    if (line.includes('✗ FAIL') || line.includes('✗')) return `<span style="color:var(--clr-danger-text);font-weight:600">${line}</span>`
+                    if (line.includes('===')) return `<span style="color:var(--clr-primary);font-weight:600">${line}</span>`
+                    if (line.includes('Total') || line.includes('Count') || line.includes('Expected') || line.includes('Administrators')) return `<span style="color:var(--clr-primary);font-weight:600">${line}</span>`
+                    if (line.includes('DisplayName') || line.includes('UserPrincipalName')) return `<span style="color:var(--color-text-primary);font-weight:600;border-bottom:1px solid var(--color-border-tertiary);padding-bottom:4px">${line}</span>`
+                    return line
+                  })
+                  .join('<br>')
+              }</div>
+            </div>
+            ` : ''}
+
+            <!-- Manual Override Section -->
+            <div style="border-top:1px solid var(--color-border-secondary);padding-top:16px">
+              <div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Manual Override</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="manual-override-btn" data-status="pass" data-control-id="${ctrl.id}" style="padding:8px 16px;border:1px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--clr-success-text);border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.2s;${(state.cfgAttested?.[ctrl.id] === 'pass') ? 'opacity:1;background:var(--clr-success-bg);border-color:var(--clr-success-text)' : 'opacity:0.6'}">✓ Mark as Pass</button>
+                <button class="manual-override-btn" data-status="warn" data-control-id="${ctrl.id}" style="padding:8px 16px;border:1px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--clr-warning-text);border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.2s;${(state.cfgAttested?.[ctrl.id] === 'warn') ? 'opacity:1;background:var(--clr-warning-bg);border-color:var(--clr-warning-text)' : 'opacity:0.6'}">⚠ Mark as Manual</button>
+                <button class="manual-override-btn" data-status="fail" data-control-id="${ctrl.id}" style="padding:8px 16px;border:1px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--clr-danger-text);border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.2s;${(state.cfgAttested?.[ctrl.id] === 'fail') ? 'opacity:1;background:var(--clr-danger-bg);border-color:var(--clr-danger-text)' : 'opacity:0.6'}">✗ Mark as Failed</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+
+    // Remove existing modal if any
+    document.getElementById('control-modal')?.remove()
+
+    // Insert and show modal
+    document.body.insertAdjacentHTML('beforeend', modalHtml)
+
+    // Add event listeners for manual override buttons
+    setTimeout(() => {
+      document.querySelectorAll('.manual-override-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const newStatus = btn.dataset.status
+          const controlId = btn.dataset.controlId
+          const statusLabels = { pass: '✓ PASS', warn: '⚠ MANUAL', fail: '✗ FAILED' }
+
+          // Update control status in state
+          if (!state.cfgAttested) state.cfgAttested = {}
+          state.cfgAttested[controlId] = newStatus
+          saveState()
+
+          // Update button styling
+          document.querySelectorAll('.manual-override-btn').forEach(b => {
+            if (b.dataset.status === newStatus && b.dataset.controlId === controlId) {
+              b.style.opacity = '1'
+              b.style.fontWeight = '700'
+            } else if (b.dataset.controlId === controlId) {
+              b.style.opacity = '0.6'
+              b.style.fontWeight = '400'
+            }
+          })
+
+          showToast(`Control ${controlId} marked as ${statusLabels[newStatus]}`, 'success')
+        })
+      })
+    }, 100)
+  } catch (error) {
+    console.error('Error opening control modal:', error)
+    showToast('Error displaying control details', 'error')
+  }
+}
+
 function getTopicStats(topic) {
   const controls = topic.subsections.flatMap(s => s.controls)
   const total = controls.length
@@ -844,70 +1011,130 @@ async function renderProductionMainWithCachedData(el, results, lastRun) {
       </div>
 
       <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary);text-transform:uppercase;letter-spacing:0.5px">Security Control Categories</div>
-      <div class="cfg-topic-grid" id="cfg-topic-grid"></div>
+
+      <!-- Tab Navigation -->
+      <div class="tabs" id="cfg-topic-tabs" style="margin-bottom:20px;margin-top:0">
+        ${topics.map((topic, idx) => `
+          <button class="tab-btn ${idx === 0 ? 'active' : ''}" data-topic-idx="${idx}">
+            <i class="ti ti-category"></i> ${topic.name || `Topic ${idx + 1}`}
+          </button>
+        `).join('')}
+      </div>
+
+      <!-- Tab Content - Control Status List -->
+      <div id="cfg-topic-content" class="tab-content"></div>
     `
 
-    // Render topics grid
-    const grid = el.querySelector('#cfg-topic-grid')
-    const TOPIC_COLOURS_MAP = {
-      't1': { bg: '#dbeafe', color: '#1e40af' },
-      't2': { bg: '#ddd6fe', color: '#6d28d9' },
-      't3': { bg: '#dcfce7', color: '#15803d' },
-      't4': { bg: '#fed7aa', color: '#92400e' },
-      't5': { bg: '#f5d4e6', color: '#9f1239' },
-      't6': { bg: '#ccfbf1', color: '#0d6e6e' },
-      't7': { bg: '#e0e7ff', color: '#3730a3' },
-      't8': { bg: '#fef3c7', color: '#b45309' },
-      't9': { bg: '#fce7f3', color: '#831843' }
-    }
-
-    topics.forEach((topic, idx) => {
-      const card = document.createElement('div')
-      card.className = 'cfg-topic-card'
-
-      // Calculate stats for this topic
-      let topicPass = 0, topicFail = 0, topicWarn = 0, topicTotal = 0
-      if (topic.controls) {
-        topic.controls.forEach(c => {
-          topicTotal++
-          if (c.status === 'pass') topicPass++
-          else if (c.status === 'fail') topicFail++
-          else if (c.status === 'warn') topicWarn++
-        })
+    // Render tab content for first topic by default
+    const renderTopicControls = (topicIdx) => {
+      console.log('📋 Rendering topic controls for index:', topicIdx)
+      const topic = topics[topicIdx]
+      console.log('📋 Topic data:', topic)
+      if (!topic) {
+        console.warn('⚠️ Topic not found at index', topicIdx)
+        return
       }
-      const topicScore = topicTotal > 0 ? Math.round((topicPass / topicTotal) * 100) : 0
 
-      const tc = TOPIC_COLOURS_MAP[topic.topicId] || TOPIC_COLOURS_MAP['t1']
-      const topicName = topic.name || `Topic ${idx + 1}`
+      const contentEl = el.querySelector('#cfg-topic-content')
+      if (!contentEl) {
+        console.error('❌ Content element not found')
+        return
+      }
 
-      card.innerHTML = `
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border-secondary)">
-          <div style="background:${tc.bg};color:${tc.color};width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <i class="ti ti-checkmark-circle" style="font-size:20px"></i>
+      // Topics have hierarchical structure: topic.subsections[].controls
+      let controls = []
+      if (topic.subsections && Array.isArray(topic.subsections)) {
+        for (const subsection of topic.subsections) {
+          if (subsection.controls && Array.isArray(subsection.controls)) {
+            controls.push(...subsection.controls)
+          }
+        }
+      }
+
+      console.log('📋 Controls count from subsections:', controls.length)
+
+      if (controls.length === 0) {
+        contentEl.innerHTML = `
+          <div class="card" style="background:var(--clr-warning-bg);border:1px solid var(--clr-warning-border);padding:16px">
+            <div style="color:var(--clr-warning-text);font-weight:600">No controls data available</div>
+            <div style="color:var(--clr-warning-text);font-size:12px;margin-top:8px">
+              This category has no detailed control information available yet.
+            </div>
           </div>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);line-height:1.3">${topicName}</div>
-            <div style="font-size:11px;color:var(--color-text-tertiary)">${topicTotal} controls</div>
-          </div>
-          <div style="font-size:16px;font-weight:700;color:${tc.color}">${topicScore}%</div>
-        </div>
+        `
+        return
+      }
 
-        <div style="display:flex;gap:12px;margin-bottom:12px">
-          ${topicFail > 0 ? `<span style="padding:4px 8px;background:var(--clr-danger-bg);color:var(--clr-danger-text);border-radius:4px;font-size:11px;font-weight:600">${topicFail} Failed</span>` : ''}
-          ${topicWarn > 0 ? `<span style="padding:4px 8px;background:var(--clr-warning-bg);color:var(--clr-warning-text);border-radius:4px;font-size:11px;font-weight:600">${topicWarn} Warnings</span>` : ''}
-          ${topicPass > 0 ? `<span style="padding:4px 8px;background:var(--clr-success-bg);color:var(--clr-success-text);border-radius:4px;font-size:11px;font-weight:600">${topicPass} Passed</span>` : ''}
-        </div>
-
-        <div style="background:var(--color-background-secondary);height:6px;border-radius:3px;overflow:hidden">
-          <div style="background:${tc.color};height:100%;width:${topicScore}%;transition:width 0.3s ease"></div>
-        </div>
-      `
-
-      card.addEventListener('click', () => {
-        showToast(`${topicName}: ${topicPass}/${topicTotal} controls passing`, 'info')
+      let passCount = 0, failCount = 0, warnCount = 0
+      controls.forEach(c => {
+        if (c.status === 'pass') passCount++
+        else if (c.status === 'fail') failCount++
+        else if (c.status === 'warn') warnCount++
       })
 
-      grid.appendChild(card)
+      contentEl.innerHTML = `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">${topic.name || `Topic ${topicIdx + 1}`} - Control Status</div>
+            <div style="display:flex;gap:12px;font-size:11px">
+              ${failCount > 0 ? `<span style="padding:4px 8px;background:var(--clr-danger-bg);color:var(--clr-danger-text);border-radius:4px;font-weight:600">${failCount} Failed</span>` : ''}
+              ${warnCount > 0 ? `<span style="padding:4px 8px;background:var(--clr-warning-bg);color:var(--clr-warning-text);border-radius:4px;font-weight:600">${warnCount} Warnings</span>` : ''}
+              ${passCount > 0 ? `<span style="padding:4px 8px;background:var(--clr-success-bg);color:var(--clr-success-text);border-radius:4px;font-weight:600">${passCount} Passed</span>` : ''}
+            </div>
+          </div>
+          <div style="overflow-x:auto;max-height:600px;overflow-y:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead style="position:sticky;top:0;z-index:10;background:var(--color-background-secondary)">
+                <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-secondary)">
+                  <th style="padding:12px;text-align:center;font-weight:600;width:80px;white-space:nowrap">Status</th>
+                  <th style="padding:12px;text-align:left;font-weight:600;width:110px;white-space:nowrap">Control ID</th>
+                  <th style="padding:12px;text-align:left;font-weight:600">Description</th>
+                  <th style="padding:12px;text-align:center;font-weight:600;width:100px;white-space:nowrap">Manual</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${controls.map((ctrl, i) => {
+                  const displayStatus = state.cfgAttested?.[ctrl.id] || ctrl.status
+                  const statusBg = displayStatus === 'pass' ? 'var(--clr-success-bg)' : displayStatus === 'fail' ? 'var(--clr-danger-bg)' : 'var(--clr-warning-bg)'
+                  const statusColor = displayStatus === 'pass' ? 'var(--clr-success-text)' : displayStatus === 'fail' ? 'var(--clr-danger-text)' : 'var(--clr-warning-text)'
+                  const statusLabel = displayStatus === 'pass' ? '✓ Pass' : displayStatus === 'fail' ? '✗ Fail' : '⚠ Warn'
+                  return `
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary);height:auto;cursor:pointer;transition:background 0.2s;${i % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}" class="control-row" data-control-id="${ctrl.id}" data-control-json='${JSON.stringify(ctrl).replace(/'/g, "&apos;")}' onclick="window.openControlModal(this.dataset.controlJson)">
+                    <td style="padding:10px;text-align:center;vertical-align:middle">
+                      <span style="display:inline-block;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;background:${statusBg};color:${statusColor}">
+                        ${statusLabel}
+                      </span>
+                    </td>
+                    <td style="padding:10px;color:var(--color-text-primary);font-weight:500;word-break:break-word">${ctrl.id || 'N/A'}</td>
+                    <td style="padding:10px;color:var(--color-text-secondary);font-size:11px;word-wrap:break-word;word-break:break-word">${ctrl.desc || ctrl.title || '-'}</td>
+                    <td style="padding:10px;text-align:center;color:var(--color-text-secondary);white-space:nowrap">
+                      ${ctrl.psExecuted === false && ctrl.ps ? '🔍 Yes' : '-'}
+                    </td>
+                  </tr>
+                  `
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `
+    }
+
+    // Render first topic by default
+    renderTopicControls(0)
+
+    // Attach tab event listeners
+    console.log('📋 Attaching click listeners to tabs')
+    el.querySelectorAll('#cfg-topic-tabs .tab-btn').forEach(btn => {
+      console.log('📋 Adding listener to tab:', btn.textContent)
+      btn.addEventListener('click', () => {
+        console.log('🖱️ Tab clicked:', btn.textContent)
+        el.querySelectorAll('#cfg-topic-tabs .tab-btn').forEach(b => b.classList.remove('active'))
+        btn.classList.add('active')
+        const topicIdx = parseInt(btn.dataset.topicIdx)
+        console.log('🖱️ Topic index:', topicIdx)
+        renderTopicControls(topicIdx)
+      })
     })
 
     // Add event listeners
@@ -1076,70 +1303,130 @@ async function renderProductionMainWithRealData(el) {
       </div>
 
       <div style="font-size:11px;font-weight:600;color:var(--color-text-secondary);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--color-border-secondary);text-transform:uppercase;letter-spacing:0.5px">Security Control Categories</div>
-      <div class="cfg-topic-grid" id="cfg-topic-grid"></div>
+
+      <!-- Tab Navigation -->
+      <div class="tabs" id="cfg-topic-tabs" style="margin-bottom:20px;margin-top:0">
+        ${topics.map((topic, idx) => `
+          <button class="tab-btn ${idx === 0 ? 'active' : ''}" data-topic-idx="${idx}">
+            <i class="ti ti-category"></i> ${topic.name || `Topic ${idx + 1}`}
+          </button>
+        `).join('')}
+      </div>
+
+      <!-- Tab Content - Control Status List -->
+      <div id="cfg-topic-content" class="tab-content"></div>
     `
 
-    // Render topic cards with real data
-    const grid = el.querySelector('#cfg-topic-grid')
-    const TOPIC_COLOURS_MAP = {
-      't1': { bg: '#dbeafe', color: '#1e40af' },
-      't2': { bg: '#ddd6fe', color: '#6d28d9' },
-      't3': { bg: '#dcfce7', color: '#15803d' },
-      't4': { bg: '#fed7aa', color: '#92400e' },
-      't5': { bg: '#f5d4e6', color: '#9f1239' },
-      't6': { bg: '#ccfbf1', color: '#0d6e6e' },
-      't7': { bg: '#e0e7ff', color: '#3730a3' },
-      't8': { bg: '#fef3c7', color: '#b45309' },
-      't9': { bg: '#fce7f3', color: '#831843' }
-    }
-
-    topics.forEach((topic, idx) => {
-      const card = document.createElement('div')
-      card.className = 'cfg-topic-card'
-
-      // Calculate stats for this topic
-      let topicPass = 0, topicFail = 0, topicWarn = 0, topicTotal = 0
-      if (topic.controls) {
-        topic.controls.forEach(c => {
-          topicTotal++
-          if (c.status === 'pass') topicPass++
-          else if (c.status === 'fail') topicFail++
-          else if (c.status === 'warn') topicWarn++
-        })
+    // Render tab content for first topic by default
+    const renderTopicControls = (topicIdx) => {
+      console.log('📋 Rendering topic controls for index:', topicIdx)
+      const topic = topics[topicIdx]
+      console.log('📋 Topic data:', topic)
+      if (!topic) {
+        console.warn('⚠️ Topic not found at index', topicIdx)
+        return
       }
-      const topicScore = topicTotal > 0 ? Math.round((topicPass / topicTotal) * 100) : 0
 
-      const tc = TOPIC_COLOURS_MAP[topic.topicId] || TOPIC_COLOURS_MAP['t1']
-      const topicName = topic.name || `Topic ${idx + 1}`
+      const contentEl = el.querySelector('#cfg-topic-content')
+      if (!contentEl) {
+        console.error('❌ Content element not found')
+        return
+      }
 
-      card.innerHTML = `
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border-secondary)">
-          <div style="background:${tc.bg};color:${tc.color};width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <i class="ti ti-checkmark-circle" style="font-size:20px"></i>
+      // Topics have hierarchical structure: topic.subsections[].controls
+      let controls = []
+      if (topic.subsections && Array.isArray(topic.subsections)) {
+        for (const subsection of topic.subsections) {
+          if (subsection.controls && Array.isArray(subsection.controls)) {
+            controls.push(...subsection.controls)
+          }
+        }
+      }
+
+      console.log('📋 Controls count from subsections:', controls.length)
+
+      if (controls.length === 0) {
+        contentEl.innerHTML = `
+          <div class="card" style="background:var(--clr-warning-bg);border:1px solid var(--clr-warning-border);padding:16px">
+            <div style="color:var(--clr-warning-text);font-weight:600">No controls data available</div>
+            <div style="color:var(--clr-warning-text);font-size:12px;margin-top:8px">
+              This category has no detailed control information available yet.
+            </div>
           </div>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);line-height:1.3">${topicName}</div>
-            <div style="font-size:11px;color:var(--color-text-tertiary)">${topicTotal} controls</div>
-          </div>
-          <div style="font-size:16px;font-weight:700;color:${tc.color}">${topicScore}%</div>
-        </div>
+        `
+        return
+      }
 
-        <div style="display:flex;gap:12px;margin-bottom:12px">
-          ${topicFail > 0 ? `<span style="padding:4px 8px;background:var(--clr-danger-bg);color:var(--clr-danger-text);border-radius:4px;font-size:11px;font-weight:600">${topicFail} Failed</span>` : ''}
-          ${topicWarn > 0 ? `<span style="padding:4px 8px;background:var(--clr-warning-bg);color:var(--clr-warning-text);border-radius:4px;font-size:11px;font-weight:600">${topicWarn} Warnings</span>` : ''}
-          ${topicPass > 0 ? `<span style="padding:4px 8px;background:var(--clr-success-bg);color:var(--clr-success-text);border-radius:4px;font-size:11px;font-weight:600">${topicPass} Passed</span>` : ''}
-        </div>
-
-        <div style="background:var(--color-background-secondary);height:6px;border-radius:3px;overflow:hidden">
-          <div style="background:${tc.color};height:100%;width:${topicScore}%;transition:width 0.3s ease"></div>
-        </div>
-      `
-
-      card.addEventListener('click', () => {
-        showToast(`${topicName}: ${topicPass}/${topicTotal} controls passing`, 'info')
+      let passCount = 0, failCount = 0, warnCount = 0
+      controls.forEach(c => {
+        if (c.status === 'pass') passCount++
+        else if (c.status === 'fail') failCount++
+        else if (c.status === 'warn') warnCount++
       })
 
-      grid.appendChild(card)
+      contentEl.innerHTML = `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">${topic.name || `Topic ${topicIdx + 1}`} - Control Status</div>
+            <div style="display:flex;gap:12px;font-size:11px">
+              ${failCount > 0 ? `<span style="padding:4px 8px;background:var(--clr-danger-bg);color:var(--clr-danger-text);border-radius:4px;font-weight:600">${failCount} Failed</span>` : ''}
+              ${warnCount > 0 ? `<span style="padding:4px 8px;background:var(--clr-warning-bg);color:var(--clr-warning-text);border-radius:4px;font-weight:600">${warnCount} Warnings</span>` : ''}
+              ${passCount > 0 ? `<span style="padding:4px 8px;background:var(--clr-success-bg);color:var(--clr-success-text);border-radius:4px;font-weight:600">${passCount} Passed</span>` : ''}
+            </div>
+          </div>
+          <div style="overflow-x:auto;max-height:600px;overflow-y:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead style="position:sticky;top:0;z-index:10;background:var(--color-background-secondary)">
+                <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-secondary)">
+                  <th style="padding:12px;text-align:center;font-weight:600;width:80px;white-space:nowrap">Status</th>
+                  <th style="padding:12px;text-align:left;font-weight:600;width:110px;white-space:nowrap">Control ID</th>
+                  <th style="padding:12px;text-align:left;font-weight:600">Description</th>
+                  <th style="padding:12px;text-align:center;font-weight:600;width:100px;white-space:nowrap">Manual</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${controls.map((ctrl, i) => {
+                  const displayStatus = state.cfgAttested?.[ctrl.id] || ctrl.status
+                  const statusBg = displayStatus === 'pass' ? 'var(--clr-success-bg)' : displayStatus === 'fail' ? 'var(--clr-danger-bg)' : 'var(--clr-warning-bg)'
+                  const statusColor = displayStatus === 'pass' ? 'var(--clr-success-text)' : displayStatus === 'fail' ? 'var(--clr-danger-text)' : 'var(--clr-warning-text)'
+                  const statusLabel = displayStatus === 'pass' ? '✓ Pass' : displayStatus === 'fail' ? '✗ Fail' : '⚠ Warn'
+                  return `
+                  <tr style="border-bottom:0.5px solid var(--color-border-tertiary);height:auto;cursor:pointer;transition:background 0.2s;${i % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}" class="control-row" data-control-id="${ctrl.id}" data-control-json='${JSON.stringify(ctrl).replace(/'/g, "&apos;")}' onclick="window.openControlModal(this.dataset.controlJson)">
+                    <td style="padding:10px;text-align:center;vertical-align:middle">
+                      <span style="display:inline-block;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;background:${statusBg};color:${statusColor}">
+                        ${statusLabel}
+                      </span>
+                    </td>
+                    <td style="padding:10px;color:var(--color-text-primary);font-weight:500;word-break:break-word">${ctrl.id || 'N/A'}</td>
+                    <td style="padding:10px;color:var(--color-text-secondary);font-size:11px;word-wrap:break-word;word-break:break-word">${ctrl.desc || ctrl.title || '-'}</td>
+                    <td style="padding:10px;text-align:center;color:var(--color-text-secondary);white-space:nowrap">
+                      ${ctrl.psExecuted === false && ctrl.ps ? '🔍 Yes' : '-'}
+                    </td>
+                  </tr>
+                  `
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `
+    }
+
+    // Render first topic by default
+    renderTopicControls(0)
+
+    // Attach tab event listeners
+    console.log('📋 Attaching click listeners to tabs')
+    el.querySelectorAll('#cfg-topic-tabs .tab-btn').forEach(btn => {
+      console.log('📋 Adding listener to tab:', btn.textContent)
+      btn.addEventListener('click', () => {
+        console.log('🖱️ Tab clicked:', btn.textContent)
+        el.querySelectorAll('#cfg-topic-tabs .tab-btn').forEach(b => b.classList.remove('active'))
+        btn.classList.add('active')
+        const topicIdx = parseInt(btn.dataset.topicIdx)
+        console.log('🖱️ Topic index:', topicIdx)
+        renderTopicControls(topicIdx)
+      })
     })
 
     // Add event listeners

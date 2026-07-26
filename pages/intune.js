@@ -213,7 +213,7 @@ function renderDemoIntunePage(el) {
       </div>
     </div>
 
-    <div class="tabs" id="intune-tabs" style="margin-bottom:16px">
+    <div class="tabs" id="intune-tabs" style="margin-bottom:20px;margin-top:20px">
       ${INTUNE_TABS.map((tab, i) => `
         <button class="tab-btn ${i === 0 ? 'active' : ''}" data-tab="${tab.id}">
           <i class="ti ${tab.icon}"></i> ${tab.label}
@@ -221,7 +221,7 @@ function renderDemoIntunePage(el) {
       `).join('')}
     </div>
 
-    <div id="intune-content"></div>
+    <div id="intune-content" class="tab-content"></div>
   `
 
   const contentEl = el.querySelector('#intune-content')

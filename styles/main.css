@@ -775,69 +775,170 @@ tr:hover td { background: var(--color-background-secondary); }
 /* ============================================================
    Tabs
    ============================================================ */
+/* ============================================================================
+   TABS & TAB NAVIGATION - Modern, Unified Styling
+   ============================================================================ */
+
 .tabs {
   display: flex;
   flex-wrap: wrap;
-  margin-bottom: 16px;
-  gap: 8px;
-  padding: 12px 0;
+  margin-bottom: 20px;
+  gap: 0;
+  padding: 0;
   border: none;
   background: transparent;
+  position: relative;
+  border-bottom: 1px solid var(--color-border-tertiary);
 }
 
+.tabs::after {
+  display: none;
+}
+
+/* Zero Trust tabs - multi-row layout with divider only between rows */
+#zt-tabs {
+  row-gap: 0;
+  column-gap: 0;
+  position: relative;
+  padding: 0;
+  border: none !important;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+/* Visual divider line between tab rows - continuous line */
+#zt-tabs::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--color-border-tertiary);
+  top: 44px;
+  display: block;
+}
+
+/* Separate first row from second row */
+#zt-tabs .tab-btn:nth-child(1),
+#zt-tabs .tab-btn:nth-child(2),
+#zt-tabs .tab-btn:nth-child(3),
+#zt-tabs .tab-btn:nth-child(4),
+#zt-tabs .tab-btn:nth-child(5),
+#zt-tabs .tab-btn:nth-child(6),
+#zt-tabs .tab-btn:nth-child(7),
+#zt-tabs .tab-btn:nth-child(8),
+#zt-tabs .tab-btn:nth-child(9) {
+  border-bottom: 3px solid transparent;
+  padding-bottom: 12px;
+}
+
+/* Push secondary tabs below divider with more spacing */
+#zt-tabs .tab-btn:nth-child(n+10) {
+  padding-top: 12px;
+}
+
+/* Individual Tab Button */
 .tab-btn {
-  padding: 10px 16px;
+  padding: 12px 20px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-secondary);
-  border: 0.5px solid var(--color-border-secondary);
-  border-radius: 6px;
-  background: var(--color-background-primary);
+  color: var(--color-text-tertiary);
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   outline: none;
   white-space: nowrap;
   height: auto;
   line-height: 1.3;
-  min-height: 36px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   letter-spacing: 0.3px;
+  position: relative;
+  z-index: 1;
+  margin-right: 0;
 }
 
 .tab-btn i {
-  font-size: 18px;
+  font-size: 16px;
   flex-shrink: 0;
+  opacity: 0.8;
+  transition: opacity 0.25s ease;
 }
 
-.tab-btn:hover {
-  background: var(--color-background-secondary);
+/* Tab Button Hover State */
+.tab-btn:hover:not(.active) {
+  background: transparent;
   color: var(--color-text-primary);
-  border-color: var(--clr-primary);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  border-bottom-color: transparent;
 }
 
+.tab-btn:hover:not(.active) i {
+  opacity: 1;
+}
+
+/* Tab Button Active State */
 .tab-btn.active {
-  background: var(--clr-primary);
-  color: white;
-  border-color: var(--clr-primary);
+  background: transparent;
+  color: var(--color-text-primary);
+  border-bottom: 3px solid var(--clr-primary) !important;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0,102,204,0.2);
 }
 
 .tab-btn.active span {
-  color: white !important;
+  color: var(--clr-primary) !important;
   font-size: 13px;
+  font-weight: 700;
 }
 
 .tab-btn.active i {
-  color: white !important;
+  color: var(--clr-primary) !important;
+  opacity: 1;
 }
 
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
+/* Tab Content Panel */
+.tab-panel {
+  display: none;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tab Content Container - Outer Card Styling */
+.tab-content, #intune-content, #entra-apps-content, [id$='-content'] {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Enhanced Card Styling for Tab Content */
+.tab-content .card:first-child,
+#intune-content .card:first-child,
+#entra-apps-content .card:first-child {
+  border: 1px solid var(--color-border-secondary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
 
 /* Security page tab spacing */
 #sec-subnav {

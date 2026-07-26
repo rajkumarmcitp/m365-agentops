@@ -13,20 +13,40 @@ const __dirname = dirname(__filename)
 
 const MOCK_DATA_FILE = join(__dirname, '..', 'data', 'mock-policies.json')
 
+// Global reference to graphClient - set by server.js
+let graphClientInstance = null
+
+/**
+ * Set the Graph Client instance for API calls
+ */
+export function setGraphClient(client) {
+  graphClientInstance = client
+}
+
 /**
  * Load policies from Graph API or mock data
  */
 export async function loadPolicies() {
   try {
+    if (graphClientInstance) {
+      const policies = await loadPoliciesFromGraphAPI(graphClientInstance)
+      if (policies && policies.length > 0) {
+        console.log(`Loaded ${policies.length} policies from Graph API`)
+        return policies
+      }
+    }
+
     if (fs.existsSync(MOCK_DATA_FILE)) {
       try {
         const mockData = JSON.parse(fs.readFileSync(MOCK_DATA_FILE, 'utf8'))
-        console.log(`Loaded ${mockData.length} mock policies`)
+        console.log(`Loaded ${mockData.length} mock policies from file`)
         return mockData
       } catch (error) {
         console.warn('Error loading mock policies:', error)
       }
     }
+
+    console.log('Using default mock policies')
     return getDefaultMockPolicies()
   } catch (error) {
     console.error('Error in loadPolicies:', error)
@@ -362,13 +382,38 @@ export function getDefaultMockPolicies() {
   ]
 }
 
-export async function loadPoliciesFromGraphAPI(accessToken) {
+export async function loadPoliciesFromGraphAPI(graphClient) {
   try {
-    console.log('Graph API integration not yet implemented')
-    return getDefaultMockPolicies()
+    if (!graphClient) {
+      console.warn('Graph client not available for API call')
+      return null
+    }
+
+    console.log('Fetching Conditional Access policies from Graph API...')
+    const response = await graphClient
+      .api('/identity/conditionalAccess/policies')
+      .get()
+
+    if (!response || !response.value) {
+      console.warn('No policies returned from Graph API')
+      return []
+    }
+
+    // Transform Graph API response to match expected format
+    const policies = response.value.map(policy => ({
+      id: policy.id,
+      displayName: policy.displayName,
+      state: policy.state, // 'enabled', 'disabled', or 'enabledForReportingButNotEnforced'
+      conditions: policy.conditions || {},
+      grantControls: policy.grantControls || {},
+      sessionControls: policy.sessionControls || {}
+    }))
+
+    console.log(`Successfully loaded ${policies.length} Conditional Access policies from Graph API`)
+    return policies
   } catch (error) {
-    console.error('Error loading from Graph API:', error)
-    return getDefaultMockPolicies()
+    console.error('Error loading from Graph API:', error.message)
+    return null
   }
 }
 

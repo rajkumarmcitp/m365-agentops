@@ -15,7 +15,10 @@ const store = {
   userSession: null,
   agentInvestigations: {},
   agentInvestigationSteps: {},
-  agentQueue: {}
+  agentQueue: {},
+  orchestratorTasks: {},
+  orchestratorEvents: {},
+  orchestratorConflicts: {}
 }
 
 export async function initDatabase() {
@@ -183,6 +186,103 @@ class DatabaseWrapper {
         status: status || 'queued'
       }
       console.log(`✓ Queued investigation for alert: ${alert_id}`)
+      return { lastID: 1, changes: 1 }
+    }
+
+    // Handle INSERT INTO orchestratorTasks
+    if (sql.includes('INSERT INTO orchestratorTasks') || sql.includes('INSERT') && sql.includes('orchestratorTasks')) {
+      const [id, type, payload, priority, status, source_agent, assigned_agent, queued_at, started_at, completed_at, error] = params
+      this.store.orchestratorTasks[id] = {
+        id,
+        type,
+        payload: typeof payload === 'string' ? JSON.parse(payload) : payload,
+        priority: priority || 'P3',
+        status: status || 'queued',
+        source_agent,
+        assigned_agent,
+        queued_at: queued_at || new Date().toISOString(),
+        started_at,
+        completed_at,
+        error
+      }
+      console.log(`✓ Orchestrator task created: ${type} [${priority}]`)
+      return { lastID: 1, changes: 1 }
+    }
+
+    // Handle INSERT INTO orchestratorEvents
+    if (sql.includes('INSERT INTO orchestratorEvents') || sql.includes('INSERT') && sql.includes('orchestratorEvents')) {
+      const [id, event_type, payload, source_agent, created_at] = params
+      this.store.orchestratorEvents[id] = {
+        id,
+        event_type,
+        payload: typeof payload === 'string' ? JSON.parse(payload) : payload,
+        source_agent,
+        created_at: created_at || new Date().toISOString()
+      }
+      console.log(`✓ Orchestrator event logged: ${event_type}`)
+      return { lastID: 1, changes: 1 }
+    }
+
+    // Handle INSERT INTO orchestratorConflicts
+    if (sql.includes('INSERT INTO orchestratorConflicts') || sql.includes('INSERT') && sql.includes('orchestratorConflicts')) {
+      const [id, conflict_type, key, agent1, agent2, resolution, resolved, created_at] = params
+      this.store.orchestratorConflicts[id] = {
+        id,
+        conflict_type,
+        key,
+        agent1,
+        agent2,
+        resolution,
+        resolved: resolved || 0,
+        created_at: created_at || new Date().toISOString()
+      }
+      console.log(`✓ Conflict logged: ${conflict_type}`)
+      return { lastID: 1, changes: 1 }
+    }
+
+    // Handle UPDATE orchestratorTasks
+    if (sql.includes('UPDATE orchestratorTasks')) {
+      const whereMatch = sql.match(/WHERE\s+id\s*=\s*\?/i)
+      if (whereMatch && params.length > 0) {
+        const taskId = params[params.length - 1]
+        if (this.store.orchestratorTasks[taskId]) {
+          const setMatch = sql.match(/SET\s+(.+)\s+WHERE/i)
+          if (setMatch) {
+            const setClause = setMatch[1]
+            const pairs = setClause.split(',').map(p => p.trim())
+            pairs.forEach((pair, idx) => {
+              const [key] = pair.split('=').map(p => p.trim())
+              if (params[idx] !== undefined) {
+                this.store.orchestratorTasks[taskId][key] = params[idx]
+              }
+            })
+            console.log(`✓ Updated orchestrator task: ${taskId}`)
+          }
+        }
+      }
+      return { lastID: 1, changes: 1 }
+    }
+
+    // Handle UPDATE orchestratorConflicts
+    if (sql.includes('UPDATE orchestratorConflicts')) {
+      const whereMatch = sql.match(/WHERE\s+id\s*=\s*\?/i)
+      if (whereMatch && params.length > 0) {
+        const conflictId = params[params.length - 1]
+        if (this.store.orchestratorConflicts[conflictId]) {
+          const setMatch = sql.match(/SET\s+(.+)\s+WHERE/i)
+          if (setMatch) {
+            const setClause = setMatch[1]
+            const pairs = setClause.split(',').map(p => p.trim())
+            pairs.forEach((pair, idx) => {
+              const [key] = pair.split('=').map(p => p.trim())
+              if (params[idx] !== undefined) {
+                this.store.orchestratorConflicts[conflictId][key] = params[idx]
+              }
+            })
+            console.log(`✓ Updated orchestrator conflict: ${conflictId}`)
+          }
+        }
+      }
       return { lastID: 1, changes: 1 }
     }
 

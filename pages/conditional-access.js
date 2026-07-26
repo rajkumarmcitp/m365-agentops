@@ -32,21 +32,17 @@ export function initConditionalAccess() {
 
 async function loadCAPData(el) {
   try {
-    const [homeData, complianceData, controlsData, riskData, remData, driftData] = await Promise.all([
+    const [homeData, complianceData, controlsAndRiskData, driftData] = await Promise.all([
       callAPI('/cap/dashboard/home'),
       callAPI('/cap/dashboard/compliance'),
-      callAPI('/cap/dashboard/controls'),
-      callAPI('/cap/dashboard/risk'),
-      callAPI('/cap/dashboard/remediation'),
+      callAPI('/cap/dashboard/controls-and-risk'),
       callAPI('/cap/dashboard/drift')
     ])
 
     dashboardData = {
       home: homeData?.data || homeData,
       compliance: complianceData?.data || complianceData,
-      controls: controlsData?.data || controlsData,
-      risk: riskData?.data || riskData,
-      remediation: remData?.data || remData,
+      controls: controlsAndRiskData?.data || controlsAndRiskData,
       drift: driftData?.data || driftData
     }
 
@@ -110,14 +106,12 @@ function renderCAP(el) {
       </div>
     </div>
 
-    <div class="cap-tabs">
-      <button class="tab-btn active" data-tab="overview">Overview</button>
-      <button class="tab-btn" data-tab="assessment">Category Assessment</button>
-      <button class="tab-btn" data-tab="compliance">Compliance</button>
-      <button class="tab-btn" data-tab="controls">Controls</button>
-      <button class="tab-btn" data-tab="risk">Risk</button>
-      <button class="tab-btn" data-tab="remediation">Remediation</button>
-      <button class="tab-btn" data-tab="drift">Drift</button>
+    <div class="tabs cap-tabs" style="margin-top:20px;margin-bottom:20px">
+      <button class="tab-btn active" data-tab="overview"><i class="ti ti-home"></i> Overview</button>
+      <button class="tab-btn" data-tab="assessment"><i class="ti ti-list-check"></i> Category Assessment</button>
+      <button class="tab-btn" data-tab="compliance"><i class="ti ti-certificate"></i> Compliance</button>
+      <button class="tab-btn" data-tab="controls"><i class="ti ti-shield-check"></i> Controls & Risk</button>
+      <button class="tab-btn" data-tab="drift"><i class="ti ti-alert-triangle"></i> Drift</button>
     </div>
 
     <!-- Control Category Selector (Only shown in Category Assessment tab) -->
@@ -204,13 +198,7 @@ function renderTabContent(el, tab) {
       renderComplianceTab(contentEl, dashboardData.compliance)
       break
     case 'controls':
-      renderControlsTab(contentEl, dashboardData.controls)
-      break
-    case 'risk':
-      renderRiskTab(contentEl, dashboardData.risk)
-      break
-    case 'remediation':
-      renderRemediationTab(contentEl, dashboardData.remediation)
+      renderControlsAndRiskTab(contentEl, dashboardData.controls)
       break
     case 'drift':
       renderDriftTab(contentEl, dashboardData.drift)
@@ -522,196 +510,108 @@ function renderComplianceTab(el, data) {
   }, 0)
 }
 
-function renderControlsTab(el, data) {
+function renderControlsAndRiskTab(el, data) {
   if (!data) {
     el.innerHTML = `<div class="card" style="background:var(--clr-danger-bg);border-left:3px solid var(--clr-danger-text);padding:16px"><i class="fas fa-exclamation-circle"></i> No data available</div>`
     return
   }
 
+  const kpis = data.kpis || {}
+  const controlsData = data.controls || []
+
   el.innerHTML = `
-    <div class="cap-grid">
-      <div class="card">
-        <div style="font-size:20px;font-weight:700;color:var(--clr-primary);margin-bottom:2px">${data.summary.total}</div>
-        <div style="font-size:12px;color:var(--color-text-secondary)">Total Controls</div>
-      </div>
-      <div class="card" style="background:var(--clr-success-bg);border-color:var(--clr-success-border)">
-        <div style="font-size:20px;font-weight:700;color:var(--clr-success-text);margin-bottom:2px">${data.summary.compliant}</div>
-        <div style="font-size:12px;color:var(--clr-success-text)">Compliant</div>
-      </div>
-      <div class="card" style="background:var(--clr-danger-bg);border-color:var(--clr-danger-border)">
-        <div style="font-size:20px;font-weight:700;color:var(--clr-danger-text);margin-bottom:2px">${data.summary.nonCompliant}</div>
-        <div style="font-size:12px;color:var(--clr-danger-text)">Non-Compliant</div>
-      </div>
-      <div class="card">
-        <div style="font-size:20px;font-weight:700;color:var(--clr-primary);margin-bottom:2px">${data.summary.compliance}</div>
-        <div style="font-size:12px;color:var(--color-text-secondary)">Compliance %</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">By Severity</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        ${data.byCategory.map(cat => `
-          <div style="padding:12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:4px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <div style="font-weight:600;font-size:13px;color:var(--color-text-primary)">${cat.category}</div>
-              <div style="font-size:12px;color:var(--color-text-secondary)">${cat.compliant}/${cat.total} (${cat.percentage}%)</div>
-            </div>
-            <div class="score-bar">
-              <div class="score-fill" style="width: ${cat.percentage}%; background: ${cat.status === 'PASS' ? 'var(--clr-success-text)' : 'var(--clr-warning-text)'}"></div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
-    ${data.controls ? `
+    <!-- Compliance & Risk KPIs -->
+    <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:16px;margin-bottom:16px">
       <div class="card">
         <div class="card-header">
-          <div class="card-title"><i class="fas fa-list-check"></i> All Controls Details</div>
+          <div class="card-title">Compliance Metrics</div>
         </div>
-        <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:12px">
+          <div style="text-align:center">
+            <div style="font-size:28px;font-weight:700;color:var(--clr-primary)">${kpis.compliance?.percentage || '0%'}</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Compliance</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:28px;font-weight:700;color:var(--clr-success-text)">${kpis.compliance?.met || 0}</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Compliant Controls</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:28px;font-weight:700;color:var(--clr-danger-text)">${kpis.compliance?.unmet || 0}</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Non-Compliant</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:28px;font-weight:700;color:var(--clr-primary)">${kpis.compliance?.total || 0}</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Total Controls</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Risk Assessment</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:12px">
+          <div style="text-align:center">
+            <div style="font-size:28px;font-weight:700;color:${kpis.risk?.overallRiskLevel === 'HIGH' ? 'var(--clr-danger-text)' : kpis.risk?.overallRiskLevel === 'MEDIUM' ? 'var(--clr-warning-text)' : 'var(--clr-success-text)'}">${kpis.risk?.overallRiskLevel || 'N/A'}</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Risk Level</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:28px;font-weight:700;color:var(--clr-danger-text)">${kpis.risk?.riskScore || 0}%</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Risk Score</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:28px;font-weight:700;color:var(--clr-danger-text)">${kpis.risk?.criticalRisks || 0}</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Critical Risks</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:28px;font-weight:700;color:var(--clr-warning-text)">${kpis.risk?.highRisks || 0}</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">High Risks</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unified Controls & Risk Table -->
+    ${controlsData.length > 0 ? `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-shield-check"></i> Controls Assessment & Risk</div>
+        </div>
+        <div style="overflow-x:auto;font-size:11px">
+          <table style="width:100%;border-collapse:collapse">
             <thead>
               <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-tertiary)">
-                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:80px">Control ID</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Control Name</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:75px">ID</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:200px">Control Name</th>
                 <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:70px">Severity</th>
-                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:80px">Status</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">CA Policy Implementation</th>
+                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:75px">Status</th>
+                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:80px">Risk Level</th>
+                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:65px">Risk Score</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:180px">Policy</th>
               </tr>
             </thead>
             <tbody>
-              ${data.controls.map((control, i) => `
+              ${controlsData.map((control, i) => `
                 <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${i % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
-                  <td style="padding:10px;color:var(--color-text-primary);font-weight:700;font-family:monospace;vertical-align:top">${control.cisId}</td>
-                  <td style="padding:10px;color:var(--color-text-primary);font-weight:500;vertical-align:top">
+                  <td style="padding:10px;color:var(--color-text-primary);font-weight:700;font-family:monospace">${control.cisId}</td>
+                  <td style="padding:10px;color:var(--color-text-primary);font-weight:500">
                     <div>${control.name}</div>
-                    <div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">${control.description}</div>
                   </td>
-                  <td style="padding:10px;vertical-align:top">
+                  <td style="padding:10px">
                     <span style="display:inline-block;padding:3px 6px;border-radius:3px;font-size:10px;font-weight:600;background:${control.severity === 'Critical' ? 'var(--clr-danger-bg)' : control.severity === 'High' ? 'var(--clr-warning-bg)' : 'var(--color-background-tertiary)'};color:${control.severity === 'Critical' ? 'var(--clr-danger-text)' : control.severity === 'High' ? 'var(--clr-warning-text)' : 'var(--color-text-secondary)'}">
                       ${control.severity}
                     </span>
                   </td>
-                  <td style="padding:10px;text-align:center;vertical-align:top">
-                    ${control.met ? '<i class="fas fa-check-circle" style="color:var(--clr-success-text);font-size:14px"></i><div style="font-size:10px;color:var(--clr-success-text);margin-top:4px">Compliant</div>' : '<i class="fas fa-times-circle" style="color:var(--clr-danger-text);font-size:14px"></i><div style="font-size:10px;color:var(--clr-danger-text);margin-top:4px">Not Met</div>'}
+                  <td style="padding:10px;text-align:center">
+                    ${control.met ? '<span style="display:inline-block;background:var(--clr-success-bg);color:var(--clr-success-text);padding:4px 8px;border-radius:3px;font-weight:600;font-size:10px"><i class="fas fa-check-circle"></i> Met</span>' : '<span style="display:inline-block;background:var(--clr-danger-bg);color:var(--clr-danger-text);padding:4px 8px;border-radius:3px;font-weight:600;font-size:10px"><i class="fas fa-times-circle"></i> Unmet</span>'}
                   </td>
-                  <td style="padding:10px;font-size:10px;color:var(--color-text-secondary);vertical-align:top">
-                    ${control.policy ? `<span style="display:inline-block;background:var(--clr-success-bg);color:var(--clr-success-text);padding:4px 8px;border-radius:3px;font-weight:600">${control.policy.name}</span>` : '<span style="color:var(--clr-danger-text);font-style:italic">Policy Not Configured</span>'}
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    ` : ''}
-
-    ${data.criticalGaps && data.criticalGaps.length > 0 ? `
-      <div class="card" style="border-left:3px solid var(--clr-danger-text)">
-        <div class="card-header">
-          <div class="card-title"><i class="fas fa-exclamation-triangle"></i> Critical Gaps (${data.criticalGaps.length})</div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:12px">
-          ${data.criticalGaps.map(gap => `
-            <div style="padding:12px;background:var(--clr-danger-bg);border:0.5px solid var(--clr-danger-border);border-radius:4px">
-              <div style="font-weight:600;color:var(--clr-danger-text);margin-bottom:4px">${gap.id}: ${gap.name}</div>
-              <div style="font-size:12px;color:var(--color-text-secondary)">${gap.description}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    ` : ''}
-  `
-}
-
-function renderRiskTab(el, data) {
-  if (!data) {
-    el.innerHTML = `<div class="card" style="background:var(--clr-danger-bg);border-left:3px solid var(--clr-danger-text);padding:16px"><i class="fas fa-exclamation-circle"></i> No data available</div>`
-    return
-  }
-
-  el.innerHTML = `
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Risk Matrix</div>
-      </div>
-      <div class="cap-grid">
-        <div style="padding:16px;background:var(--clr-danger-bg);border:0.5px solid var(--clr-danger-border);border-radius:4px;text-align:center">
-          <div style="font-size:20px;font-weight:700;color:var(--clr-danger-text)">${data.riskMatrix.critical.count}</div>
-          <div style="font-size:12px;color:var(--clr-danger-text);margin-top:4px">Critical</div>
-          <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px">${data.riskMatrix.critical.timeToFix}</div>
-        </div>
-        <div style="padding:16px;background:var(--clr-warning-bg);border:0.5px solid var(--clr-warning-border);border-radius:4px;text-align:center">
-          <div style="font-size:20px;font-weight:700;color:var(--clr-warning-text)">${data.riskMatrix.high.count}</div>
-          <div style="font-size:12px;color:var(--clr-warning-text);margin-top:4px">High</div>
-          <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px">${data.riskMatrix.high.timeToFix}</div>
-        </div>
-        <div style="padding:16px;background:#fef3c7;border:0.5px solid #fcd34d;border-radius:4px;text-align:center">
-          <div style="font-size:20px;font-weight:700;color:#92400e">${data.riskMatrix.medium.count}</div>
-          <div style="font-size:12px;color:#92400e;margin-top:4px">Medium</div>
-          <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px">${data.riskMatrix.medium.timeToFix}</div>
-        </div>
-        <div style="padding:16px;background:var(--clr-success-bg);border:0.5px solid var(--clr-success-border);border-radius:4px;text-align:center">
-          <div style="font-size:20px;font-weight:700;color:var(--clr-success-text)">${data.riskMatrix.low.count}</div>
-          <div style="font-size:12px;color:var(--clr-success-text);margin-top:4px">Low</div>
-          <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px">${data.riskMatrix.low.timeToFix}</div>
-        </div>
-      </div>
-    </div>
-
-    ${data.topRisks && data.topRisks.length > 0 ? `
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title"><i class="fas fa-exclamation-triangle"></i> Top Risks (${data.topRisks.length})</div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:12px">
-          ${data.topRisks.map(risk => `
-            <div style="padding:12px;background:var(--clr-danger-bg);border-left:3px solid var(--clr-danger-text);border-radius:4px">
-              <div style="font-weight:600;font-size:13px;color:var(--clr-danger-text);margin-bottom:4px">${risk.controlId}: ${risk.name}</div>
-              <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px">${risk.description}</div>
-              <div style="font-size:11px;color:var(--clr-danger-text);padding:6px;background:rgba(220, 38, 38, 0.1);border-radius:3px">${risk.impactArea}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    ` : ''}
-
-    ${data.controls ? `
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title"><i class="fas fa-shield-alt"></i> Control Risk Assessment</div>
-        </div>
-        <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:11px">
-            <thead>
-              <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-tertiary)">
-                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:80px">Control ID</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Control Name</th>
-                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:80px">Risk Level</th>
-                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:70px">Risk Score</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Impact Area</th>
-                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Policy</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.controls.map((control, i) => `
-                <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${i % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
-                  <td style="padding:10px;color:var(--color-text-primary);font-weight:700;font-family:monospace;vertical-align:top">${control.cisId}</td>
-                  <td style="padding:10px;color:var(--color-text-primary);font-weight:500;vertical-align:top">
-                    <div>${control.name}</div>
-                  </td>
-                  <td style="padding:10px;text-align:center;vertical-align:top">
+                  <td style="padding:10px;text-align:center">
                     <span style="display:inline-block;padding:4px 8px;border-radius:3px;font-size:10px;font-weight:600;background:${control.riskLevel === 'Critical' ? 'var(--clr-danger-bg)' : control.riskLevel === 'High' ? 'var(--clr-warning-bg)' : control.riskLevel === 'Medium' ? '#fef3c7' : 'var(--clr-success-bg)'};color:${control.riskLevel === 'Critical' ? 'var(--clr-danger-text)' : control.riskLevel === 'High' ? 'var(--clr-warning-text)' : control.riskLevel === 'Medium' ? '#92400e' : 'var(--clr-success-text)'}">
                       ${control.riskLevel}
                     </span>
                   </td>
-                  <td style="padding:10px;text-align:center;font-weight:700;color:${control.riskScore >= 80 ? 'var(--clr-danger-text)' : control.riskScore >= 60 ? 'var(--clr-warning-text)' : 'var(--clr-success-text)'};vertical-align:top">${control.riskScore}</td>
-                  <td style="padding:10px;font-size:10px;color:var(--color-text-secondary);vertical-align:top">${control.impactArea}</td>
-                  <td style="padding:10px;font-size:10px;color:var(--color-text-secondary);vertical-align:top">
+                  <td style="padding:10px;text-align:center;font-weight:700;color:${control.riskScore >= 80 ? 'var(--clr-danger-text)' : control.riskScore >= 60 ? 'var(--clr-warning-text)' : 'var(--clr-success-text)'}">${control.riskScore}</td>
+                  <td style="padding:10px;font-size:10px;color:var(--color-text-secondary)">
                     ${control.policy ? `<span style="display:inline-block;background:var(--clr-success-bg);color:var(--clr-success-text);padding:3px 6px;border-radius:3px;font-weight:600">${control.policy.name}</span>` : '<span style="color:var(--clr-danger-text);font-style:italic">Not Configured</span>'}
                   </td>
                 </tr>
@@ -721,60 +621,21 @@ function renderRiskTab(el, data) {
         </div>
       </div>
     ` : ''}
-  `
-}
 
-function renderRemediationTab(el, data) {
-  if (!data) {
-    el.innerHTML = `<div class="card" style="background:var(--clr-danger-bg);border-left:3px solid var(--clr-danger-text);padding:16px"><i class="fas fa-exclamation-circle"></i> No data available</div>`
-    return
-  }
-
-  el.innerHTML = `
-    <div class="cap-grid">
-      <div class="card">
-        <div style="font-size:20px;font-weight:700;color:var(--clr-primary);margin-bottom:2px">${data.summary.total}</div>
-        <div style="font-size:12px;color:var(--color-text-secondary)">Total</div>
-      </div>
-      <div class="card" style="background:var(--clr-success-bg);border-color:var(--clr-success-border)">
-        <div style="font-size:20px;font-weight:700;color:var(--clr-success-text);margin-bottom:2px">${data.summary.successful}</div>
-        <div style="font-size:12px;color:var(--clr-success-text)">Successful</div>
-      </div>
-      <div class="card" style="background:#fef3c7;border-color:#fcd34d">
-        <div style="font-size:20px;font-weight:700;color:#92400e;margin-bottom:2px">${data.summary.partial}</div>
-        <div style="font-size:12px;color:#92400e">Partial</div>
-      </div>
-      <div class="card" style="background:var(--clr-danger-bg);border-color:var(--clr-danger-border)">
-        <div style="font-size:20px;font-weight:700;color:var(--clr-danger-text);margin-bottom:2px">${data.summary.failed}</div>
-        <div style="font-size:12px;color:var(--clr-danger-text)">Failed</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Success Rate</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:16px">
-        <div style="font-size:32px;font-weight:700;color:var(--clr-primary);min-width:60px">${data.summary.successRate}%</div>
-        <div class="score-bar" style="flex:1;height:8px">
-          <div class="score-fill" style="width: ${data.summary.successRate}%"></div>
-        </div>
-      </div>
-    </div>
-
-    ${data.recentRemediations.length > 0 ? `
-      <div class="card">
+    ${data.summary?.topRisks && data.summary.topRisks.length > 0 ? `
+      <div class="card" style="border-left:3px solid var(--clr-danger-text)">
         <div class="card-header">
-          <div class="card-title">Recent Remediations</div>
+          <div class="card-title"><i class="fas fa-exclamation-triangle"></i> Top Risks</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:12px">
-          ${data.recentRemediations.map(rem => `
-            <div style="padding:12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:4px;display:flex;justify-content:space-between;align-items:center">
-              <div>
-                <div style="font-weight:600;font-size:13px;color:var(--color-text-primary)">${rem.controlId}</div>
-                <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">${new Date(rem.timestamp).toLocaleDateString()} ${rem.dryRun ? '• Dry Run' : ''}</div>
+          ${data.summary.topRisks.map(risk => `
+            <div style="padding:12px;background:var(--clr-danger-bg);border-left:3px solid var(--clr-danger-text);border-radius:4px">
+              <div style="font-weight:600;font-size:13px;color:var(--clr-danger-text);margin-bottom:4px">${risk.name}</div>
+              <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:6px">${risk.impactArea}</div>
+              <div style="display:flex;gap:16px">
+                <div style="font-size:10px;color:var(--color-text-secondary)"><strong>Risk Score:</strong> ${risk.riskScore}</div>
+                <div style="font-size:10px;color:var(--color-text-secondary)"><strong>Severity:</strong> ${risk.severity}</div>
               </div>
-              <div style="font-size:11px;padding:4px 8px;background:${rem.status === 'SUCCESS' ? 'var(--clr-success-bg)' : 'var(--clr-danger-bg)'};color:${rem.status === 'SUCCESS' ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'};border-radius:3px;font-weight:600">${rem.status}</div>
             </div>
           `).join('')}
         </div>

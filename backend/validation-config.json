@@ -1,0 +1,12 @@
+{
+  "validationMethod": "hybrid",
+  "timeout": 30000,
+  "retryAttempts": 3,
+  "retryBackoffMs": 2000,
+  "cacheTTL": 3600000,
+  "enablePowerShell": true,
+  "psModulesPath": "/opt/microsoft/powershell/7",
+  "preferredMethods": {},
+  "controlMethodMap": {},
+  "lastUpdated": "2026-07-25T09:23:14.969Z"
+}
