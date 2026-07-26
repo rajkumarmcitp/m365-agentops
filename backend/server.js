@@ -10568,11 +10568,14 @@ app.post('/api/tenantguard/test/create-drift', (req, res) => {
       control_id: 'CIS-1.3.1',
       control_name: 'Ensure that only cloud apps are allowed in Microsoft 365',
       severity: 'HIGH',
+      drift_type: 'disabled',
       description: 'Test drift for Day 2 approval workflow',
       current_value: 'Third-party apps enabled',
       expected_value: 'Third-party apps disabled',
       created_at: new Date().toISOString(),
-      drift_resolved_at: null
+      drift_detected_at: new Date().toISOString(),
+      drift_resolved_at: null,
+      approval_status: 'pending'
     }
 
     // Create test recommendation
