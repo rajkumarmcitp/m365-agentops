@@ -10667,6 +10667,39 @@ app.post('/api/tenantguard/settings/remediation', (req, res) => {
 })
 
 /**
+ * GET /api/tenantguard/auto-fix/history
+ * Get auto-fix execution history
+ */
+app.get('/api/tenantguard/auto-fix/history', (req, res) => {
+  try {
+    const eventBus = getEventBus()
+    if (!eventBus) {
+      return res.json({ success: true, data: [] })
+    }
+
+    // Get the last 50 auto-fix events from the event bus
+    const events = eventBus.getRecentEvents(50, 'auto_fix_executed')
+
+    res.json({
+      success: true,
+      data: events.map(e => ({
+        id: e.id,
+        controlId: e.payload?.controlId,
+        driftId: e.payload?.driftId,
+        recId: e.payload?.recId,
+        executed: e.payload?.result?.executed,
+        policyId: e.payload?.result?.policyId || e.payload?.result?.displayName,
+        triggeredBy: e.payload?.triggeredBy,
+        timestamp: e.timestamp
+      }))
+    })
+  } catch (err) {
+    console.error('Get auto-fix history error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
  * ============================================================
  * TenantGuard User Investigation Endpoints
  * ============================================================
