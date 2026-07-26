@@ -839,30 +839,38 @@ async function loadAutoFixHistory() {
     const failed = history.filter(e => !e.executed).length
     const successRate = total > 0 ? Math.round((successful / total) * 100) : 0
 
-    // Update stats
-    document.getElementById('stat-total-executed').textContent = total
-    document.getElementById('stat-success-rate').textContent = `${successRate}%`
-    document.getElementById('stat-failures').textContent = failed
+    // Update stats (with null checks)
+    const totalEl = document.getElementById('stat-total-executed')
+    if (totalEl) totalEl.textContent = total
+
+    const rateEl = document.getElementById('stat-success-rate')
+    if (rateEl) rateEl.textContent = `${successRate}%`
+
+    const failEl = document.getElementById('stat-failures')
+    if (failEl) failEl.textContent = failed
 
     // Update last execution time
-    if (history.length > 0) {
+    const lastEl = document.getElementById('stat-last-execution')
+    if (lastEl && history.length > 0) {
       const lastTime = new Date(history[0].timestamp)
       const now = new Date()
       const diffMs = now - lastTime
       const diffMins = Math.floor(diffMs / 60000)
 
       if (diffMins < 1) {
-        document.getElementById('stat-last-execution').textContent = 'Just now'
+        lastEl.textContent = 'Just now'
       } else if (diffMins < 60) {
-        document.getElementById('stat-last-execution').textContent = `${diffMins}m ago`
+        lastEl.textContent = `${diffMins}m ago`
       } else {
         const diffHours = Math.floor(diffMins / 60)
-        document.getElementById('stat-last-execution').textContent = `${diffHours}h ago`
+        lastEl.textContent = `${diffHours}h ago`
       }
     }
 
     // Render table
     const tbody = document.getElementById('auto-fix-history-body')
+    if (!tbody) return
+
     if (history.length === 0) {
       tbody.innerHTML = `
         <tr>
