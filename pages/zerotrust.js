@@ -19,6 +19,7 @@ import { callAPI } from '../lib/api-client.js'
 import { ZT_PILLARS } from '../data/zt-pillars.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
 import { analyzeComplianceGaps, calculateComplianceScore, getComplianceLevel, getComplianceColor, generateRemediationRoadmap, getComplianceMetrics, generateComplianceReport } from '../lib/compliance-analyzer.js'
+import { getOpenDrifts, getDriftHistory, getRecommendation, approveRecommendation, rejectRecommendation, markDriftResolved } from '../lib/compliance-drift-client.js'
 
 let realValidations = null
 let realTrends = null
@@ -26,6 +27,8 @@ let priorityActions = null
 let lastRunTime = null
 let activeTab = 'overview'
 let lazyLoadedPillars = {}
+let complianceDrifts = {}  // Map of controlId -> [drifts]
+let selectedDriftControlId = null  // Track which control's drift is being viewed
 
 export function initZeroTrust() {
   const el = document.getElementById('page-zerotrust')
@@ -78,6 +81,9 @@ async function loadCachedZeroTrustData(el) {
         lastRunTime: cachedResult.lastRunTime || new Date().toISOString()
       }
       lastRunTime = cachedResult.lastRunTime
+
+      // Load compliance drifts and build control mapping
+      loadComplianceDrifts()
 
       // Derive priority actions locally from failed/warning validations
       priorityActions = validations
@@ -1735,21 +1741,31 @@ function renderZTPillarContent(pillarName, stats, validations) {
           <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.4px">Current Status</div>
           <div style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.4px;text-align:right">Severity</div>
         </div>
-        ${controls.map(v => `
-          <div style="display:grid;grid-template-columns:32px 1fr 200px 200px 90px;padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);align-items:start;cursor:pointer"
+        ${controls.map(v => {
+          const hasDrift = complianceDrifts[v.id] && complianceDrifts[v.id].length > 0
+          return `
+          <div style="display:grid;grid-template-columns:32px 1fr 200px 200px 90px;padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);align-items:start;cursor:pointer;background:${hasDrift ? '#FCE8E8' : ''};transition:all 150ms"
                class="validation-detail-row zt-control-row"
                data-validation-id="${v.id}"
                data-status="${v.status}"
                data-manual="${v.requiresManualValidation ? 'true' : 'false'}"
-               onmouseover="this.style.background='var(--color-background-secondary)'"
-               onmouseout="this.style.background=''">
-            <div style="padding-top:2px;text-align:center">${statusIcon(v.status)}</div>
+               onmouseover="this.style.background='${hasDrift ? '#FCE8E8' : 'var(--color-background-secondary)'}';this.style.boxShadow='inset 0 0 0 2px #A32D2D'"
+               onmouseout="this.style.background='${hasDrift ? '#FCE8E8' : ''}';this.style.boxShadow='none'"
+               onclick="${hasDrift ? `window.showDriftDetails('${v.id}')` : ''}">
+            <div style="padding-top:2px;text-align:center">
+              ${statusIcon(v.status)}
+              ${hasDrift ? '<div style="font-size:12px;margin-top:2px">🚨</div>' : ''}
+            </div>
             <div style="min-width:0">
               <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
                 ${v.name}
+                ${hasDrift ? '<span style="display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;background:#A32D2D;color:white;letter-spacing:0.3px">DRIFT</span>' : ''}
                 ${v.requiresManualValidation ? '<span style="display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;background:#fff3cd;color:#92400e;border:1px solid #fbbf24;letter-spacing:0.3px">MANUAL</span>' : ''}
               </div>
-              <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.description || ''}</div>
+              <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                ${v.description || ''}
+                ${hasDrift ? '<span style="color:#A32D2D;font-weight:600"> • Click to view drift</span>' : ''}
+              </div>
             </div>
             <div style="font-size:10px;color:var(--color-text-secondary);padding-right:8px">${v.expectedValue || '—'}</div>
             <div style="font-size:10px;color:${v.requiresManualValidation ? 'var(--clr-warning-text)' : 'var(--color-text-secondary)'}">
@@ -1759,11 +1775,279 @@ function renderZTPillarContent(pillarName, stats, validations) {
               <span class="badge ${v.severity === 'Critical' ? 'danger' : v.severity === 'High' ? 'warning' : 'secondary'}" style="font-size:9px">${v.severity || '—'}</span>
             </div>
           </div>
-        `).join('')}
+        `
+        }).join('')}
       </div>
     `).join('')}
     </div>
   `
+}
+
+/**
+ * Load compliance drifts and build control mapping
+ */
+async function loadComplianceDrifts() {
+  try {
+    const drifts = await getOpenDrifts()
+    complianceDrifts = {}
+
+    for (const drift of drifts) {
+      if (!complianceDrifts[drift.control_id]) {
+        complianceDrifts[drift.control_id] = []
+      }
+      complianceDrifts[drift.control_id].push(drift)
+    }
+
+    console.log(`✓ Loaded ${drifts.length} compliance drifts`)
+  } catch (err) {
+    console.error('Failed to load compliance drifts:', err)
+  }
+}
+
+/**
+ * Show drift detail modal for a control
+ */
+window.showDriftDetails = async function(controlId) {
+  selectedDriftControlId = controlId
+  const drifts = complianceDrifts[controlId] || []
+
+  if (drifts.length === 0) {
+    alert('No drifts for this control')
+    return
+  }
+
+  const drift = drifts[0]  // Show most recent drift
+  const rec = await getRecommendation(drift.id)
+  const history = await getDriftHistory(controlId)
+
+  const modal = document.createElement('div')
+  modal.style.cssText = `
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+    z-index: 10000;
+  `
+  modal.id = 'drift-modal'
+
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 12px; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 95%">
+      ${renderDriftDetailModal(controlId, drift, rec, history)}
+    </div>
+  `
+
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      modal.remove()
+    }
+  }
+
+  document.body.appendChild(modal)
+
+  // Attach event listeners
+  attachDriftModalListeners(drift.id, rec?.id)
+}
+
+/**
+ * Render drift detail modal content
+ */
+function renderDriftDetailModal(controlId, drift, rec, history) {
+  const driftTimeAgo = formatTimeAgo(drift.drift_detected_at)
+  const isDriftOpen = !drift.drift_resolved_at
+  const isApproved = rec?.approval_status === 'approved'
+
+  return `
+    <div style="padding: 24px">
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #ddd">
+        <div>
+          <h2 style="margin: 0 0 6px 0; color: #0C447C">🚨 Compliance Drift Detected</h2>
+          <p style="margin: 0; font-size: 14px; color: #666">Control: ${controlId}</p>
+        </div>
+        <button onclick="document.getElementById('drift-modal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; color: #999">×</button>
+      </div>
+
+      <!-- Drift Info -->
+      <div style="background: #FCE8E8; border-left: 4px solid #A32D2D; padding: 12px; margin-bottom: 20px; border-radius: 4px">
+        <p style="margin: 0 0 8px 0; font-weight: 600; color: #A32D2D">Drift Status</p>
+        <p style="margin: 0; font-size: 13px; color: #666">
+          <strong>Detected:</strong> ${formatDate(drift.drift_detected_at)} (${driftTimeAgo})
+        </p>
+        ${drift.changed_by ? `<p style="margin: 4px 0 0 0; font-size: 13px; color: #666"><strong>Changed by:</strong> ${drift.changed_by}</p>` : ''}
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: #666"><strong>Type:</strong> ${drift.drift_type}</p>
+      </div>
+
+      <!-- Expected vs Actual -->
+      <div style="background: #f5f5f5; padding: 12px; margin-bottom: 20px; border-radius: 4px; font-size: 13px; font-family: monospace">
+        <p style="margin: 0 0 8px 0; color: #666"><strong>Expected:</strong></p>
+        <p style="margin: 0 0 12px 0; padding: 8px; background: white; border-radius: 3px; border-left: 3px solid #3B6D11; color: #333">${formatValue(drift.expected_value)}</p>
+
+        <p style="margin: 0 0 8px 0; color: #666"><strong>Actual:</strong></p>
+        <p style="margin: 0; padding: 8px; background: white; border-radius: 3px; border-left: 3px solid #A32D2D; color: #333">${formatValue(drift.actual_value)}</p>
+      </div>
+
+      <!-- Remediation Recommendation -->
+      ${rec ? `
+        <div style="margin-bottom: 20px; padding: 12px; background: #f9fafb; border-radius: 4px; border: 1px solid #e5e7eb">
+          <h4 style="margin: 0 0 8px 0; color: #0C447C; font-size: 14px">📋 Remediation Recommendation</h4>
+          <p style="margin: 0 0 8px 0; font-size: 13px; color: #666"><strong>${rec.title}</strong></p>
+          <p style="margin: 0 0 8px 0; font-size: 13px; color: #666">${rec.description}</p>
+
+          <p style="margin: 8px 0; font-size: 13px; color: #666"><strong>Why important:</strong> ${rec.why_important}</p>
+          <p style="margin: 8px 0; font-size: 13px; color: #666"><strong>Effort:</strong> ${rec.estimated_effort}</p>
+
+          ${rec.steps ? `
+            <div style="margin: 12px 0">
+              <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #0C447C">Steps:</p>
+              <ol style="margin: 0; padding-left: 20px; font-size: 12px; color: #666">
+                ${rec.steps.map((s, i) => `<li style="margin: 4px 0">${s.action}${s.url ? ` <a href="${s.url}" target="_blank" style="color: #0066cc; text-decoration: none">[Open]</a>` : ''}</li>`).join('')}
+              </ol>
+            </div>
+          ` : ''}
+
+          <!-- Status Badge -->
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb">
+            <p style="margin: 0; font-size: 12px; font-weight: 600; color: ${rec.approval_status === 'approved' ? '#3B6D11' : rec.approval_status === 'rejected' ? '#A32D2D' : '#854F0B'}">
+              Status: ${rec.approval_status.toUpperCase()}
+              ${rec.approved_by ? ` by ${rec.approved_by}` : ''}
+            </p>
+          </div>
+
+          <!-- Action Buttons -->
+          ${rec.approval_status === 'pending' ? `
+            <div style="margin-top: 12px; display: flex; gap: 8px">
+              <button class="drift-approve-btn" data-rec-id="${rec.id}" style="flex: 1; padding: 8px; background: #E6F1FB; color: #0C447C; border: 1px solid #0C447C; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600">
+                ✓ Approve
+              </button>
+              <button class="drift-reject-btn" data-rec-id="${rec.id}" style="flex: 1; padding: 8px; background: #FFF3CD; color: #854F0B; border: 1px solid #854F0B; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600">
+                ✗ Reject
+              </button>
+            </div>
+          ` : rec.approval_status === 'approved' && isDriftOpen ? `
+            <div style="margin-top: 12px">
+              <p style="margin: 0 0 8px 0; font-size: 12px; color: #666">After applying the fix in Azure AD:</p>
+              <div style="display: flex; gap: 8px">
+                <input type="text" class="drift-resolve-note-input" placeholder="What you did to fix it..." style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px">
+                <button class="drift-resolve-btn" data-drift-id="${drift.id}" style="padding: 8px 16px; background: #E6F1FB; color: #0C447C; border: 1px solid #0C447C; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600">
+                  ✓ Mark Resolved
+                </button>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
+
+      <!-- Drift History Timeline -->
+      <div>
+        <h4 style="margin: 0 0 12px 0; color: #0C447C; font-size: 14px">▼ Drift History Timeline</h4>
+        <div style="border-left: 2px solid #ddd; padding-left: 12px; margin-left: 6px">
+          ${history.map(h => `
+            <div style="margin-bottom: 12px; padding-left: 12px; position: relative">
+              <div style="position: absolute; left: -20px; top: 2px; width: 14px; height: 14px; background: ${h.drift_resolved_at ? '#3B6D11' : '#A32D2D'}; border: 2px solid white; border-radius: 50%"></div>
+              <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 13px; color: #0C447C">
+                ${formatDate(h.drift_detected_at)} (${formatTimeAgo(h.drift_detected_at)})
+              </p>
+              <p style="margin: 0 0 4px 0; font-size: 12px; color: #666">
+                ${h.drift_type} detected
+              </p>
+              ${h.drift_resolved_at ? `
+                <p style="margin: 0; font-size: 12px; color: #3B6D11">
+                  ✓ Resolved: ${formatDate(h.drift_resolved_at)}
+                  <br>Method: ${h.resolution_method}
+                  ${h.resolved_by ? `<br>By: ${h.resolved_by}` : ''}
+                </p>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `
+}
+
+/**
+ * Attach event listeners to drift modal
+ */
+function attachDriftModalListeners(driftId, recId) {
+  // Approve button
+  const approveBtn = document.querySelector('.drift-approve-btn')
+  if (approveBtn) {
+    approveBtn.onclick = async () => {
+      const notes = prompt('Optional note:')
+      try {
+        await approveRecommendation(recId, notes || '')
+        showToast('Recommendation approved', 'success')
+        document.getElementById('drift-modal').remove()
+        await loadComplianceDrifts()
+      } catch (err) {
+        showToast('Failed to approve', 'error')
+      }
+    }
+  }
+
+  // Reject button
+  const rejectBtn = document.querySelector('.drift-reject-btn')
+  if (rejectBtn) {
+    rejectBtn.onclick = async () => {
+      const reason = prompt('Reason for rejecting:')
+      try {
+        await rejectRecommendation(recId, reason || '')
+        showToast('Recommendation rejected', 'success')
+        document.getElementById('drift-modal').remove()
+        await loadComplianceDrifts()
+      } catch (err) {
+        showToast('Failed to reject', 'error')
+      }
+    }
+  }
+
+  // Mark resolved button
+  const resolveBtn = document.querySelector('.drift-resolve-btn')
+  if (resolveBtn) {
+    resolveBtn.onclick = async () => {
+      const noteInput = document.querySelector('.drift-resolve-note-input')
+      const note = noteInput?.value || ''
+      try {
+        await markDriftResolved(driftId, note)
+        showToast('Drift marked as resolved', 'success')
+        document.getElementById('drift-modal').remove()
+        await loadComplianceDrifts()
+      } catch (err) {
+        showToast('Failed to mark resolved', 'error')
+      }
+    }
+  }
+}
+
+/**
+ * Format value for display
+ */
+function formatValue(val) {
+  if (val === null || val === undefined) return '—'
+  if (typeof val === 'object') return JSON.stringify(val, null, 2)
+  return String(val)
+}
+
+/**
+ * Format timestamp
+ */
+function formatDate(timestamp) {
+  if (!timestamp) return 'Unknown'
+  const date = new Date(timestamp)
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString()
+}
+
+/**
+ * Format time ago
+ */
+function formatTimeAgo(timestamp) {
+  if (!timestamp) return 'unknown'
+  const date = new Date(timestamp)
+  const now = new Date()
+  const seconds = Math.floor((now - date) / 1000)
+
+  if (seconds < 60) return `${seconds}s ago`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+  return `${Math.floor(seconds / 86400)}d ago`
 }
 
 // Global filter function — called by onclick on filter buttons
