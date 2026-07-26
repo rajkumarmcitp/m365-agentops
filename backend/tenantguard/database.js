@@ -22,7 +22,8 @@ const store = {
   complianceDrifts: {},
   complianceRecommendations: {},
   complianceChecks: {},
-  riskAssessments: {}
+  riskAssessments: {},
+  tenantguardSettings: {}
 }
 
 export async function initDatabase() {
@@ -132,6 +133,37 @@ class DatabaseWrapper {
       }
       console.log(`✓ Stored audit log: ${operation}`)
       return { lastID: 1, changes: 1 }
+    }
+
+    // Handle INSERT INTO tenantguard_settings
+    if (sql.includes('INSERT INTO tenantguard_settings')) {
+      const [key, value, description, updated_by] = params
+      this.store.tenantguardSettings = this.store.tenantguardSettings || {}
+      this.store.tenantguardSettings[key] = {
+        key,
+        value,
+        description,
+        updated_at: new Date().toISOString(),
+        updated_by
+      }
+      return { lastID: 1, changes: 1 }
+    }
+
+    // Handle UPDATE tenantguard_settings
+    if (sql.includes('UPDATE tenantguard_settings')) {
+      const whereMatch = sql.match(/WHERE\s+key\s*=\s*\?/i)
+      if (whereMatch && params.length >= 4) {
+        const [value, description, updated_by, key] = params
+        this.store.tenantguardSettings = this.store.tenantguardSettings || {}
+        this.store.tenantguardSettings[key] = {
+          key,
+          value,
+          description,
+          updated_at: new Date().toISOString(),
+          updated_by
+        }
+        return { changes: 1 }
+      }
     }
 
     // Handle INSERT INTO agent_investigations
@@ -500,7 +532,8 @@ class DatabaseWrapper {
         'compliance_drifts': 'complianceDrifts',
         'compliance_recommendations': 'complianceRecommendations',
         'compliance_checks': 'complianceChecks',
-        'risk_assessments': 'riskAssessments'
+        'risk_assessments': 'riskAssessments',
+        'tenantguard_settings': 'tenantguardSettings'
       }
       const storeKey = tableMap[table] || table
       const data = this.store[storeKey] || {}
@@ -526,7 +559,8 @@ class DatabaseWrapper {
         'compliance_drifts': 'complianceDrifts',
         'compliance_recommendations': 'complianceRecommendations',
         'compliance_checks': 'complianceChecks',
-        'risk_assessments': 'riskAssessments'
+        'risk_assessments': 'riskAssessments',
+        'tenantguard_settings': 'tenantguardSettings'
       }
 
       const storeKey = tableMap[table] || table
