@@ -18,7 +18,10 @@ const store = {
   agentQueue: {},
   orchestratorTasks: {},
   orchestratorEvents: {},
-  orchestratorConflicts: {}
+  orchestratorConflicts: {},
+  complianceDrifts: {},
+  complianceRecommendations: {},
+  complianceChecks: {}
 }
 
 export async function initDatabase() {
@@ -310,6 +313,121 @@ class DatabaseWrapper {
       return { lastID: 1, changes: 1 }
     }
 
+    // Handle INSERT INTO compliance_drifts
+    if (sql.includes('INSERT INTO compliance_drifts') || sql.includes('INSERT') && sql.includes('compliance_drifts')) {
+      const [id, control_id, control_name, drift_type, severity, expected_value, actual_value, drift_detected_at, detected_by, before_value, after_value] = params
+      this.store.complianceDrifts[id] = {
+        id,
+        control_id,
+        control_name,
+        drift_type,
+        severity,
+        expected_value: typeof expected_value === 'string' ? JSON.parse(expected_value) : expected_value,
+        actual_value: typeof actual_value === 'string' ? JSON.parse(actual_value) : actual_value,
+        drift_detected_at,
+        drift_resolved_at: null,
+        resolution_method: null,
+        detected_by,
+        resolved_by: null,
+        resolved_note: null,
+        changed_by: null,
+        changed_at: null,
+        before_value,
+        after_value,
+        audit_log_entry: null,
+        created_at: new Date().toISOString()
+      }
+      console.log(`✓ Compliance drift created: ${control_id}`)
+      return { lastID: 1, changes: 1 }
+    }
+
+    // Handle INSERT INTO compliance_recommendations
+    if (sql.includes('INSERT INTO compliance_recommendations') || sql.includes('INSERT') && sql.includes('compliance_recommendations')) {
+      const [id, drift_id, control_id, title, description, steps, why_important, severity, estimated_effort, approval_status] = params
+      this.store.complianceRecommendations[id] = {
+        id,
+        drift_id,
+        control_id,
+        title,
+        description,
+        steps: typeof steps === 'string' ? JSON.parse(steps) : steps,
+        why_important,
+        severity,
+        estimated_effort,
+        approval_status,
+        approved_by: null,
+        approved_at: null,
+        notes: null,
+        created_at: new Date().toISOString()
+      }
+      console.log(`✓ Compliance recommendation created: ${control_id}`)
+      return { lastID: 1, changes: 1 }
+    }
+
+    // Handle INSERT INTO compliance_checks
+    if (sql.includes('INSERT INTO compliance_checks') || sql.includes('INSERT') && sql.includes('compliance_checks')) {
+      const [id, control_id, check_timestamp, status, previous_status, drift_detected, details] = params
+      this.store.complianceChecks[id] = {
+        id,
+        control_id,
+        check_timestamp,
+        status,
+        previous_status,
+        drift_detected,
+        drift_id: null,
+        details: typeof details === 'string' ? JSON.parse(details) : details,
+        duration_ms: 0,
+        created_at: new Date().toISOString()
+      }
+      return { lastID: 1, changes: 1 }
+    }
+
+    // Handle UPDATE compliance_drifts
+    if (sql.includes('UPDATE compliance_drifts')) {
+      const whereMatch = sql.match(/WHERE\s+id\s*=\s*\?/i)
+      if (whereMatch && params.length > 0) {
+        const driftId = params[params.length - 1]
+        if (this.store.complianceDrifts[driftId]) {
+          const setMatch = sql.match(/SET\s+(.+)\s+WHERE/i)
+          if (setMatch) {
+            const setClause = setMatch[1]
+            const pairs = setClause.split(',').map(p => p.trim())
+            pairs.forEach((pair, idx) => {
+              const [key] = pair.split('=').map(p => p.trim())
+              if (params[idx] !== undefined) {
+                this.store.complianceDrifts[driftId][key] = params[idx]
+              }
+            })
+            console.log(`✓ Updated compliance drift: ${driftId}`)
+          }
+        }
+      }
+      return { lastID: 1, changes: 1 }
+    }
+
+    // Handle UPDATE compliance_recommendations
+    if (sql.includes('UPDATE compliance_recommendations')) {
+      const whereMatch = sql.match(/WHERE\s+id\s*=\s*\?/i)
+      if (whereMatch && params.length > 0) {
+        const recId = params[params.length - 1]
+        if (this.store.complianceRecommendations[recId]) {
+          const setMatch = sql.match(/SET\s+(.+)\s+WHERE/i)
+          if (setMatch) {
+            const setClause = setMatch[1]
+            const pairs = setClause.split(',').map(p => p.trim())
+            pairs.forEach((pair, idx) => {
+              const [key] = pair.split('=').map(p => p.trim())
+              if (params[idx] !== undefined) {
+                this.store.complianceRecommendations[recId][key] = params[idx]
+              }
+            })
+            console.log(`✓ Updated compliance recommendation: ${recId}`)
+          }
+        }
+      }
+      return { lastID: 1, changes: 1 }
+    }
+
     return { lastID: 1, changes: 1 }
   }
 
@@ -353,7 +471,10 @@ class DatabaseWrapper {
         'audit_logs_cache': 'auditLogs',
         'agent_investigations': 'agentInvestigations',
         'agent_investigation_steps': 'agentInvestigationSteps',
-        'agent_queue': 'agentQueue'
+        'agent_queue': 'agentQueue',
+        'compliance_drifts': 'complianceDrifts',
+        'compliance_recommendations': 'complianceRecommendations',
+        'compliance_checks': 'complianceChecks'
       }
       const storeKey = tableMap[table] || table
       const data = this.store[storeKey] || {}
@@ -375,7 +496,10 @@ class DatabaseWrapper {
         'alert_correlations': 'correlations',
         'agent_investigations': 'agentInvestigations',
         'agent_investigation_steps': 'agentInvestigationSteps',
-        'agent_queue': 'agentQueue'
+        'agent_queue': 'agentQueue',
+        'compliance_drifts': 'complianceDrifts',
+        'compliance_recommendations': 'complianceRecommendations',
+        'compliance_checks': 'complianceChecks'
       }
 
       const storeKey = tableMap[table] || table

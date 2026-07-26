@@ -61,6 +61,7 @@ import {
 import { initializeEventBus, getEventBus } from './tenantguard/agent-event-bus.js'
 import { initializeContextStore, getContextStore } from './tenantguard/agent-context-store.js'
 import { AgentOrchestrator, setOrchestrator, getOrchestrator } from './tenantguard/agent-orchestrator.js'
+import { initializeComplianceDriftAgent, getComplianceDriftAgent } from './tenantguard/compliance-drift-agent.js'
 import {
   checkPowerShellAvailable,
   checkInstalledModules,
@@ -801,6 +802,10 @@ async function initializeTenantGuard() {
     setOrchestrator(orchestrator)
     orchestrator.startHealthMonitoring()
     console.log('✅ Multi-Agent Orchestration Layer initialized')
+
+    // Initialize compliance drift detection agent
+    initializeComplianceDriftAgent(db, eventBus, graphClient)
+    console.log('✅ Compliance Drift Detection Agent initialized')
 
     // if (graphClient) {
     //   startAuditCollectionJob(graphClient)
@@ -10337,6 +10342,150 @@ app.get('/api/orchestrator/conflicts', (req, res) => {
     res.json({ success: true, data: { conflicts: status.conflicts } })
   } catch (err) {
     console.error('Get conflicts error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * ============================================================
+ * Compliance Drift Detection Endpoints
+ * ============================================================
+ */
+
+/**
+ * GET /api/tenantguard/compliance/drifts
+ * Get all open compliance drifts
+ */
+app.get('/api/tenantguard/compliance/drifts', (req, res) => {
+  try {
+    const agent = getComplianceDriftAgent()
+    if (!agent) {
+      return res.status(503).json({ success: false, error: 'Compliance agent not initialized' })
+    }
+    const drifts = agent.getOpenDrifts()
+    res.json({ success: true, data: drifts })
+  } catch (err) {
+    console.error('Get drifts error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/compliance/drifts/:controlId
+ * Get drift history for a specific control
+ */
+app.get('/api/tenantguard/compliance/drifts/:controlId', (req, res) => {
+  try {
+    const agent = getComplianceDriftAgent()
+    if (!agent) {
+      return res.status(503).json({ success: false, error: 'Compliance agent not initialized' })
+    }
+    const history = agent.getDriftHistory(req.params.controlId)
+    res.json({ success: true, data: history })
+  } catch (err) {
+    console.error('Get drift history error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/compliance/recommendations/:driftId
+ * Get remediation recommendation for a drift
+ */
+app.get('/api/tenantguard/compliance/recommendations/:driftId', (req, res) => {
+  try {
+    const agent = getComplianceDriftAgent()
+    if (!agent) {
+      return res.status(503).json({ success: false, error: 'Compliance agent not initialized' })
+    }
+    const rec = agent.getRecommendation(req.params.driftId)
+    res.json({ success: true, data: rec || null })
+  } catch (err) {
+    console.error('Get recommendation error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/compliance/recommendations/:recId/approve
+ * Admin approves remediation recommendation
+ */
+app.post('/api/tenantguard/compliance/recommendations/:recId/approve', (req, res) => {
+  try {
+    const agent = getComplianceDriftAgent()
+    if (!agent) {
+      return res.status(503).json({ success: false, error: 'Compliance agent not initialized' })
+    }
+
+    const { notes = '' } = req.body
+    const adminEmail = req.user?.email || 'unknown@contoso.com'
+
+    agent.approveRecommendation(req.params.recId, adminEmail, notes)
+    res.json({ success: true, data: { status: 'approved' } })
+  } catch (err) {
+    console.error('Approve recommendation error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/compliance/recommendations/:recId/reject
+ * Admin rejects remediation recommendation
+ */
+app.post('/api/tenantguard/compliance/recommendations/:recId/reject', (req, res) => {
+  try {
+    const agent = getComplianceDriftAgent()
+    if (!agent) {
+      return res.status(503).json({ success: false, error: 'Compliance agent not initialized' })
+    }
+
+    const { reason = '' } = req.body
+    const adminEmail = req.user?.email || 'unknown@contoso.com'
+
+    agent.rejectRecommendation(req.params.recId, adminEmail, reason)
+    res.json({ success: true, data: { status: 'rejected' } })
+  } catch (err) {
+    console.error('Reject recommendation error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/compliance/drifts/:driftId/resolve
+ * Admin marks drift as manually resolved
+ */
+app.post('/api/tenantguard/compliance/drifts/:driftId/resolve', (req, res) => {
+  try {
+    const agent = getComplianceDriftAgent()
+    if (!agent) {
+      return res.status(503).json({ success: false, error: 'Compliance agent not initialized' })
+    }
+
+    const { notes = '' } = req.body
+    const adminEmail = req.user?.email || 'unknown@contoso.com'
+
+    agent.markDriftResolved(req.params.driftId, adminEmail, notes)
+    res.json({ success: true, data: { status: 'resolved' } })
+  } catch (err) {
+    console.error('Mark resolved error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/compliance/stats
+ * Get compliance statistics
+ */
+app.get('/api/tenantguard/compliance/stats', (req, res) => {
+  try {
+    const agent = getComplianceDriftAgent()
+    if (!agent) {
+      return res.status(503).json({ success: false, error: 'Compliance agent not initialized' })
+    }
+    const stats = agent.getStats()
+    res.json({ success: true, data: stats })
+  } catch (err) {
+    console.error('Get stats error:', err.message)
     res.status(500).json({ success: false, error: err.message })
   }
 })
