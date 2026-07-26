@@ -108,6 +108,34 @@ export class SettingsService {
   }
 
   /**
+   * Get remediation settings
+   */
+  static getRemediationSettings() {
+    try {
+      const enabled = this.getSetting('auto_remediation_enabled', 'false') === 'true'
+      const requiresApproval = this.getSetting('remediation_requires_approval', 'true') === 'true'
+      return { enabled, requiresApproval }
+    } catch (error) {
+      console.error('Error getting remediation settings:', error.message)
+      return { enabled: false, requiresApproval: true }
+    }
+  }
+
+  /**
+   * Set remediation settings
+   */
+  static setRemediationSettings({ enabled = false, requiresApproval = true }, updatedBy = 'system') {
+    try {
+      this.setSetting('auto_remediation_enabled', enabled ? 'true' : 'false', 'Enable auto-remediation for compliance drifts', updatedBy)
+      this.setSetting('remediation_requires_approval', requiresApproval ? 'true' : 'false', 'Require admin approval before auto-fixing', updatedBy)
+      return { success: true, message: 'Remediation settings updated' }
+    } catch (error) {
+      console.error('Error setting remediation settings:', error.message)
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
    * Mask sensitive value for display
    */
   static maskValue(value) {

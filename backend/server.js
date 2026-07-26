@@ -63,6 +63,7 @@ import { initializeContextStore, getContextStore } from './tenantguard/agent-con
 import { AgentOrchestrator, setOrchestrator, getOrchestrator } from './tenantguard/agent-orchestrator.js'
 import { initializeComplianceDriftAgent, getComplianceDriftAgent } from './tenantguard/compliance-drift-agent.js'
 import { initializeRiskAssessmentAgent, getRiskAssessmentAgent } from './tenantguard/risk-assessment-agent.js'
+import { initializeAutoFixAgent, getAutoFixAgent } from './tenantguard/auto-fix-agent.js'
 import {
   checkPowerShellAvailable,
   checkInstalledModules,
@@ -811,6 +812,12 @@ async function initializeTenantGuard() {
     // Initialize risk assessment agent
     initializeRiskAssessmentAgent(db, eventBus)
     console.log('✅ Risk Assessment Agent initialized')
+
+    // Initialize auto-fix agent
+    if (graphClient) {
+      initializeAutoFixAgent(graphClient)
+      console.log('✅ Auto-Fix Agent initialized')
+    }
 
     // if (graphClient) {
     //   startAuditCollectionJob(graphClient)
@@ -10569,6 +10576,46 @@ app.post('/api/tenantguard/risk/trigger', (req, res) => {
     res.json({ success: true, data: current })
   } catch (err) {
     console.error('Trigger risk assessment error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * ============================================================
+ * Remediation Settings Endpoints
+ * ============================================================
+ */
+
+/**
+ * GET /api/tenantguard/settings/remediation
+ * Get auto-remediation settings
+ */
+app.get('/api/tenantguard/settings/remediation', (req, res) => {
+  try {
+    const settings = SettingsService.getRemediationSettings()
+    res.json({ success: true, data: settings })
+  } catch (err) {
+    console.error('Get remediation settings error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/settings/remediation
+ * Save auto-remediation settings
+ */
+app.post('/api/tenantguard/settings/remediation', (req, res) => {
+  try {
+    const { enabled = false, requiresApproval = true } = req.body
+    const result = SettingsService.setRemediationSettings({ enabled, requiresApproval }, req.user?.email || 'system')
+    if (result.success) {
+      const settings = SettingsService.getRemediationSettings()
+      res.json({ success: true, data: settings })
+    } else {
+      res.status(400).json(result)
+    }
+  } catch (err) {
+    console.error('Save remediation settings error:', err.message)
     res.status(500).json({ success: false, error: err.message })
   }
 })
