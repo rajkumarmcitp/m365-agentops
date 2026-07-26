@@ -1,4 +1,4 @@
-import { getAlertSummary, getAlerts, dismissAlert, getCorrelations, getPatterns, startInvestigation, getInvestigation, chatInvestigation, generateInvestigationReport } from '../lib/tenantguard-client.js'
+import { getAlertSummary, getAlerts, dismissAlert, getCorrelations, getPatterns, startInvestigation, getInvestigation, chatInvestigation, generateInvestigationReport, triggerAutonomousInvestigation, getAgentInvestigations, getAgentInvestigation, getAgentStatus, pauseAgent, resumeAgent } from '../lib/tenantguard-client.js'
 import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { renderTenantGuardSettings } from './tenantguard-settings.js'
@@ -17,6 +17,12 @@ let autoRefreshInterval = null
 let lastUpdateTime = null
 let isRefreshing = false
 let updateCount = 0
+
+// Agent-related state
+let agentInvestigations = []
+let agentStatus = {}
+let agentPollingInterval = null
+let selectedInvestigationId = null
 
 // Real-time update config
 const REFRESH_INTERVAL = 60 * 1000 // 60 seconds (1 minute) for efficient polling
@@ -132,7 +138,7 @@ function renderContent(el) {
       </div>
     </div>
 
-    <div class="tabs" id="tg-main-tabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px">
+    <div class="tabs" id="tg-main-tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;margin-top:20px">
       <button class="tab-btn ${activeTab === 'dashboard' ? 'active' : ''}" data-tab="dashboard">
         <i class="ti ti-layout-dashboard"></i> Dashboard
       </button>
@@ -154,12 +160,15 @@ function renderContent(el) {
       <button class="tab-btn ${activeTab === 'forensics' ? 'active' : ''}" data-tab="forensics">
         <i class="ti ti-history"></i> Forensics
       </button>
+      <button class="tab-btn ${activeTab === 'agent' ? 'active' : ''}" data-tab="agent">
+        <i class="ti ti-robot"></i> Agent <span class="tab-badge" id="agent-active-badge"></span>
+      </button>
       <button class="tab-btn ${activeTab === 'settings' ? 'active' : ''}" data-tab="settings">
         <i class="ti ti-settings"></i> Settings
       </button>
     </div>
 
-    <div id="tg-content">
+    <div id="tg-content" class="tab-content">
       ${renderTabContent(riskScore, riskLevel)}
     </div>
   `
@@ -169,11 +178,21 @@ function renderContent(el) {
     btn.addEventListener('click', (e) => {
       activeTab = e.currentTarget.dataset.tab
       renderContent(el)
+
       // Render settings UI if settings tab selected
       if (activeTab === 'settings') {
         setTimeout(() => {
           renderTenantGuardSettings(el)
         }, 0)
+      }
+
+      // Start agent polling if agent tab selected
+      if (activeTab === 'agent') {
+        startAgentPolling()
+        attachAgentTabListeners()
+      } else {
+        // Stop polling if leaving agent tab
+        if (agentPollingInterval) clearInterval(agentPollingInterval)
       }
     })
   })
@@ -354,6 +373,8 @@ function renderTabContent(riskScore, riskLevel) {
       return renderUserInvestigationView()
     case 'forensics':
       return renderForensicTimelineView()
+    case 'agent':
+      return renderAgentTab()
     case 'settings':
       return `<div class="content-area" id="settings-container"></div>`
     default:
@@ -2108,6 +2129,382 @@ function showCorrelationDetails(correlation) {
   document.body.appendChild(modal)
 }
 
+
+/**
+ * Render Agent Tab - Autonomous Threat Investigation
+ */
+function renderAgentTab() {
+  const statusBadge = document.getElementById('agent-active-badge')
+  if (statusBadge) {
+    statusBadge.textContent = agentStatus?.inProgressCount > 0 ? agentStatus.inProgressCount : ''
+  }
+
+  const statusBg = agentStatus?.running ? '#E6F1FB' : '#FFF3CD'
+  const statusColor = agentStatus?.running ? '#0C447C' : '#854F0B'
+
+  return `
+    <div class="content-area" style="padding: 20px">
+      <!-- Status Header -->
+      <div class="card" style="background: ${statusBg}; border-left: 4px solid ${statusColor}; margin-bottom: 20px">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px">
+          <div>
+            <h3 style="margin: 0 0 8px 0; color: ${statusColor}">
+              🤖 Autonomous Threat Investigation Agent
+            </h3>
+            <p style="margin: 0; color: ${statusColor}; font-size: 14px">
+              Status: <strong>${agentStatus?.running ? '▶️ Running' : '⏸️ Paused'}</strong> ·
+              ${agentStatus?.inProgressCount > 0 ? `<strong>${agentStatus.inProgressCount} active</strong>` : 'Ready'} ·
+              Claude: <strong>${agentStatus?.claudeConfigured ? '✓ Configured' : '⚠️ Fallback Mode'}</strong>
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px">
+            ${agentStatus?.running ? `
+              <button class="btn" id="agent-pause-btn" style="background: #FFF3CD; color: #854F0B; border: 1px solid #854F0B">
+                <i class="ti ti-pause"></i> Pause
+              </button>
+            ` : `
+              <button class="btn" id="agent-resume-btn" style="background: #E6F1FB; color: #0C447C; border: 1px solid #0C447C">
+                <i class="ti ti-play"></i> Resume
+              </button>
+            `}
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs within Agent tab -->
+      <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--color-border-primary); padding-bottom: 12px">
+        <button class="agent-subtab-btn active" data-subtab="active" style="padding: 8px 16px; background: none; border: none; border-bottom: 2px solid #0C447C; color: #0C447C; cursor: pointer; font-weight: 600; font-size: 14px">
+          🔄 Active (${agentStatus?.inProgressCount || 0})
+        </button>
+        <button class="agent-subtab-btn" data-subtab="history" style="padding: 8px 16px; background: none; border: none; color: var(--color-text-secondary); cursor: pointer; font-weight: 600; font-size: 14px">
+          📋 History
+        </button>
+      </div>
+
+      <!-- Active Investigations -->
+      <div id="agent-active-section" class="agent-subtab-content">
+        ${renderAgentActiveInvestigations()}
+      </div>
+
+      <!-- Investigation History -->
+      <div id="agent-history-section" class="agent-subtab-content" style="display: none">
+        ${renderAgentInvestigationHistory()}
+      </div>
+
+      <!-- Investigation Detail Panel (shown when selected) -->
+      <div id="agent-detail-panel"></div>
+    </div>
+  `
+}
+
+function renderAgentActiveInvestigations() {
+  if (!agentInvestigations || agentInvestigations.length === 0) {
+    return `
+      <div class="card" style="text-align: center; padding: 40px">
+        <p style="color: var(--color-text-secondary); font-size: 16px">
+          ✓ No active investigations
+        </p>
+        <p style="color: var(--color-text-tertiary); font-size: 14px; margin-top: 8px">
+          Auto-investigations trigger on P0/P1 alerts
+        </p>
+      </div>
+    `
+  }
+
+  const active = agentInvestigations.filter(inv => !['complete', 'failed', 'skipped'].includes(inv.status))
+
+  if (active.length === 0) {
+    return `
+      <div class="card" style="text-align: center; padding: 40px">
+        <p style="color: var(--color-text-secondary); font-size: 16px">✓ No active investigations</p>
+      </div>
+    `
+  }
+
+  return active.map(inv => `
+    <div class="card" style="margin-bottom: 12px; padding: 15px; border-left: 4px solid #0C447C; cursor: pointer" class="agent-inv-item" data-inv-id="${inv.id}">
+      <div style="display: flex; justify-content: space-between; align-items: start">
+        <div style="flex: 1">
+          <p style="margin: 0 0 8px 0; font-weight: 600">
+            ${inv.id}
+          </p>
+          <p style="margin: 0 0 4px 0; font-size: 14px; color: var(--color-text-secondary)">
+            Alert: ${inv.alert_id} · Priority: <strong>${inv.priority}</strong>
+          </p>
+          <p style="margin: 0; font-size: 13px; color: var(--color-text-tertiary)">
+            Started: ${new Date(inv.started_at).toLocaleString()}
+          </p>
+        </div>
+        <div style="text-align: right">
+          <span style="display: inline-block; padding: 4px 12px; background: #E6F1FB; color: #0C447C; border-radius: 4px; font-size: 12px; font-weight: 600; margin-bottom: 8px">
+            ${inv.status.toUpperCase()}
+          </span>
+          <p style="margin: 0; font-size: 12px; color: var(--color-text-tertiary)">
+            Iteration: ${inv.iteration}/${inv.max_iterations}
+          </p>
+        </div>
+      </div>
+    </div>
+  `).join('')
+}
+
+function renderAgentInvestigationHistory() {
+  const completed = agentInvestigations.filter(inv => ['complete', 'failed', 'skipped'].includes(inv.status))
+
+  if (completed.length === 0) {
+    return `
+      <div class="card" style="text-align: center; padding: 40px">
+        <p style="color: var(--color-text-secondary)">No completed investigations yet</p>
+      </div>
+    `
+  }
+
+  return `
+    <div style="overflow-x: auto">
+      <table style="width: 100%; border-collapse: collapse; font-size: 14px">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--color-border-primary)">
+            <th style="text-align: left; padding: 12px; font-weight: 600">Investigation ID</th>
+            <th style="text-align: left; padding: 12px; font-weight: 600">Alert ID</th>
+            <th style="text-align: left; padding: 12px; font-weight: 600">Priority</th>
+            <th style="text-align: left; padding: 12px; font-weight: 600">Verdict</th>
+            <th style="text-align: left; padding: 12px; font-weight: 600">Risk Score</th>
+            <th style="text-align: left; padding: 12px; font-weight: 600">Duration</th>
+            <th style="text-align: left; padding: 12px; font-weight: 600">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${completed.map(inv => {
+            const verdictColor = {
+              'true_positive': '#A32D2D',
+              'false_positive': '#3B6D11',
+              'uncertain': '#854F0B',
+              null: '#9CA3AF'
+            }[inv.verdict]
+
+            const duration = inv.completed_at
+              ? Math.round((new Date(inv.completed_at) - new Date(inv.started_at)) / 1000) + 's'
+              : '-'
+
+            return `
+              <tr style="border-bottom: 1px solid var(--color-border-primary)">
+                <td style="padding: 12px"><code style="font-size: 12px">${inv.id.substring(0, 12)}</code></td>
+                <td style="padding: 12px"><code style="font-size: 12px">${inv.alert_id.substring(0, 20)}</code></td>
+                <td style="padding: 12px"><strong>${inv.priority}</strong></td>
+                <td style="padding: 12px">
+                  ${inv.verdict ? `
+                    <span style="display: inline-block; padding: 4px 8px; background: ${verdictColor}15; color: ${verdictColor}; border-radius: 3px; font-weight: 600; font-size: 12px">
+                      ${inv.verdict.replace('_', ' ').toUpperCase()}
+                    </span>
+                  ` : '-'}
+                </td>
+                <td style="padding: 12px">${inv.risk_score ? inv.risk_score + '/100' : '-'}</td>
+                <td style="padding: 12px">${duration}</td>
+                <td style="padding: 12px">
+                  <button class="agent-view-btn" data-inv-id="${inv.id}" style="background: none; border: none; color: #0C447C; cursor: pointer; text-decoration: underline; font-weight: 600; font-size: 12px">
+                    View Report
+                  </button>
+                </td>
+              </tr>
+            `
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+function renderAgentInvestigationDetail(invId) {
+  const inv = agentInvestigations.find(i => i.id === invId)
+  if (!inv) return ''
+
+  const verdictColor = {
+    'true_positive': '#A32D2D',
+    'false_positive': '#3B6D11',
+    'uncertain': '#854F0B'
+  }[inv.verdict]
+
+  const report = inv.report ? JSON.parse(inv.report) : {}
+
+  return `
+    <div class="card" style="margin-top: 20px; border: 1px solid var(--color-border-primary)">
+      <div style="padding: 20px; border-bottom: 1px solid var(--color-border-primary)">
+        <div style="display: flex; justify-content: space-between; align-items: start">
+          <div>
+            <h2 style="margin: 0 0 8px 0">Investigation Report: ${inv.id}</h2>
+            <p style="margin: 0; color: var(--color-text-secondary); font-size: 14px">
+              Alert: ${inv.alert_id} · Created: ${new Date(inv.started_at).toLocaleString()}
+            </p>
+          </div>
+          <button onclick="document.getElementById('agent-detail-panel').innerHTML=''; this.closest('.card').style.display='none'" style="background: none; border: none; cursor: pointer; font-size: 20px">✕</button>
+        </div>
+      </div>
+
+      ${inv.verdict ? `
+        <div style="padding: 20px; background: ${verdictColor}08; border-bottom: 1px solid ${verdictColor}30">
+          <div style="display: flex; justify-content: space-between; align-items: center">
+            <div>
+              <p style="margin: 0 0 8px 0; font-weight: 600; color: ${verdictColor}">VERDICT</p>
+              <p style="margin: 0; font-size: 20px; font-weight: 700; color: ${verdictColor}">
+                ${inv.verdict.replace('_', ' ').toUpperCase()}
+              </p>
+            </div>
+            <div style="text-align: right">
+              <p style="margin: 0 0 8px 0; font-weight: 600; color: ${verdictColor}">RISK SCORE</p>
+              <p style="margin: 0; font-size: 28px; font-weight: 700; color: ${verdictColor}">
+                ${inv.risk_score}/100
+              </p>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
+      ${report.reasoning ? `
+        <div style="padding: 20px">
+          <h3 style="margin: 0 0 12px 0">🔍 Investigation Reasoning</h3>
+          <div style="background: var(--color-background-secondary); border: 1px solid var(--color-border-primary); border-radius: 6px; padding: 12px; font-family: monospace; font-size: 12px; color: var(--color-text-secondary); max-height: 400px; overflow-y: auto">
+            ${(report.reasoning || []).map((entry, i) => `
+              <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--color-border-primary)">
+                <strong style="color: #0C447C">Iteration ${i + 1}:</strong>
+                <p style="margin: 4px 0 0 0">${entry.decision || 'analyze'}</p>
+                <p style="margin: 4px 0 0 0; color: var(--color-text-tertiary); font-size: 11px">${entry.rationale || 'Evidence analysis'}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      ${report.report ? `
+        <div style="padding: 20px">
+          <h3 style="margin: 0 0 12px 0">📄 Investigation Report</h3>
+          <div style="background: var(--color-background-secondary); border: 1px solid var(--color-border-primary); border-radius: 6px; padding: 15px; line-height: 1.6; max-height: 600px; overflow-y: auto; font-size: 13px">
+            ${report.report}
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `
+}
+
+async function startAgentPolling() {
+  // Load initial data
+  await loadAgentData()
+
+  // Poll every 5 seconds
+  if (agentPollingInterval) clearInterval(agentPollingInterval)
+  agentPollingInterval = setInterval(loadAgentData, 5000)
+}
+
+async function loadAgentData() {
+  try {
+    const statusRes = await getAgentStatus()
+    const invRes = await getAgentInvestigations()
+
+    agentStatus = statusRes?.data || {}
+    agentInvestigations = invRes?.data || []
+
+    // Update badge
+    const badge = document.getElementById('agent-active-badge')
+    if (badge) {
+      badge.textContent = agentStatus?.inProgressCount > 0 ? agentStatus.inProgressCount : ''
+    }
+
+    // Refresh active section
+    const activeSection = document.getElementById('agent-active-section')
+    if (activeSection && activeTab === 'agent') {
+      activeSection.innerHTML = renderAgentActiveInvestigations()
+      attachAgentItemListeners()
+    }
+
+    // Refresh history section
+    const historySection = document.getElementById('agent-history-section')
+    if (historySection && historySection.style.display !== 'none') {
+      historySection.innerHTML = renderAgentInvestigationHistory()
+      attachAgentViewButtonListeners()
+    }
+  } catch (err) {
+    console.error('Failed to load agent data:', err)
+  }
+}
+
+function attachAgentTabListeners() {
+  // Sub-tab switcher
+  document.querySelectorAll('.agent-subtab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Update active state
+      document.querySelectorAll('.agent-subtab-btn').forEach(b => {
+        b.style.borderBottom = 'none'
+        b.style.color = 'var(--color-text-secondary)'
+      })
+      btn.style.borderBottom = '2px solid #0C447C'
+      btn.style.color = '#0C447C'
+
+      // Show/hide sections
+      const subtab = btn.dataset.subtab
+      document.getElementById('agent-active-section').style.display = subtab === 'active' ? '' : 'none'
+      document.getElementById('agent-history-section').style.display = subtab === 'history' ? '' : 'none'
+    })
+  })
+
+  // Pause/Resume buttons
+  const pauseBtn = document.getElementById('agent-pause-btn')
+  const resumeBtn = document.getElementById('agent-resume-btn')
+
+  if (pauseBtn) {
+    pauseBtn.addEventListener('click', async () => {
+      try {
+        await pauseAgent()
+        showToast('Agent paused', 'info')
+        await loadAgentData()
+      } catch (err) {
+        showToast('Failed to pause agent', 'error')
+      }
+    })
+  }
+
+  if (resumeBtn) {
+    resumeBtn.addEventListener('click', async () => {
+      try {
+        await resumeAgent()
+        showToast('Agent resumed', 'info')
+        await loadAgentData()
+      } catch (err) {
+        showToast('Failed to resume agent', 'error')
+      }
+    })
+  }
+
+  attachAgentItemListeners()
+  attachAgentViewButtonListeners()
+}
+
+function attachAgentItemListeners() {
+  document.querySelectorAll('.agent-inv-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      const invId = item.dataset.invId
+      try {
+        const invRes = await getAgentInvestigation(invId)
+        const detailPanel = document.getElementById('agent-detail-panel')
+        detailPanel.innerHTML = renderAgentInvestigationDetail(invId)
+      } catch (err) {
+        showToast('Failed to load investigation details', 'error')
+      }
+    })
+  })
+}
+
+function attachAgentViewButtonListeners() {
+  document.querySelectorAll('.agent-view-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const invId = btn.dataset.invId
+      const detailPanel = document.getElementById('agent-detail-panel')
+      detailPanel.innerHTML = renderAgentInvestigationDetail(invId)
+      detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  })
+}
 
 window.switchTab = (tab) => {
   activeTab = tab

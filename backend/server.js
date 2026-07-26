@@ -28,6 +28,8 @@ import { startAuditCollectionJob } from './tenantguard/jobs.js'
 import { startCorrelationJobs } from './tenantguard/correlation-jobs.js'
 import { storeAlertToSharePoint, storeCorrelationToSharePoint } from './tenantguard/sharepoint-sync.js'
 import { localAIAgent } from './local-ai-agent.js'
+import { normalizedControls } from './normalized-controls.js'
+import { controlValidationRules, validateControl, flattenPolicySettings } from './ca-settings-schema.js'
 import {
   getEmailThreatDataFromGraph,
   getComplianceDataFromGraph,
@@ -49,6 +51,14 @@ import { createInvestigationTables } from './tenantguard/investigation-schema.js
 import { SettingsService } from './tenantguard/settings-service.js'
 import { getDataService } from './tenantguard/data-service.js'
 import {
+  initializeAgentScheduler as initializeThreatAgentScheduler,
+  manualTrigger as manualThreatInvestigation,
+  pauseScheduler as pauseThreatAgent,
+  resumeScheduler as resumeThreatAgent,
+  getSchedulerStatus as getThreatAgentStatus,
+  shutdownScheduler as shutdownThreatAgent
+} from './tenantguard/agent-scheduler.js'
+import {
   checkPowerShellAvailable,
   checkInstalledModules,
   installMissingModules,
@@ -68,7 +78,7 @@ import { BackupStorageManager } from './lib/backup-storage.js'
 import setupBackupRoutes from './routes/backup-routes.js'
 import { capControlFramework, evaluateCategory } from './lib/cap-control-framework.js'
 import { extractControlsFromPolicies, calculateControlCoverage } from './control-extractor.js'
-import { loadPolicies } from './policy-loader.js'
+import { loadPolicies, setGraphClient } from './policy-loader.js'
 import {
   getAlertStatus, setAlertStatus, getAlertStatusHistory, getAllAlertStatuses,
   getAlertsByStatus, getStatusMetrics, bulkUpdateStatus, pruneHistory,
@@ -481,6 +491,9 @@ if (isValidCredentials) {
       graphClient = Client.initWithMiddleware({ authProvider })
       console.log('✓ Azure credentials configured - using real Graph API')
 
+      // Initialize Policy Loader with Graph client
+      setGraphClient(graphClient)
+
       // Initialize Backup System with Graph client
       ensureBackupRoutesRegistered()
 
@@ -773,6 +786,10 @@ async function initializeTenantGuard() {
     investigationService = new InvestigationService(claudeClient)
     const status = investigationService.getStatus()
     console.log(`   ${status.message}`)
+
+    // Initialize autonomous threat investigation agent scheduler
+    initializeThreatAgentScheduler(graphClient)
+    console.log('✅ Autonomous Threat Investigation Agent initialized')
 
     // if (graphClient) {
     //   startAuditCollectionJob(graphClient)
@@ -10075,6 +10092,105 @@ app.get('/api/tenantguard/audit/sources', (req, res) => {
     })
   } catch (error) {
     res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+/**
+ * ============================================================
+ * Autonomous Threat Investigation Agent Endpoints
+ * ============================================================
+ */
+
+/**
+ * POST /api/tenantguard/agent/investigate/:alertId
+ * Manually trigger autonomous investigation for an alert
+ */
+app.post('/api/tenantguard/agent/investigate/:alertId', async (req, res) => {
+  try {
+    const result = await manualThreatInvestigation(req.params.alertId)
+    res.json({ success: true, data: result })
+  } catch (err) {
+    console.error('Manual trigger error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/agent/investigations
+ * Get list of all autonomous investigations
+ */
+app.get('/api/tenantguard/agent/investigations', (req, res) => {
+  try {
+    const db = getDatabase()
+    const limit = req.query.limit ? parseInt(req.query.limit) : 50
+    const sql = `SELECT * FROM agent_investigations ORDER BY started_at DESC LIMIT ${limit}`
+    const investigations = db.prepare(sql).all()
+    res.json({ success: true, data: investigations || [], count: (investigations || []).length })
+  } catch (err) {
+    console.error('Get investigations error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/agent/investigations/:id
+ * Get single investigation with full reasoning chain and steps
+ */
+app.get('/api/tenantguard/agent/investigations/:id', (req, res) => {
+  try {
+    const db = getDatabase()
+    const inv = db.prepare(`SELECT * FROM agent_investigations WHERE id = '${req.params.id}'`).get()
+    if (!inv) {
+      return res.status(404).json({ success: false, error: 'Investigation not found' })
+    }
+
+    const steps = db.prepare(`SELECT * FROM agent_investigation_steps WHERE investigation_id = '${req.params.id}' ORDER BY iteration ASC`).all()
+    res.json({ success: true, data: { ...inv, steps: steps || [] } })
+  } catch (err) {
+    console.error('Get investigation error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/agent/status
+ * Get agent scheduler status
+ */
+app.get('/api/tenantguard/agent/status', (req, res) => {
+  try {
+    const status = getThreatAgentStatus()
+    res.json({ success: true, data: status })
+  } catch (err) {
+    console.error('Get status error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/agent/pause
+ * Pause autonomous investigations
+ */
+app.post('/api/tenantguard/agent/pause', (req, res) => {
+  try {
+    pauseThreatAgent()
+    res.json({ success: true, data: { paused: true } })
+  } catch (err) {
+    console.error('Pause error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/agent/resume
+ * Resume autonomous investigations
+ */
+app.post('/api/tenantguard/agent/resume', (req, res) => {
+  try {
+    resumeThreatAgent()
+    res.json({ success: true, data: { paused: false } })
+  } catch (err) {
+    console.error('Resume error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
   }
 })
 
@@ -24002,24 +24118,25 @@ function evaluateCategoryNetworkProtection() {
 
 // CIS Controls Mapping for Conditional Access
 const cisControlsMapping = [
-  { cisId: '5.2.2.1', name: 'Admin MFA', description: 'Ensure multifactor authentication is enabled for all users in administrative roles', severity: 'Critical', policyPattern: 'admin|administrator' },
-  { cisId: '5.2.2.2', name: 'User MFA', description: 'Ensure multifactor authentication is enabled for all users', severity: 'Critical', policyPattern: 'mfa|multifactor' },
-  { cisId: '5.2.2.3', name: 'Legacy Authentication', description: 'Enable Conditional Access policies to block legacy authentication', severity: 'Critical', policyPattern: 'legacy|oauth|basic' },
-  { cisId: '5.2.2.4', name: 'Session Control', description: 'Ensure Sign-in frequency is enabled and browser sessions are not persistent for Administrative users', severity: 'High', policyPattern: 'session|frequency' },
-  { cisId: '5.2.2.5', name: 'Authentication Strength', description: 'Ensure Phishing-resistant MFA strength is required for Administrators', severity: 'Critical', policyPattern: 'phishing|fido|passkey' },
-  { cisId: '5.2.2.6', name: 'User Risk', description: 'Enable Identity Protection user risk policies', severity: 'High', policyPattern: 'user.*risk|risk.*user' },
-  { cisId: '5.2.2.7', name: 'Sign-in Risk', description: 'Enable Identity Protection sign-in risk policies', severity: 'High', policyPattern: 'sign.*risk|signin.*risk' },
-  { cisId: '5.2.2.8', name: 'Risk Response', description: 'Ensure sign-in risk is blocked for medium and high risk', severity: 'Critical', policyPattern: 'block.*risk|risk.*block' },
-  { cisId: '5.2.2.9', name: 'Device Compliance', description: 'Ensure a managed device is required for authentication', severity: 'High', policyPattern: 'device|compliant' },
-  { cisId: '5.2.2.10', name: 'Security Info Registration', description: 'Ensure a managed device is required to register security information', severity: 'High', policyPattern: 'security.*info|mfa.*register' },
-  { cisId: '5.2.2.11', name: 'Intune Enrollment', description: 'Ensure sign-in frequency for Intune Enrollment is set to Every time', severity: 'Medium', policyPattern: 'intune|enrollment' },
-  { cisId: '5.2.2.12', name: 'Device Code Flow', description: 'Ensure the device code sign-in flow is blocked', severity: 'High', policyPattern: 'device.*code|block.*device' },
-  { cisId: '5.2.2.13', name: 'Session Control', description: 'Ensure periodic reauthentication is required for all users', severity: 'Medium', policyPattern: 'reauthenticate|periodic' },
-  { cisId: '5.2.2.14', name: 'Named Locations', description: 'Ensure trusted named locations are defined', severity: 'Medium', policyPattern: 'location|geography|country' },
-  { cisId: '5.2.2.15', name: 'Location Policy', description: 'Ensure exclusionary geographic access controls are utilized', severity: 'High', policyPattern: 'geography|country|location' },
-  { cisId: '5.2.2.16', name: 'Token Protection', description: 'Ensure Token Protection is enforced for session tokens', severity: 'High', policyPattern: 'token|protect' },
-  { cisId: '5.2.2.17', name: 'Authentication Transfer', description: 'Ensure authentication transfer is blocked', severity: 'High', policyPattern: 'transfer|auth.*transfer' }
+  { cisId: '5.2.2.1', name: 'Admin MFA', description: 'Ensure multifactor authentication is enabled for all users in administrative roles', severity: 'Critical', policyPattern: 'admin|administrator', preferredPolicy: 'CA003' },
+  { cisId: '5.2.2.2', name: 'User MFA', description: 'Ensure multifactor authentication is enabled for all users', severity: 'Critical', policyPattern: 'mfa|multifactor', preferredPolicy: 'CA001' },
+  { cisId: '5.2.2.3', name: 'Legacy Authentication', description: 'Enable Conditional Access policies to block legacy authentication', severity: 'Critical', policyPattern: 'legacy|oauth|basic', preferredPolicy: 'CA002' },
+  { cisId: '5.2.2.4', name: 'Session Control', description: 'Ensure Sign-in frequency is enabled and browser sessions are not persistent for Administrative users', severity: 'High', policyPattern: 'session|frequency', preferredPolicy: 'CA009' },
+  { cisId: '5.2.2.5', name: 'Authentication Strength', description: 'Ensure Phishing-resistant MFA strength is required for Administrators', severity: 'Critical', policyPattern: 'phishing|fido|passkey', preferredPolicy: 'CA001' },
+  { cisId: '5.2.2.6', name: 'User Risk', description: 'Enable Identity Protection user risk policies', severity: 'High', policyPattern: 'user.*risk|risk.*user', preferredPolicy: 'CA005' },
+  { cisId: '5.2.2.7', name: 'Sign-in Risk', description: 'Enable Identity Protection sign-in risk policies', severity: 'High', policyPattern: 'sign.*risk|signin.*risk', preferredPolicy: 'CA006' },
+  { cisId: '5.2.2.8', name: 'Risk Response', description: 'Ensure sign-in risk is blocked for medium and high risk', severity: 'Critical', policyPattern: 'block.*risk|risk.*block', preferredPolicy: 'CA005' },
+  { cisId: '5.2.2.9', name: 'Device Compliance', description: 'Ensure a managed device is required for authentication', severity: 'High', policyPattern: 'device|compliant', preferredPolicy: 'CA007' },
+  { cisId: '5.2.2.10', name: 'Security Info Registration', description: 'Ensure a managed device is required to register security information', severity: 'High', policyPattern: 'security.*info|mfa.*register', preferredPolicy: 'CA007' },
+  { cisId: '5.2.2.11', name: 'Intune Enrollment', description: 'Ensure sign-in frequency for Intune Enrollment is set to Every time', severity: 'Medium', policyPattern: 'intune|enrollment', preferredPolicy: 'CA009' },
+  { cisId: '5.2.2.12', name: 'Device Code Flow', description: 'Ensure the device code sign-in flow is blocked', severity: 'High', policyPattern: 'device.*code|block.*device', preferredPolicy: 'CA008' },
+  { cisId: '5.2.2.13', name: 'Session Control', description: 'Ensure periodic reauthentication is required for all users', severity: 'Medium', policyPattern: 'reauthenticate|periodic', preferredPolicy: 'CA009' },
+  { cisId: '5.2.2.14', name: 'Named Locations', description: 'Ensure trusted named locations are defined', severity: 'Medium', policyPattern: 'location|geography|country', preferredPolicy: 'CA013' },
+  { cisId: '5.2.2.15', name: 'Location Policy', description: 'Ensure exclusionary geographic access controls are utilized', severity: 'High', policyPattern: 'geography|country|location', preferredPolicy: 'CA013' },
+  { cisId: '5.2.2.16', name: 'Token Protection', description: 'Ensure Token Protection is enforced for session tokens', severity: 'High', policyPattern: 'token|protect', preferredPolicy: 'CA009' },
+  { cisId: '5.2.2.17', name: 'Authentication Transfer', description: 'Ensure authentication transfer is blocked', severity: 'High', policyPattern: 'transfer|auth.*transfer', preferredPolicy: 'CA001' }
 ]
+
 
 function validateCISControls(policies) {
   const results = []
@@ -24150,54 +24267,97 @@ app.get('/api/cap/dashboard/compliance', async (req, res) => {
   }
 })
 
+// Extract all controls from category evaluations
+/**
+ * Get normalized controls with validation status
+ * Maps normalized framework to actual CA policy implementations
+ */
+async function getAllNormalizedControls() {
+  const realPolicies = await loadPolicies()
+
+  return normalizedControls.map(control => {
+    const validation = validateControl(control.id, realPolicies)
+
+    return {
+      controlId: control.id,
+      name: control.name,
+      description: `${control.name} - Applies to: ${control.appliesTo.join(', ')}`,
+      category: control.category,
+      severity: control.severity,
+      appliesTo: control.appliesTo,
+      validated: validation.validated,
+      status: validation.validated ? (validation.met ? 'Passed' : 'Failed') : 'Not Validated',
+      met: validation.met,
+      validationRule: validation.requiredSettings || null,
+      validationReason: validation.reason || null,
+      score: validation.met ? 10 : 0
+    }
+  })
+}
+
 // Controls Dashboard
 app.get('/api/cap/dashboard/controls', async (req, res) => {
   try {
+    const allControls = await getAllNormalizedControls()
     const realPolicies = await loadPolicies()
-    const extractedControls = extractControlsFromPolicies(realPolicies)
-    const coverage = calculateControlCoverage(extractedControls)
+
+    // Enrich controls with policy mapping
+    const controlsWithPolicies = allControls.map(control => {
+      const relatedPolicies = realPolicies.filter(policy => {
+        const policyName = policy.displayName.toLowerCase()
+        const controlName = control.name.toLowerCase()
+        return policyName.includes(controlName.substring(0, 10)) ||
+               controlName.includes(policyName.substring(0, 10))
+      })
+
+      const enabledPolicy = relatedPolicies.find(p => p.state === 'enabled')
+
+      return {
+        cisId: control.controlId,
+        name: control.name,
+        description: control.description || '',
+        category: control.category,
+        severity: control.severity,
+        status: control.status,
+        met: relatedPolicies.some(p => p.state === 'enabled') || control.status === 'Passed',
+        policy: enabledPolicy ? { id: enabledPolicy.id, name: enabledPolicy.displayName, enabled: true } : null,
+        policies: relatedPolicies.map(p => ({ id: p.id, name: p.displayName, enabled: p.state === 'enabled' }))
+      }
+    })
+
+    const coverage = {
+      total: allControls.length,
+      met: allControls.filter(c => c.status === 'Passed').length,
+      percentage: Math.round((allControls.filter(c => c.status === 'Passed').length / allControls.length) * 100) || 0,
+      withPolicies: controlsWithPolicies.filter(c => c.policies.length > 0).length
+    }
 
     res.json({
       success: true,
       data: {
         timestamp: new Date().toISOString(),
         summary: {
-          total: extractedControls.length,
-          compliant: extractedControls.filter(c => c.met).length,
-          nonCompliant: extractedControls.filter(c => !c.met).length,
-          compliance: coverage.percentage + '%'
+          total: allControls.length,
+          compliant: allControls.filter(c => c.status === 'Passed').length,
+          nonCompliant: allControls.filter(c => c.status !== 'Passed').length,
+          compliance: coverage.percentage + '%',
+          withPolicies: coverage.withPolicies
         },
-        byCategory: [
-          {
-            category: 'Critical Controls',
-            total: extractedControls.filter(c => c.severity === 'Critical').length,
-            compliant: extractedControls.filter(c => c.severity === 'Critical' && c.met).length,
-            percentage: extractedControls.filter(c => c.severity === 'Critical').length > 0 ? Math.round((extractedControls.filter(c => c.severity === 'Critical' && c.met).length / extractedControls.filter(c => c.severity === 'Critical').length) * 100) : 0,
-            status: extractedControls.filter(c => c.severity === 'Critical').length > 0 && extractedControls.filter(c => c.severity === 'Critical' && c.met).length >= extractedControls.filter(c => c.severity === 'Critical').length * 0.8 ? 'PASS' : 'WARN'
-          },
-          {
-            category: 'High Priority Controls',
-            total: extractedControls.filter(c => c.severity === 'High').length,
-            compliant: extractedControls.filter(c => c.severity === 'High' && c.met).length,
-            percentage: extractedControls.filter(c => c.severity === 'High').length > 0 ? Math.round((extractedControls.filter(c => c.severity === 'High' && c.met).length / extractedControls.filter(c => c.severity === 'High').length) * 100) : 0,
-            status: extractedControls.filter(c => c.severity === 'High').length > 0 && Math.round((extractedControls.filter(c => c.severity === 'High' && c.met).length / extractedControls.filter(c => c.severity === 'High').length) * 100) >= 70 ? 'PASS' : 'WARN'
-          },
-          {
-            category: 'Medium Priority Controls',
-            total: extractedControls.filter(c => c.severity === 'Medium').length,
-            compliant: extractedControls.filter(c => c.severity === 'Medium' && c.met).length,
-            percentage: extractedControls.filter(c => c.severity === 'Medium').length > 0 ? Math.round((extractedControls.filter(c => c.severity === 'Medium' && c.met).length / extractedControls.filter(c => c.severity === 'Medium').length) * 100) : 0,
-            status: extractedControls.filter(c => c.severity === 'Medium').length > 0 && Math.round((extractedControls.filter(c => c.severity === 'Medium' && c.met).length / extractedControls.filter(c => c.severity === 'Medium').length) * 100) >= 70 ? 'PASS' : 'WARN'
-          }
-        ],
-        controls: extractedControls,
-        cisMapping: { percentage: coverage.cisPercentage, description: `${coverage.withCIS} of ${coverage.total} controls mapped to CIS` },
-        criticalGaps: extractedControls.filter(c => !c.met && c.severity === 'Critical').slice(0, 3).map(c => ({
-          id: c.id,
+        byCategory: Array.from(new Set(allControls.map(c => c.severity))).map(severity => ({
+          category: severity + ' Priority Controls',
+          total: allControls.filter(c => c.severity === severity).length,
+          compliant: allControls.filter(c => c.severity === severity && c.status === 'Passed').length,
+          percentage: allControls.filter(c => c.severity === severity).length > 0 ? Math.round((allControls.filter(c => c.severity === severity && c.status === 'Passed').length / allControls.filter(c => c.severity === severity).length) * 100) : 0,
+          status: allControls.filter(c => c.severity === severity && c.status === 'Passed').length >= allControls.filter(c => c.severity === severity).length * 0.7 ? 'PASS' : 'WARN'
+        })),
+        controls: controlsWithPolicies,
+        policyMapping: { total: realPolicies.length, enabled: realPolicies.filter(p => p.state === 'enabled').length, description: `${realPolicies.filter(p => p.state === 'enabled').length} of ${realPolicies.length} policies enabled` },
+        criticalGaps: allControls.filter(c => c.status !== 'Passed' && c.severity === 'Critical').slice(0, 5).map(c => ({
+          id: c.controlId,
           name: c.name,
           description: c.description,
           severity: c.severity,
-          cisControls: c.cisControls
+          category: c.category
         }))
       }
     })
@@ -24210,24 +24370,48 @@ app.get('/api/cap/dashboard/controls', async (req, res) => {
 // Risk Assessment Dashboard
 app.get('/api/cap/dashboard/risk', async (req, res) => {
   try {
+    const allControls = await getAllNormalizedControls()
     const realPolicies = await loadPolicies()
-    const cisResults = validateCISControls(realPolicies)
-    const enabledCount = realPolicies.filter(p => p.state === 'enabled').length
-    const totalCount = realPolicies.length
-    const compliancePercentage = totalCount > 0 ? Math.round((enabledCount / totalCount) * 100) : 0
+
+    // Enrich controls with policy mapping and risk assessment
+    const controlsWithRisk = allControls.map(control => {
+      const relatedPolicies = realPolicies.filter(policy => {
+        const policyName = policy.displayName.toLowerCase()
+        const controlName = control.name.toLowerCase()
+        return policyName.includes(controlName.substring(0, 10)) ||
+               controlName.includes(policyName.substring(0, 10))
+      })
+
+      const isMet = relatedPolicies.some(p => p.state === 'enabled') || control.status === 'Passed'
+      const enabledPolicy = relatedPolicies.find(p => p.state === 'enabled')
+
+      return {
+        cisId: control.controlId,
+        name: control.name,
+        description: control.description || '',
+        category: control.category,
+        severity: control.severity,
+        status: control.status,
+        met: isMet,
+        policy: enabledPolicy ? { id: enabledPolicy.id, name: enabledPolicy.displayName, enabled: true } : null,
+        policies: relatedPolicies.map(p => ({ id: p.id, name: p.displayName, enabled: p.state === 'enabled' })),
+        riskLevel: isMet ? 'LOW' : control.severity,
+        riskScore: isMet ? 10 : (control.severity === 'Critical' ? 90 : control.severity === 'High' ? 70 : 50),
+        impactArea: control.severity === 'Critical' ? 'SEVERE - Immediate action required' :
+                    control.severity === 'High' ? 'SIGNIFICANT - Address within 30 days' :
+                    'MODERATE - Schedule for review'
+      }
+    })
+
+    const totalControls = allControls.length
+    const metControls = controlsWithRisk.filter(c => c.met).length
+    const compliancePercentage = totalControls > 0 ? Math.round((metControls / totalControls) * 100) : 0
     const riskPercentage = 100 - compliancePercentage
     const overallRiskLevel = riskPercentage >= 40 ? 'HIGH' : riskPercentage >= 20 ? 'MEDIUM' : 'LOW'
 
-    // Map controls to risk level based on whether they're met
-    const controlsWithRisk = cisResults.map(control => ({
-      ...control,
-      riskLevel: !control.met ? control.severity : 'LOW',
-      riskScore: !control.met ? (control.severity === 'Critical' ? 90 : control.severity === 'High' ? 70 : 50) : 10,
-      impactArea: control.severity === 'Critical' ? 'SEVERE - Immediate action required' : control.severity === 'High' ? 'SIGNIFICANT - Address within 30 days' : 'MODERATE - Schedule for review'
-    }))
-
     const criticalRisks = controlsWithRisk.filter(c => !c.met && c.severity === 'Critical')
     const highRisks = controlsWithRisk.filter(c => !c.met && c.severity === 'High')
+    const mediumRisks = controlsWithRisk.filter(c => !c.met && c.severity === 'Medium')
 
     res.json({
       success: true,
@@ -24238,17 +24422,24 @@ app.get('/api/cap/dashboard/risk', async (req, res) => {
         riskMatrix: {
           critical: { count: criticalRisks.length, impact: 'SEVERE', timeToFix: '0-7 days' },
           high: { count: highRisks.length, impact: 'SIGNIFICANT', timeToFix: '7-30 days' },
-          medium: { count: controlsWithRisk.filter(c => !c.met && c.severity === 'Medium').length, impact: 'MODERATE', timeToFix: '30-90 days' },
-          low: { count: controlsWithRisk.filter(c => c.met).length, impact: 'MINOR', timeToFix: 'N/A' }
+          medium: { count: mediumRisks.length, impact: 'MODERATE', timeToFix: '30-90 days' },
+          low: { count: metControls, impact: 'MINOR', timeToFix: 'N/A' }
         },
         topRisks: criticalRisks.slice(0, 5).map(c => ({
-          controlId: c.cisId,
+          controlId: c.controlId,
           name: c.name,
           description: c.description,
+          category: c.category,
           riskScore: c.riskScore,
           impactArea: c.impactArea
         })),
         complianceGap: riskPercentage + '%',
+        controlsSummary: {
+          total: totalControls,
+          met: metControls,
+          unmet: totalControls - metControls,
+          percentage: compliancePercentage
+        },
         controls: controlsWithRisk
       }
     })
@@ -24259,35 +24450,6 @@ app.get('/api/cap/dashboard/risk', async (req, res) => {
 })
 
 // Remediation Dashboard
-app.get('/api/cap/dashboard/remediation', async (req, res) => {
-  try {
-    const realPolicies = await loadPolicies()
-    const enabledCount = realPolicies.filter(p => p.state === 'enabled').length
-    const totalCount = realPolicies.length
-    const compliancePercentage = totalCount > 0 ? Math.round((enabledCount / totalCount) * 100) : 0
-    const successRate = Math.max(0, Math.min(100, compliancePercentage))
-
-    res.json({
-      success: true,
-      data: {
-        timestamp: new Date().toISOString(),
-        summary: { total: totalCount, successful: enabledCount, partial: Math.max(0, Math.floor((totalCount - enabledCount) * 0.3)), failed: Math.max(0, totalCount - enabledCount - Math.floor((totalCount - enabledCount) * 0.3)), successRate: successRate },
-        recentRemediations: realPolicies.map((p, i) => ({
-          id: 'rem-' + (i + 1).toString().padStart(3, '0'),
-          controlId: p.id,
-          timestamp: new Date(Date.now() - i * 86400000).toISOString(),
-          status: p.state === 'enabled' ? 'SUCCESS' : 'PENDING',
-          dryRun: false
-        })).slice(0, 5),
-        trend: successRate >= 70 ? 'IMPROVING' : successRate >= 40 ? 'STABLE' : 'DECLINING'
-      }
-    })
-  } catch (error) {
-    console.error('Error in remediation endpoint:', error)
-    res.status(500).json({ success: false, error: error.message })
-  }
-})
-
 // Drift Detection Dashboard
 // Helper function to normalize policy configuration for display
 function extractPolicyConfiguration(policy) {
@@ -24343,6 +24505,100 @@ function extractPolicyConfiguration(policy) {
 
   return config
 }
+
+
+// Merged Controls & Risk Dashboard
+app.get('/api/cap/dashboard/controls-and-risk', async (req, res) => {
+  try {
+    const allControls = await getAllNormalizedControls()
+    const realPolicies = await loadPolicies()
+
+    const controlsWithRisk = allControls.map(control => {
+      // Validate this control against enabled policies
+      const validation = validateControl(control.controlId, realPolicies)
+
+      // Use the validated status and implementing policy from actual validation
+      const isMet = validation.met
+      const implementingPolicies = validation.implementingPolicies || []
+      const primaryPolicy = validation.implementingPolicy
+
+      // Get all enabled policies for reference
+      const allEnabledPolicies = realPolicies.filter(p => p.state === 'enabled')
+
+      return {
+        cisId: control.controlId,
+        name: control.name,
+        description: control.description || '',
+        category: control.category,
+        severity: control.severity,
+        status: control.status,
+        met: isMet,
+        policy: primaryPolicy ? { id: primaryPolicy.id, name: primaryPolicy.name, enabled: true } : null,
+        implementingPolicies: implementingPolicies.map(p => ({ id: p.id, name: p.name })),
+        policies: allEnabledPolicies.map(p => ({ id: p.id, name: p.displayName, enabled: true })),
+        riskLevel: isMet ? 'LOW' : control.severity,
+        riskScore: isMet ? 10 : (control.severity === 'Critical' ? 90 : control.severity === 'High' ? 70 : 50),
+        impactArea: control.severity === 'Critical' ? 'SEVERE - Immediate action required' :
+                    control.severity === 'High' ? 'SIGNIFICANT - Address within 30 days' :
+                    'MODERATE - Schedule for review'
+      }
+    })
+
+    const totalControls = allControls.length
+    const metControls = controlsWithRisk.filter(c => c.met).length
+    const compliancePercentage = totalControls > 0 ? Math.round((metControls / totalControls) * 100) : 0
+    const riskPercentage = 100 - compliancePercentage
+    const overallRiskLevel = riskPercentage >= 40 ? 'HIGH' : riskPercentage >= 20 ? 'MEDIUM' : 'LOW'
+
+    const criticalRisks = controlsWithRisk.filter(c => !c.met && c.severity === 'Critical')
+    const highRisks = controlsWithRisk.filter(c => !c.met && c.severity === 'High')
+
+    res.json({
+      success: true,
+      data: {
+        timestamp: new Date().toISOString(),
+        kpis: {
+          compliance: {
+            total: totalControls,
+            met: metControls,
+            unmet: totalControls - metControls,
+            percentage: compliancePercentage + '%'
+          },
+          risk: {
+            overallRiskLevel,
+            riskScore: Math.round(riskPercentage),
+            criticalRisks: criticalRisks.length,
+            highRisks: highRisks.length,
+            riskPercentage: riskPercentage + '%'
+          },
+          policies: {
+            total: realPolicies.length,
+            enabled: realPolicies.filter(p => p.state === 'enabled').length,
+            disabled: realPolicies.filter(p => p.state === 'disabled').length
+          }
+        },
+        controls: controlsWithRisk,
+        summary: {
+          totalControls,
+          compliant: metControls,
+          nonCompliant: totalControls - metControls,
+          compliancePercentage,
+          riskLevel: overallRiskLevel,
+          riskScore: Math.round(riskPercentage),
+          topRisks: criticalRisks.concat(highRisks).slice(0, 5).map(c => ({
+            name: c.name,
+            severity: c.severity,
+            riskScore: c.riskScore,
+            impactArea: c.impactArea
+          }))
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Error in controls-and-risk endpoint:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
 
 app.get('/api/cap/dashboard/drift', async (req, res) => {
   try {
