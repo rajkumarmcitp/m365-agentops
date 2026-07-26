@@ -1543,22 +1543,38 @@ async function refreshData() {
       })
     ])
 
-    // Use demo data only for TenantGuard
-    console.log('📊 Using demo data for TenantGuard page')
-    allAlerts = getDemoAlerts()
-    console.log(`✅ Loaded ${allAlerts.length} demo alerts`)
+    // Use real data from Graph API, fallback to demo if unavailable
+    if (alertsRes.success && alertsRes.data && alertsRes.data.length > 0) {
+      console.log('📊 Using REAL data from Graph API')
+      allAlerts = alertsRes.data
+      console.log(`✅ Loaded ${allAlerts.length} REAL alerts from tenant`)
+    } else {
+      console.log('📊 Using demo data (Graph API unavailable)')
+      allAlerts = getDemoAlerts()
+      console.log(`✅ Loaded ${allAlerts.length} demo alerts`)
+    }
 
-    allCorrelations = getDemoCorrelations()
-    console.log(`✅ Loaded ${allCorrelations.length} demo correlations`)
+    if (correlationsRes.success && correlationsRes.data && correlationsRes.data.length > 0) {
+      allCorrelations = correlationsRes.data
+      console.log(`✅ Loaded ${allCorrelations.length} REAL correlations from tenant`)
+    } else {
+      allCorrelations = getDemoCorrelations()
+      console.log(`✅ Loaded ${allCorrelations.length} demo correlations`)
+    }
 
-    allPatterns = [
-      { id: 'p1', type: 'Data Exfiltration', severity: 'HIGH', events: 8, pattern: 'Unusual download + external share' },
-      { id: 'p2', type: 'Privilege Escalation', severity: 'CRITICAL', events: 12, pattern: 'MFA bypass + role addition' },
-      { id: 'p3', type: 'Lateral Movement', severity: 'HIGH', events: 5, pattern: 'Service account compromise' },
-    ]
-    console.log(`✅ Loaded ${allPatterns.length} demo patterns`)
+    if (patternsRes.success && patternsRes.data && patternsRes.data.length > 0) {
+      allPatterns = patternsRes.data
+      console.log(`✅ Loaded ${allPatterns.length} REAL patterns from tenant`)
+    } else {
+      allPatterns = [
+        { id: 'p1', type: 'Data Exfiltration', severity: 'HIGH', events: 8, pattern: 'Unusual download + external share' },
+        { id: 'p2', type: 'Privilege Escalation', severity: 'CRITICAL', events: 12, pattern: 'MFA bypass + role addition' },
+        { id: 'p3', type: 'Lateral Movement', severity: 'HIGH', events: 5, pattern: 'Service account compromise' },
+      ]
+      console.log(`✅ Loaded ${allPatterns.length} demo patterns`)
+    }
 
-    // Load risk assessment data
+    // Load risk assessment data from backend
     riskAssessment = riskRes || null
     riskHistory = riskHistRes || []
     if (riskAssessment) {
