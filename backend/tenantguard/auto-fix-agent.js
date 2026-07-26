@@ -115,14 +115,13 @@ export class AutoFixAgent {
         }
       }
 
-      // Uncomment when ready for production (requires write permissions)
-      // const result = await this.graphClient.api('/beta/identity/conditionalAccess/policies').post(policy)
-      // Stub for now
-      console.log('[DRY-RUN] Would create CA policy:', policy)
+      const result = await this.graphClient.api('/beta/identity/conditionalAccess/policies').post(policy)
+      console.log('✅ Created legacy auth block policy:', result.id)
 
       return {
-        executed: false,
-        reason: 'Requires manual approval in Azure AD (dry-run mode)'
+        executed: true,
+        policyId: result.id,
+        displayName: result.displayName
       }
     } catch (error) {
       return {
@@ -159,17 +158,15 @@ export class AutoFixAgent {
 
       const update = { state: 'enabled' }
 
-      // Uncomment when ready for production
-      // const result = await this.graphClient
-      //   .api(`/beta/identity/conditionalAccess/policies/${disabledPolicy.id}`)
-      //   .patch(update)
-      // Stub for now
-      console.log(`[DRY-RUN] Would enable CA policy ${disabledPolicy.id}:`, update)
+      const result = await this.graphClient
+        .api(`/beta/identity/conditionalAccess/policies/${disabledPolicy.id}`)
+        .patch(update)
+      console.log(`✅ Enabled CA policy ${disabledPolicy.id}`)
 
       return {
-        executed: false,
-        reason: 'Requires manual approval in Azure AD (dry-run mode)',
-        policyId: disabledPolicy.id
+        executed: true,
+        policyId: disabledPolicy.id,
+        displayName: result.displayName
       }
     } catch (error) {
       return {
@@ -196,16 +193,14 @@ export class AutoFixAgent {
         }
       }
 
-      // Uncomment when ready for production
-      // const result = await this.graphClient
-      //   .api('/policies/authenticationMethodsPolicy')
-      //   .patch(update)
-      // Stub for now
-      console.log('[DRY-RUN] Would enable MFA policy:', update)
+      const result = await this.graphClient
+        .api('/policies/authenticationMethodsPolicy')
+        .patch(update)
+      console.log('✅ Enabled MFA authentication policy')
 
       return {
-        executed: false,
-        reason: 'Requires manual approval in Azure AD (dry-run mode)'
+        executed: true,
+        policyType: 'MFA'
       }
     } catch (error) {
       return {
@@ -230,16 +225,14 @@ export class AutoFixAgent {
         isEnabled: true
       }
 
-      // Uncomment when ready for production
-      // const result = await this.graphClient
-      //   .api('/policies/identitySecurityDefaultsEnforcementPolicy')
-      //   .patch(update)
-      // Stub for now
-      console.log('[DRY-RUN] Would enable security defaults:', update)
+      const result = await this.graphClient
+        .api('/policies/identitySecurityDefaultsEnforcementPolicy')
+        .patch(update)
+      console.log('✅ Enabled security defaults')
 
       return {
-        executed: false,
-        reason: 'Requires manual approval in Azure AD (dry-run mode)'
+        executed: true,
+        policyType: 'SecurityDefaults'
       }
     } catch (error) {
       return {

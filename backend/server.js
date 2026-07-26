@@ -10420,9 +10420,9 @@ app.get('/api/tenantguard/compliance/recommendations/:driftId', (req, res) => {
 
 /**
  * POST /api/tenantguard/compliance/recommendations/:recId/approve
- * Admin approves remediation recommendation
+ * Admin approves remediation recommendation + triggers auto-fix if enabled
  */
-app.post('/api/tenantguard/compliance/recommendations/:recId/approve', (req, res) => {
+app.post('/api/tenantguard/compliance/recommendations/:recId/approve', async (req, res) => {
   try {
     const agent = getComplianceDriftAgent()
     if (!agent) {
@@ -10433,7 +10433,53 @@ app.post('/api/tenantguard/compliance/recommendations/:recId/approve', (req, res
     const adminEmail = req.user?.email || 'unknown@contoso.com'
 
     agent.approveRecommendation(req.params.recId, adminEmail, notes)
-    res.json({ success: true, data: { status: 'approved' } })
+
+    // Check if auto-remediation is enabled
+    const remSettings = SettingsService.getRemediationSettings()
+    let autoFixResult = null
+
+    if (remSettings.enabled) {
+      const autoFixAgent = getAutoFixAgent()
+      if (autoFixAgent) {
+        try {
+          // Get the recommendation details to find the control ID and drift info
+          const db = getDatabase()
+          const rec = db.prepare(
+            'SELECT control_id, drift_id FROM compliance_recommendations WHERE id = ?'
+          ).get(req.params.recId)
+
+          if (rec) {
+            autoFixResult = await autoFixAgent.executeRemediation(rec.control_id, { id: rec.drift_id })
+            console.log(`⚡ Auto-fix triggered for ${rec.control_id}:`, autoFixResult)
+
+            // Log to event bus
+            const eventBus = getEventBus()
+            if (eventBus) {
+              eventBus.publish('auto_fix_executed', {
+                controlId: rec.control_id,
+                driftId: rec.drift_id,
+                recId: req.params.recId,
+                result: autoFixResult,
+                triggeredBy: adminEmail,
+                timestamp: new Date().toISOString()
+              })
+            }
+          }
+        } catch (autoFixErr) {
+          console.error('Auto-fix execution failed:', autoFixErr.message)
+          autoFixResult = { executed: false, error: autoFixErr.message }
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        status: 'approved',
+        autoFixTriggered: remSettings.enabled && !!autoFixResult,
+        autoFixResult
+      }
+    })
   } catch (err) {
     console.error('Approve recommendation error:', err.message)
     res.status(500).json({ success: false, error: err.message })
