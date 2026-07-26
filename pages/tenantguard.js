@@ -1519,9 +1519,22 @@ async function refreshData() {
   try {
     console.log('📡 Fetching real-time data from backend...')
 
+    // Load alert filter setting
+    let alertsUrl = `${API_BASE}/api/tenantguard/alerts?limit=1000`
+    try {
+      const filterRes = await fetch('http://localhost:3000/api/tenantguard/settings/alert-filter')
+      const filterData = await filterRes.json()
+      if (filterData.data?.excludeInformational) {
+        alertsUrl += '&exclude=informational'
+        console.log('🔍 Filtering out informational events')
+      }
+    } catch (e) {
+      console.warn('Could not load alert filter setting:', e.message)
+    }
+
     // Parallel fetch from all backend APIs
     const [alertsRes, correlationsRes, patternsRes, riskRes, riskHistRes] = await Promise.all([
-      fetch(`${API_BASE}/api/tenantguard/alerts?limit=1000`).then(r => r.json()).catch(e => {
+      fetch(alertsUrl).then(r => r.json()).catch(e => {
         console.error('Failed to fetch alerts:', e)
         return { success: false, data: [] }
       }),

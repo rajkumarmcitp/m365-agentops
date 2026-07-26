@@ -62,6 +62,27 @@ export function renderTenantGuardSettings(el) {
           <span id="remediation-save-status" style="font-size:12px;margin-left:10px"></span>
         </section>
 
+        <!-- Alert Filtering Section -->
+        <section class="settings-section" id="alert-filtering-section">
+          <h2>🔍 Alert Filtering</h2>
+
+          <div class="form-group">
+            <label class="settings-label">Exclude Informational Events</label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="exclude-informational-alerts" style="width:18px;height:18px;cursor:pointer">
+              <span style="font-size:13px">Hide read-only operations from alerts (Get, Read, List, View, Check, etc.)</span>
+            </label>
+          </div>
+
+          <div style="font-size:11px;color:var(--color-text-secondary);margin:12px 0;padding:10px;background:var(--color-bg-tertiary);border-radius:4px">
+            <strong>When enabled:</strong> Shows only security-relevant events like policy changes, admin actions, and failed operations.<br>
+            <strong>When disabled (default):</strong> Shows all audit log events including informational read-only operations.
+          </div>
+
+          <button class="btn btn-primary" id="save-alert-filter-settings">Save Filter Settings</button>
+          <span id="alert-filter-save-status" style="font-size:12px;margin-left:10px"></span>
+        </section>
+
         <!-- Auto-Fix Activity Monitoring Section -->
         <section class="settings-section" id="auto-fix-activity-section">
           <h2>⚡ Auto-Fix Activity Monitoring</h2>
@@ -463,6 +484,19 @@ function attachEventListeners() {
     }
   })
 
+  // Alert Filtering
+  document.getElementById('save-alert-filter-settings')?.addEventListener('click', async () => {
+    const excludeInformational = document.getElementById('exclude-informational-alerts')?.checked || false
+    try {
+      await saveAlertFilterSettings({ excludeInformational })
+      const statusEl = document.getElementById('alert-filter-save-status')
+      statusEl.textContent = '✅ Saved'
+      setTimeout(() => { statusEl.textContent = '' }, 3000)
+    } catch (err) {
+      document.getElementById('alert-filter-save-status').textContent = '❌ Save failed'
+    }
+  })
+
   // Auto-fix activity monitoring
   document.getElementById('refresh-auto-fix-history')?.addEventListener('click', loadAutoFixHistory)
 
@@ -761,6 +795,11 @@ async function loadSettings() {
     const approvalCb = document.getElementById('remediation-requires-approval')
     if (approvalCb) approvalCb.checked = remSettings.requiresApproval
 
+    // Load alert filter settings
+    const filterSettings = await getAlertFilterSettings()
+    const excludeInfoCb = document.getElementById('exclude-informational-alerts')
+    if (excludeInfoCb) excludeInfoCb.checked = filterSettings.excludeInformational || false
+
     // Load auto-fix history
     await loadAutoFixHistory()
 
@@ -921,4 +960,26 @@ function showToast(message, type = 'info') {
   setTimeout(() => {
     toast.classList.remove('show')
   }, 4000)
+}
+
+async function getAlertFilterSettings() {
+  try {
+    const response = await fetch('http://localhost:3000/api/tenantguard/settings/alert-filter')
+    const result = await response.json()
+    return result.data || { excludeInformational: false }
+  } catch (error) {
+    console.error('Error loading alert filter settings:', error)
+    return { excludeInformational: false }
+  }
+}
+
+async function saveAlertFilterSettings(settings) {
+  const response = await fetch('http://localhost:3000/api/tenantguard/settings/alert-filter', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings)
+  })
+  const result = await response.json()
+  if (!result.success) throw new Error(result.error || 'Failed to save settings')
+  return result.data
 }

@@ -10667,6 +10667,36 @@ app.post('/api/tenantguard/settings/remediation', (req, res) => {
 })
 
 /**
+ * GET /api/tenantguard/settings/alert-filter
+ * Get alert filter settings
+ */
+app.get('/api/tenantguard/settings/alert-filter', (req, res) => {
+  try {
+    const excludeInformational = SettingsService.getSetting('alert_exclude_informational', 'false') === 'true'
+    res.json({ success: true, data: { excludeInformational } })
+  } catch (err) {
+    console.error('Get alert filter settings error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/settings/alert-filter
+ * Save alert filter settings
+ */
+app.post('/api/tenantguard/settings/alert-filter', (req, res) => {
+  try {
+    const { excludeInformational = false } = req.body
+    SettingsService.setSetting('alert_exclude_informational', String(excludeInformational), 'Exclude informational alerts from display', req.user?.email || 'system')
+    const setting = SettingsService.getSetting('alert_exclude_informational', 'false') === 'true'
+    res.json({ success: true, data: { excludeInformational: setting } })
+  } catch (err) {
+    console.error('Save alert filter settings error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
  * GET /api/tenantguard/auto-fix/history
  * Get auto-fix execution history
  */
