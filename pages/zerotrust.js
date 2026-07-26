@@ -405,6 +405,9 @@ function renderZeroTrustWithData(el) {
         <button class="tab-btn" data-zt-tab="ai">
           <i class="ti ti-brain"></i><span>AI Security</span>
         </button>
+        <button class="tab-btn" data-zt-tab="drifts">
+          <i class="ti ti-alert-circle"></i><span>Drifts</span>
+        </button>
         <button class="tab-btn" data-zt-tab="frameworks">
           <i class="ti ti-certificate"></i><span>Frameworks</span>
         </button>
@@ -525,6 +528,9 @@ function renderZTTabContent(el) {
       setupExceptionHandlers()
       window.loadZTExceptions()
     }, 50)
+  } else if (activeTab === 'drifts') {
+    contentEl.innerHTML = renderZTDriftsTab()
+    setTimeout(() => loadDriftTabStats(), 50)
   } else {
     const pillarName = pillarsMap[activeTab]
     const pillarStats = realValidations.summary.byPillar[pillarName]
@@ -2138,6 +2144,9 @@ function renderZeroTrustWithDemoData(el) {
         <button class="tab-btn" data-zt-tab="ai">
           <i class="ti ti-brain"></i><span>AI Security</span>
         </button>
+        <button class="tab-btn" data-zt-tab="drifts">
+          <i class="ti ti-alert-circle"></i><span>Drifts</span>
+        </button>
         <button class="tab-btn" data-zt-tab="frameworks">
           <i class="ti ti-certificate"></i><span>Frameworks</span>
         </button>
@@ -2651,4 +2660,119 @@ function renderRestoreExplorer() {
       </div>
     </div>
   `
+}
+
+function renderZTDriftsTab() {
+  const allDrifts = Object.values(complianceDrifts).flat()
+  const openDrifts = allDrifts.filter(d => !d.drift_resolved_at)
+  const criticalDrifts = openDrifts.filter(d => d.severity === 'CRITICAL')
+  const highDrifts = openDrifts.filter(d => d.severity === 'HIGH')
+
+  if (openDrifts.length === 0) {
+    return `
+      <div style="padding:40px;text-align:center;color:var(--color-text-secondary)">
+        <div style="font-size:48px;margin-bottom:16px">✅</div>
+        <h3 style="margin:0 0 8px 0;color:var(--color-text-primary)">No open compliance drifts detected</h3>
+        <p style="margin:0;font-size:13px">All CIS controls are in compliance.</p>
+      </div>
+    `
+  }
+
+  const severityColors = {
+    'CRITICAL': { bg: '#FCE8E8', text: '#A32D2D' },
+    'HIGH': { bg: '#FEF3C7', text: '#D97706' },
+    'MEDIUM': { bg: '#FFF7ED', text: '#B45309' },
+    'LOW': { bg: '#F0FDF4', text: '#15803D' }
+  }
+
+  const driftTypeLabels = {
+    'disabled': '⊗ Disabled',
+    'deleted': '🗑️ Deleted',
+    'modified': '✏️ Modified'
+  }
+
+  const formatTimeAgo = (timestamp) => {
+    if (!timestamp) return 'unknown'
+    const date = new Date(timestamp)
+    const now = new Date()
+    const seconds = Math.floor((now - date) / 1000)
+    if (seconds < 60) return `${seconds}s ago`
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+    return `${Math.floor(seconds / 86400)}d ago`
+  }
+
+  // Sort by severity: CRITICAL → HIGH → MEDIUM → LOW
+  const sorted = [...openDrifts].sort((a, b) => {
+    const severityOrder = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
+    return (severityOrder[a.severity] || 4) - (severityOrder[b.severity] || 4)
+  })
+
+  return `
+    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
+        <div style="font-size:24px;font-weight:700;color:var(--color-primary)">${openDrifts.length}</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Open Drifts</div>
+      </div>
+      <div class="card" style="flex:1;min-width:140px;padding:12px;background:#FCE8E8;text-align:center">
+        <div style="font-size:24px;font-weight:700;color:#A32D2D">${criticalDrifts.length}</div>
+        <div style="font-size:11px;color:#A32D2D;margin-top:4px">Critical</div>
+      </div>
+      <div class="card" style="flex:1;min-width:140px;padding:12px;background:#FEF3C7;text-align:center">
+        <div style="font-size:24px;font-weight:700;color:#D97706">${highDrifts.length}</div>
+        <div style="font-size:11px;color:#D97706;margin-top:4px">High</div>
+      </div>
+      <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
+        <div style="font-size:24px;font-weight:700;color:var(--color-text-primary)" id="drift-resolved-count">0</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Resolved</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden;border:1px solid var(--color-border-secondary)">
+      <div style="display:grid;grid-template-columns:100px 1fr 150px 150px 200px;gap:0;background:var(--color-bg-tertiary);padding:12px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);border-bottom:1px solid var(--color-border-secondary)">
+        <div>Severity</div>
+        <div>Control</div>
+        <div>Type</div>
+        <div>Detected</div>
+        <div>Status</div>
+      </div>
+
+      ${sorted.map(drift => {
+        const color = severityColors[drift.severity] || severityColors.LOW
+        const statusText = drift.approval_status === 'pending' ? 'Pending Approval' :
+                          drift.approval_status === 'approved' ? 'Approved' :
+                          drift.approval_status === 'rejected' ? 'Rejected' : 'No Recommendation'
+        return `
+          <div style="display:grid;grid-template-columns:100px 1fr 150px 150px 200px;gap:0;padding:12px;border-bottom:0.5px solid var(--color-border-tertiary);align-items:center;hover-effect:true"
+               data-drift-control-id="${drift.control_id}">
+            <div style="font-weight:600;color:${color.text};background:${color.bg};padding:3px 8px;border-radius:3px;text-align:center;font-size:10px">${drift.severity}</div>
+            <div style="font-size:11px">
+              <div style="font-weight:600;margin-bottom:2px">${drift.control_id}</div>
+              <div style="font-size:10px;color:var(--color-text-secondary)">${drift.control_name || 'Unknown control'}</div>
+            </div>
+            <div style="font-size:10px;color:var(--color-text-secondary)">${driftTypeLabels[drift.drift_type] || drift.drift_type}</div>
+            <div style="font-size:10px;color:var(--color-text-secondary)">${formatTimeAgo(drift.drift_detected_at)}</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:10px;color:var(--color-text-secondary)">${statusText}</span>
+              <button class="btn btn-sm" onclick="window.showDriftDetails('${drift.control_id}')" style="padding:4px 12px;font-size:11px">View</button>
+            </div>
+          </div>
+        `
+      }).join('')}
+    </div>
+  `
+}
+
+async function loadDriftTabStats() {
+  try {
+    const response = await fetch(`${API_BASE}/api/tenantguard/compliance/stats`)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
+    const el = document.getElementById('drift-resolved-count')
+    if (el && data.data) {
+      el.textContent = data.data.resolvedDrifts || 0
+    }
+  } catch (err) {
+    console.error('Failed to load drift stats:', err)
+  }
 }
