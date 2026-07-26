@@ -1521,7 +1521,7 @@ async function refreshData() {
 
     // Parallel fetch from all backend APIs
     const [alertsRes, correlationsRes, patternsRes, riskRes, riskHistRes] = await Promise.all([
-      fetch(`${API_BASE}/api/tenantguard/alerts?limit=1000&exclude=informational`).then(r => r.json()).catch(e => {
+      fetch(`${API_BASE}/api/tenantguard/alerts?limit=1000`).then(r => r.json()).catch(e => {
         console.error('Failed to fetch alerts:', e)
         return { success: false, data: [] }
       }),
