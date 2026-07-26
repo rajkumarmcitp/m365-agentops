@@ -1,4 +1,5 @@
 import { getAlertSummary, getAlerts, dismissAlert, getCorrelations, getPatterns, startInvestigation, getInvestigation, chatInvestigation, generateInvestigationReport, triggerAutonomousInvestigation, getAgentInvestigations, getAgentInvestigation, getAgentStatus, pauseAgent, resumeAgent, getOrchestratorStatus, getOrchestratorEvents, pauseAllAgents, resumeAllAgents } from '../lib/tenantguard-client.js'
+import { getCurrentRiskAssessment, getRiskHistory, triggerRiskAssessment } from '../lib/risk-assessment-client.js'
 import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { renderTenantGuardSettings } from './tenantguard-settings.js'
@@ -28,6 +29,10 @@ let selectedInvestigationId = null
 let orchestratorStatus = {}
 let orchestratorEvents = []
 let orchestratorTasks = []
+
+// Risk assessment state
+let riskAssessment = null
+let riskHistory = []
 
 // Real-time update config
 const REFRESH_INTERVAL = 60 * 1000 // 60 seconds (1 minute) for efficient polling
@@ -168,6 +173,9 @@ function renderContent(el) {
       <button class="tab-btn ${activeTab === 'agent' ? 'active' : ''}" data-tab="agent">
         <i class="ti ti-robot"></i> Agent <span class="tab-badge" id="agent-active-badge"></span>
       </button>
+      <button class="tab-btn ${activeTab === 'risk' ? 'active' : ''}" data-tab="risk">
+        <i class="ti ti-flame"></i> Risk
+      </button>
       <button class="tab-btn ${activeTab === 'settings' ? 'active' : ''}" data-tab="settings">
         <i class="ti ti-settings"></i> Settings
       </button>
@@ -198,6 +206,13 @@ function renderContent(el) {
       } else {
         // Stop polling if leaving agent tab
         if (agentPollingInterval) clearInterval(agentPollingInterval)
+      }
+
+      // Attach risk tab listeners if risk tab selected
+      if (activeTab === 'risk') {
+        setTimeout(() => {
+          attachRiskTabListeners()
+        }, 0)
       }
     })
   })
@@ -380,6 +395,8 @@ function renderTabContent(riskScore, riskLevel) {
       return renderForensicTimelineView()
     case 'agent':
       return renderAgentTab()
+    case 'risk':
+      return renderRiskTab()
     case 'settings':
       return `<div class="content-area" id="settings-container"></div>`
     default:
@@ -1503,7 +1520,7 @@ async function refreshData() {
     console.log('📡 Fetching real-time data from backend...')
 
     // Parallel fetch from all backend APIs
-    const [alertsRes, correlationsRes, patternsRes] = await Promise.all([
+    const [alertsRes, correlationsRes, patternsRes, riskRes, riskHistRes] = await Promise.all([
       fetch(`${API_BASE}/api/tenantguard/alerts?limit=1000&exclude=informational`).then(r => r.json()).catch(e => {
         console.error('Failed to fetch alerts:', e)
         return { success: false, data: [] }
@@ -1516,6 +1533,14 @@ async function refreshData() {
         console.error('Failed to fetch patterns:', e)
         return { success: false, data: [] }
       }),
+      getCurrentRiskAssessment().catch(e => {
+        console.error('Failed to fetch risk assessment:', e)
+        return null
+      }),
+      getRiskHistory(10).catch(e => {
+        console.error('Failed to fetch risk history:', e)
+        return []
+      })
     ])
 
     // Use demo data only for TenantGuard
@@ -1532,6 +1557,13 @@ async function refreshData() {
       { id: 'p3', type: 'Lateral Movement', severity: 'HIGH', events: 5, pattern: 'Service account compromise' },
     ]
     console.log(`✅ Loaded ${allPatterns.length} demo patterns`)
+
+    // Load risk assessment data
+    riskAssessment = riskRes || null
+    riskHistory = riskHistRes || []
+    if (riskAssessment) {
+      console.log(`✅ Risk assessment loaded: score=${riskAssessment.overall_score} (${riskAssessment.risk_level})`)
+    }
   } catch (error) {
     console.error('Error refreshing data:', error)
     allAlerts = getDemoAlerts()
@@ -2575,6 +2607,151 @@ function renderOrchestratorEventStream() {
       </div>
     </div>
   `
+}
+
+function renderRiskTab() {
+  if (!riskAssessment) {
+    return `
+      <div class="content-area">
+        <div class="card" style="padding: 40px; text-align: center; background: var(--color-bg-secondary)">
+          <div style="font-size: 48px; margin-bottom: 16px">📊</div>
+          <h2 style="margin: 0 0 8px 0">No Risk Assessment Yet</h2>
+          <p style="margin: 0; color: var(--color-text-secondary)">The risk assessment agent runs every 30 minutes. Click below to trigger an immediate assessment.</p>
+          <button class="btn btn-primary" id="trigger-risk-btn" style="margin-top: 16px"><i class="ti ti-lightning"></i> Trigger Assessment</button>
+        </div>
+      </div>
+    `
+  }
+
+  const riskColors = {
+    'CRITICAL': '#A32D2D',
+    'HIGH': '#D97706',
+    'MEDIUM': '#B45309',
+    'LOW': '#15803D'
+  }
+
+  const color = riskColors[riskAssessment.risk_level] || '#0C447C'
+  const lastAssessed = riskAssessment.assessed_at ? new Date(riskAssessment.assessed_at).toLocaleString() : 'Unknown'
+  const trendIndicator = {
+    'improving': '📈 Improving',
+    'stable': '→ Stable',
+    'deteriorating': '📉 Deteriorating'
+  }[riskAssessment.trend] || 'Unknown'
+
+  return `
+    <div class="content-area">
+      <!-- Risk Score Gauge -->
+      <div class="card" style="padding: 30px; background: linear-gradient(135deg, ${color}08 0%, ${color}04 100%); border-left: 4px solid ${color}">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: center">
+          <div style="text-align: center">
+            <div style="font-size: 72px; font-weight: 700; color: ${color}; line-height: 1">${riskAssessment.overall_score}</div>
+            <div style="font-size: 14px; color: var(--color-text-secondary); margin-top: 8px">Risk Score (0-100)</div>
+          </div>
+          <div>
+            <div style="display: flex; gap: 12px; margin-bottom: 16px; align-items: center">
+              <div style="font-size: 20px; font-weight: 700; color: ${color}; min-width: 120px">${riskAssessment.risk_level}</div>
+              <div style="flex: 1; height: 8px; background: var(--color-border-primary); border-radius: 4px; overflow: hidden">
+                <div style="width: ${riskAssessment.overall_score}%; height: 100%; background: ${color}; transition: width 0.3s"></div>
+              </div>
+            </div>
+            <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px">
+              Last assessed: ${lastAssessed}
+            </div>
+            <div style="font-size: 13px; color: var(--color-text-secondary)">
+              Trend: <strong>${trendIndicator}</strong>
+              ${riskAssessment.previous_score ? `(was ${riskAssessment.previous_score})` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pillar Breakdown -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px">
+        <div class="card" style="padding: 20px">
+          <div style="font-size: 12px; color: var(--color-text-secondary); font-weight: 600; margin-bottom: 12px">COMPLIANCE</div>
+          <div style="font-size: 32px; font-weight: 700; color: #A32D2D; margin-bottom: 8px">${riskAssessment.compliance_score}/<span style="font-size: 20px">40</span></div>
+          <div style="height: 6px; background: var(--color-border-primary); border-radius: 3px; overflow: hidden">
+            <div style="width: ${(riskAssessment.compliance_score / 40) * 100}%; height: 100%; background: #A32D2D"></div>
+          </div>
+          <div style="font-size: 12px; color: var(--color-text-secondary); margin-top: 8px">${riskAssessment.open_drifts} open drift${riskAssessment.open_drifts !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="card" style="padding: 20px">
+          <div style="font-size: 12px; color: var(--color-text-secondary); font-weight: 600; margin-bottom: 12px">THREATS</div>
+          <div style="font-size: 32px; font-weight: 700; color: #D97706; margin-bottom: 8px">${riskAssessment.threat_score}/<span style="font-size: 20px">35</span></div>
+          <div style="height: 6px; background: var(--color-border-primary); border-radius: 3px; overflow: hidden">
+            <div style="width: ${(riskAssessment.threat_score / 35) * 100}%; height: 100%; background: #D97706"></div>
+          </div>
+          <div style="font-size: 12px; color: var(--color-text-secondary); margin-top: 8px">${riskAssessment.critical_alerts} critical alert${riskAssessment.critical_alerts !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="card" style="padding: 20px">
+          <div style="font-size: 12px; color: var(--color-text-secondary); font-weight: 600; margin-bottom: 12px">POSTURE</div>
+          <div style="font-size: 32px; font-weight: 700; color: #B45309; margin-bottom: 8px">${riskAssessment.posture_score}/<span style="font-size: 20px">25</span></div>
+          <div style="height: 6px; background: var(--color-border-primary); border-radius: 3px; overflow: hidden">
+            <div style="width: ${(riskAssessment.posture_score / 25) * 100}%; height: 100%; background: #B45309"></div>
+          </div>
+          <div style="font-size: 12px; color: var(--color-text-secondary); margin-top: 8px">${riskAssessment.control_fail_rate}% control failure</div>
+        </div>
+      </div>
+
+      <!-- Top Risk Factors -->
+      ${riskAssessment.factors && riskAssessment.factors.length > 0 ? `
+        <div class="card" style="padding: 20px; margin-top: 20px">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 16px">🚨 Top Risk Factors</div>
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            ${riskAssessment.factors.map((factor, idx) => {
+              const impactColors = {
+                'CRITICAL': '#A32D2D',
+                'HIGH': '#D97706',
+                'MEDIUM': '#B45309',
+                'LOW': '#15803D'
+              }
+              const impactColor = impactColors[factor.impact] || '#0C447C'
+              return `
+                <div style="padding: 12px; background: var(--color-bg-secondary); border-radius: 6px; border-left: 3px solid ${impactColor}">
+                  <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 4px">
+                    <div style="font-weight: 600; color: var(--color-text-primary)">${idx + 1}. ${factor.title}</div>
+                    <span style="font-size: 11px; font-weight: 600; color: ${impactColor}; background: ${impactColor}12; padding: 2px 8px; border-radius: 3px">${factor.impact}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center">
+                    <div style="font-size: 12px; color: var(--color-text-secondary)">${factor.detail}</div>
+                    <span style="font-size: 11px; background: ${factor.category === 'Compliance' ? '#A32D2D' : factor.category === 'Threats' ? '#D97706' : '#B45309'}12; color: ${factor.category === 'Compliance' ? '#A32D2D' : factor.category === 'Threats' ? '#D97706' : '#B45309'}; padding: 2px 8px; border-radius: 3px; font-weight: 600">${factor.category}</span>
+                  </div>
+                </div>
+              `
+            }).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Control Buttons -->
+      <div style="display: flex; gap: 12px; margin-top: 20px">
+        <button class="btn btn-primary" id="trigger-risk-btn"><i class="ti ti-lightning"></i> Trigger Assessment Now</button>
+      </div>
+    </div>
+  `
+}
+
+function attachRiskTabListeners() {
+  const triggerBtn = document.getElementById('trigger-risk-btn')
+  if (triggerBtn) {
+    triggerBtn.addEventListener('click', async () => {
+      triggerBtn.disabled = true
+      showToast('Running risk assessment...', 'info')
+      try {
+        await triggerRiskAssessment()
+        const assessment = await getCurrentRiskAssessment()
+        if (assessment) {
+          riskAssessment = assessment
+          renderContent(document.getElementById('page-tenantguard'))
+          showToast('✅ Risk assessment complete', 'success')
+        }
+      } catch (err) {
+        showToast('Failed to trigger assessment', 'error')
+      } finally {
+        triggerBtn.disabled = false
+      }
+    })
+  }
 }
 
 function formatTimeAgo(timestamp) {
