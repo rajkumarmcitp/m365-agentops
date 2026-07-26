@@ -21,7 +21,8 @@ const store = {
   orchestratorConflicts: {},
   complianceDrifts: {},
   complianceRecommendations: {},
-  complianceChecks: {}
+  complianceChecks: {},
+  riskAssessments: {}
 }
 
 export async function initDatabase() {
@@ -382,6 +383,30 @@ class DatabaseWrapper {
       return { lastID: 1, changes: 1 }
     }
 
+    // Handle INSERT INTO risk_assessments
+    if (sql.includes('INSERT INTO risk_assessments') || sql.includes('INSERT') && sql.includes('risk_assessments')) {
+      const [id, assessed_at, overall_score, risk_level, compliance_score, threat_score, posture_score, trend, open_drifts, critical_alerts, true_positives, control_fail_rate, factors, previous_score] = params
+      this.store.riskAssessments[id] = {
+        id,
+        assessed_at: assessed_at || new Date().toISOString(),
+        overall_score,
+        risk_level,
+        compliance_score,
+        threat_score,
+        posture_score,
+        trend,
+        open_drifts,
+        critical_alerts,
+        true_positives,
+        control_fail_rate,
+        factors: typeof factors === 'string' ? JSON.parse(factors) : factors,
+        previous_score,
+        created_at: new Date().toISOString()
+      }
+      console.log(`✓ Risk assessment created: score=${overall_score} (${risk_level})`)
+      return { lastID: 1, changes: 1 }
+    }
+
     // Handle UPDATE compliance_drifts
     if (sql.includes('UPDATE compliance_drifts')) {
       const whereMatch = sql.match(/WHERE\s+id\s*=\s*\?/i)
@@ -474,7 +499,8 @@ class DatabaseWrapper {
         'agent_queue': 'agentQueue',
         'compliance_drifts': 'complianceDrifts',
         'compliance_recommendations': 'complianceRecommendations',
-        'compliance_checks': 'complianceChecks'
+        'compliance_checks': 'complianceChecks',
+        'risk_assessments': 'riskAssessments'
       }
       const storeKey = tableMap[table] || table
       const data = this.store[storeKey] || {}
@@ -499,7 +525,8 @@ class DatabaseWrapper {
         'agent_queue': 'agentQueue',
         'compliance_drifts': 'complianceDrifts',
         'compliance_recommendations': 'complianceRecommendations',
-        'compliance_checks': 'complianceChecks'
+        'compliance_checks': 'complianceChecks',
+        'risk_assessments': 'riskAssessments'
       }
 
       const storeKey = tableMap[table] || table

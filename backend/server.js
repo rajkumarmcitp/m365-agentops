@@ -62,6 +62,7 @@ import { initializeEventBus, getEventBus } from './tenantguard/agent-event-bus.j
 import { initializeContextStore, getContextStore } from './tenantguard/agent-context-store.js'
 import { AgentOrchestrator, setOrchestrator, getOrchestrator } from './tenantguard/agent-orchestrator.js'
 import { initializeComplianceDriftAgent, getComplianceDriftAgent } from './tenantguard/compliance-drift-agent.js'
+import { initializeRiskAssessmentAgent, getRiskAssessmentAgent } from './tenantguard/risk-assessment-agent.js'
 import {
   checkPowerShellAvailable,
   checkInstalledModules,
@@ -806,6 +807,10 @@ async function initializeTenantGuard() {
     // Initialize compliance drift detection agent
     initializeComplianceDriftAgent(db, eventBus, graphClient)
     console.log('✅ Compliance Drift Detection Agent initialized')
+
+    // Initialize risk assessment agent
+    initializeRiskAssessmentAgent(db, eventBus)
+    console.log('✅ Risk Assessment Agent initialized')
 
     // if (graphClient) {
     //   startAuditCollectionJob(graphClient)
@@ -10486,6 +10491,84 @@ app.get('/api/tenantguard/compliance/stats', (req, res) => {
     res.json({ success: true, data: stats })
   } catch (err) {
     console.error('Get stats error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * ============================================================
+ * Risk Assessment Endpoints
+ * ============================================================
+ */
+
+/**
+ * GET /api/tenantguard/risk/current
+ * Get current risk assessment
+ */
+app.get('/api/tenantguard/risk/current', (req, res) => {
+  try {
+    const db = getDatabase()
+    const assessments = db.prepare('SELECT * FROM risk_assessments ORDER BY assessed_at DESC LIMIT 1').all()
+    const current = assessments.length > 0 ? assessments[0] : null
+    res.json({ success: true, data: current })
+  } catch (err) {
+    console.error('Get current risk error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/risk/history
+ * Get risk assessment history
+ */
+app.get('/api/tenantguard/risk/history', (req, res) => {
+  try {
+    const db = getDatabase()
+    const limit = Math.min(parseInt(req.query.limit || 10), 100)
+    const history = db.prepare(`SELECT * FROM risk_assessments ORDER BY assessed_at DESC LIMIT ${limit}`).all()
+    res.json({ success: true, data: history })
+  } catch (err) {
+    console.error('Get risk history error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * GET /api/tenantguard/risk/factors
+ * Get top risk factors from latest assessment
+ */
+app.get('/api/tenantguard/risk/factors', (req, res) => {
+  try {
+    const db = getDatabase()
+    const assessments = db.prepare('SELECT factors FROM risk_assessments ORDER BY assessed_at DESC LIMIT 1').all()
+    let factors = []
+    if (assessments.length > 0 && assessments[0].factors) {
+      factors = typeof assessments[0].factors === 'string' ? JSON.parse(assessments[0].factors) : assessments[0].factors
+    }
+    res.json({ success: true, data: factors })
+  } catch (err) {
+    console.error('Get risk factors error:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+/**
+ * POST /api/tenantguard/risk/trigger
+ * Trigger immediate risk assessment
+ */
+app.post('/api/tenantguard/risk/trigger', (req, res) => {
+  try {
+    const agent = getRiskAssessmentAgent()
+    if (!agent) {
+      return res.status(503).json({ success: false, error: 'Risk Assessment Agent not initialized' })
+    }
+    agent.runAssessment()
+    const db = getDatabase()
+    const assessments = db.prepare('SELECT * FROM risk_assessments ORDER BY assessed_at DESC LIMIT 1').all()
+    const current = assessments.length > 0 ? assessments[0] : null
+    res.json({ success: true, data: current })
+  } catch (err) {
+    console.error('Trigger risk assessment error:', err.message)
     res.status(500).json({ success: false, error: err.message })
   }
 })
