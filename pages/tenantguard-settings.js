@@ -7,7 +7,7 @@
 import './styles/tenantguard-settings.css'
 import emailSettings from '../lib/email-settings-manager.js'
 import { api } from '../lib/api-client.js'
-import { getRemediationSettings, saveRemediationSettings } from '../lib/remediation-settings-client.js'
+import { getRemediationSettings, saveRemediationSettings, getAutoFixHistory } from '../lib/remediation-settings-client.js'
 
 export function renderTenantGuardSettings(el) {
   try {
@@ -60,6 +60,66 @@ export function renderTenantGuardSettings(el) {
 
           <button class="btn btn-primary" id="save-remediation-settings">Save Remediation Settings</button>
           <span id="remediation-save-status" style="font-size:12px;margin-left:10px"></span>
+        </section>
+
+        <!-- Auto-Fix Activity Monitoring Section -->
+        <section class="settings-section" id="auto-fix-activity-section">
+          <h2>⚡ Auto-Fix Activity Monitoring</h2>
+
+          <!-- Summary Stats -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px">
+            <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-primary);border-radius:8px;padding:16px;text-align:center">
+              <div style="font-size:28px;font-weight:bold;color:#0C447C;margin-bottom:4px" id="stat-total-executed">0</div>
+              <div style="font-size:12px;color:var(--color-text-secondary)">Total Executed</div>
+            </div>
+            <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-primary);border-radius:8px;padding:16px;text-align:center">
+              <div style="font-size:28px;font-weight:bold;color:#3B6D11;margin-bottom:4px" id="stat-success-rate">0%</div>
+              <div style="font-size:12px;color:var(--color-text-secondary)">Success Rate</div>
+            </div>
+            <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-primary);border-radius:8px;padding:16px;text-align:center">
+              <div style="font-size:28px;font-weight:bold;color:#A32D2D;margin-bottom:4px" id="stat-failures">0</div>
+              <div style="font-size:12px;color:var(--color-text-secondary)">Failures</div>
+            </div>
+            <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border-primary);border-radius:8px;padding:16px;text-align:center">
+              <div style="font-size:14px;font-weight:600;color:#666;margin-bottom:4px" id="stat-last-execution">Never</div>
+              <div style="font-size:12px;color:var(--color-text-secondary)">Last Execution</div>
+            </div>
+          </div>
+
+          <!-- Activity Table -->
+          <div style="margin-top:20px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <h3 style="margin:0;font-size:14px;font-weight:600">Recent Executions</h3>
+              <button id="refresh-auto-fix-history" style="padding:6px 12px;background:#E6F1FB;color:#0C447C;border:1px solid #0C447C;border-radius:4px;cursor:pointer;font-size:12px">
+                🔄 Refresh
+              </button>
+            </div>
+
+            <div id="auto-fix-history-table" style="overflow-x:auto">
+              <table style="width:100%;border-collapse:collapse;font-size:13px">
+                <thead>
+                  <tr style="background:var(--color-bg-tertiary);border-bottom:2px solid var(--color-border-primary)">
+                    <th style="padding:12px;text-align:left;font-weight:600">Control</th>
+                    <th style="padding:12px;text-align:left;font-weight:600">Status</th>
+                    <th style="padding:12px;text-align:left;font-weight:600">Triggered By</th>
+                    <th style="padding:12px;text-align:left;font-weight:600">Timestamp</th>
+                    <th style="padding:12px;text-align:left;font-weight:600">Details</th>
+                  </tr>
+                </thead>
+                <tbody id="auto-fix-history-body">
+                  <tr>
+                    <td colspan="5" style="padding:24px;text-align:center;color:var(--color-text-tertiary)">
+                      Loading activity...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="margin-top:12px;font-size:11px;color:var(--color-text-secondary)">
+              Showing last 50 auto-fix executions. Updates automatically every 10 seconds.
+            </div>
+          </div>
         </section>
 
         <!-- Email Configuration Section -->
@@ -403,6 +463,9 @@ function attachEventListeners() {
     }
   })
 
+  // Auto-fix activity monitoring
+  document.getElementById('refresh-auto-fix-history')?.addEventListener('click', loadAutoFixHistory)
+
   // Email configuration
   document.getElementById('btn-test-email')?.addEventListener('click', handleTestEmail)
   document.getElementById('btn-save-email')?.addEventListener('click', handleSaveEmail)
@@ -698,6 +761,14 @@ async function loadSettings() {
     const approvalCb = document.getElementById('remediation-requires-approval')
     if (approvalCb) approvalCb.checked = remSettings.requiresApproval
 
+    // Load auto-fix history
+    await loadAutoFixHistory()
+
+    // Set up auto-refresh every 10 seconds
+    if (!window.autoFixHistoryInterval) {
+      window.autoFixHistoryInterval = setInterval(loadAutoFixHistory, 10000)
+    }
+
     // Load recipients from global settings manager
     const recipients = emailSettings.getRecipients()
     const container = document.getElementById('recipients-list')
@@ -754,6 +825,83 @@ async function checkEmailConfig() {
     if (status) {
       status.className = 'status-indicator error'
       status.textContent = '❌ Unreachable'
+    }
+  }
+}
+
+async function loadAutoFixHistory() {
+  try {
+    const history = await getAutoFixHistory()
+
+    // Calculate stats
+    const total = history.length
+    const successful = history.filter(e => e.executed).length
+    const failed = history.filter(e => !e.executed).length
+    const successRate = total > 0 ? Math.round((successful / total) * 100) : 0
+
+    // Update stats
+    document.getElementById('stat-total-executed').textContent = total
+    document.getElementById('stat-success-rate').textContent = `${successRate}%`
+    document.getElementById('stat-failures').textContent = failed
+
+    // Update last execution time
+    if (history.length > 0) {
+      const lastTime = new Date(history[0].timestamp)
+      const now = new Date()
+      const diffMs = now - lastTime
+      const diffMins = Math.floor(diffMs / 60000)
+
+      if (diffMins < 1) {
+        document.getElementById('stat-last-execution').textContent = 'Just now'
+      } else if (diffMins < 60) {
+        document.getElementById('stat-last-execution').textContent = `${diffMins}m ago`
+      } else {
+        const diffHours = Math.floor(diffMins / 60)
+        document.getElementById('stat-last-execution').textContent = `${diffHours}h ago`
+      }
+    }
+
+    // Render table
+    const tbody = document.getElementById('auto-fix-history-body')
+    if (history.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="padding:24px;text-align:center;color:var(--color-text-tertiary)">
+            No auto-fix executions yet
+          </td>
+        </tr>
+      `
+      return
+    }
+
+    tbody.innerHTML = history.map(event => `
+      <tr style="border-bottom:1px solid var(--color-border-primary);hover:background:var(--color-bg-secondary)">
+        <td style="padding:12px;font-weight:600">${event.controlId || 'N/A'}</td>
+        <td style="padding:12px">
+          <span style="display:inline-block;padding:4px 8px;border-radius:3px;background:${event.executed ? '#D1FAE5' : '#FEE2E2'};color:${event.executed ? '#065F46' : '#991B1B'};font-size:11px;font-weight:600">
+            ${event.executed ? '✅ Success' : '❌ Failed'}
+          </span>
+        </td>
+        <td style="padding:12px;font-size:12px;color:var(--color-text-secondary)">${event.triggeredBy || 'System'}</td>
+        <td style="padding:12px;font-size:12px;color:var(--color-text-secondary)">${new Date(event.timestamp).toLocaleString()}</td>
+        <td style="padding:12px;font-size:12px">
+          <span style="color:#0C447C;cursor:pointer" title="${event.policyId || 'N/A'}">
+            ${event.policyId ? '📋 View' : '-'}
+          </span>
+        </td>
+      </tr>
+    `).join('')
+  } catch (err) {
+    console.error('Failed to load auto-fix history:', err)
+    const tbody = document.getElementById('auto-fix-history-body')
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="padding:24px;text-align:center;color:#A32D2D">
+            ❌ Failed to load history
+          </td>
+        </tr>
+      `
     }
   }
 }
