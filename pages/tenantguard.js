@@ -1,4 +1,4 @@
-import { getAlertSummary, getAlerts, dismissAlert, getCorrelations, getPatterns, startInvestigation, getInvestigation, chatInvestigation, generateInvestigationReport, triggerAutonomousInvestigation, getAgentInvestigations, getAgentInvestigation, getAgentStatus, pauseAgent, resumeAgent } from '../lib/tenantguard-client.js'
+import { getAlertSummary, getAlerts, dismissAlert, getCorrelations, getPatterns, startInvestigation, getInvestigation, chatInvestigation, generateInvestigationReport, triggerAutonomousInvestigation, getAgentInvestigations, getAgentInvestigation, getAgentStatus, pauseAgent, resumeAgent, getOrchestratorStatus, getOrchestratorEvents, pauseAllAgents, resumeAllAgents } from '../lib/tenantguard-client.js'
 import { showToast } from '../components/toast.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { renderTenantGuardSettings } from './tenantguard-settings.js'
@@ -23,6 +23,11 @@ let agentInvestigations = []
 let agentStatus = {}
 let agentPollingInterval = null
 let selectedInvestigationId = null
+
+// Orchestrator state
+let orchestratorStatus = {}
+let orchestratorEvents = []
+let orchestratorTasks = []
 
 // Real-time update config
 const REFRESH_INTERVAL = 60 * 1000 // 60 seconds (1 minute) for efficient polling
@@ -2179,6 +2184,9 @@ function renderAgentTab() {
         <button class="agent-subtab-btn" data-subtab="history" style="padding: 8px 16px; background: none; border: none; color: var(--color-text-secondary); cursor: pointer; font-weight: 600; font-size: 14px">
           📋 History
         </button>
+        <button class="agent-subtab-btn" data-subtab="orchestrator" style="padding: 8px 16px; background: none; border: none; color: var(--color-text-secondary); cursor: pointer; font-weight: 600; font-size: 14px">
+          🔧 Orchestrator
+        </button>
       </div>
 
       <!-- Active Investigations -->
@@ -2189,6 +2197,11 @@ function renderAgentTab() {
       <!-- Investigation History -->
       <div id="agent-history-section" class="agent-subtab-content" style="display: none">
         ${renderAgentInvestigationHistory()}
+      </div>
+
+      <!-- Orchestrator Panel -->
+      <div id="agent-orchestrator-section" class="agent-subtab-content" style="display: none">
+        ${renderOrchestratorPanel()}
       </div>
 
       <!-- Investigation Detail Panel (shown when selected) -->
@@ -2386,6 +2399,196 @@ function renderAgentInvestigationDetail(invId) {
   `
 }
 
+/**
+ * Orchestrator Panel - Multi-agent coordination UI
+ */
+function renderOrchestratorPanel() {
+  return `
+    <div style="display: flex; flex-direction: column; gap: 20px">
+      <!-- Global Controls -->
+      <div class="card" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border: 1px solid #ddd">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px">
+          <div>
+            <h3 style="margin: 0 0 4px 0; color: #0C447C">🔗 Multi-Agent Orchestration</h3>
+            <p style="margin: 0; font-size: 13px; color: #555">
+              ${orchestratorStatus?.agents?.length || 0} agents ·
+              ${orchestratorStatus?.queue?.filter(t => t.status === 'queued').length || 0} tasks queued ·
+              ${orchestratorStatus?.conflicts?.length || 0} conflicts
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px">
+            ${orchestratorStatus?.allPaused ? `
+              <button class="btn" id="orchestrator-resume-all-btn" style="background: #E6F1FB; color: #0C447C; border: 1px solid #0C447C; padding: 8px 12px; font-size: 13px">
+                <i class="ti ti-play"></i> Resume All
+              </button>
+            ` : `
+              <button class="btn" id="orchestrator-pause-all-btn" style="background: #FFF3CD; color: #854F0B; border: 1px solid #854F0B; padding: 8px 12px; font-size: 13px">
+                <i class="ti ti-pause"></i> Pause All
+              </button>
+            `}
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent Network Cards -->
+      ${renderOrchestratorAgentCards()}
+
+      <!-- Task Queue -->
+      ${renderOrchestratorTaskQueue()}
+
+      <!-- Event Stream -->
+      ${renderOrchestratorEventStream()}
+    </div>
+  `
+}
+
+function renderOrchestratorAgentCards() {
+  const agents = orchestratorStatus?.agents || []
+
+  if (agents.length === 0) {
+    return `<div class="card" style="text-align: center; padding: 30px; color: var(--color-text-secondary)">No agents registered yet</div>`
+  }
+
+  return `
+    <div>
+      <h4 style="margin: 0 0 12px 0; color: #0C447C; font-size: 14px">🤖 Agent Network (${agents.length})</h4>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px">
+        ${agents.map(agent => {
+          const statusColor = agent.status === 'idle' ? '#3B6D11' : agent.status === 'busy' ? '#0C447C' : agent.status === 'paused' ? '#854F0B' : '#888'
+          const statusBg = agent.status === 'idle' ? '#F0F7E8' : agent.status === 'busy' ? '#E6F1FB' : agent.status === 'paused' ? '#FAEEDA' : '#F5F5F5'
+          const typeLabel = agent.type === 'investigation' ? '🚨 Investigation' : '📊 Named'
+
+          return `
+            <div class="card" style="background: ${statusBg}; border-left: 3px solid ${statusColor}">
+              <div style="padding: 12px">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px">
+                  <div>
+                    <p style="margin: 0; font-weight: 600; color: #0C447C; font-size: 14px">${agent.id}</p>
+                    <p style="margin: 0; font-size: 12px; color: ${statusColor}; font-weight: 500">
+                      ${agent.status.toUpperCase()} ${typeLabel}
+                    </p>
+                  </div>
+                </div>
+                <p style="margin: 8px 0 4px 0; font-size: 12px; color: var(--color-text-secondary)">
+                  <i class="ti ti-clock-check"></i> Last: ${formatTimeAgo(agent.lastActivity)}
+                </p>
+                ${agent.currentTask ? `
+                  <p style="margin: 4px 0; font-size: 12px; color: var(--color-text-secondary); background: rgba(255,255,255,0.5); padding: 4px 6px; border-radius: 3px">
+                    Task: ${agent.currentTask}
+                  </p>
+                ` : ''}
+              </div>
+            </div>
+          `
+        }).join('')}
+      </div>
+    </div>
+  `
+}
+
+function renderOrchestratorTaskQueue() {
+  const tasks = orchestratorStatus?.queue || []
+  const queued = tasks.filter(t => t.status === 'queued')
+  const assigned = tasks.filter(t => t.status === 'assigned')
+
+  if (tasks.length === 0) {
+    return `<div class="card" style="text-align: center; padding: 30px; color: var(--color-text-secondary)">No tasks in queue</div>`
+  }
+
+  return `
+    <div>
+      <h4 style="margin: 0 0 12px 0; color: #0C447C; font-size: 14px">📋 Task Queue (${tasks.length})</h4>
+      <div class="card">
+        <table style="width: 100%; font-size: 13px; border-collapse: collapse">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--color-border-primary)">
+              <th style="text-align: left; padding: 10px; font-weight: 600">Priority</th>
+              <th style="text-align: left; padding: 10px; font-weight: 600">Type</th>
+              <th style="text-align: left; padding: 10px; font-weight: 600">Status</th>
+              <th style="text-align: left; padding: 10px; font-weight: 600">Elapsed</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tasks.map(task => {
+              const priorityColor = task.priority === 'P0' ? '#A32D2D' : task.priority === 'P1' ? '#854F0B' : task.priority === 'P2' ? '#0C447C' : '#888'
+              const statusLabel = task.status === 'queued' ? '⏳ Queued' : task.status === 'assigned' ? '⚙️ Running' : '✓ Done'
+              const elapsed = task.startedAt ? formatTimeAgo(task.startedAt) : '-'
+
+              return `
+                <tr style="border-bottom: 1px solid var(--color-border-primary)">
+                  <td style="padding: 10px"><span style="background: ${priorityColor}; color: white; padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 12px">${task.priority}</span></td>
+                  <td style="padding: 10px"><code style="background: #f0f0f0; padding: 2px 4px; border-radius: 2px; font-size: 12px">${task.type}</code></td>
+                  <td style="padding: 10px">${statusLabel}</td>
+                  <td style="padding: 10px">${elapsed}</td>
+                </tr>
+              `
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+}
+
+function renderOrchestratorEventStream() {
+  const events = orchestratorEvents.slice(0, 20)  // last 20
+
+  if (events.length === 0) {
+    return `<div class="card" style="text-align: center; padding: 30px; color: var(--color-text-secondary)">No events yet</div>`
+  }
+
+  const eventIcons = {
+    'THREAT_CONFIRMED': '🚨',
+    'THREAT_DISMISSED': '✓',
+    'COMPLIANCE_VIOLATION': '⚠️',
+    'INVESTIGATION_COMPLETE': '📊',
+    'TASK_QUEUED': '📋',
+    'TASK_ASSIGNED': '⚙️',
+    'TASK_COMPLETED': '✅',
+    'TASK_STALLED': '⏸️',
+    'AGENT_CONFLICT': '⚡',
+    'AGENT_PAUSED': '⏹️',
+    'AGENT_RESUMED': '▶️',
+    'CONFLICT_RESOLVED': '🔧'
+  }
+
+  return `
+    <div>
+      <h4 style="margin: 0 0 12px 0; color: #0C447C; font-size: 14px">📡 Event Stream (Recent)</h4>
+      <div class="card" style="max-height: 400px; overflow-y: auto">
+        ${events.map(event => {
+          const icon = eventIcons[event.eventType] || '•'
+          return `
+            <div style="padding: 8px; border-bottom: 1px solid var(--color-border-primary); font-size: 12px">
+              <div style="display: flex; gap: 8px; align-items: flex-start">
+                <span style="font-size: 14px">${icon}</span>
+                <div style="flex: 1">
+                  <p style="margin: 0; font-weight: 600; color: #0C447C">${event.eventType}</p>
+                  <p style="margin: 2px 0 0 0; font-size: 11px; color: var(--color-text-tertiary)">
+                    ${formatTimeAgo(event.timestamp)} by ${event.sourceAgent}
+                  </p>
+                </div>
+              </div>
+            </div>
+          `
+        }).join('')}
+      </div>
+    </div>
+  `
+}
+
+function formatTimeAgo(timestamp) {
+  if (!timestamp) return 'never'
+  const date = new Date(timestamp)
+  const now = new Date()
+  const seconds = Math.floor((now - date) / 1000)
+
+  if (seconds < 60) return `${seconds}s ago`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+  return `${Math.floor(seconds / 86400)}d ago`
+}
+
 async function startAgentPolling() {
   // Load initial data
   await loadAgentData()
@@ -2402,6 +2605,17 @@ async function loadAgentData() {
 
     agentStatus = statusRes?.data || {}
     agentInvestigations = invRes?.data || []
+
+    // Load orchestrator data
+    try {
+      const orchStatusRes = await getOrchestratorStatus()
+      const orchEventsRes = await getOrchestratorEvents(20)
+
+      orchestratorStatus = orchStatusRes?.data || {}
+      orchestratorEvents = orchEventsRes?.data || []
+    } catch (err) {
+      console.log('Orchestrator data not yet available:', err.message)
+    }
 
     // Update badge
     const badge = document.getElementById('agent-active-badge')
@@ -2421,6 +2635,13 @@ async function loadAgentData() {
     if (historySection && historySection.style.display !== 'none') {
       historySection.innerHTML = renderAgentInvestigationHistory()
       attachAgentViewButtonListeners()
+    }
+
+    // Refresh orchestrator section
+    const orchSection = document.getElementById('agent-orchestrator-section')
+    if (orchSection && orchSection.style.display !== 'none') {
+      orchSection.innerHTML = renderOrchestratorPanel()
+      attachOrchestratorListeners()
     }
   } catch (err) {
     console.error('Failed to load agent data:', err)
@@ -2443,6 +2664,7 @@ function attachAgentTabListeners() {
       const subtab = btn.dataset.subtab
       document.getElementById('agent-active-section').style.display = subtab === 'active' ? '' : 'none'
       document.getElementById('agent-history-section').style.display = subtab === 'history' ? '' : 'none'
+      document.getElementById('agent-orchestrator-section').style.display = subtab === 'orchestrator' ? '' : 'none'
     })
   })
 
@@ -2504,6 +2726,36 @@ function attachAgentViewButtonListeners() {
       detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
   })
+}
+
+function attachOrchestratorListeners() {
+  // Pause all agents button
+  const pauseAllBtn = document.getElementById('orchestrator-pause-all-btn')
+  if (pauseAllBtn) {
+    pauseAllBtn.addEventListener('click', async () => {
+      try {
+        await pauseAllAgents()
+        showToast('All agents paused', 'info')
+        await loadAgentData()
+      } catch (err) {
+        showToast('Failed to pause all agents', 'error')
+      }
+    })
+  }
+
+  // Resume all agents button
+  const resumeAllBtn = document.getElementById('orchestrator-resume-all-btn')
+  if (resumeAllBtn) {
+    resumeAllBtn.addEventListener('click', async () => {
+      try {
+        await resumeAllAgents()
+        showToast('All agents resumed', 'info')
+        await loadAgentData()
+      } catch (err) {
+        showToast('Failed to resume all agents', 'error')
+      }
+    })
+  }
 }
 
 window.switchTab = (tab) => {
