@@ -48,10 +48,21 @@ export async function initPrivAccts() {
       workloadIdentities = []
       workloadDataLoaded = false
     }
+
+    console.log('📡 Fetching privileged groups...')
+    const groupsResult = await getPrivilegedGroups()
+    if (groupsResult.success && groupsResult.data?.groups) {
+      privilegedGroups = groupsResult.data.groups
+      console.log(`✅ Loaded ${privilegedGroups.length} real privileged groups`)
+    } else {
+      console.warn('⚠️ No privileged groups data available from API')
+      privilegedGroups = []
+    }
   } catch (error) {
-    console.error('❌ Error loading privileged accounts or workload identities:', error.message)
+    console.error('❌ Error loading privileged accounts, workload identities, or groups:', error.message)
     realPrivilegedAccounts = []
     workloadIdentities = []
+    privilegedGroups = []
     accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0, servicePrincipals: 0 }
   }
 
@@ -92,7 +103,7 @@ function renderPrivAcctsContent(el) {
       <div class="kpi-tile"><div class="kpi-value info">${accountsSummary.totalAccounts}</div><div class="kpi-label">Accounts</div></div>
       <div class="kpi-tile"><div class="kpi-value ${accountsSummary.atRisk > 0 ? 'danger' : 'success'}">${accountsSummary.atRisk}</div><div class="kpi-label">At Risk</div></div>
       <div class="kpi-tile"><div class="kpi-value info">${accountsSummary.noMFA}</div><div class="kpi-label">No MFA</div></div>
-      <div class="kpi-tile"><div class="kpi-value info">0</div><div class="kpi-label">Groups</div></div>
+      <div class="kpi-tile"><div class="kpi-value info">${privilegedGroups.length}</div><div class="kpi-label">Groups</div></div>
       <div class="kpi-tile"><div class="kpi-value warning">${accountsSummary.permanentRoles}</div><div class="kpi-label">Permanent</div></div>
     </div>
 
@@ -530,6 +541,9 @@ function wireAccountEvents(container) {
 
 function renderGroupsTab(el) {
   const container = el.querySelector('#pa-tab-groups')
+  // Use real groups from API if available, otherwise use demo data
+  const groupsData = privilegedGroups.length > 0 ? privilegedGroups : PA_GROUPS
+
   container.innerHTML = `
     <div class="filter-bar" style="margin-bottom:12px">
       <input type="text" class="form-input search" id="pa-grp-search" placeholder="Search groups...">
@@ -538,14 +552,13 @@ function renderGroupsTab(el) {
       <table>
         <thead><tr>
           <th style="width:25%">Group</th>
-          <th style="width:20%">Roles</th>
-          <th style="width:10%">Members</th>
-          <th style="width:12%">PIM</th>
-          <th style="width:18%">Last Activity</th>
-          <th style="width:15%">Actions</th>
+          <th style="width:20%">Members</th>
+          <th style="width:15%">Permanent</th>
+          <th style="width:15%">Eligible</th>
+          <th style="width:25%">Description</th>
         </tr></thead>
         <tbody id="pa-grp-tbody">
-          ${PA_GROUPS.map(g => groupRow(g)).join('')}
+          ${groupsData.map(g => realGroupRow(g)).join('')}
         </tbody>
       </table>
     </div>
@@ -554,11 +567,39 @@ function renderGroupsTab(el) {
 
   container.querySelector('#pa-grp-search').addEventListener('input', e => {
     const q = e.target.value.toLowerCase()
-    container.querySelector('#pa-grp-tbody').innerHTML = PA_GROUPS
+    container.querySelector('#pa-grp-tbody').innerHTML = groupsData
       .filter(g => !q || g.name.toLowerCase().includes(q))
-      .map(g => groupRow(g)).join('')
+      .map(g => realGroupRow(g)).join('')
     wireGroupEvents(container)
   })
+}
+
+function realGroupRow(g) {
+  return `
+    <tr class="pa-grp-row" data-id="${g.id}">
+      <td><strong style="font-size:11px">${g.name}</strong></td>
+      <td><span class="badge info" style="font-size:10px">${g.members} total</span></td>
+      <td>${g.permanent}</td>
+      <td>${g.eligible}</td>
+      <td style="font-size:10px;color:var(--color-text-tertiary);max-width:200px;overflow:hidden;text-overflow:ellipsis">${g.description || 'N/A'}</td>
+    </tr>
+    <tr class="pa-grp-expand-row" data-id="${g.id}" style="display:none">
+      <td colspan="5" style="padding:0">
+        <div class="pa-expand-panel" style="display:block">
+          <div class="section-heading">Members (${g.memberDetails?.length || 0})</div>
+          ${(g.memberDetails || []).map(member => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px">
+              <div>
+                <strong>${member.name}</strong>
+                <div style="font-size:9px;color:var(--color-text-tertiary)">${member.upn || 'N/A'}</div>
+              </div>
+              <span class="badge" style="font-size:9px">${member.type}</span>
+            </div>
+          `).join('')}
+        </div>
+      </td>
+    </tr>
+  `
 }
 
 function groupRow(g) {
