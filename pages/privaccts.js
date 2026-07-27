@@ -857,6 +857,19 @@ function renderWorkloadIdentityTab(el) {
   const mediumCount = appsWithScores.filter(a => a.riskData.severity === 'Medium').length
 
   let html = `
+    <!-- Information Banner -->
+    <div style="background:#E3F2FD;border-radius:6px;padding:12px;margin-bottom:16px;border-left:4px solid #1565C0;border-right:1px solid #BBDEFB">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <div style="font-size:16px;color:#1565C0;margin-top:2px">ℹ️</div>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:#0D47A1;margin-bottom:4px">Privileged Workload Identities</div>
+          <div style="font-size:11px;color:#1565C0;line-height:1.5">
+            The following applications have been identified as possessing privileged permissions or roles within your tenant. This includes service principals with critical permissions (such as Directory.ReadWrite.All, Application.ReadWrite.All) or assigned privileged directory roles (Global Administrator, Application Administrator, etc.). Regular monitoring and auditing of these identities is recommended for optimal security.
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Cache Status & Refresh -->
     <div style="background:#F5F5F5;border-radius:6px;padding:12px;margin-bottom:16px;border-left:3px solid #1976D2;display:flex;justify-content:space-between;align-items:center">
       <div style="font-size:11px;color:#666">
