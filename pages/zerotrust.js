@@ -2693,16 +2693,6 @@ function renderZTDriftsTab() {
 
   // Note: CA policies drift data will be loaded async and inserted via loadCADriftData()
 
-  if (openDrifts.length === 0) {
-    return `
-      <div style="padding:40px;text-align:center;color:var(--color-text-secondary)">
-        <div style="font-size:48px;margin-bottom:16px">✅</div>
-        <h3 style="margin:0 0 8px 0;color:var(--color-text-primary)">No open compliance drifts detected</h3>
-        <p style="margin:0;font-size:13px">All CIS controls are in compliance.</p>
-      </div>
-    `
-  }
-
   const severityColors = {
     'CRITICAL': { bg: '#FCE8E8', text: '#A32D2D' },
     'HIGH': { bg: '#FEF3C7', text: '#D97706' },
@@ -2737,7 +2727,7 @@ function renderZTDriftsTab() {
     <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
         <div style="font-size:24px;font-weight:700;color:var(--color-primary)">${openDrifts.length}</div>
-        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Open Drifts</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">CIS Drifts</div>
       </div>
       <div class="card" style="flex:1;min-width:140px;padding:12px;background:#FCE8E8;text-align:center">
         <div style="font-size:24px;font-weight:700;color:#A32D2D">${criticalDrifts.length}</div>
@@ -2753,7 +2743,11 @@ function renderZTDriftsTab() {
       </div>
     </div>
 
-    <div class="card" style="padding:0;overflow:hidden;border:1px solid var(--color-border-secondary)">
+    ${openDrifts.length > 0 ? `
+    <div class="card" style="margin-bottom:24px;padding:0;overflow:hidden;border:1px solid var(--color-border-secondary)">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-tasks"></i> CIS Control Drifts</div>
+      </div>
       <div style="display:grid;grid-template-columns:100px 1fr 150px 150px 200px;gap:0;background:var(--color-bg-tertiary);padding:12px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);border-bottom:1px solid var(--color-border-secondary)">
         <div>Severity</div>
         <div>Control</div>
@@ -2785,8 +2779,15 @@ function renderZTDriftsTab() {
         `
       }).join('')}
     </div>
+    ` : `
+    <div style="padding:24px;text-align:center;color:var(--color-text-secondary);background:var(--color-background-secondary);border-radius:4px;margin-bottom:24px">
+      <div style="font-size:32px;margin-bottom:8px">✅</div>
+      <div style="font-weight:600;color:var(--color-text-primary)">No CIS Control drifts detected</div>
+      <div style="font-size:12px;margin-top:4px">All CIS controls are in compliance.</div>
+    </div>
+    `}
 
-    <div id="ca-drift-section" style="margin-top:24px">
+    <div id="ca-drift-section">
       <!-- CA Policy Drifts will be loaded here -->
     </div>
   `
