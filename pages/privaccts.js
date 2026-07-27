@@ -864,7 +864,7 @@ function renderWorkloadIdentityTab(el) {
         <div>
           <div style="font-size:12px;font-weight:600;color:#0D47A1;margin-bottom:4px">Privileged Workload Identities</div>
           <div style="font-size:11px;color:#1565C0;line-height:1.5">
-            The following applications have been identified as possessing privileged permissions or roles within your tenant. This includes service principals with critical permissions (such as Directory.ReadWrite.All, Application.ReadWrite.All) or assigned privileged directory roles (Global Administrator, Application Administrator, etc.). Regular monitoring and auditing of these identities is recommended for optimal security.
+            Only applications with privileged permissions or directory roles are displayed. Regular monitoring and auditing of these identities is recommended.
           </div>
         </div>
       </div>
