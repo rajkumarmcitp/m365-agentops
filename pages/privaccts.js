@@ -866,7 +866,7 @@ function renderWorkloadIdentityTab(el) {
       <button id="refresh-workload-btn" style="padding:8px 16px;background:#1976D2;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;transition:all 0.2s;margin-left:12px">
         🔄 Refresh Now
       </button>
-    </div>`
+    </div>
 
     <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
