@@ -9556,7 +9556,7 @@ app.get('/api/workload-identities/risk-assessment', async (req, res) => {
       console.log('  Fetching service principals (paginated)...')
       let query = graphClient
         .api('/servicePrincipals')
-        .select('id,appId,displayName,createdDateTime,accountEnabled,appOwnerOrganizationId,servicePrincipalType')
+        .select('id,appId,displayName,createdDateTime,accountEnabled,appOwnerOrganizationId,servicePrincipalType,appRoleAssignmentRequired')
         .top(100) // API limits to ~100 per page anyway
 
       do {
@@ -9745,8 +9745,9 @@ app.get('/api/workload-identities/risk-assessment', async (req, res) => {
         consentedPermissions: permissions,
         hasRole: false,
         roles: [],
-        isAppRegistrationOnly: lastSignInDaysAgo === -1, // Only true if NO service principal evidence
-        servicePrincipalStatus
+        isAppRegistrationOnly: lastSignInDaysAgo === -1,
+        servicePrincipalStatus,
+        userAssignmentRequired: false // App registrations don't have this property
       })
     }
 
@@ -9785,10 +9786,21 @@ app.get('/api/workload-identities/risk-assessment', async (req, res) => {
       riskData: calculateWorkloadRiskScore(app)
     }))
 
-    // CHANGED: Include ALL workload identities (not just privileged ones)
-    // Reference: User needs visibility into ALL service principals regardless of current privilege level
-    // Risk score determines if action is needed (0-200 scale: 0-49 low, 50-99 medium, 100-149 high, 150+ critical)
-    const privilegedApps = appsWithRisk
+    // FILTER: Keep only apps with privileged permissions or roles
+    // Reference: User needs visibility into PRIVILEGED workload identities only
+    const privilegedApps = appsWithRisk.filter(app => {
+      // Has ASSIGNED privileged directory roles
+      const hasAssignedPrivilegeRole = app.roles.some(r =>
+        ['Global Administrator', 'Application Administrator', 'Conditional Access Administrator',
+         'Security Administrator', 'Exchange Administrator', 'Teams Administrator', 'User Administrator'].includes(r)
+      )
+
+      // Has REQUESTED critical permissions (in app manifest)
+      const hasRequestedCriticalPerms = app.consentedPermissions.some(p => p.risk === 'Critical')
+
+      // MUST have either assigned role OR requested critical permissions
+      return hasAssignedPrivilegeRole || hasRequestedCriticalPerms
+    })
 
     // Final cleanup: Remove duplicate permissions from each app
     for (const app of privilegedApps) {
@@ -9883,7 +9895,8 @@ async function enrichServicePrincipal(sp, criticalPermissions, latestSignInMap =
       lastSignInDaysAgo: 9999,
       consentedPermissions: [],
       hasRole: false,
-      roles: []
+      roles: [],
+      userAssignmentRequired: sp.appRoleAssignmentRequired === true // Track if user assignment is required
     }
 
     // Get owners

@@ -883,6 +883,7 @@ function renderWorkloadIdentityTab(el) {
             <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:600">Severity</th>
             <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:600">Last Activity</th>
             <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:600">Owners</th>
+            <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:600">User Assignment Required</th>
           </tr>
         </thead>
         <tbody>
@@ -931,6 +932,9 @@ function renderWorkloadIdentityTab(el) {
             </td>
             <td style="padding:10px 12px;vertical-align:top;text-align:center">
               <span style="display:inline-block;background:${app.ownerCount === 0 ? '#FFEBEE' : 'var(--color-background-secondary)'};color:${app.ownerCount === 0 ? '#D32F2F' : 'var(--color-text-secondary)'};padding:3px 6px;border-radius:2px;font-size:9px">${app.ownerCount} ${app.ownerCount === 1 ? 'owner' : 'owners'}</span>
+            </td>
+            <td style="padding:10px 12px;vertical-align:top;text-align:center">
+              <span style="display:inline-block;background:${app.userAssignmentRequired ? '#E3F2FD' : '#F5F5F5'};color:${app.userAssignmentRequired ? '#1565C0' : '#757575'};padding:4px 8px;border-radius:3px;font-size:10px;font-weight:600">${app.userAssignmentRequired ? '✅ Enabled' : '❌ Disabled'}</span>
             </td>
           </tr>
     `
