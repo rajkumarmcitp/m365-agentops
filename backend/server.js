@@ -9654,12 +9654,95 @@ async function runWorkloadIdentitiesJob() {
     cachedWorkloadIdentities.workloadIdentities = result
     cachedWorkloadIdentities.timestamp = new Date()
 
+    // Save to SharePoint if configured
+    if (sharePointClient && process.env.SHAREPOINT_ZT_WORKLOAD_LIST_ID) {
+      try {
+        console.log('📊 Saving workload identities to SharePoint...')
+        await saveWorkloadIdentitiesToSharePoint(result)
+        console.log(`✅ Saved ${result.length} workload identities to SharePoint`)
+      } catch (err) {
+        console.warn(`⚠️ Could not save to SharePoint: ${err.message}`)
+      }
+    }
+
     const elapsed = Date.now() - startTime
     console.log(`✅ [Workload Identities Job] Completed in ${elapsed}ms. Cached ${result.length} apps`)
   } catch (error) {
     console.error(`❌ [Workload Identities Job] Failed: ${error.message}`)
   } finally {
     cachedWorkloadIdentities.isRunning = false
+  }
+}
+
+// Save workload identities to SharePoint list
+async function saveWorkloadIdentitiesToSharePoint(apps) {
+  if (!sharePointClient || !process.env.SHAREPOINT_ZT_WORKLOAD_LIST_ID) {
+    console.warn('⚠️ SharePoint not configured for workload identities')
+    return
+  }
+
+  try {
+    const siteId = 'root'
+    const listId = process.env.SHAREPOINT_ZT_WORKLOAD_LIST_ID
+
+    // Prepare batch payload
+    const items = apps.map(app => ({
+      fields: {
+        Title: app.name,
+        AppId: app.appId,
+        DisplayName: app.name,
+        RiskScore: app.riskData?.score || 0,
+        Severity: app.riskData?.severity || 'Unknown',
+        Permissions: (app.consentedPermissions || []).map(p => p.name).join(';'),
+        CriticalPermissions: (app.consentedPermissions || []).filter(p => p.risk === 'Critical').length,
+        LastActivity: app.lastSignInDaysAgo === -1 ? 'N/A' : app.lastSignInDaysAgo === null ? 'Outside Retention' : `${app.lastSignInDaysAgo} days ago`,
+        Owners: app.ownerCount || 0,
+        UserAssignmentRequired: app.userAssignmentRequired ? 'Yes' : 'No',
+        ServicePrincipalStatus: app.servicePrincipalStatus || 'Unknown',
+        IsAppRegistrationOnly: app.isAppRegistrationOnly ? 'Yes' : 'No',
+        CreatedDate: app.createdDate,
+        DataRefreshTime: new Date().toISOString()
+      }
+    }))
+
+    console.log(`  Upserting ${items.length} items to SharePoint list...`)
+
+    // Delete existing items and add new ones (full replace)
+    try {
+      const existingItems = await sharePointClient
+        .api(`/sites/${siteId}/lists/${listId}/items`)
+        .select('id')
+        .get()
+
+      // Delete all existing items
+      for (const item of existingItems.value || []) {
+        try {
+          await sharePointClient
+            .api(`/sites/${siteId}/lists/${listId}/items/${item.id}`)
+            .delete()
+        } catch (err) {
+          console.warn(`  ⚠️ Could not delete item ${item.id}: ${err.message}`)
+        }
+      }
+    } catch (err) {
+      console.warn(`  ⚠️ Could not fetch existing items: ${err.message}`)
+    }
+
+    // Add new items
+    for (const item of items) {
+      try {
+        await sharePointClient
+          .api(`/sites/${siteId}/lists/${listId}/items`)
+          .post({ fields: item.fields })
+      } catch (err) {
+        console.warn(`  ⚠️ Could not create item ${item.fields.Title}: ${err.message}`)
+      }
+    }
+
+    console.log(`  ✅ Saved ${items.length} items to SharePoint`)
+  } catch (error) {
+    console.error(`❌ SharePoint save failed: ${error.message}`)
+    throw error
   }
 }
 

@@ -854,6 +854,17 @@ function renderWorkloadIdentityTab(el) {
   const mediumCount = appsWithScores.filter(a => a.riskData.severity === 'Medium').length
 
   let html = `
+    <!-- Cache Status & Refresh -->
+    <div style="background:var(--color-background-secondary);border-radius:6px;padding:12px;margin-bottom:16px;border-left:3px solid var(--color-primary);display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:11px;color:var(--color-text-secondary)">
+        <div>✅ Data cached${workloadIdentities.length > 0 ? ': ' + workloadIdentities.length + ' apps' : ''}</div>
+        <div style="margin-top:4px;font-size:10px">Last updated: <span id="cache-timestamp">fetching...</span></div>
+      </div>
+      <button id="refresh-workload-btn" style="padding:6px 12px;background:var(--color-primary);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.2s">
+        🔄 Refresh Now
+      </button>
+    </div>
+
     <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
         <div style="font-size:24px;font-weight:700;color:#D32F2F">${criticalCount}</div>
@@ -947,6 +958,68 @@ function renderWorkloadIdentityTab(el) {
   `
 
   container.innerHTML = html
+
+  // Attach event listeners
+  const cacheTs = highPrivilegeApps.length > 0 ? localStorage.getItem('workload-cache-timestamp') : null
+  const cacheEl = container.querySelector('#cache-timestamp')
+  if (cacheEl && cacheTs) {
+    const date = new Date(cacheTs)
+    cacheEl.textContent = date.toLocaleTimeString()
+  }
+
+  const refreshBtn = container.querySelector('#refresh-workload-btn')
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      refreshBtn.disabled = true
+      refreshBtn.textContent = '⏳ Refreshing...'
+
+      try {
+        const response = await fetch('/api/workload-identities/refresh', { method: 'POST' })
+        const result = await response.json()
+
+        if (result.success) {
+          showToast('🔄 Refresh job started. Data will update shortly.', 'info')
+          refreshBtn.textContent = '⏳ Running...'
+          // Poll for completion (check every 5 seconds for up to 2 minutes)
+          let attempts = 0
+          const pollInterval = setInterval(async () => {
+            attempts++
+            try {
+              const statusResp = await fetch('/api/workload-identities/risk-assessment')
+              const statusData = await statusResp.json()
+              const summary = statusData.data?.summary
+
+              if (summary && !summary.isRunning) {
+                clearInterval(pollInterval)
+                showToast('✅ Workload identities refreshed!', 'success')
+                refreshBtn.textContent = '🔄 Refresh Now'
+                refreshBtn.disabled = false
+                // Reload the page or update the data
+                location.reload()
+              }
+            } catch (err) {
+              console.error('Error polling status:', err)
+            }
+
+            if (attempts > 24) { // 2 minutes timeout
+              clearInterval(pollInterval)
+              refreshBtn.textContent = '🔄 Refresh Now'
+              refreshBtn.disabled = false
+              showToast('⏱️ Refresh timeout. Check back in a moment.', 'warning')
+            }
+          }, 5000)
+        } else {
+          showToast('❌ ' + (result.error || 'Refresh failed'), 'error')
+          refreshBtn.textContent = '🔄 Refresh Now'
+          refreshBtn.disabled = false
+        }
+      } catch (error) {
+        showToast('❌ ' + error.message, 'error')
+        refreshBtn.textContent = '🔄 Refresh Now'
+        refreshBtn.disabled = false
+      }
+    })
+  }
 }
 
 function renderDemoWorkloadIdentityTab(el) {
