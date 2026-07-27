@@ -9533,6 +9533,725 @@ app.get('/api/privileged-accounts', async (req, res) => {
 })
 
 /**
+ * GET /api/workload-identities/risk-assessment
+ * Fetch real service principals and app registrations with risk assessment
+ * Includes permissions, credentials, ownership, and sign-in data from Azure AD
+ */
+app.get('/api/workload-identities/risk-assessment', async (req, res) => {
+  try {
+    if (!graphClient) {
+      console.warn('⚠️ Graph Client not initialized, returning demo data')
+      return sendDemoWorkloadIdentities(res)
+    }
+
+    console.log('📡 Fetching real workload identities from Azure AD...')
+    const startTime = Date.now()
+
+    // Fetch all service principals with key properties (increased to 200 to catch more apps)
+    const servicePrincipals = await Promise.race([
+      graphClient
+        .api('/servicePrincipals')
+        .select('id,appId,displayName,createdDateTime,accountEnabled,appOwnerOrganizationId,servicePrincipalType')
+        .top(200)
+        .get(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Service principals fetch timeout')), 15000)
+      )
+    ])
+
+    console.log(`✓ Fetched ${servicePrincipals.value?.length || 0} service principals`)
+
+    const workloadIdentities = []
+    const criticalPermissions = getCriticalPermissionsList()
+    const permissionMap = getPermissionIdToNameMap()
+
+    // OPTIMIZATION: Batch-fetch all recent sign-ins instead of one query per app
+    // This reduces hundreds of Graph calls to 1-2 calls and prevents throttling
+    // Reference: Optimized approach from Microsoft Graph best practices
+    const latestSignInMap = new Map()
+    try {
+      console.log('  Fetching recent sign-in activity (batch query)...')
+      const signIns = await Promise.race([
+        graphClient
+          .api('/auditLogs/signIns')
+          .orderby('createdDateTime desc')
+          .select('appId,createdDateTime')
+          .top(1000)
+          .get(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 30000))
+      ])
+
+      // Build lookup map: appId → most recent createdDateTime
+      // This ensures O(1) lookup when enriching each service principal
+      for (const signIn of signIns.value || []) {
+        if (signIn.appId && !latestSignInMap.has(signIn.appId)) {
+          latestSignInMap.set(signIn.appId, signIn.createdDateTime)
+        }
+      }
+      console.log(`  ✓ Built sign-in lookup for ${latestSignInMap.size} apps (batch query)`)
+    } catch (err) {
+      console.warn(`  ⚠️ Could not fetch sign-in data: ${err.message}`)
+    }
+
+    const spsToProcess = (servicePrincipals.value || []).filter(sp =>
+      sp.appOwnerOrganizationId &&
+      !sp.displayName?.startsWith('Microsoft') &&
+      !sp.displayName?.startsWith('Azure') &&
+      sp.servicePrincipalType !== 'ManagedIdentity'
+    )
+
+    console.log(`  Filtering to ${spsToProcess.length} customer-owned apps`)
+
+    // Also fetch app registrations with privileged permissions (even without service principals)
+    let appRegistrations = []
+    try {
+      const appRegsResult = await Promise.race([
+        graphClient
+          .api('/applications')
+          .select('id,appId,displayName,createdDateTime,requiredResourceAccess')
+          .top(200)
+          .get(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))
+      ])
+      appRegistrations = appRegsResult.value || []
+      console.log(`✓ Fetched ${appRegistrations.length} app registrations`)
+    } catch (err) {
+      console.warn('⚠️ Could not fetch app registrations:', err.message)
+    }
+
+    // Process service principals in batches
+    for (let i = 0; i < spsToProcess.length; i += 10) {
+      const batch = spsToProcess.slice(i, i + 10)
+
+      const batchResults = await Promise.allSettled(
+        batch.map(sp => enrichServicePrincipal(sp, criticalPermissions, latestSignInMap))
+      )
+
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled' && result.value) {
+          workloadIdentities.push(result.value)
+        }
+      }
+    }
+
+    // Process app registrations WITHOUT service principals
+    // Build a set of app IDs that already have service principals
+    const spAppIds = new Set(spsToProcess.map(sp => sp.appId))
+
+    // Filter app registrations: only those with critical permissions and NO service principal
+    // Reference: App Registrations without Service Principals cannot authenticate or sign in
+    const appRegsWithPrivilegedPerms = appRegistrations.filter(app => {
+      if (spAppIds.has(app.appId)) return false // Skip if already has service principal
+      if (!app.requiredResourceAccess) return false
+      if (app.displayName?.startsWith('Microsoft') || app.displayName?.startsWith('Azure')) return false
+
+      // Check if has critical permissions
+      for (const resource of app.requiredResourceAccess) {
+        if (resource.resourceAppId === '00000003-0000-0000-c000-000000000000') { // MS Graph
+          for (const access of resource.resourceAccess || []) {
+            const permName = permissionMap[access.id]
+            if (permName && criticalPermissions.includes(permName)) {
+              return true // Has critical permission
+            }
+          }
+        }
+      }
+      return false
+    })
+
+    console.log(`  Found ${appRegsWithPrivilegedPerms.length} app registrations with privileged permissions (no service principal)`)
+
+    // Add app registrations with privileged permissions to results
+    for (const appReg of appRegsWithPrivilegedPerms) {
+      const permissions = []
+
+      // Extract critical permissions
+      for (const resource of appReg.requiredResourceAccess) {
+        if (resource.resourceAppId === '00000003-0000-0000-c000-000000000000') {
+          for (const access of resource.resourceAccess || []) {
+            const permName = permissionMap[access.id]
+
+            // Log unmapped permission IDs for M365 AgentOps (for debugging)
+            if (appReg.displayName?.includes('M365 AgentOps') && !permName) {
+              console.log(`  📋 M365 AgentOps unmapped permission ID: ${access.id}`)
+            }
+
+            if (permName && criticalPermissions.includes(permName)) {
+              permissions.push({
+                name: permName,
+                type: 'Application',
+                risk: 'Critical'
+              })
+            }
+          }
+        }
+      }
+
+      // CRITICAL FIX: Check if this app appears in sign-in logs (proves it has a service principal)
+      const lastSignInDate = latestSignInMap.get(appReg.appId)
+      let lastSignInDaysAgo = -1 // Default: No Service Principal
+      let servicePrincipalStatus = 'No Service Principal'
+
+      if (lastSignInDate) {
+        // Has service principal with sign-in activity
+        lastSignInDaysAgo = Math.floor((Date.now() - new Date(lastSignInDate).getTime()) / 86400000)
+        servicePrincipalStatus = 'Active Service Principal' // Corrected classification
+      }
+
+      workloadIdentities.push({
+        id: appReg.id,
+        name: appReg.displayName || 'Unknown App',
+        appId: appReg.appId,
+        createdDate: appReg.createdDateTime,
+        ownerCount: 0,
+        secretAgeInDays: 0,
+        secretExpiresInDays: 0,
+        lastSignInDaysAgo,
+        consentedPermissions: permissions,
+        hasRole: false,
+        roles: [],
+        isAppRegistrationOnly: lastSignInDaysAgo === -1, // Only true if NO service principal evidence
+        servicePrincipalStatus
+      })
+    }
+
+    // DEDUPLICATE: Merge duplicate apps (same appId/name) and combine their permissions
+    const appMap = new Map()
+    for (const app of workloadIdentities) {
+      // Use appId as key (most reliable), fallback to name
+      const key = app.appId || app.name?.toLowerCase().trim()
+
+      if (appMap.has(key)) {
+        // Merge with existing app
+        const existing = appMap.get(key)
+        // Combine permissions (remove duplicates by permission name)
+        const existingPermMap = new Map(existing.consentedPermissions.map(p => [p.name, p]))
+        for (const perm of app.consentedPermissions) {
+          if (!existingPermMap.has(perm.name)) {
+            existingPermMap.set(perm.name, perm)
+          }
+        }
+        existing.consentedPermissions = Array.from(existingPermMap.values())
+
+        // Keep the earliest creation date
+        if (app.createdDate && (!existing.createdDate || new Date(app.createdDate) < new Date(existing.createdDate))) {
+          existing.createdDate = app.createdDate
+        }
+      } else {
+        appMap.set(key, app)
+      }
+    }
+
+    const deduplicatedApps = Array.from(appMap.values())
+
+    // Calculate risk scores
+    const appsWithRisk = deduplicatedApps.map(app => ({
+      ...app,
+      riskData: calculateWorkloadRiskScore(app)
+    }))
+
+    // FILTER: Keep only apps with privileged permissions or roles
+    const privilegedApps = appsWithRisk.filter(app => {
+      // Has ASSIGNED privileged directory roles
+      const hasAssignedPrivilegeRole = app.roles.some(r =>
+        ['Global Administrator', 'Application Administrator', 'Conditional Access Administrator',
+         'Security Administrator', 'Exchange Administrator', 'Teams Administrator', 'User Administrator'].includes(r)
+      )
+
+      // Has REQUESTED critical permissions (in app manifest)
+      const hasRequestedCriticalPerms = app.consentedPermissions.some(p => p.risk === 'Critical')
+
+      // MUST have either assigned role OR requested critical permissions
+      return hasAssignedPrivilegeRole || hasRequestedCriticalPerms
+    })
+
+    // Final cleanup: Remove duplicate permissions from each app
+    for (const app of privilegedApps) {
+      const permNames = new Set()
+      app.consentedPermissions = app.consentedPermissions.filter(perm => {
+        if (permNames.has(perm.name)) return false
+        permNames.add(perm.name)
+        return true
+      })
+    }
+
+    // Sort by risk score descending
+    privilegedApps.sort((a, b) => b.riskData.score - a.riskData.score)
+
+    const criticalCount = privilegedApps.filter(a => a.riskData.severity === 'Critical').length
+    const highCount = privilegedApps.filter(a => a.riskData.severity === 'High').length
+    const mediumCount = privilegedApps.filter(a => a.riskData.severity === 'Medium').length
+
+    const elapsed = Date.now() - startTime
+    console.log(`✅ High-privilege workload identities: ${privilegedApps.length} apps (from ${workloadIdentities.length} total), ${criticalCount} critical, ${highCount} high (${elapsed}ms)`)
+
+    res.json({
+      success: true,
+      data: {
+        workloadIdentities: privilegedApps, // All privileged apps, sorted by risk
+        summary: {
+          total: workloadIdentities.length,
+          privileged: privilegedApps.length,
+          critical: criticalCount,
+          high: highCount,
+          medium: mediumCount,
+          isRealData: true
+        }
+      }
+    })
+
+  } catch (error) {
+    console.error('❌ Workload identities API error:', error.message)
+    console.warn('⚠️ Falling back to demo data')
+    sendDemoWorkloadIdentities(res)
+  }
+})
+
+/**
+ * Helper: Send demo workload identities (fallback)
+ */
+function sendDemoWorkloadIdentities(res) {
+  const demoWorkloadIdentities = getDemoWorkloadIdentitiesData()
+
+  const appsWithRisk = demoWorkloadIdentities.map(app => ({
+    ...app,
+    riskData: calculateWorkloadRiskScore(app)
+  }))
+
+  appsWithRisk.sort((a, b) => b.riskData.score - a.riskData.score)
+
+  const criticalCount = appsWithRisk.filter(a => a.riskData.severity === 'Critical').length
+  const highCount = appsWithRisk.filter(a => a.riskData.severity === 'High').length
+  const mediumCount = appsWithRisk.filter(a => a.riskData.severity === 'Medium').length
+
+  res.json({
+    success: true,
+    data: {
+      workloadIdentities: appsWithRisk,
+      summary: {
+        total: appsWithRisk.length,
+        critical: criticalCount,
+        high: highCount,
+        medium: mediumCount,
+        isRealData: false
+      }
+    }
+  })
+}
+
+/**
+ * Helper: Enrich service principal with detailed info
+ * @param {Object} sp - Service principal from Graph API
+ * @param {Array} criticalPermissions - List of critical permission names
+ * @param {Map} latestSignInMap - Pre-fetched map of appId → latest createdDateTime
+ */
+async function enrichServicePrincipal(sp, criticalPermissions, latestSignInMap = new Map()) {
+  try {
+    let app = {
+      id: sp.id,
+      name: sp.displayName || 'Unknown App',
+      appId: sp.appId,
+      createdDate: sp.createdDateTime,
+      ownerCount: 0,
+      secretAgeInDays: 0,
+      secretExpiresInDays: 0,
+      lastSignInDaysAgo: 9999,
+      consentedPermissions: [],
+      hasRole: false,
+      roles: []
+    }
+
+    // Get owners
+    try {
+      const ownerResult = await Promise.race([
+        graphClient.api(`/servicePrincipals/${sp.id}/owners`).select('id').get(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+      ])
+      app.ownerCount = ownerResult.value?.length || 0
+    } catch (err) {
+      // Silent fail - owners not critical
+    }
+
+    // Get credentials
+    try {
+      const appRegResult = await Promise.race([
+        graphClient.api(`/applications?$filter=appId eq '${sp.appId}'`).select('id,passwordCredentials,keyCredentials').get(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+      ])
+
+      if (appRegResult.value?.[0]) {
+        const appReg = appRegResult.value[0]
+        const allCreds = [...(appReg.passwordCredentials || []), ...(appReg.keyCredentials || [])]
+
+        if (allCreds.length > 0) {
+          const latestCred = allCreds.sort((a, b) =>
+            new Date(b.startDateTime) - new Date(a.startDateTime)
+          )[0]
+
+          app.secretAgeInDays = Math.floor((new Date() - new Date(latestCred.startDateTime)) / (1000 * 60 * 60 * 24))
+          app.secretExpiresInDays = Math.floor((new Date(latestCred.endDateTime) - new Date()) / (1000 * 60 * 60 * 24))
+        }
+      }
+    } catch (err) {
+      // Silent fail - credentials not critical for demo
+    }
+
+    // Get app roles
+    try {
+      const rolesResult = await Promise.race([
+        graphClient.api(`/servicePrincipals/${sp.id}/appRoleAssignments`).select('appRoleId').get(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+      ])
+
+      for (const roleAssignment of rolesResult.value || []) {
+        if (roleAssignment.appRoleId) {
+          const roleName = mapAppRoleIdToName(roleAssignment.appRoleId)
+          if (roleName && !app.roles.includes(roleName)) {
+            app.roles.push(roleName)
+            app.hasRole = true
+          }
+        }
+      }
+    } catch (err) {
+      // Silent fail
+    }
+
+    // Get last sign-in from pre-fetched lookup map (efficient batch query)
+    // Reference: Microsoft recommends batching sign-in queries to avoid throttling
+    const lastSignInDate = latestSignInMap.get(sp.appId)
+    if (lastSignInDate) {
+      app.lastSignInDaysAgo = Math.floor((Date.now() - new Date(lastSignInDate).getTime()) / 86400000) // 86400000ms = 1 day
+    }
+    // else: null = never signed in during retention window (or no service principal)
+
+    // Get permissions from app registration (requiredResourceAccess)
+    try {
+      const appRegResult = await Promise.race([
+        graphClient.api(`/applications?$filter=appId eq '${sp.appId}'`).select('id,requiredResourceAccess').get(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+      ])
+
+      if (appRegResult.value?.[0]?.requiredResourceAccess) {
+        const requiredAccess = appRegResult.value[0].requiredResourceAccess || []
+        const permissionMap = getPermissionIdToNameMap() // Map GUIDs to permission names
+
+        for (const resource of requiredAccess) {
+          // Check if this is MS Graph (00000003-0000-0000-c000-000000000000)
+          const isGraph = resource.resourceAppId === '00000003-0000-0000-c000-000000000000'
+
+          if (isGraph && resource.resourceAccess) {
+            for (const access of resource.resourceAccess) {
+              // Get permission name from ID
+              const permName = permissionMap[access.id]
+
+              // Check if this permission is in our critical list
+              if (permName && criticalPermissions.includes(permName)) {
+                app.consentedPermissions.push({
+                  name: permName,
+                  type: 'Application',
+                  risk: 'Critical'
+                })
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      // Silent fail
+    }
+
+    return app
+  } catch (error) {
+    console.warn(`Error enriching ${sp.displayName}:`, error.message)
+    return null
+  }
+}
+
+/**
+ * Helper: Map Microsoft Graph permission IDs (GUIDs) to permission names
+ * These are the actual permission IDs used in requiredResourceAccess
+ * Source: Microsoft Graph permissions reference
+ */
+function getPermissionIdToNameMap() {
+  return {
+    // Directory & Identity (Directory.* permissions)
+    '19dbc75e-c2e2-444c-a770-ec69d8559fc7': 'Directory.ReadWrite.All',
+    '9e3f94ae-4ad3-434d-92f7-c6a1f43e3f8f': 'Directory.ReadWrite.All',
+    '3cc64161-36c0-4868-bd09-d6ac6a5f9e41': 'RoleManagement.ReadWrite.Directory',
+    '741f803b-c850-494e-b5df-cde7c675a1ca': 'RoleManagement.ReadWrite.Directory',
+    '62ade113-f8e0-4bf9-a067-4bd3d91e1ea5': 'Group.ReadWrite.All',
+    'e1fe6dd8-ba31-4d61-89e7-88639da4683d': 'User.ReadWrite.All',
+    '204e0828-b5ca-4ad8-b9ae-7904e7cffada': 'User.ReadWrite.All',
+
+    // Application & Policy
+    '18a4783c-866f-4d64-a5a1-20f51c612a41': 'Application.ReadWrite.OwnedBy',
+    '84bccea3-f856-4a8a-967b-dbe21fbc754c': 'Application.ReadWrite.All',
+    '1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9': 'Application.ReadWrite.All',
+    '83f8f2f7-0da7-4f56-9ba3-4d8e45ff8e4c': 'Application.ReadWrite.All',
+    'cadb4976-3bed-4f3f-b658-448282e7b622': 'Policy.ReadWrite.ConditionalAccess',
+
+    // Mail (High Risk)
+    'b633e1c5-e141-4c3d-8dbe-75b640b5c094': 'Mail.Send',
+    '5b567255-7703-4780-807c-37603bd3b224': 'Mail.Send',
+    '5b567255-7703-4780-807c-7be8301ae99b': 'Mail.Send', // Actual from M365 AgentOps
+    '024d486b-2424-41c3-863f-e2467d8fb6fd': 'Mail.Send',
+    '498476ce-e0fe-48b0-b801-37ba7e2685c6': 'Mail.Send', // Alternative ID
+    'dbd4b2ce-84d1-4d46-962f-f4c8c4fc41ba': 'Mail.ReadWrite.All',
+    '5dcc1d34-7057-46f9-ad2c-c9c0f8ce6899': 'Mail.ReadWrite.All',
+
+    // Device
+    '3045c65e-8f0e-4d22-b65c-67bcc373b02b': 'Device.ReadWrite.All',
+    '2f51f645-1d79-43f5-b394-46f4de9c5385': 'Device.ReadWrite.All',
+
+    // Security
+    '187d0e31-75da-4d6f-b58a-73d8b6cd2e8e': 'SecurityIncident.ReadWrite.All',
+    '64733754-3a7b-4eae-8f97-4654bd3ba5c0': 'SecurityEvents.ReadWrite.All',
+    'ee352e1d-43ab-46d8-a756-f7db3ce1000a': 'SecurityEvents.ReadWrite.All',
+    '02e97e29-4e49-42f9-ba80-b749ba5787c0': 'ThreatSubmission.ReadWrite.All',
+
+    // SharePoint/Sites
+    '22618754-da9b-45cb-ba76-973ed8e80589': 'Sites.FullControl.All',
+    '0c219fc8-84f0-4589-a7d6-1b80b7e3a42b': 'Sites.Manage.All',
+    '89497672-e83a-45dd-8b57-b2bae7b35b66': 'Sites.ReadWrite.All',
+    'a82116e5-55eb-4c41-a432-f3257fde61b7': 'Sites.ReadWrite.All',
+
+    // Teams
+    '09e57cd3-2be2-4a48-82d2-6ef899edb32b': 'TeamSettings.ReadWrite.All',
+    'cd262a4f-4e74-4981-96b8-54888c6e8c70': 'ChannelSettings.ReadWrite.All',
+    '8ba4a692-bc31-4128-9094-475872af8a53': 'Chat.ReadWrite.All',
+
+    // AppRole
+    '06b708a9-e830-4db3-ba3d-18ccab520159': 'AppRoleAssignment.ReadWrite.All',
+  }
+}
+
+/**
+ * Helper: Get critical permissions list
+ */
+function getCriticalPermissionsList() {
+  return [
+    'Directory.ReadWrite.All',
+    'RoleManagement.ReadWrite.Directory',
+    'User.ReadWrite.All',
+    'Group.ReadWrite.All',
+    'AppRoleAssignment.ReadWrite.All',
+    'Application.ReadWrite.All',
+    'Application.ReadWrite.OwnedBy',
+    'Policy.ReadWrite.ConditionalAccess',
+    'Device.ReadWrite.All',
+    'Mail.ReadWrite.All',
+    'Mail.Send',
+    'Sites.FullControl.All',
+    'Sites.Manage.All',
+    'TeamSettings.ReadWrite.All',
+    'ChannelSettings.ReadWrite.All',
+    'SecurityEvents.ReadWrite.All',
+    'SecurityIncident.ReadWrite.All',
+    'ThreatSubmission.ReadWrite.All'
+  ]
+}
+
+/**
+ * Helper: Map app role IDs to readable names
+ */
+function mapAppRoleIdToName(roleId) {
+  const roleMap = {
+    '9b895d92-2cd3-44c7-9131-e6e2c8f84e9c': 'Global Administrator',
+    'a9ea8996-122f-4757-8bcc-082674004b91': 'Application Administrator',
+    '7be44c8a-adaf-4e2a-84d6-ab2649e08a13': 'Conditional Access Administrator',
+    '194ae4cb-b126-40b2-bd5b-6091b380977d': 'Security Administrator',
+    '62e90394-69f5-430b-a426-440a3c17c5ee': 'Exchange Administrator',
+    'a6696b6b-1ca6-4687-9cac-2e94ebb3f999': 'Teams Administrator',
+    '1c6e93f7-d835-40ef-8962-ab9cf01e8201': 'User Administrator'
+  }
+  return roleMap[roleId] || null
+}
+
+/**
+ * Helper: Get demo workload identities data
+ */
+function getDemoWorkloadIdentitiesData() {
+  return [
+    {
+      id: 'app-1',
+      name: 'Microsoft Graph Management API',
+      appId: '00000003-0000-0000-c000-000000000000',
+      lastUsed: '2026-07-27 08:15',
+      createdDate: '2026-01-15',
+      ownerCount: 1,
+      secretAgeInDays: 420,
+      secretExpiresInDays: -45,
+      lastSignInDaysAgo: 2,
+      consentedPermissions: [
+        { name: 'Directory.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'User.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Group.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'RoleManagement.ReadWrite.Directory', type: 'Application', risk: 'Critical' },
+        { name: 'Organization.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'AppRoleAssignment.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Application.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Policy.ReadWrite.ConditionalAccess', type: 'Application', risk: 'Critical' }
+      ]
+    },
+    {
+      id: 'app-2',
+      name: 'Azure Service Management API',
+      appId: '797f4846-ba00-4fd7-ba43-dac1f8f63013',
+      lastUsed: '2026-07-26 14:30',
+      createdDate: '2026-02-20',
+      ownerCount: 0,
+      secretAgeInDays: 180,
+      secretExpiresInDays: 185,
+      lastSignInDaysAgo: 1,
+      hasRole: true,
+      roles: ['Application Administrator'],
+      consentedPermissions: [
+        { name: 'Directory.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Application.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Policy.ReadWrite.ConditionalAccess', type: 'Application', risk: 'Critical' },
+        { name: 'Device.ReadWrite.All', type: 'Application', risk: 'Critical' }
+      ]
+    },
+    {
+      id: 'app-3',
+      name: 'Exchange Online Management',
+      appId: 'a7f3f0ba-63d3-4ef0-a6f8-af8f87c2eb4f',
+      lastUsed: '2026-07-27 10:45',
+      createdDate: '2026-03-10',
+      ownerCount: 1,
+      secretAgeInDays: 250,
+      secretExpiresInDays: 115,
+      lastSignInDaysAgo: 0,
+      consentedPermissions: [
+        { name: 'Mail.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Mail.Send', type: 'Application', risk: 'Critical' },
+        { name: 'MailboxSettings.ReadWrite', type: 'Application', risk: 'Critical' },
+        { name: 'User.ReadWrite.All', type: 'Application', risk: 'Critical' }
+      ]
+    },
+    {
+      id: 'app-4',
+      name: 'SharePoint Admin API',
+      appId: '8e8a0e31-be67-4be1-9bba-4491c06a7300',
+      lastUsed: '2026-07-25 16:20',
+      createdDate: '2026-04-05',
+      ownerCount: 2,
+      secretAgeInDays: 95,
+      secretExpiresInDays: 270,
+      lastSignInDaysAgo: 2,
+      consentedPermissions: [
+        { name: 'Sites.FullControl.All', type: 'Application', risk: 'Critical' },
+        { name: 'Sites.Manage.All', type: 'Application', risk: 'Critical' },
+        { name: 'Files.ReadWrite.All', type: 'Application', risk: 'Critical' }
+      ]
+    },
+    {
+      id: 'app-5',
+      name: 'Teams Management Service',
+      appId: '1b730954-1685-4b74-9bda-da7b524db900',
+      lastUsed: '2026-05-10 09:50',
+      createdDate: '2026-05-12',
+      ownerCount: 0,
+      secretAgeInDays: 765,
+      secretExpiresInDays: -200,
+      lastSignInDaysAgo: 78,
+      consentedPermissions: [
+        { name: 'TeamSettings.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'ChannelSettings.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Chat.ReadWrite.All', type: 'Application', risk: 'Critical' }
+      ]
+    },
+    {
+      id: 'app-6',
+      name: 'Compliance Center API',
+      appId: '3239592c-1b4f-4746-a8ac-fd016c2d9f56',
+      lastUsed: '2026-07-22 13:15',
+      createdDate: '2026-06-08',
+      ownerCount: 1,
+      secretAgeInDays: 45,
+      secretExpiresInDays: 320,
+      lastSignInDaysAgo: 5,
+      consentedPermissions: [
+        { name: 'SecurityEvents.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'SecurityIncident.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'ThreatSubmission.ReadWrite.All', type: 'Application', risk: 'Critical' }
+      ]
+    },
+  ]
+}
+
+
+/**
+ * Helper: Calculate risk score for workload identity
+ */
+function calculateWorkloadRiskScore(app) {
+  let score = 0
+  const factors = []
+
+  // Critical permissions
+  const criticalPerms = app.consentedPermissions?.filter(p => p.risk === 'Critical') || []
+  if (criticalPerms.length > 0) {
+    score += criticalPerms.length * 100
+    factors.push(`${criticalPerms.length} critical permission${criticalPerms.length > 1 ? 's' : ''}`)
+  }
+
+  // Dangerous permissions
+  const dangerousPerms = app.consentedPermissions?.filter(p => p.risk === 'High') || []
+  if (dangerousPerms.length > 0) {
+    score += dangerousPerms.length * 85
+    factors.push(`${dangerousPerms.length} dangerous permission${dangerousPerms.length > 1 ? 's' : ''}`)
+  }
+
+  // Global Admin role
+  if (app.roles?.includes('Global Administrator')) {
+    score += 100
+    factors.push('Global Administrator role assigned')
+  }
+
+  // Other privileged roles
+  if (app.roles?.some(r => ['Application Administrator', 'Conditional Access Administrator', 'Security Administrator'].includes(r))) {
+    score += 95
+    factors.push(`Privileged role: ${app.roles.join(', ')}`)
+  }
+
+  // Old secrets
+  if (app.secretAgeInDays > 365) {
+    score += 20
+    factors.push(`Secret not rotated in ${app.secretAgeInDays} days`)
+  }
+
+  // Expiring secrets
+  if (app.secretExpiresInDays < 30 && app.secretExpiresInDays > 0) {
+    score += 20
+    factors.push(`Secret expires in ${app.secretExpiresInDays} days`)
+  }
+
+  // Expired secrets
+  if (app.secretExpiresInDays < 0) {
+    score += 50
+    factors.push('Secret is expired')
+  }
+
+  // No owners
+  if (app.ownerCount === 0) {
+    score += 25
+    factors.push('No owners assigned')
+  }
+
+  // Unused (>90 days)
+  if (app.lastSignInDaysAgo > 90) {
+    score += 30
+    factors.push(`Last activity ${app.lastSignInDaysAgo} days ago`)
+  }
+
+  return {
+    score: Math.min(score, 200),
+    factors,
+    severity: score >= 150 ? 'Critical' : score >= 100 ? 'High' : score >= 50 ? 'Medium' : 'Low'
+  }
+}
+
+/**
  * GET /api/identity/posture
  * Get identity posture metrics from Azure AD
  */

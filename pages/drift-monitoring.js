@@ -1,8 +1,61 @@
 import { getOpenDrifts, getDriftHistory, getRecommendation, approveRecommendation, rejectRecommendation, markDriftResolved } from '../lib/compliance-drift-client.js'
 import { callAPI } from '../lib/api-client.js'
+import { getAccessToken } from '../lib/auth.js'
 
 let complianceDrifts = {}
 let selectedDriftTab = 'cis'
+let guidCache = {} // Cache for GUID to display name mappings
+
+// GUID pattern matcher
+const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Resolve GUID to display name via Graph API
+async function resolveGuidToName(guid) {
+  if (!guidPattern.test(guid)) return guid // Not a GUID
+  if (guidCache[guid]) return guidCache[guid] // Already cached
+
+  try {
+    const token = await getAccessToken()
+    if (!token) return guid
+
+    const response = await fetch(`https://graph.microsoft.com/v1.0/directoryObjects/${guid}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      const displayName = data.displayName || data.userPrincipalName || guid
+      guidCache[guid] = displayName
+      return displayName
+    }
+  } catch (err) {
+    console.warn(`Failed to resolve GUID ${guid}:`, err)
+  }
+
+  return guid
+}
+
+// Format configuration value, resolving GUIDs if present
+async function formatConfigValue(value) {
+  const strValue = String(value)
+
+  // If it's a GUID, try to resolve it
+  if (guidPattern.test(strValue)) {
+    return await resolveGuidToName(strValue)
+  }
+
+  // If it contains GUIDs (comma-separated), resolve each
+  if (strValue.includes(',')) {
+    const parts = strValue.split(',').map(s => s.trim())
+    const resolved = await Promise.all(parts.map(p => formatConfigValue(p)))
+    return resolved.join(', ')
+  }
+
+  return value
+}
 
 export function initDriftMonitoring() {
   const el = document.getElementById('page-driftmonitoring')
@@ -236,9 +289,24 @@ async function loadCADriftData() {
       return
     }
 
-    const policies = res.data.policies
+    let policies = res.data.policies || []
+
+    // Pre-resolve GUIDs in configuration values
+    try {
+      policies = await Promise.all(policies.map(async (policy) => {
+        const resolvedConfig = {}
+        for (const [key, value] of Object.entries(policy.configuration || {})) {
+          resolvedConfig[key] = await formatConfigValue(value)
+        }
+        return { ...policy, configuration: resolvedConfig }
+      }))
+    } catch (err) {
+      console.warn('Error resolving GUIDs, continuing with original values:', err)
+      // Continue with original policies if resolution fails
+    }
     const policyDrifts = policies.filter(p => p.driftDetected)
     const driftCount = policyDrifts.length
+    const enabledCount = policies.filter(p => p.state === 'enabled').length
 
     let html = `
       <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
@@ -247,86 +315,81 @@ async function loadCADriftData() {
           <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Policies with Drift</div>
         </div>
         <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--color-primary)">${enabledCount}</div>
+          <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Enabled Policies</div>
+        </div>
+        <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
           <div style="font-size:24px;font-weight:700;color:var(--color-primary)">${policies.length}</div>
           <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Total Policies</div>
         </div>
       </div>
     `
 
-    if (driftCount === 0) {
-      html += `
-        <div style="padding:40px;text-align:center;background:var(--color-background-secondary);border-radius:4px">
-          <div style="font-size:48px;margin-bottom:16px">✅</div>
-          <h3 style="margin:0 0 8px 0;color:var(--color-text-primary)">No CA policy drifts detected</h3>
-          <p style="margin:0;font-size:13px;color:var(--color-text-secondary)">All policies are in sync with expected configuration.</p>
+    // Always show all policies in table
+    html += `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-layer-group"></i> All Conditional Access Policies</div>
         </div>
-      `
-    } else {
-      html += `
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><i class="fas fa-layer-group"></i> Conditional Access Policies - Configuration Drift</div>
-          </div>
-          <div style="overflow-x:auto;font-size:11px">
-            <table style="width:100%;border-collapse:collapse">
-              <thead>
-                <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-tertiary)">
-                  <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:200px">Policy Name</th>
-                  <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Configuration</th>
-                  <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:100px">Status</th>
-                  <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:150px">Changed Field</th>
-                </tr>
-              </thead>
-              <tbody>
-      `
+        <div style="overflow-x:auto;font-size:12px">
+          <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+            <thead>
+              <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-tertiary)">
+                <th style="padding:8px;text-align:center;font-weight:600;color:var(--color-text-primary);width:40px;font-size:12px">State</th>
+                <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-primary);width:220px;font-size:12px">Policy Name</th>
+                <th style="padding:8px;text-align:center;font-weight:600;color:var(--color-text-primary);width:80px;font-size:12px">Mode</th>
+                <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-primary);flex:1;min-width:250px;font-size:12px">Configuration</th>
+                <th style="padding:8px;text-align:center;font-weight:600;color:var(--color-text-primary);width:90px;font-size:12px">Drift</th>
+              </tr>
+            </thead>
+            <tbody>
+    `
 
-      policyDrifts.forEach((policy, idx) => {
-        html += `
-                <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${idx % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
-                  <td style="padding:10px;vertical-align:top;font-weight:600;color:var(--color-text-primary)">
-                    <div>${policy.displayName}</div>
-                    <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:3px">${policy.policyId}</div>
-                  </td>
-                  <td style="padding:10px;vertical-align:top;color:var(--color-text-secondary)">
-                    <div style="display:flex;flex-wrap:wrap;gap:6px">
-                      ${Object.entries(policy.configuration || {}).slice(0, 3).map(([key, value]) => `
-                        <span style="display:inline-block;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);padding:4px 8px;border-radius:3px;font-size:10px;white-space:nowrap">
-                          <strong>${key}:</strong> ${String(value).substring(0, 25)}${String(value).length > 25 ? '...' : ''}
-                        </span>
-                      `).join('')}
-                    </div>
-                  </td>
-                  <td style="padding:10px;text-align:center;vertical-align:top">
-                    <span style="display:inline-block;background:var(--clr-danger-bg);color:var(--clr-danger-text);padding:4px 8px;border-radius:3px;font-weight:600;font-size:10px">
-                      <i class="fas fa-exclamation-circle"></i> Drift
-                    </span>
-                  </td>
-                  <td style="padding:10px;vertical-align:top;color:var(--color-text-secondary)">
-                    ${policy.changedControl ? `
-                      <div style="background:var(--clr-warning-bg);border-left:3px solid var(--clr-warning-text);padding:6px;border-radius:3px">
-                        <div style="font-weight:600;color:var(--clr-warning-text);font-size:10px;margin-bottom:3px">
-                          ${policy.changedControl}
-                        </div>
-                        <div style="font-size:9px;color:var(--color-text-secondary)">
-                          <div><strong>Expected:</strong> ${policy.previousValue}</div>
-                          <div><strong>Current:</strong> ${policy.currentValue}</div>
-                        </div>
-                      </div>
-                    ` : `
-                      <span style="color:var(--color-text-tertiary);font-style:italic">No changes</span>
-                    `}
-                  </td>
-                </tr>
-        `
-      })
+    policies.forEach((policy, idx) => {
+      const isDrift = policy.driftDetected
+      const statusBg = isDrift ? 'var(--clr-danger-bg)' : 'var(--clr-success-bg)'
+      const statusText = isDrift ? 'var(--clr-danger-text)' : 'var(--clr-success-text)'
+      const driftLabel = isDrift ? '⚠️ Drift' : '✅ Sync'
+      const policyNameShort = policy.displayName.length > 30 ? policy.displayName.substring(0, 27) + '...' : policy.displayName
 
       html += `
-              </tbody>
-            </table>
-          </div>
-        </div>
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${idx % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
+                <td style="padding:8px;text-align:center;vertical-align:middle;width:40px">
+                  ${policy.state === 'enabled' ? '<span style="background:#4CAF50;color:white;padding:2px 4px;border-radius:2px;font-size:9px;font-weight:600">ON</span>' : '<span style="background:#999;color:white;padding:2px 4px;border-radius:2px;font-size:9px;font-weight:600">OFF</span>'}
+                </td>
+                <td style="padding:8px;vertical-align:top;font-weight:500;color:var(--color-text-primary);width:220px;word-break:break-word">
+                  <div style="font-size:12px;margin-bottom:3px">${policyNameShort}</div>
+                  <div style="font-size:10px;color:var(--color-text-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${policy.policyId}</div>
+                </td>
+                <td style="padding:8px;text-align:center;vertical-align:middle;width:80px">
+                  <span style="display:inline-block;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);padding:2px 4px;border-radius:2px;font-size:10px">
+                    ${policy.state.substring(0, 8)}
+                  </span>
+                </td>
+                <td style="padding:8px;vertical-align:top;color:var(--color-text-secondary);flex:1;min-width:250px">
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;max-height:100px;overflow-y:auto">
+                    ${Object.entries(policy.configuration || {}).map(([key, value]) => `
+                      <span style="display:inline-flex;align-items:center;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);padding:3px 6px;border-radius:2px;font-size:9px;word-wrap:break-word;white-space:normal;max-width:100%">
+                        <strong>${key}:</strong>&nbsp;<span style="word-break:break-all">${String(value)}</span>
+                      </span>
+                    `).join('')}
+                  </div>
+                </td>
+                <td style="padding:8px;text-align:center;vertical-align:middle;width:90px">
+                  <span style="display:inline-block;background:${statusBg};color:${statusText};padding:3px 6px;border-radius:3px;font-weight:600;font-size:10px">
+                    ${driftLabel}
+                  </span>
+                </td>
+              </tr>
       `
-    }
+    })
+
+    html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `
 
     container.innerHTML = html
   } catch (err) {

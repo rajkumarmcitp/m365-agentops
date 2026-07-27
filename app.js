@@ -550,8 +550,8 @@ async function doLoginWithEntraID(account) {
 
   // Determine nav access based on role
   const roleNavAccess = {
-    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
-    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
+    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
+    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
     manager: ['requests', 'msgcenter', 'tasks', 'portal', 'myreqs', 'myaccount', 'chat'],
     user: ['portal', 'myreqs', 'myaccount', 'chat']
   }

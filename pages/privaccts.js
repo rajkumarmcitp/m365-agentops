@@ -1,11 +1,13 @@
 import { showToast } from '../components/toast.js'
-import { getPrivilegedAccounts } from '../lib/api-client.js'
+import { getPrivilegedAccounts, getWorkloadIdentitiesWithRisk } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { PA_GROUPS } from '../data/pa-data.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 let logEntries = []
 let realPrivilegedAccounts = []
+let workloadIdentities = []
+let workloadDataLoaded = false // Track if API returned data (even if empty)
 let accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0, servicePrincipals: 0 }
 
 export async function initPrivAccts() {
@@ -14,7 +16,7 @@ export async function initPrivAccts() {
 
   if (isDemoAccount()) {
     console.log('🎭 Demo account detected - showing demo privileged accounts')
-    renderDemoPrivAccts(el)
+    await renderDemoPrivAccts(el)
     return
   }
 
@@ -33,9 +35,22 @@ export async function initPrivAccts() {
       realPrivilegedAccounts = []
       accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0, servicePrincipals: 0 }
     }
+
+    console.log('📡 Fetching workload identities with risk assessment...')
+    const workloadResult = await getWorkloadIdentitiesWithRisk()
+    if (workloadResult.success && workloadResult.data?.workloadIdentities !== undefined) {
+      workloadIdentities = workloadResult.data.workloadIdentities
+      workloadDataLoaded = true
+      console.log(`✅ Loaded ${workloadIdentities.length} workload identities (real data)`)
+    } else {
+      console.warn('⚠️ No workload identity data available from API')
+      workloadIdentities = []
+      workloadDataLoaded = false
+    }
   } catch (error) {
-    console.error('❌ Error loading privileged accounts:', error.message)
+    console.error('❌ Error loading privileged accounts or workload identities:', error.message)
     realPrivilegedAccounts = []
+    workloadIdentities = []
     accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0, servicePrincipals: 0 }
   }
 
@@ -83,16 +98,19 @@ function renderPrivAcctsContent(el) {
     <div class="tabs" id="pa-tabs">
       <button class="tab-btn active" data-tab="accounts">Privileged Accounts</button>
       <button class="tab-btn" data-tab="groups">Privileged Groups</button>
+      <button class="tab-btn" data-tab="workload">Workload Identity</button>
       <button class="tab-btn" data-tab="log">Membership Log</button>
     </div>
 
     <div class="tab-panel active" id="pa-tab-accounts"></div>
     <div class="tab-panel" id="pa-tab-groups"></div>
+    <div class="tab-panel" id="pa-tab-workload"></div>
     <div class="tab-panel" id="pa-tab-log"></div>
   `
 
   renderAccountsTab(el)
   renderGroupsTab(el)
+  renderWorkloadIdentityTab(el)
   renderLogTab(el)
 
   el.querySelectorAll('#pa-tabs .tab-btn').forEach(btn => {
@@ -139,7 +157,7 @@ function roleBadge(role) {
   return `<span class="pa-role-chip ${isGlobal ? 'global' : ''}">${role}</span>`
 }
 
-function renderDemoPrivAccts(el) {
+async function renderDemoPrivAccts(el) {
   const demoAccounts = [
     { id: 'user-1', name: 'Aisha Raza', email: 'aisha.raza@contoso.com', role: 'Global Administrator', mfa: ['Microsoft Authenticator'], riskLevel: 'high', lastSignIn: '2026-06-01 14:32' },
     { id: 'user-2', name: 'Chen Wei', email: 'chen.wei@contoso.com', role: 'Exchange Administrator', mfa: ['Authenticator App'], riskLevel: 'low', lastSignIn: '2026-06-01 09:15' },
@@ -169,6 +187,16 @@ function renderDemoPrivAccts(el) {
     { date: '2026-05-29 16:45', user: 'Sarah Johnson', action: 'Removed from SharePoint Administrators', status: 'Role deactivated', severity: 'low' },
     { date: '2026-05-28 11:30', user: 'Tom Brooks', action: 'Added to Teams Administrators', status: 'Eligible assignment', severity: 'warning' },
   ]
+
+  // Also load workload identities from API in demo mode
+  try {
+    const workloadResult = await getWorkloadIdentitiesWithRisk()
+    if (workloadResult.success && workloadResult.data?.workloadIdentities) {
+      workloadIdentities = workloadResult.data.workloadIdentities
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not load workload identities in demo mode:', error.message)
+  }
 
   el.innerHTML = `
     <div class="page-header">
@@ -203,16 +231,19 @@ function renderDemoPrivAccts(el) {
     <div class="tabs" id="pa-tabs">
       <button class="tab-btn active" data-tab="accounts">Privileged Accounts</button>
       <button class="tab-btn" data-tab="groups">Privileged Groups</button>
+      <button class="tab-btn" data-tab="workload">Workload Identity</button>
       <button class="tab-btn" data-tab="log">Membership Log</button>
     </div>
 
     <div class="tab-panel active" id="pa-tab-accounts"></div>
     <div class="tab-panel" id="pa-tab-groups"></div>
+    <div class="tab-panel" id="pa-tab-workload"></div>
     <div class="tab-panel" id="pa-tab-log"></div>
   `
 
   renderDemoAccountsTab(el, demoAccounts)
   renderDemoGroupsTab(el, demoGroups)
+  renderDemoWorkloadIdentityTab(el)
   renderDemoLogTab(el, demoLog)
 
   el.querySelector('#pa-sync').addEventListener('click', () => {
@@ -566,6 +597,450 @@ function wireGroupEvents(container) {
       showToast(`${btn.dataset.upn} removed from group.`, 'success')
       addLogEntry('remove', `${btn.dataset.upn} removed from group`, 'Admin')
     })
+  })
+}
+
+// Risk scoring engine for workload identities
+function calculateRiskScore(app) {
+  let score = 0
+  const factors = []
+
+  // Critical permissions (highest weight)
+  const criticalPermissions = [
+    'Directory.ReadWrite.All',
+    'RoleManagement.ReadWrite.Directory',
+    'User.ReadWrite.All',
+    'Group.ReadWrite.All',
+    'AppRoleAssignment.ReadWrite.All',
+    'Application.ReadWrite.All',
+    'Application.ReadWrite.OwnedBy',
+    'Policy.ReadWrite.ConditionalAccess',
+    'Device.ReadWrite.All',
+    'DeviceManagementConfiguration.ReadWrite.All',
+    'DeviceManagementManagedDevices.ReadWrite.All',
+    'Organization.ReadWrite.All',
+    'Domain.ReadWrite.All',
+    'IdentityRiskyUser.ReadWrite.All',
+    'IdentityProvider.ReadWrite.All'
+  ]
+
+  // Exchange/SharePoint/Teams/Security permissions
+  const dangerousPermissions = [
+    'Mail.ReadWrite',
+    'Mail.Send',
+    'Mail.ReadWrite.All',
+    'Sites.FullControl.All',
+    'Sites.Manage.All',
+    'Sites.ReadWrite.All',
+    'ChannelSettings.ReadWrite.All',
+    'TeamSettings.ReadWrite.All',
+    'Chat.ReadWrite.All',
+    'Calls.AccessMedia.All',
+    'SecurityEvents.ReadWrite.All',
+    'SecurityIncident.ReadWrite.All',
+    'ThreatSubmission.ReadWrite.All'
+  ]
+
+  // Check permissions
+  const appPerms = app.consentedPermissions || []
+  appPerms.forEach(perm => {
+    if (criticalPermissions.includes(perm.name)) {
+      score += 100
+      factors.push(`Critical permission: ${perm.name}`)
+    } else if (dangerousPermissions.includes(perm.name)) {
+      score += 85
+      factors.push(`Dangerous permission: ${perm.name}`)
+    }
+  })
+
+  // Role checks
+  if (app.hasRole && app.roles.includes('Global Administrator')) {
+    score += 100
+    factors.push('Assigned Global Administrator role')
+  }
+  if (app.hasRole && app.roles.some(r => ['Privileged Role Administrator', 'Conditional Access Administrator', 'Security Administrator'].includes(r))) {
+    score += 95
+    factors.push(`Privileged role assigned: ${app.roles.join(', ')}`)
+  }
+
+  // Credential checks
+  if (app.secretAgeInDays && app.secretAgeInDays > 365) {
+    score += 20
+    factors.push(`Secret not rotated in ${app.secretAgeInDays} days`)
+  }
+  if (app.secretExpiresInDays && app.secretExpiresInDays < 30 && app.secretExpiresInDays > 0) {
+    score += 20
+    factors.push(`Secret expires in ${app.secretExpiresInDays} days`)
+  }
+
+  // Ownership checks
+  if (app.ownerCount === 0) {
+    score += 25
+    factors.push('No owners assigned')
+  }
+
+  // Usage checks - handle three cases:
+  // -1 = App Registration Only (can't sign in)
+  // null = Service Principal outside retention window
+  // 0+ = Actual days since last sign-in
+  if (app.lastSignInDaysAgo === -1) {
+    // App Registration without Service Principal - cannot be used
+    score += 10 // Lower penalty than unused app
+    factors.push('No Service Principal exists')
+  } else if (app.lastSignInDaysAgo !== null && app.lastSignInDaysAgo > 90) {
+    // Service Principal with no recent activity
+    score += 30
+    factors.push(`Last activity ${app.lastSignInDaysAgo} days ago`)
+  }
+
+  // Multiple high-risk permissions
+  if (appPerms.filter(p => criticalPermissions.includes(p.name)).length > 3) {
+    score += 30
+    factors.push('Multiple critical permissions detected')
+  }
+
+  return {
+    score: Math.min(score, 200),
+    factors,
+    severity: score >= 150 ? 'Critical' : score >= 100 ? 'High' : score >= 50 ? 'Medium' : 'Low'
+  }
+}
+
+function getDemoWorkloadIdentities() {
+  return [
+    {
+      id: 'app-1',
+      name: 'Microsoft Graph Management API',
+      appId: '00000003-0000-0000-c000-000000000000',
+      lastUsed: '2026-07-27 08:15',
+      createdDate: '2026-01-15',
+      ownerCount: 1,
+      secretAgeInDays: 420,
+      secretExpiresInDays: -45,
+      lastSignInDaysAgo: 2,
+      consentedPermissions: [
+        { name: 'Directory.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'User.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Group.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'RoleManagement.ReadWrite.Directory', type: 'Application', risk: 'Critical' },
+        { name: 'Organization.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'AppRoleAssignment.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Application.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Policy.ReadWrite.ConditionalAccess', type: 'Application', risk: 'Critical' }
+      ]
+    },
+    {
+      id: 'app-2',
+      name: 'Azure Service Management API',
+      appId: '797f4846-ba00-4fd7-ba43-dac1f8f63013',
+      lastUsed: '2026-07-26 14:30',
+      createdDate: '2026-02-20',
+      ownerCount: 0,
+      secretAgeInDays: 180,
+      secretExpiresInDays: 185,
+      lastSignInDaysAgo: 1,
+      hasRole: true,
+      roles: ['Application Administrator'],
+      consentedPermissions: [
+        { name: 'Directory.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Application.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Policy.ReadWrite.ConditionalAccess', type: 'Application', risk: 'Critical' },
+        { name: 'Device.ReadWrite.All', type: 'Application', risk: 'Critical' }
+      ]
+    },
+    {
+      id: 'app-3',
+      name: 'Exchange Online Management',
+      appId: 'a7f3f0ba-63d3-4ef0-a6f8-af8f87c2eb4f',
+      lastUsed: '2026-07-27 10:45',
+      createdDate: '2026-03-10',
+      ownerCount: 1,
+      secretAgeInDays: 250,
+      secretExpiresInDays: 115,
+      lastSignInDaysAgo: 0,
+      consentedPermissions: [
+        { name: 'Mail.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Mail.Send', type: 'Application', risk: 'Critical' },
+        { name: 'MailboxSettings.ReadWrite', type: 'Application', risk: 'Critical' },
+        { name: 'User.ReadWrite.All', type: 'Application', risk: 'Critical' }
+      ]
+    },
+    {
+      id: 'app-4',
+      name: 'SharePoint Admin API',
+      appId: '8e8a0e31-be67-4be1-9bba-4491c06a7300',
+      lastUsed: '2026-07-25 16:20',
+      createdDate: '2026-04-05',
+      ownerCount: 2,
+      secretAgeInDays: 95,
+      secretExpiresInDays: 270,
+      lastSignInDaysAgo: 2,
+      consentedPermissions: [
+        { name: 'Sites.FullControl.All', type: 'Application', risk: 'Critical' },
+        { name: 'Sites.Manage.All', type: 'Application', risk: 'Critical' },
+        { name: 'Files.ReadWrite.All', type: 'Application', risk: 'Critical' }
+      ]
+    },
+    {
+      id: 'app-5',
+      name: 'Teams Management Service',
+      appId: '1b730954-1685-4b74-9bda-da7b524db900',
+      lastUsed: '2026-05-10 09:50',
+      createdDate: '2026-05-12',
+      ownerCount: 0,
+      secretAgeInDays: 765,
+      secretExpiresInDays: -200,
+      lastSignInDaysAgo: 78,
+      consentedPermissions: [
+        { name: 'TeamSettings.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'ChannelSettings.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'Chat.ReadWrite.All', type: 'Application', risk: 'Critical' }
+      ]
+    },
+    {
+      id: 'app-6',
+      name: 'Compliance Center API',
+      appId: '3239592c-1b4f-4746-a8ac-fd016c2d9f56',
+      lastUsed: '2026-07-22 13:15',
+      createdDate: '2026-06-08',
+      ownerCount: 1,
+      secretAgeInDays: 45,
+      secretExpiresInDays: 320,
+      lastSignInDaysAgo: 5,
+      consentedPermissions: [
+        { name: 'SecurityEvents.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'SecurityIncident.ReadWrite.All', type: 'Application', risk: 'Critical' },
+        { name: 'ThreatSubmission.ReadWrite.All', type: 'Application', risk: 'Critical' }
+      ]
+    },
+  ]
+}
+
+function renderWorkloadIdentityTab(el) {
+  const container = el.querySelector('#pa-tab-workload')
+  if (!container) return
+
+  // Use real workload identities from API if loaded, or fallback to demo data
+  // Important: empty array is still valid real data (means 0 privileged apps), don't fall back
+  const highPrivilegeApps = workloadDataLoaded ? workloadIdentities : getDemoWorkloadIdentities()
+
+  // Handle empty result (0 privileged apps found)
+  if (highPrivilegeApps.length === 0 && workloadDataLoaded) {
+    let html = `
+      <div style="padding:20px;text-align:center;background:var(--color-background-secondary);border-radius:6px;border:1px solid var(--clr-success-bg)">
+        <div style="font-size:16px;font-weight:600;color:var(--clr-success-text);margin-bottom:8px">✅ No Privileged Workload Identities Detected</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:12px">Your tenant has no service principals with privileged permissions or roles assigned.</div>
+        <div style="font-size:11px;color:var(--color-text-tertiary);padding:12px;background:var(--color-background-primary);border-radius:4px;border-left:3px solid var(--clr-success-text)">
+          <strong>What this means:</strong> No apps have been granted critical permissions like Directory.ReadWrite.All, Application.ReadWrite.All, or privileged directory roles. This is good security practice!
+        </div>
+      </div>
+    `
+    container.innerHTML = html
+    return
+  }
+
+  // Calculate risk scores for all apps and enrich with risk factors
+  const appsWithScores = highPrivilegeApps.map(app => {
+    const riskData = calculateRiskScore(app)
+    return {
+      ...app,
+      riskData,
+      permissions: app.consentedPermissions?.length || 0
+    }
+  })
+
+  const criticalCount = appsWithScores.filter(a => a.riskData.severity === 'Critical').length
+  const highCount = appsWithScores.filter(a => a.riskData.severity === 'High').length
+  const mediumCount = appsWithScores.filter(a => a.riskData.severity === 'Medium').length
+
+  let html = `
+    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
+        <div style="font-size:24px;font-weight:700;color:#D32F2F">${criticalCount}</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Critical Risk</div>
+      </div>
+      <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
+        <div style="font-size:24px;font-weight:700;color:var(--clr-danger-text)">${highCount}</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">High Risk</div>
+      </div>
+      <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
+        <div style="font-size:24px;font-weight:700;color:var(--clr-warning-text)">${mediumCount}</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Medium Risk</div>
+      </div>
+      <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
+        <div style="font-size:24px;font-weight:700;color:var(--color-primary)">${highPrivilegeApps.length}</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Total Identities</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse">
+        <thead style="background:var(--color-background-secondary)">
+          <tr>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600">Workload Identity</th>
+            <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:600">Permissions</th>
+            <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:600">Risk Score</th>
+            <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:600">Severity</th>
+            <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:600">Last Activity</th>
+            <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:600">Owners</th>
+          </tr>
+        </thead>
+        <tbody>
+  `
+
+  appsWithScores.forEach((app, idx) => {
+    const risk = app.riskData
+    const riskColor = risk.severity === 'Critical' ? '#D32F2F' : risk.severity === 'High' ? 'var(--clr-danger-text)' : risk.severity === 'Medium' ? 'var(--clr-warning-text)' : 'var(--clr-success-text)'
+    const riskBg = risk.severity === 'Critical' ? '#FFEBEE' : risk.severity === 'High' ? 'var(--clr-danger-bg)' : risk.severity === 'Medium' ? 'var(--clr-warning-bg)' : 'var(--clr-success-bg)'
+
+    // Format credential status
+    let credentialStatus = '✅ Valid'
+    if (app.secretAgeInDays > 365) {
+      credentialStatus = '⚠️ Old'
+    } else if (app.secretExpiresInDays < 30 && app.secretExpiresInDays > 0) {
+      credentialStatus = '⚠️ Exp. Soon'
+    } else if (app.secretExpiresInDays < 0) {
+      credentialStatus = '❌ Expired'
+    }
+
+    html += `
+          <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${idx % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
+            <td style="padding:10px 12px;vertical-align:top;font-weight:500;color:var(--color-primary);font-size:11px;cursor:pointer" onclick="window.showAppPermissionsModal('${app.id}')" class="workload-app-name" data-app-id="${app.id}" data-app-name="${app.name}" data-app-permissions='${JSON.stringify(app.consentedPermissions)}' data-risk-factors='${JSON.stringify(risk.factors)}'>
+              <span style="text-decoration:underline">${app.name}</span>
+              ${app.isAppRegistrationOnly ? '<span style="display:inline-block;margin-left:6px;background:#FFF3E0;color:#E65100;padding:2px 6px;border-radius:2px;font-size:8px;font-weight:600">APP REG ONLY</span>' : ''}
+              <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:2px">${app.isAppRegistrationOnly ? '⚠️ No Service Principal' : credentialStatus}</div>
+            </td>
+            <td style="padding:10px 12px;vertical-align:top;text-align:center">
+              <span style="display:inline-block;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);padding:4px 8px;border-radius:3px;font-size:10px;font-weight:600">${app.permissions}</span>
+            </td>
+            <td style="padding:10px 12px;text-align:center;vertical-align:top">
+              <div style="font-size:10px;font-weight:600;color:${riskColor}">${risk.score}</div>
+              <div style="font-size:9px;color:var(--color-text-tertiary)">Score</div>
+            </td>
+            <td style="padding:10px 12px;text-align:center;vertical-align:top">
+              <span style="display:inline-block;background:${riskBg};color:${riskColor};padding:4px 8px;border-radius:3px;font-size:10px;font-weight:600">${risk.severity}</span>
+            </td>
+            <td style="padding:10px 12px;vertical-align:top;text-align:center">
+              <span style="font-size:10px;color:var(--color-text-secondary)">
+                ${app.lastSignInDaysAgo === -1 ? '❌ N/A (No SP)' :
+                  app.lastSignInDaysAgo === null ? '⏱️ Outside retention' :
+                  app.lastSignInDaysAgo === 0 ? 'Today' :
+                  app.lastSignInDaysAgo === 1 ? 'Yesterday' :
+                  app.lastSignInDaysAgo + 'd ago'}
+              </span>
+            </td>
+            <td style="padding:10px 12px;vertical-align:top;text-align:center">
+              <span style="display:inline-block;background:${app.ownerCount === 0 ? '#FFEBEE' : 'var(--color-background-secondary)'};color:${app.ownerCount === 0 ? '#D32F2F' : 'var(--color-text-secondary)'};padding:3px 6px;border-radius:2px;font-size:9px">${app.ownerCount} ${app.ownerCount === 1 ? 'owner' : 'owners'}</span>
+            </td>
+          </tr>
+    `
+  })
+
+  html += `
+        </tbody>
+      </table>
+    </div>
+  `
+
+  container.innerHTML = html
+}
+
+function renderDemoWorkloadIdentityTab(el) {
+  renderWorkloadIdentityTab(el)
+}
+
+// Modal for viewing app permissions
+window.showAppPermissionsModal = function(appId) {
+  const appElement = document.querySelector(`[data-app-id="${appId}"]`)
+  if (!appElement) return
+
+  const appName = appElement.dataset.appName
+  const permissions = JSON.parse(appElement.dataset.appPermissions)
+  const riskFactors = JSON.parse(appElement.dataset.riskFactors || '[]')
+
+  const riskLevels = {
+    'Critical': { color: '#D32F2F', bg: '#FFEBEE' },
+    'High': { color: '#F57C00', bg: '#FFF3E0' },
+    'Medium': { color: '#F9A825', bg: '#FFFBF0' },
+    'Low': { color: '#388E3C', bg: '#F1F8E9' }
+  }
+
+  let permissionsHtml = permissions.map((perm, idx) => {
+    const risk = perm.risk || 'Unknown'
+    const riskStyle = riskLevels[risk] || { color: '#666', bg: '#f5f5f5' }
+
+    return `
+      <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${idx % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
+        <td style="padding:10px 12px;vertical-align:top;font-weight:500;color:var(--color-text-primary);font-size:11px">${perm.name}</td>
+        <td style="padding:10px 12px;vertical-align:top;text-align:center">
+          <span style="display:inline-block;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);padding:3px 8px;border-radius:2px;font-size:9px">${perm.type}</span>
+        </td>
+        <td style="padding:10px 12px;vertical-align:top;text-align:center">
+          <span style="display:inline-block;background:${riskStyle.bg};color:${riskStyle.color};padding:3px 8px;border-radius:2px;font-size:9px;font-weight:600">${risk}</span>
+        </td>
+      </tr>
+    `
+  }).join('')
+
+  const modal = document.createElement('div')
+  modal.id = 'workload-permissions-modal'
+  modal.style.cssText = `
+    position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);
+    display:flex;align-items:center;justify-content:center;z-index:9999
+  `
+
+  modal.innerHTML = `
+    <div style="background:white;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.2);width:90%;max-width:800px;max-height:80vh;overflow:auto">
+      <div style="padding:20px;border-bottom:1px solid var(--color-border-tertiary);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:white">
+        <div>
+          <h2 style="margin:0;font-size:16px;font-weight:600;color:var(--color-text-primary)">${appName}</h2>
+          <p style="margin:4px 0 0 0;font-size:11px;color:var(--color-text-secondary)">Consented Permissions (${permissions.length})</p>
+        </div>
+        <button onclick="document.getElementById('workload-permissions-modal').remove()" style="border:none;background:none;cursor:pointer;font-size:24px;color:var(--color-text-secondary)">×</button>
+      </div>
+
+      <div style="padding:20px">
+        ${riskFactors.length > 0 ? `
+          <div style="margin-bottom:16px;padding:12px;background:#FFEBEE;border-radius:4px;border-left:4px solid #D32F2F">
+            <div style="font-weight:600;color:#B71C1C;font-size:11px;margin-bottom:8px">🚨 Risk Factors Detected:</div>
+            <ul style="margin:0;padding:0 0 0 20px;font-size:10px;color:#C62828">
+              ${riskFactors.map(f => `<li style="margin:4px 0">${f}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+
+        <div style="margin-bottom:16px">
+          <h3 style="margin:0 0 12px 0;font-size:12px;font-weight:600;color:var(--color-text-primary)">Consented Permissions (${permissions.length})</h3>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table style="width:100%;border-collapse:collapse;font-size:11px">
+              <thead>
+                <tr style="background:var(--color-background-secondary)">
+                  <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--color-text-primary)">Permission Name</th>
+                  <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--color-text-primary);width:100px">Type</th>
+                  <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--color-text-primary);width:90px">Risk</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${permissionsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="padding:12px;background:var(--color-background-secondary);border-radius:4px;border-left:3px solid var(--clr-warning-text)">
+          <p style="margin:0;font-size:10px;color:var(--color-text-secondary)">
+            <strong>📋 Reference Categories:</strong> These permissions are based on Microsoft Entra ID risk assessment framework including Directory, Application, Role Management, Mail, SharePoint, Teams, and Security permissions.
+          </p>
+        </div>
+      </div>
+    </div>
+  `
+
+  document.body.appendChild(modal)
+
+  // Close on background click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove()
   })
 }
 
