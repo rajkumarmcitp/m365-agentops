@@ -39,6 +39,7 @@ import { initIntune } from './pages/intune.js'
 import { initMyAccount } from './pages/myaccount.js'
 import { initializeServiceHealth } from './lib/service-health-manager.js'
 import { initConditionalAccess } from './pages/conditional-access.js'
+import { initDriftMonitoring } from './pages/drift-monitoring.js'
 
 // ============================================================
 // Help Icon Handler - Use event delegation
@@ -272,6 +273,7 @@ const PAGE_INIT = {
   'user-investigation': initUserInvestigation,
   zerotrust: initZeroTrust,
   conditionalaccess: initConditionalAccess,
+  driftmonitoring: initDriftMonitoring,
   m365config: initM365Config,
   privaccts: initPrivAccts,
   licenses: initLicenses,
@@ -623,7 +625,7 @@ function renderShell() {
 
 function renderAllPages() {
   const pages = [
-    'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','conditionalaccess','privaccts','m365config',
+    'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','conditionalaccess','driftmonitoring','privaccts','m365config',
     'msgcenter','messages','tasks','applications','intune','licenses','agents','agent-details','approvals','portal','myreqs','myaccount','chat',
     'graphapi','sso','setup-wizard','audit','settings','backup','backup-config'
   ]
