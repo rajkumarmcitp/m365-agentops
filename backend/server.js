@@ -862,6 +862,8 @@ try {
   console.error('❌ Nightly validation scheduler initialization failed:', error.message)
 }
 
+// Note: Workload identities background job is initialized at the end of server startup (after all functions are defined)
+
 // ============================================================
 // Validation Scheduler Endpoints
 // ============================================================
@@ -9537,13 +9539,133 @@ app.get('/api/privileged-accounts', async (req, res) => {
  * Fetch real service principals and app registrations with risk assessment
  * Includes permissions, credentials, ownership, and sign-in data from Azure AD
  */
+// Cache for workload identities (updated by background job)
+let cachedWorkloadIdentities = {
+  workloadIdentities: [],
+  timestamp: null,
+  isRunning: false
+}
+
+// Fast endpoint - returns cached data immediately
 app.get('/api/workload-identities/risk-assessment', async (req, res) => {
   try {
-    if (!graphClient) {
-      console.warn('⚠️ Graph Client not initialized, returning demo data')
-      return sendDemoWorkloadIdentities(res)
+    // Return cached data immediately (even if empty/old)
+    if (cachedWorkloadIdentities.workloadIdentities.length > 0) {
+      const criticalCount = cachedWorkloadIdentities.workloadIdentities.filter(a => a.riskData?.severity === 'Critical').length
+      const highCount = cachedWorkloadIdentities.workloadIdentities.filter(a => a.riskData?.severity === 'High').length
+      const mediumCount = cachedWorkloadIdentities.workloadIdentities.filter(a => a.riskData?.severity === 'Medium').length
+
+      console.log(`✅ Returning cached workload identities (${cachedWorkloadIdentities.workloadIdentities.length} apps)`)
+      return res.json({
+        success: true,
+        data: {
+          workloadIdentities: cachedWorkloadIdentities.workloadIdentities,
+          summary: {
+            total: cachedWorkloadIdentities.workloadIdentities.length,
+            privileged: cachedWorkloadIdentities.workloadIdentities.length,
+            critical: criticalCount,
+            high: highCount,
+            medium: mediumCount,
+            isRealData: true,
+            cacheTimestamp: cachedWorkloadIdentities.timestamp,
+            isStale: cachedWorkloadIdentities.timestamp ? Date.now() - new Date(cachedWorkloadIdentities.timestamp).getTime() > 3600000 : true, // Stale if > 1 hour old
+            isRunning: cachedWorkloadIdentities.isRunning
+          }
+        }
+      })
     }
 
+    // No cached data - start job and return empty with status
+    if (!cachedWorkloadIdentities.isRunning && !graphClient) {
+      console.warn('⚠️ Graph Client not initialized')
+      return res.json({ success: false, error: 'Graph client not initialized', data: { workloadIdentities: [] } })
+    }
+
+    // Trigger background job if not running
+    if (!cachedWorkloadIdentities.isRunning) {
+      console.log('🔄 Triggering background workload identities job...')
+      runWorkloadIdentitiesJob() // Fire and forget
+    }
+
+    // Return empty with status
+    res.json({
+      success: true,
+      data: {
+        workloadIdentities: [],
+        summary: {
+          total: 0,
+          privileged: 0,
+          critical: 0,
+          high: 0,
+          medium: 0,
+          isRealData: false,
+          cacheTimestamp: cachedWorkloadIdentities.timestamp,
+          isStale: true,
+          isRunning: true,
+          message: 'Loading privileged workload identities...'
+        }
+      }
+    })
+  } catch (error) {
+    console.error('❌ Workload identities API error:', error.message)
+    res.json({
+      success: false,
+      error: error.message,
+      data: { workloadIdentities: [] }
+    })
+  }
+})
+
+// Admin endpoint - manually trigger refresh
+app.post('/api/workload-identities/refresh', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.status(400).json({ success: false, error: 'Graph client not initialized' })
+    }
+
+    if (cachedWorkloadIdentities.isRunning) {
+      return res.status(429).json({ success: false, error: 'Refresh already in progress' })
+    }
+
+    console.log('🔄 [Admin] Triggering manual workload identities refresh...')
+    res.json({ success: true, message: 'Refresh job started. Check back in 30-60 seconds.' })
+
+    // Run job in background (don't await)
+    runWorkloadIdentitiesJob()
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Background job: Fetch and cache workload identities
+async function runWorkloadIdentitiesJob() {
+  try {
+    if (cachedWorkloadIdentities.isRunning) {
+      console.log('⏭️ Workload identities job already running, skipping...')
+      return
+    }
+
+    cachedWorkloadIdentities.isRunning = true
+    console.log('🔄 [Workload Identities Job] Starting background enrichment...')
+    const startTime = Date.now()
+
+    const result = await enrichWorkloadIdentitiesData()
+
+    cachedWorkloadIdentities.workloadIdentities = result
+    cachedWorkloadIdentities.timestamp = new Date()
+
+    const elapsed = Date.now() - startTime
+    console.log(`✅ [Workload Identities Job] Completed in ${elapsed}ms. Cached ${result.length} apps`)
+  } catch (error) {
+    console.error(`❌ [Workload Identities Job] Failed: ${error.message}`)
+  } finally {
+    cachedWorkloadIdentities.isRunning = false
+  }
+}
+
+// Helper function: Do the heavy lifting
+async function enrichWorkloadIdentitiesData() {
+  try {
     console.log('📡 Fetching real workload identities from Azure AD...')
     const startTime = Date.now()
 
@@ -9822,27 +9944,12 @@ app.get('/api/workload-identities/risk-assessment', async (req, res) => {
     const elapsed = Date.now() - startTime
     console.log(`✅ High-privilege workload identities: ${privilegedApps.length} apps (from ${workloadIdentities.length} total), ${criticalCount} critical, ${highCount} high (${elapsed}ms)`)
 
-    res.json({
-      success: true,
-      data: {
-        workloadIdentities: privilegedApps, // All privileged apps, sorted by risk
-        summary: {
-          total: workloadIdentities.length,
-          privileged: privilegedApps.length,
-          critical: criticalCount,
-          high: highCount,
-          medium: mediumCount,
-          isRealData: true
-        }
-      }
-    })
-
+    return privilegedApps // Return the data for caching
   } catch (error) {
-    console.error('❌ Workload identities API error:', error.message)
-    console.warn('⚠️ Falling back to demo data')
-    sendDemoWorkloadIdentities(res)
+    console.error('❌ Workload identities enrichment error:', error.message)
+    throw error // Propagate error to job handler
   }
-})
+}
 
 /**
  * Helper: Send demo workload identities (fallback)
@@ -25402,6 +25509,22 @@ app.get('/api/cap/dashboard/drift', async (req, res) => {
     res.status(500).json({ success: false, error: error.message })
   }
 })
+
+// ============================================================
+// Initialize Workload Identities Background Job (after all functions are defined)
+// ============================================================
+try {
+  console.log('🔄 Scheduling workload identities background job...')
+  // Run immediately on startup
+  runWorkloadIdentitiesJob()
+  // Then run every 2 hours
+  setInterval(() => {
+    runWorkloadIdentitiesJob()
+  }, 2 * 60 * 60 * 1000) // 2 hours
+  console.log('✅ Workload identities background job scheduled (every 2 hours)')
+} catch (error) {
+  console.error('❌ Workload identities job scheduler failed:', error.message)
+}
 
 // ============================================================
 // 404 Handler - MUST be last
