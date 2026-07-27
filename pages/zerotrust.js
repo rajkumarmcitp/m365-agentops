@@ -407,9 +407,6 @@ function renderZeroTrustWithData(el) {
         <button class="tab-btn" data-zt-tab="ai">
           <i class="ti ti-brain"></i><span>AI Security</span>
         </button>
-        <button class="tab-btn" data-zt-tab="drifts">
-          <i class="ti ti-alert-circle"></i><span>Drifts</span>
-        </button>
         <button class="tab-btn" data-zt-tab="frameworks">
           <i class="ti ti-certificate"></i><span>Frameworks</span>
         </button>
@@ -529,12 +526,6 @@ function renderZTTabContent(el) {
     setTimeout(() => {
       setupExceptionHandlers()
       window.loadZTExceptions()
-    }, 50)
-  } else if (activeTab === 'drifts') {
-    contentEl.innerHTML = renderZTDriftsTab()
-    setTimeout(() => {
-      loadDriftTabStats()
-      loadCADriftData()
     }, 50)
   } else {
     const pillarName = pillarsMap[activeTab]
@@ -2166,9 +2157,6 @@ function renderZeroTrustWithDemoData(el) {
         </button>
         <button class="tab-btn" data-zt-tab="ai">
           <i class="ti ti-brain"></i><span>AI Security</span>
-        </button>
-        <button class="tab-btn" data-zt-tab="drifts">
-          <i class="ti ti-alert-circle"></i><span>Drifts</span>
         </button>
         <button class="tab-btn" data-zt-tab="frameworks">
           <i class="ti ti-certificate"></i><span>Frameworks</span>
