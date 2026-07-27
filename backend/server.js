@@ -23420,6 +23420,22 @@ app.get('/api/cap/dashboard/home', async (req, res) => {
   }
 })
 
+// Helper: Create manual validation control
+function manualControl(id, name, severity, rec) {
+  return {
+    controlId: id,
+    name: name,
+    severity: severity,
+    status: 'Manual',
+    validationType: 'Manual',
+    score: 0,
+    matchedPolicies: [],
+    missingCoverage: ['Requires Azure Portal verification'],
+    recommendation: `[MANUAL] ${rec} - Verify in Azure AD > Conditional Access`,
+    expectedValue: 'Review manually in Portal'
+  }
+}
+
 // Helper: Evaluate real policies against Identity Protection controls
 function evaluateIdentityControls(policies) {
   const controls = []
