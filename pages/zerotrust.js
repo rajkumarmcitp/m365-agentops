@@ -532,7 +532,10 @@ function renderZTTabContent(el) {
     }, 50)
   } else if (activeTab === 'drifts') {
     contentEl.innerHTML = renderZTDriftsTab()
-    setTimeout(() => loadDriftTabStats(), 50)
+    setTimeout(() => {
+      loadDriftTabStats()
+      loadCADriftData()
+    }, 50)
   } else {
     const pillarName = pillarsMap[activeTab]
     const pillarStats = realValidations.summary.byPillar[pillarName]
@@ -2688,6 +2691,8 @@ function renderZTDriftsTab() {
   const criticalDrifts = openDrifts.filter(d => d.severity === 'CRITICAL')
   const highDrifts = openDrifts.filter(d => d.severity === 'HIGH')
 
+  // Note: CA policies drift data will be loaded async and inserted via loadCADriftData()
+
   if (openDrifts.length === 0) {
     return `
       <div style="padding:40px;text-align:center;color:var(--color-text-secondary)">
@@ -2780,7 +2785,97 @@ function renderZTDriftsTab() {
         `
       }).join('')}
     </div>
+
+    <div id="ca-drift-section" style="margin-top:24px">
+      <!-- CA Policy Drifts will be loaded here -->
+    </div>
   `
+}
+
+async function loadCADriftData() {
+  try {
+    const res = await callAPI('/cap/dashboard/drift')
+    if (!res.success || !res.data.policies) return
+
+    const driftContainer = document.getElementById('ca-drift-section')
+    if (!driftContainer) return
+
+    const policyDrifts = res.data.policies.filter(p => p.driftDetected)
+
+    if (policyDrifts.length === 0) {
+      driftContainer.innerHTML = ''
+      return
+    }
+
+    let html = `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-shield-alt"></i> Conditional Access Policies - Configuration Drift</div>
+        </div>
+        <div style="overflow-x:auto;font-size:11px">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-tertiary)">
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:200px">Policy Name</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary)">Configuration</th>
+                <th style="padding:10px;text-align:center;font-weight:600;color:var(--color-text-primary);width:100px">Drift Status</th>
+                <th style="padding:10px;text-align:left;font-weight:600;color:var(--color-text-primary);width:150px">Changed Field</th>
+              </tr>
+            </thead>
+            <tbody>
+    `
+
+    policyDrifts.forEach((policy, idx) => {
+      html += `
+              <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${idx % 2 === 0 ? 'background:var(--color-background-primary)' : 'background:var(--color-background-secondary)'}">
+                <td style="padding:10px;vertical-align:top;font-weight:600;color:var(--color-text-primary)">
+                  <div>${policy.displayName}</div>
+                  <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:3px">${policy.policyId}</div>
+                </td>
+                <td style="padding:10px;vertical-align:top;color:var(--color-text-secondary)">
+                  <div style="display:flex;flex-wrap:wrap;gap:6px">
+                    ${Object.entries(policy.configuration || {}).slice(0, 3).map(([key, value]) => `
+                      <span style="display:inline-block;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);padding:4px 8px;border-radius:3px;font-size:10px;white-space:nowrap">
+                        <strong>${key}:</strong> ${String(value).substring(0, 25)}${String(value).length > 25 ? '...' : ''}
+                      </span>
+                    `).join('')}
+                  </div>
+                </td>
+                <td style="padding:10px;text-align:center;vertical-align:top">
+                  <span style="display:inline-block;background:var(--clr-danger-bg);color:var(--clr-danger-text);padding:4px 8px;border-radius:3px;font-weight:600;font-size:10px">
+                    <i class="fas fa-exclamation-circle"></i> Drift
+                  </span>
+                </td>
+                <td style="padding:10px;vertical-align:top;color:var(--color-text-secondary)">
+                  ${policy.changedControl ? `
+                    <div style="background:var(--clr-warning-bg);border-left:3px solid var(--clr-warning-text);padding:6px;border-radius:3px">
+                      <div style="font-weight:600;color:var(--clr-warning-text);font-size:10px;margin-bottom:3px">
+                        ${policy.changedControl}
+                      </div>
+                      <div style="font-size:9px;color:var(--color-text-secondary)">
+                        <div><strong>Expected:</strong> ${policy.previousValue}</div>
+                        <div><strong>Current:</strong> ${policy.currentValue}</div>
+                      </div>
+                    </div>
+                  ` : `
+                    <span style="color:var(--color-text-tertiary);font-style:italic">No changes</span>
+                  `}
+                </td>
+              </tr>
+      `
+    })
+
+    html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `
+
+    driftContainer.innerHTML = html
+  } catch (err) {
+    console.warn('Failed to load CA drift data:', err)
+  }
 }
 
 async function loadDriftTabStats() {
