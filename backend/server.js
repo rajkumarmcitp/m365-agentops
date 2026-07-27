@@ -9547,19 +9547,44 @@ app.get('/api/workload-identities/risk-assessment', async (req, res) => {
     console.log('📡 Fetching real workload identities from Azure AD...')
     const startTime = Date.now()
 
-    // Fetch all service principals with key properties (increased to 200 to catch more apps)
-    const servicePrincipals = await Promise.race([
-      graphClient
+    // Fetch ALL service principals with pagination (Graph API returns ~100 at a time)
+    // Reference: Using $skiptoken to iterate through all results
+    const allServicePrincipals = []
+    let nextLink = null
+    let pageCount = 0
+    try {
+      console.log('  Fetching service principals (paginated)...')
+      let query = graphClient
         .api('/servicePrincipals')
         .select('id,appId,displayName,createdDateTime,accountEnabled,appOwnerOrganizationId,servicePrincipalType')
-        .top(200)
-        .get(),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Service principals fetch timeout')), 15000)
-      )
-    ])
+        .top(100) // API limits to ~100 per page anyway
 
-    console.log(`✓ Fetched ${servicePrincipals.value?.length || 0} service principals`)
+      do {
+        pageCount++
+        const result = await Promise.race([
+          nextLink ? graphClient.api(nextLink).get() : query.get(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Service principals fetch timeout')), 15000)
+          )
+        ])
+        allServicePrincipals.push(...(result.value || []))
+        nextLink = result['@odata.nextLink']
+        console.log(`    Page ${pageCount}: ${result.value?.length || 0} items (total: ${allServicePrincipals.length})`)
+      } while (nextLink && pageCount < 10) // Limit to 10 pages max for safety
+
+      console.log(`✓ Fetched ${allServicePrincipals.length} service principals (${pageCount} pages)`)
+    } catch (err) {
+      console.warn(`⚠️ Error fetching service principals: ${err.message}`)
+      console.log(`  Continuing with ${allServicePrincipals.length} apps fetched so far`)
+    }
+
+    const servicePrincipals = { value: allServicePrincipals }
+    const fetchedSPCount = allServicePrincipals.length
+    console.log(`✓ Total: ${fetchedSPCount} service principals`)
+
+    // DEBUG: Log all service principal names for filtering inspection
+    const allSPNames = (servicePrincipals.value || []).map(sp => sp.displayName).sort()
+    console.log(`  All SPs: ${allSPNames.slice(0, 20).join(', ')}${allSPNames.length > 20 ? '...' : ''}`)
 
     const workloadIdentities = []
     const criticalPermissions = getCriticalPermissionsList()
@@ -9593,14 +9618,24 @@ app.get('/api/workload-identities/risk-assessment', async (req, res) => {
       console.warn(`  ⚠️ Could not fetch sign-in data: ${err.message}`)
     }
 
-    const spsToProcess = (servicePrincipals.value || []).filter(sp =>
-      sp.appOwnerOrganizationId &&
-      !sp.displayName?.startsWith('Microsoft') &&
-      !sp.displayName?.startsWith('Azure') &&
-      sp.servicePrincipalType !== 'ManagedIdentity'
-    )
+    // FILTER: Include all non-Microsoft/Azure service principals, regardless of owner org
+    // Reference: Some legitimate tenant apps don't have appOwnerOrganizationId set
+    // (especially third-party apps, community projects, and legacy apps)
+    const spsToProcess = (servicePrincipals.value || []).filter(sp => {
+      const include = !sp.displayName?.startsWith('Microsoft') &&
+        !sp.displayName?.startsWith('Azure') &&
+        !sp.displayName?.startsWith('Power BI') &&
+        !sp.displayName?.startsWith('Microsoft 365') &&
+        sp.servicePrincipalType !== 'ManagedIdentity'
+      if (!include && sp.displayName) {
+        console.log(`  ✗ Filtered out: ${sp.displayName} (type: ${sp.servicePrincipalType})`)
+      }
+      return include
+    })
 
-    console.log(`  Filtering to ${spsToProcess.length} customer-owned apps`)
+    const keptSPNames = spsToProcess.map(sp => sp.displayName).sort()
+    console.log(`  ✓ Processing ${spsToProcess.length} customer-owned apps`)
+    console.log(`  Kept: ${keptSPNames.join(', ')}`)
 
     // Also fetch app registrations with privileged permissions (even without service principals)
     let appRegistrations = []
@@ -9609,7 +9644,7 @@ app.get('/api/workload-identities/risk-assessment', async (req, res) => {
         graphClient
           .api('/applications')
           .select('id,appId,displayName,createdDateTime,requiredResourceAccess')
-          .top(200)
+          .top(500)
           .get(),
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))
       ])
@@ -9750,20 +9785,10 @@ app.get('/api/workload-identities/risk-assessment', async (req, res) => {
       riskData: calculateWorkloadRiskScore(app)
     }))
 
-    // FILTER: Keep only apps with privileged permissions or roles
-    const privilegedApps = appsWithRisk.filter(app => {
-      // Has ASSIGNED privileged directory roles
-      const hasAssignedPrivilegeRole = app.roles.some(r =>
-        ['Global Administrator', 'Application Administrator', 'Conditional Access Administrator',
-         'Security Administrator', 'Exchange Administrator', 'Teams Administrator', 'User Administrator'].includes(r)
-      )
-
-      // Has REQUESTED critical permissions (in app manifest)
-      const hasRequestedCriticalPerms = app.consentedPermissions.some(p => p.risk === 'Critical')
-
-      // MUST have either assigned role OR requested critical permissions
-      return hasAssignedPrivilegeRole || hasRequestedCriticalPerms
-    })
+    // CHANGED: Include ALL workload identities (not just privileged ones)
+    // Reference: User needs visibility into ALL service principals regardless of current privilege level
+    // Risk score determines if action is needed (0-200 scale: 0-49 low, 50-99 medium, 100-149 high, 150+ critical)
+    const privilegedApps = appsWithRisk
 
     // Final cleanup: Remove duplicate permissions from each app
     for (const app of privilegedApps) {
@@ -9958,6 +9983,20 @@ async function enrichServicePrincipal(sp, criticalPermissions, latestSignInMap =
       }
     } catch (err) {
       // Silent fail
+    }
+
+    // Mark that this is a service principal (not just an app registration)
+    app.isAppRegistrationOnly = false
+    app.servicePrincipalStatus = 'Active Service Principal'
+
+    // Update last sign-in if we have recent activity
+    const spSignInDate = latestSignInMap.get(sp.appId)
+    if (spSignInDate) {
+      app.lastSignInDaysAgo = Math.floor((Date.now() - new Date(spSignInDate).getTime()) / 86400000)
+    } else if (app.lastSignInDaysAgo === 9999) {
+      // No sign-in data - mark as outside retention window
+      app.lastSignInDaysAgo = null
+      app.servicePrincipalStatus = 'Active Service Principal (no recent sign-ins)'
     }
 
     return app
