@@ -1,5 +1,5 @@
 import { showToast } from '../components/toast.js'
-import { getPrivilegedAccounts, getWorkloadIdentitiesWithRisk } from '../lib/api-client.js'
+import { getPrivilegedAccounts, getWorkloadIdentitiesWithRisk, getPrivilegedGroups } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
 import { PA_GROUPS } from '../data/pa-data.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
@@ -8,6 +8,7 @@ let logEntries = []
 let realPrivilegedAccounts = []
 let workloadIdentities = []
 let workloadDataLoaded = false // Track if API returned data (even if empty)
+let privilegedGroups = [] // Real groups from API
 let accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0, servicePrincipals: 0 }
 
 export async function initPrivAccts() {
@@ -174,7 +175,8 @@ async function renderDemoPrivAccts(el) {
     servicePrincipals: 0
   }
 
-  const demoGroups = [
+  // Use real groups if loaded from API, otherwise use demo fallback
+  const demoGroups = privilegedGroups.length > 0 ? privilegedGroups : [
     { id: 'group-1', name: 'Global Administrators', members: 2, eligible: 1, permanent: true },
     { id: 'group-2', name: 'Exchange Administrators', members: 1, eligible: 0, permanent: true },
     { id: 'group-3', name: 'Security Administrators', members: 1, eligible: 0, permanent: true },
@@ -187,6 +189,17 @@ async function renderDemoPrivAccts(el) {
     { date: '2026-05-29 16:45', user: 'Sarah Johnson', action: 'Removed from SharePoint Administrators', status: 'Role deactivated', severity: 'low' },
     { date: '2026-05-28 11:30', user: 'Tom Brooks', action: 'Added to Teams Administrators', status: 'Eligible assignment', severity: 'warning' },
   ]
+
+  // Load real data from API if not in demo mode
+  try {
+    const groupsResult = await getPrivilegedGroups()
+    if (groupsResult.success && groupsResult.data?.groups) {
+      privilegedGroups = groupsResult.data.groups
+      console.log(`✅ Loaded ${privilegedGroups.length} real groups from API`)
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not load privileged groups:', error.message)
+  }
 
   // Also load workload identities from API in demo mode
   try {
@@ -224,7 +237,7 @@ async function renderDemoPrivAccts(el) {
       <div class="kpi-tile"><div class="kpi-value info">${demoSummary.totalAccounts}</div><div class="kpi-label">Accounts</div></div>
       <div class="kpi-tile"><div class="kpi-value danger">${demoSummary.atRisk}</div><div class="kpi-label">At Risk</div></div>
       <div class="kpi-tile"><div class="kpi-value warning">${demoSummary.noMFA}</div><div class="kpi-label">No MFA</div></div>
-      <div class="kpi-tile"><div class="kpi-value info">${demoGroups.length}</div><div class="kpi-label">Groups</div></div>
+      <div class="kpi-tile"><div class="kpi-value info">${privilegedGroups.length > 0 ? privilegedGroups.length : demoGroups.length}</div><div class="kpi-label">Groups</div></div>
       <div class="kpi-tile"><div class="kpi-value warning">${demoSummary.permanentRoles}</div><div class="kpi-label">Permanent</div></div>
     </div>
 

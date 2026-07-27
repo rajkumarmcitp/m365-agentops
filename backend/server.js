@@ -9547,6 +9547,67 @@ let cachedWorkloadIdentities = {
 }
 
 // Fast endpoint - returns cached data immediately
+// Get Privileged Groups with membership details
+app.get('/api/privileged-groups', async (req, res) => {
+  try {
+    if (!graphClient) {
+      return res.json({ success: false, error: 'Graph client not initialized', data: { groups: [] } })
+    }
+
+    console.log('📡 Fetching privileged groups from Azure AD...')
+
+    // Fetch all directory roles (admin roles)
+    const rolesResult = await graphClient
+      .api('/directoryRoles')
+      .expand('members')
+      .get()
+
+    const groups = []
+    for (const role of rolesResult.value || []) {
+      const members = role.members || []
+      const permanentMembers = members.filter(m => !m.membershipType || m.membershipType === 'direct')
+      const eligibleMembers = members.filter(m => m.membershipType === 'eligible')
+
+      groups.push({
+        id: role.id,
+        name: role.displayName,
+        description: role.description,
+        members: members.length,
+        permanent: permanentMembers.length,
+        eligible: eligibleMembers.length,
+        memberDetails: members.map(m => ({
+          id: m.id,
+          name: m.displayName,
+          upn: m.userPrincipalName,
+          type: m['@odata.type']?.includes('ServicePrincipal') ? 'Service Principal' : 'User'
+        }))
+      })
+    }
+
+    console.log(`✅ Privileged groups: ${groups.length} groups with ${groups.reduce((sum, g) => sum + g.members, 0)} members`)
+
+    res.json({
+      success: true,
+      data: {
+        groups: groups.sort((a, b) => b.members - a.members),
+        summary: {
+          totalGroups: groups.length,
+          totalMembers: groups.reduce((sum, g) => sum + g.members, 0),
+          permanentAssignments: groups.reduce((sum, g) => sum + g.permanent, 0),
+          eligibleAssignments: groups.reduce((sum, g) => sum + g.eligible, 0)
+        }
+      }
+    })
+  } catch (error) {
+    console.error('❌ Privileged groups error:', error.message)
+    res.json({
+      success: false,
+      error: error.message,
+      data: { groups: [] }
+    })
+  }
+})
+
 app.get('/api/workload-identities/risk-assessment', async (req, res) => {
   try {
     // Return cached data immediately (even if empty/old)
