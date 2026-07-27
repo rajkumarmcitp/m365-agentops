@@ -23527,94 +23527,35 @@ function evaluateIdentityControls(policies) {
 // Category evaluation functions
 
 function evaluateCategoryPolicyFoundationGovernance(policies = []) {
+  const policyCount = (policies || []).length
+  const enabledCount = (policies || []).filter(p => p.state === 'enabled').length
+
   return {
     categoryId: 'CA-CAT-01',
     categoryName: 'Policy Foundation & Governance',
     zeroTrustPillar: 'Governance',
-    totalScore: 46,
+    totalScore: enabledCount > 0 ? 30 : 0,
     maxScore: 50,
-    coverage: 92,
+    coverage: policyCount > 0 ? Math.round((enabledCount / policyCount) * 100) : 0,
     controls: [
       {
         controlId: 'CA-001',
         name: 'Conditional Access Enabled',
         severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: [],
-        missingCoverage: [],
-        recommendation: '48 Conditional Access policies have been discovered and enabled.'
+        status: policyCount > 0 ? 'Passed' : 'Failed',
+        validationType: 'Automatic',
+        score: policyCount > 0 ? 10 : 0,
+        matchedPolicies: policyCount > 0 ? [`${policyCount} total policies loaded`] : [],
+        missingCoverage: policyCount === 0 ? ['No CA policies'] : [],
+        recommendation: policyCount > 0 ? `${policyCount} Conditional Access policies found. ${enabledCount} enabled, ${policyCount - enabledCount} disabled.` : 'Create Conditional Access policies to enable security controls.'
       },
-      {
-        controlId: 'CA-002',
-        name: 'Production Policies Enabled',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: [],
-        missingCoverage: [],
-        recommendation: 'All production Conditional Access policies are properly enabled.'
-      },
-      {
-        controlId: 'CA-003',
-        name: 'Report-only Policies Reviewed',
-        severity: 'Medium',
-        status: 'Warning',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['5 policies'],
-        recommendation: '5 report-only policies have not been reviewed in the last 90 days. Review and transition to enforcement.'
-      },
-      {
-        controlId: 'CA-004',
-        name: 'Policy Naming Standard',
-        severity: 'Low',
-        status: 'Passed',
-        score: 3,
-        matchedPolicies: [],
-        missingCoverage: [],
-        recommendation: 'Policy naming conventions are properly applied.'
-      },
-      {
-        controlId: 'CA-005',
-        name: 'Policy Description Available',
-        severity: 'Low',
-        status: 'Warning',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['8 policies'],
-        recommendation: '8 policies do not contain descriptions. Add descriptions to document policy purpose and scope.'
-      },
-      {
-        controlId: 'CA-006',
-        name: 'Policy Ownership Assigned',
-        severity: 'Medium',
-        status: 'Passed',
-        score: 5,
-        matchedPolicies: [],
-        missingCoverage: [],
-        recommendation: 'Policy ownership is clearly assigned and documented.'
-      },
-      {
-        controlId: 'CA-007',
-        name: 'Break Glass Accounts Excluded',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: [],
-        missingCoverage: [],
-        recommendation: 'Emergency access (break-glass) accounts are properly excluded from restrictive policies.'
-      },
-      {
-        controlId: 'CA-008',
-        name: 'Policy Change Auditing Enabled',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: [],
-        missingCoverage: [],
-        recommendation: 'Audit logging is enabled for all Conditional Access policy changes.'
-      }
+      manualControl('CA-002', 'Production Policies Enabled', 'Critical', 'Verify all production policies are properly enabled in Azure AD portal'),
+      manualControl('CA-003', 'Report-only Policies Reviewed', 'Medium', 'Review report-only policies and transition to enforcement'),
+      manualControl('CA-004', 'Policy Naming Standard', 'Low', 'Verify policy naming conventions are consistent'),
+      manualControl('CA-005', 'Policy Description Available', 'Low', 'Ensure all policies have descriptions documenting purpose'),
+      manualControl('CA-006', 'Policy Ownership Assigned', 'Medium', 'Confirm policy ownership is clearly assigned'),
+      manualControl('CA-007', 'Break Glass Accounts Excluded', 'Critical', 'Verify emergency access accounts are excluded from restrictive policies'),
+      manualControl('CA-008', 'Policy Change Auditing Enabled', 'Critical', 'Confirm audit logging is enabled for all policy changes')
     ]
   }
 }
@@ -23640,1076 +23581,465 @@ function evaluateCategoryIdentityProtection(policies = []) {
 }
 
 function evaluateCategoryAdministrativeProtection(policies = []) {
+  const policyCount = (policies || []).length
+  const enabledCount = (policies || []).filter(p => p.state === 'enabled').length
+
   return {
     categoryId: 'CA-CAT-03',
     categoryName: 'Administrative Protection',
     zeroTrustPillar: 'Identity',
-    totalScore: 70,
+    totalScore: enabledCount > 0 ? 30 : 0,
     maxScore: 101,
-    coverage: 69,
+    coverage: policyCount > 0 ? Math.round((enabledCount / policyCount) * 100) : 0,
     controls: [
       {
         controlId: 'CA-020',
-        name: 'Global Administrators Protected',
+        name: 'Admin Policy Status',
         severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Admins-MFA'],
-        missingCoverage: [],
-        recommendation: 'Global Admin MFA is properly configured. Continue monitoring coverage.',
-        expectedValue: 'Global Administrators require MFA'
+        status: policyCount > 0 ? 'Passed' : 'Failed',
+        validationType: 'Automatic',
+        score: policyCount > 0 ? 10 : 0,
+        matchedPolicies: policyCount > 0 ? [`${policyCount} policies loaded`] : [],
+        missingCoverage: policyCount === 0 ? ['No policies'] : [],
+        recommendation: policyCount > 0 ? `${enabledCount} enabled, ${policyCount - enabledCount} disabled` : 'Create admin protection policies'
       },
-      {
-        controlId: 'CA-021',
-        name: 'Privileged Roles Protected',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Admins-MFA'],
-        missingCoverage: ['Exchange Admin', 'SharePoint Admin'],
-        recommendation: 'Extend policy to cover all 10 privileged roles.',
-        expectedValue: 'All privileged roles require MFA'
-      },
-      {
-        controlId: 'CA-022',
-        name: 'Azure Portal Protected',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-Admins-MFA'],
-        missingCoverage: [],
-        recommendation: 'Azure Portal is protected. Monitor for any policy changes.',
-        expectedValue: 'Azure Portal requires MFA'
-      },
-      {
-        controlId: 'CA-023',
-        name: 'Microsoft Entra Admin Center Protected',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-Admins-MFA'],
-        missingCoverage: [],
-        recommendation: 'Entra Admin Center is protected via admin MFA policy.',
-        expectedValue: 'Admin Portals require MFA'
-      },
-      {
-        controlId: 'CA-024',
-        name: 'Exchange Admin Center Protected',
-        severity: 'High',
-        status: 'Failed',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['Exchange Admin Center'],
-        recommendation: 'Create Conditional Access policy for Office 365 Exchange Online targeting admins.',
-        expectedValue: 'Exchange Online requires MFA'
-      },
-      {
-        controlId: 'CA-025',
-        name: 'Privileged Identity Management Compatible',
-        severity: 'Medium',
-        status: 'Passed',
-        score: 5,
-        matchedPolicies: ['PIM is enabled'],
-        missingCoverage: [],
-        recommendation: 'PIM is enabled for privileged roles.',
-        expectedValue: 'Roles eligible through PIM'
-      },
-      {
-        controlId: 'CA-026',
-        name: 'Phishing Resistant MFA Required',
-        severity: 'Critical',
-        status: 'Failed',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['All privileged roles'],
-        recommendation: 'Create authentication strength policy requiring phishing-resistant MFA for admin roles.',
-        expectedValue: 'Phishing Resistant'
-      },
-      {
-        controlId: 'CA-027',
-        name: 'Administrators Blocked From Unmanaged Devices',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Admins-MFA'],
-        missingCoverage: [],
-        recommendation: 'Device compliance requirement is in place for admin access.',
-        expectedValue: 'Compliant devices only'
-      },
-      {
-        controlId: 'CA-028',
-        name: 'Break-glass Accounts Excluded',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-Admins-MFA'],
-        missingCoverage: [],
-        recommendation: 'Break-glass accounts properly excluded to prevent lockout.',
-        expectedValue: 'Emergency accounts excluded'
-      },
-      {
-        controlId: 'CA-029',
-        name: 'Administrator Sign-ins Restricted to Trusted Locations',
-        severity: 'High',
-        status: 'Failed',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['All locations'],
-        recommendation: 'Implement location-based policy restricting admin access to corporate offices/VPN.',
-        expectedValue: 'Trusted locations only'
-      },
-      {
-        controlId: 'CA-030',
-        name: 'Administrator Sign-in Risk Policy Enforced',
-        severity: 'High',
-        status: 'Failed',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['Risk-based enforcement'],
-        recommendation: 'Create policy requiring MFA for risky admin sign-ins.',
-        expectedValue: 'Medium/High risk requires MFA'
-      },
-      {
-        controlId: 'CA-031',
-        name: 'Administrator Session Controls Configured',
-        severity: 'Medium',
-        status: 'Failed',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['Session timeout'],
-        recommendation: 'Enable session controls (sign-in frequency, token protection) for admin sessions.',
-        expectedValue: 'Session controls enabled'
-      }
+      manualControl('CA-021', 'Global Administrators Protected', 'Critical', 'Verify Global Admin MFA in Azure Portal'),
+      manualControl('CA-022', 'Azure Portal Protected', 'High', 'Verify Azure Portal MFA requirement'),
+      manualControl('CA-023', 'Exchange Admin Center Protected', 'High', 'Verify Exchange Online admin protection'),
+      manualControl('CA-024', 'Entra Admin Center Protected', 'High', 'Verify Entra admin center access controls'),
+      manualControl('CA-025', 'Privileged Identity Management', 'Medium', 'Review PIM eligibility assignments'),
+      manualControl('CA-026', 'Phishing Resistant MFA', 'Critical', 'Configure phishing-resistant MFA for admins'),
+      manualControl('CA-027', 'Device Compliance for Admins', 'Critical', 'Verify device compliance policies'),
+      manualControl('CA-028', 'Break-glass Accounts', 'High', 'Verify emergency account exclusions'),
+      manualControl('CA-029', 'Location Restrictions', 'High', 'Configure trusted location policies'),
+      manualControl('CA-030', 'Sign-in Risk Policy', 'High', 'Review risk-based MFA enforcement'),
+      manualControl('CA-031', 'Session Controls', 'Medium', 'Configure session timeout and controls')
     ]
   }
 }
 
 // Get available control categories
-app.get('/api/cap/dashboard/categories', (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      categories: [
-        {
-          categoryId: 'CA-CAT-02',
-          categoryName: 'Identity Protection',
-          zeroTrustPillar: 'Identity',
-          weight: 20,
-          controlCount: 10,
-          evaluation: evaluateCategoryIdentityProtection()
-        },
-        {
-          categoryId: 'CA-CAT-03',
-          categoryName: 'Administrative Protection',
-          zeroTrustPillar: 'Identity',
-          weight: 25,
-          controlCount: 12,
-          evaluation: evaluateCategoryAdministrativeProtection()
-        },
-        {
-          categoryId: 'CA-CAT-04',
-          categoryName: 'Device Trust',
-          zeroTrustPillar: 'Devices',
-          weight: 20,
-          controlCount: 16,
-          evaluation: evaluateCategoryDeviceTrust()
-        },
-        {
-          categoryId: 'CA-CAT-05',
-          categoryName: 'Application Protection',
-          zeroTrustPillar: 'Applications',
-          weight: 20,
-          controlCount: 8,
-          evaluation: evaluateCategoryApplicationProtection()
-        }
-      ]
-    }
-  })
+app.get('/api/cap/dashboard/categories', async (req, res) => {
+  try {
+    const realPolicies = await loadPolicies()
+    res.json({
+      success: true,
+      data: {
+        categories: [
+          {
+            categoryId: 'CA-CAT-01',
+            categoryName: 'Policy Foundation & Governance',
+            zeroTrustPillar: 'Governance',
+            weight: 10,
+            controlCount: 8,
+            evaluation: evaluateCategoryPolicyFoundationGovernance(realPolicies)
+          },
+          {
+            categoryId: 'CA-CAT-02',
+            categoryName: 'Identity Protection',
+            zeroTrustPillar: 'Identity',
+            weight: 20,
+            controlCount: 4,
+            evaluation: evaluateCategoryIdentityProtection(realPolicies)
+          },
+          {
+            categoryId: 'CA-CAT-03',
+            categoryName: 'Administrative Protection',
+            zeroTrustPillar: 'Identity',
+            weight: 25,
+            controlCount: 12,
+            evaluation: evaluateCategoryAdministrativeProtection(realPolicies)
+          },
+          {
+            categoryId: 'CA-CAT-04',
+            categoryName: 'Device Trust',
+            zeroTrustPillar: 'Devices',
+            weight: 20,
+            controlCount: 16,
+            evaluation: evaluateCategoryDeviceTrust(realPolicies)
+          },
+          {
+            categoryId: 'CA-CAT-05',
+            categoryName: 'Application Protection',
+            zeroTrustPillar: 'Applications',
+            weight: 20,
+            controlCount: 8,
+            evaluation: evaluateCategoryApplicationProtection(realPolicies)
+          },
+          {
+            categoryId: 'CA-CAT-06',
+            categoryName: 'Network Protection',
+            zeroTrustPillar: 'Network',
+            weight: 15,
+            controlCount: 7,
+            evaluation: evaluateCategoryNetworkProtection(realPolicies)
+          },
+          {
+            categoryId: 'CA-CAT-07',
+            categoryName: 'Client Application Protection',
+            zeroTrustPillar: 'Applications',
+            weight: 15,
+            controlCount: 6,
+            evaluation: evaluateCategoryClientApplicationProtection(realPolicies)
+          },
+          {
+            categoryId: 'CA-CAT-08',
+            categoryName: 'Session Protection',
+            zeroTrustPillar: 'Identity',
+            weight: 15,
+            controlCount: 8,
+            evaluation: evaluateCategorySessionProtection(realPolicies)
+          },
+          {
+            categoryId: 'CA-CAT-09',
+            categoryName: 'Guest & External User Protection',
+            zeroTrustPillar: 'Identity',
+            weight: 15,
+            controlCount: 7,
+            evaluation: evaluateCategoryGuestExternalUserProtection(realPolicies)
+          },
+          {
+            categoryId: 'CA-CAT-10',
+            categoryName: 'Workload Identity Protection',
+            zeroTrustPillar: 'Identity',
+            weight: 15,
+            controlCount: 7,
+            evaluation: evaluateCategoryWorkloadIdentityProtection(realPolicies)
+          },
+          {
+            categoryId: 'CA-CAT-11',
+            categoryName: 'Developer Protection',
+            zeroTrustPillar: 'Identity',
+            weight: 15,
+            controlCount: 7,
+            evaluation: evaluateCategoryDeveloperProtection(realPolicies)
+          },
+          {
+            categoryId: 'CA-CAT-12',
+            categoryName: 'Monitoring, Operations & Governance',
+            zeroTrustPillar: 'Governance',
+            weight: 15,
+            controlCount: 7,
+            evaluation: evaluateCategoryMonitoringOperationsGovernance(realPolicies)
+          }
+        ]
+      }
+    })
+  } catch (err) {
+    console.error('Error loading categories:', err.message)
+    res.status(500).json({ success: false, error: err.message })
+  }
 })
 
 function evaluateCategoryApplicationProtection(policies = []) {
+  const policyCount = (policies || []).length
+  const enabledCount = (policies || []).filter(p => p.state === 'enabled').length
+
   return {
     categoryId: 'CA-CAT-05',
     categoryName: 'Application Protection',
     zeroTrustPillar: 'Applications',
-    totalScore: 88,
+    totalScore: enabledCount > 0 ? 30 : 0,
     maxScore: 121,
-    coverage: 73,
+    coverage: policyCount > 0 ? Math.round((enabledCount / policyCount) * 100) : 0,
     controls: [
       {
         controlId: 'CA-050',
-        name: 'All Cloud Applications Protected',
+        name: 'Application Policy Status',
         severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-AllCloudApps', 'CA-InternalUsers-AllApps', 'CA-Admins-AllApps'],
-        missingCoverage: [],
-        recommendation: 'All cloud applications are protected. Continue monitoring for new apps.'
+        status: policyCount > 0 ? 'Passed' : 'Failed',
+        validationType: 'Automatic',
+        score: policyCount > 0 ? 10 : 0,
+        matchedPolicies: policyCount > 0 ? [`${policyCount} policies loaded`] : [],
+        missingCoverage: policyCount === 0 ? ['No policies'] : [],
+        recommendation: policyCount > 0 ? `${enabledCount} enabled, ${policyCount - enabledCount} disabled` : 'Create application protection policies'
       },
-      {
-        controlId: 'CA-051',
-        name: 'Microsoft 365 Applications Protected',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Office365-Protection'],
-        missingCoverage: [],
-        recommendation: 'Office 365 apps are fully protected.'
-      },
-      {
-        controlId: 'CA-052',
-        name: 'Azure Management Protected',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-AzureManagement-MFA'],
-        missingCoverage: [],
-        recommendation: 'Azure management requires MFA.'
-      },
-      {
-        controlId: 'CA-053',
-        name: 'Microsoft Admin Portals Protected',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-AdminPortals'],
-        missingCoverage: [],
-        recommendation: 'Admin portals are protected.'
-      },
-      {
-        controlId: 'CA-054',
-        name: 'Authentication Context Configured',
-        severity: 'High',
-        status: 'Partial',
-        score: 4,
-        matchedPolicies: [],
-        missingCoverage: ['Authentication Context'],
-        recommendation: 'Configure authentication context for sensitive applications.'
-      },
-      {
-        controlId: 'CA-055',
-        name: 'Sensitive Applications Protected',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-SensitiveApps'],
-        missingCoverage: [],
-        recommendation: 'Sensitive applications have enhanced protection.'
-      },
-      {
-        controlId: 'CA-056',
-        name: 'Enterprise Applications Protected',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-EnterpriseApps'],
-        missingCoverage: [],
-        recommendation: 'Enterprise applications are covered by CAP policies.'
-      },
-      {
-        controlId: 'CA-057',
-        name: 'Service Principal Exclusions Reviewed',
-        severity: 'Medium',
-        status: 'Partial',
-        score: 2,
-        matchedPolicies: [],
-        missingCoverage: ['SP exclusions audit'],
-        recommendation: 'Review and document all service principal exclusions.'
-      }
+      manualControl('CA-051', 'Cloud Applications Protected', 'Critical', 'Verify all cloud apps in Azure Portal'),
+      manualControl('CA-052', 'Microsoft 365 Apps Protected', 'Critical', 'Verify Office 365 app protection'),
+      manualControl('CA-053', 'Azure Management Protected', 'Critical', 'Verify Azure management access'),
+      manualControl('CA-054', 'Admin Portals Protected', 'High', 'Verify admin portal policies'),
+      manualControl('CA-055', 'Authentication Context', 'High', 'Configure authentication context'),
+      manualControl('CA-056', 'Sensitive Apps Protected', 'Critical', 'Review sensitive application policies'),
+      manualControl('CA-057', 'Enterprise Apps Coverage', 'High', 'Verify enterprise application coverage')
     ]
   }
 }
 
 function evaluateCategoryDeviceTrust(policies = []) {
+  const policyCount = (policies || []).length
+  const enabledCount = (policies || []).filter(p => p.state === 'enabled').length
+
   return {
     categoryId: 'CA-CAT-04',
     categoryName: 'Device Trust',
     zeroTrustPillar: 'Devices',
-    totalScore: 86,
+    totalScore: enabledCount > 0 ? 30 : 0,
     maxScore: 131,
-    coverage: 66,
+    coverage: policyCount > 0 ? Math.round((enabledCount / policyCount) * 100) : 0,
     controls: [
       {
         controlId: 'CA-040',
-        name: 'Require Compliant Device',
+        name: 'Device Policy Status',
         severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Admins-CompliantDevice', 'CA-InternalUsers-CompliantDevice', 'CA-Developers-CompliantDevice'],
-        missingCoverage: ['Guests', 'Service Accounts'],
-        recommendation: 'Extend compliant device requirement to all user personas.'
+        status: policyCount > 0 ? 'Passed' : 'Failed',
+        validationType: 'Automatic',
+        score: policyCount > 0 ? 10 : 0,
+        matchedPolicies: policyCount > 0 ? [`${policyCount} policies loaded`] : [],
+        missingCoverage: policyCount === 0 ? ['No policies'] : [],
+        recommendation: policyCount > 0 ? `${enabledCount} enabled, ${policyCount - enabledCount} disabled` : 'Create device trust policies'
       },
-      {
-        controlId: 'CA-041',
-        name: 'Require Hybrid Entra Joined Device',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-Admins-HybridJoin'],
-        missingCoverage: [],
-        recommendation: 'Hybrid joined device requirement is active for admins.'
-      },
-      {
-        controlId: 'CA-042',
-        name: 'Device Filter Configured',
-        severity: 'Medium',
-        status: 'Failed',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['All policies'],
-        recommendation: 'Configure device filter rules for fine-grained control.'
-      },
-      {
-        controlId: 'CA-043',
-        name: 'Require Approved Client Applications',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-ExchangeOnline-AppRestriction'],
-        missingCoverage: [],
-        recommendation: 'Approved applications are enforced for Exchange Online.'
-      },
-      {
-        controlId: 'CA-044',
-        name: 'Require App Protection Policy',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['Mobile-App-Protection'],
-        missingCoverage: [],
-        recommendation: 'Mobile app protection policy is active.'
-      },
-      {
-        controlId: 'CA-045',
-        name: 'Supported Device Platforms',
-        severity: 'Medium',
-        status: 'Passed',
-        score: 5,
-        matchedPolicies: ['CA-MultiPlatform'],
-        missingCoverage: [],
-        recommendation: 'All major platforms (Windows, macOS, iOS, Android) are covered.'
-      },
-      {
-        controlId: 'CA-046',
-        name: 'Unsupported Device Platforms Blocked',
-        severity: 'High',
-        status: 'Partial',
-        score: 4,
-        matchedPolicies: [],
-        missingCoverage: ['Unknown platform'],
-        recommendation: 'Explicitly block Linux and unknown device types.'
-      },
-      {
-        controlId: 'CA-047',
-        name: 'Intune Device Compliance Integrated',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['Intune-Compliance-Policy'],
-        missingCoverage: [],
-        recommendation: 'Device compliance policies are integrated with Conditional Access.'
-      },
-      {
-        controlId: 'CA-048',
-        name: 'Device Compliance Policy Exists',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['Windows-Compliance', 'iOS-Compliance', 'Android-Compliance'],
-        missingCoverage: [],
-        recommendation: 'Compliance policies exist for all major platforms.'
-      },
-      {
-        controlId: 'CA-049',
-        name: 'Device Compliance Policy Assigned',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['All Users Group'],
-        missingCoverage: [],
-        recommendation: 'Compliance policies are assigned to all users.'
-      },
-      {
-        controlId: 'CA-050',
-        name: 'Jailbroken/Rooted Devices Blocked',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['Mobile-Compliance-Policy'],
-        missingCoverage: [],
-        recommendation: 'Jailbreak/root detection is enabled.'
-      },
-      {
-        controlId: 'CA-051',
-        name: 'Minimum OS Version Enforced',
-        severity: 'High',
-        status: 'Failed',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['All platforms'],
-        recommendation: 'Configure minimum OS versions (Windows 11, macOS 13+, iOS 16+, Android 12+).'
-      },
-      {
-        controlId: 'CA-052',
-        name: 'Device Encryption Required',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['Encryption-Policy'],
-        missingCoverage: [],
-        recommendation: 'BitLocker/FileVault/mobile encryption is required.'
-      },
-      {
-        controlId: 'CA-053',
-        name: 'Secure Boot / TPM Required',
-        severity: 'High',
-        status: 'Failed',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['Windows devices'],
-        recommendation: 'Require Secure Boot and TPM 2.0 for Windows devices.'
-      },
-      {
-        controlId: 'CA-054',
-        name: 'Microsoft Defender Device Risk Integrated',
-        severity: 'High',
-        status: 'Failed',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['Defender integration'],
-        recommendation: 'Integrate Microsoft Defender for Endpoint device risk assessment.'
-      },
-      {
-        controlId: 'CA-055',
-        name: 'High Device Risk Blocked',
-        severity: 'Critical',
-        status: 'Failed',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['Risk-based blocking'],
-        recommendation: 'Block high-risk devices detected by Defender for Endpoint.'
-      }
+      manualControl('CA-041', 'Compliant Device Required', 'Critical', 'Verify device compliance requirement'),
+      manualControl('CA-042', 'Hybrid Entra Joined', 'High', 'Review Hybrid Entra join policies'),
+      manualControl('CA-043', 'Device Filter Configured', 'Medium', 'Configure device filter rules'),
+      manualControl('CA-044', 'Client Applications', 'High', 'Verify approved client app restrictions'),
+      manualControl('CA-045', 'App Protection Policy', 'High', 'Review mobile app protection'),
+      manualControl('CA-046', 'Device Platforms', 'Medium', 'Verify platform support'),
+      manualControl('CA-047', 'Unsupported Platforms Blocked', 'High', 'Block unsupported platforms'),
+      manualControl('CA-048', 'Intune Compliance', 'Critical', 'Verify Intune integration'),
+      manualControl('CA-049', 'Compliance Policy Exists', 'High', 'Review compliance policies'),
+      manualControl('CA-050', 'Compliance Assignment', 'High', 'Verify policy assignment'),
+      manualControl('CA-051', 'Jailbreak Detection', 'Critical', 'Enable jailbreak/root detection'),
+      manualControl('CA-052', 'Minimum OS Version', 'High', 'Configure OS requirements'),
+      manualControl('CA-053', 'Device Encryption', 'Critical', 'Require encryption'),
+      manualControl('CA-054', 'Secure Boot / TPM', 'High', 'Require Secure Boot'),
+      manualControl('CA-055', 'Defender Integration', 'High', 'Integrate device risk')
     ]
   }
 }
 
 function evaluateCategoryMonitoringOperationsGovernance(policies = []) {
+  const policyCount = (policies || []).length
+  const enabledCount = (policies || []).filter(p => p.state === 'enabled').length
+
   return {
     categoryId: 'CA-CAT-12',
     categoryName: 'Monitoring, Operations & Governance',
     zeroTrustPillar: 'Governance',
-    totalScore: 57,
-    maxScore: 64,
-    coverage: 91,
+    totalScore: enabledCount > 0 ? 30 : 0,
+    maxScore: 90,
+    coverage: policyCount > 0 ? Math.round((enabledCount / policyCount) * 100) : 0,
     controls: [
       {
         controlId: 'CA-120',
-        name: 'Conditional Access Policies Enabled',
+        name: 'Governance Policy Status',
         severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: [],
-        missingCoverage: [],
-        recommendation: '52 Conditional Access policies are enabled and actively enforced.'
+        status: policyCount > 0 ? 'Passed' : 'Failed',
+        validationType: 'Automatic',
+        score: policyCount > 0 ? 10 : 0,
+        matchedPolicies: policyCount > 0 ? [`${policyCount} policies loaded`] : [],
+        missingCoverage: policyCount === 0 ? ['No policies'] : [],
+        recommendation: policyCount > 0 ? `${enabledCount} enabled, ${policyCount - enabledCount} disabled` : 'Create monitoring policies'
       },
-      {
-        controlId: 'CA-121',
-        name: 'Report-only Policies Reviewed',
-        severity: 'Medium',
-        status: 'Passed',
-        score: 5,
-        matchedPolicies: [],
-        missingCoverage: [],
-        recommendation: 'Report-only policies are properly reviewed before enforcement.'
-      },
-      {
-        controlId: 'CA-122',
-        name: 'Policy Naming Standard',
-        severity: 'Low',
-        status: 'Warning',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['7 policies'],
-        recommendation: 'Seven policies do not follow the approved naming convention. Rename policies to match organizational standards.'
-      },
-      {
-        controlId: 'CA-123',
-        name: 'Policy Ownership Assigned',
-        severity: 'Medium',
-        status: 'Passed',
-        score: 5,
-        matchedPolicies: [],
-        missingCoverage: [],
-        recommendation: 'Policy ownership is clearly assigned and documented.'
-      },
-      {
-        controlId: 'CA-124',
-        name: 'Policy Change Monitoring',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: [],
-        missingCoverage: [],
-        recommendation: 'Audit logging is enabled for all Conditional Access policy changes.'
-      },
-      {
-        controlId: 'CA-125',
-        name: 'Conditional Access Insights & Reporting Enabled',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: [],
-        missingCoverage: [],
-        recommendation: 'Conditional Access Insights workbook is actively used for monitoring and analysis.'
-      },
-      {
-        controlId: 'CA-126',
-        name: 'Policy Conflict Detection',
-        severity: 'High',
-        status: 'Warning',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['2 policies'],
-        recommendation: 'Two Conditional Access policies contain overlapping assignments. Review and consolidate policies to eliminate conflicts.'
-      },
-      {
-        controlId: 'CA-127',
-        name: 'Emergency Access Accounts Validated',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 14,
-        matchedPolicies: [],
-        missingCoverage: [],
-        recommendation: 'Emergency access (break-glass) accounts are verified and properly excluded from restrictive policies.'
-      }
+      manualControl('CA-121', 'Report-only Policies', 'Medium', 'Review report-only policies'),
+      manualControl('CA-122', 'Policy Naming Standard', 'Low', 'Verify policy naming conventions'),
+      manualControl('CA-123', 'Policy Ownership', 'Medium', 'Assign policy owners'),
+      manualControl('CA-124', 'Policy Change Monitoring', 'Critical', 'Enable audit logging'),
+      manualControl('CA-125', 'Insights & Reporting', 'High', 'Enable CA Insights workbook'),
+      manualControl('CA-126', 'Conflict Detection', 'High', 'Review policy conflicts'),
+      manualControl('CA-127', 'Emergency Access', 'Critical', 'Verify break-glass accounts')
     ]
   }
 }
 
 function evaluateCategoryDeveloperProtection(policies = []) {
+  const policyCount = (policies || []).length
+  const enabledCount = (policies || []).filter(p => p.state === 'enabled').length
+
   return {
     categoryId: 'CA-CAT-11',
     categoryName: 'Developer Protection',
     zeroTrustPillar: 'Identity',
-    totalScore: 56,
+    totalScore: enabledCount > 0 ? 30 : 0,
     maxScore: 64,
-    coverage: 89,
+    coverage: policyCount > 0 ? Math.round((enabledCount / policyCount) * 100) : 0,
     controls: [
       {
         controlId: 'CA-110',
-        name: 'Developers Require MFA',
+        name: 'Developer Policy Status',
         severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Developers-MFA'],
-        missingCoverage: [],
-        recommendation: 'MFA is properly enforced for all developer accounts.'
+        status: policyCount > 0 ? 'Passed' : 'Failed',
+        validationType: 'Automatic',
+        score: policyCount > 0 ? 10 : 0,
+        matchedPolicies: policyCount > 0 ? [`${policyCount} policies loaded`] : [],
+        missingCoverage: policyCount === 0 ? ['No policies'] : [],
+        recommendation: policyCount > 0 ? `${enabledCount} enabled, ${policyCount - enabledCount} disabled` : 'Create developer policies'
       },
-      {
-        controlId: 'CA-111',
-        name: 'Developer Authentication Strength',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Developer-AuthStrength'],
-        missingCoverage: [],
-        recommendation: 'Strong authentication is enforced for developer access.'
-      },
-      {
-        controlId: 'CA-112',
-        name: 'Developer Compliant Devices Required',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Developer-DeviceCompliance'],
-        missingCoverage: [],
-        recommendation: 'Compliant device requirement is enforced for developers.'
-      },
-      {
-        controlId: 'CA-113',
-        name: 'Developer Sign-in Risk Policy',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-Developer-SignInRisk'],
-        missingCoverage: [],
-        recommendation: 'Sign-in risk detection is active for developer accounts.'
-      },
-      {
-        controlId: 'CA-114',
-        name: 'Developer User Risk Policy',
-        severity: 'High',
-        status: 'Warning',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['2 developer groups'],
-        recommendation: 'Developer user risk policy is configured but excludes two developer groups. Update policy to include all developer groups.'
-      },
-      {
-        controlId: 'CA-115',
-        name: 'Developer Session Controls',
-        severity: 'Medium',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-Developer-SessionControl'],
-        missingCoverage: [],
-        recommendation: 'Session controls are properly configured for developer access.'
-      },
-      {
-        controlId: 'CA-116',
-        name: 'Developer Cloud Applications Protected',
-        severity: 'High',
-        status: 'Warning',
-        score: 0,
-        matchedPolicies: ['CA-Developer-Azure', 'CA-Developer-ADO'],
-        missingCoverage: ['GitHub Enterprise'],
-        recommendation: 'GitHub Enterprise is not covered by Conditional Access. Add GitHub Enterprise to developer protection policies.'
-      },
-      {
-        controlId: 'CA-117',
-        name: 'Developer Conditional Access Policies Enabled',
-        severity: 'Medium',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Developer-Policies'],
-        missingCoverage: [],
-        recommendation: 'All developer protection policies are enabled and actively enforced.'
-      }
+      manualControl('CA-111', 'Developers Require MFA', 'Critical', 'Verify developer MFA requirement'),
+      manualControl('CA-112', 'Authentication Strength', 'Critical', 'Review strong auth enforcement'),
+      manualControl('CA-113', 'Compliant Devices', 'Critical', 'Verify device compliance'),
+      manualControl('CA-114', 'Sign-in Risk Policy', 'High', 'Review sign-in risk detection'),
+      manualControl('CA-115', 'User Risk Policy', 'High', 'Verify user risk policy scope'),
+      manualControl('CA-116', 'Session Controls', 'Medium', 'Configure session controls'),
+      manualControl('CA-117', 'Cloud Apps Protection', 'High', 'Review app coverage')
     ]
   }
 }
 
 function evaluateCategoryWorkloadIdentityProtection(policies = []) {
+  const policyCount = (policies || []).length
+  const enabledCount = (policies || []).filter(p => p.state === 'enabled').length
+
   return {
     categoryId: 'CA-CAT-10',
     categoryName: 'Workload Identity Protection',
     zeroTrustPillar: 'Identity',
-    totalScore: 53,
-    maxScore: 61,
-    coverage: 86,
+    totalScore: enabledCount > 0 ? 30 : 0,
+    maxScore: 70,
+    coverage: policyCount > 0 ? Math.round((enabledCount / policyCount) * 100) : 0,
     controls: [
       {
         controlId: 'CA-100',
-        name: 'Workload Identity Conditional Access Enabled',
+        name: 'Workload Policy Status',
         severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-WorkloadIdentity-Risk', 'CA-ServicePrincipal-Protection'],
-        missingCoverage: [],
-        recommendation: 'Workload identity Conditional Access is properly enabled and protecting service principals.'
+        status: policyCount > 0 ? 'Passed' : 'Failed',
+        validationType: 'Automatic',
+        score: policyCount > 0 ? 10 : 0,
+        matchedPolicies: policyCount > 0 ? [`${policyCount} policies loaded`] : [],
+        missingCoverage: policyCount === 0 ? ['No policies'] : [],
+        recommendation: policyCount > 0 ? `${enabledCount} enabled, ${policyCount - enabledCount} disabled` : 'Create workload identity policies'
       },
-      {
-        controlId: 'CA-101',
-        name: 'Service Principals Protected',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-ServicePrincipal-CAP'],
-        missingCoverage: [],
-        recommendation: 'All service principals are covered by Conditional Access policies.'
-      },
-      {
-        controlId: 'CA-102',
-        name: 'Managed Identities Protected',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-ManagedIdentity-Protection'],
-        missingCoverage: [],
-        recommendation: 'Managed identities are properly protected by access controls.'
-      },
-      {
-        controlId: 'CA-103',
-        name: 'High Privilege Workload Identities Protected',
-        severity: 'Critical',
-        status: 'Warning',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['3 privileged service principals'],
-        recommendation: 'Three privileged service principals are not covered by Conditional Access. Add them to a privileged identity protection policy.'
-      },
-      {
-        controlId: 'CA-104',
-        name: 'Authentication Context Applied',
-        severity: 'Medium',
-        status: 'Passed',
-        score: 5,
-        matchedPolicies: ['CA-AuthContext-Workload'],
-        missingCoverage: [],
-        recommendation: 'Authentication context is applied to workload identities for step-up authentication.'
-      },
-      {
-        controlId: 'CA-105',
-        name: 'Risk-Based Protection Configured',
-        severity: 'High',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-WorkloadRisk-Detection'],
-        missingCoverage: [],
-        recommendation: 'Risk-based protection is configured for workload identities with anomaly detection.'
-      },
-      {
-        controlId: 'CA-106',
-        name: 'High-Risk Workload Identities Blocked',
-        severity: 'Critical',
-        status: 'Warning',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['Blocking policy'],
-        recommendation: 'High-risk workload identities are reported but no blocking policy is configured. Add blocking action to risk policies.'
-      },
-      {
-        controlId: 'CA-107',
-        name: 'Workload Identity Policies Enabled',
-        severity: 'Medium',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-WorkloadIdentity-Policies'],
-        missingCoverage: [],
-        recommendation: 'All workload identity protection policies are enabled and active.'
-      }
+      manualControl('CA-101', 'Workload Identity CAP', 'Critical', 'Verify workload identity policies'),
+      manualControl('CA-102', 'Service Principals', 'Critical', 'Review service principal coverage'),
+      manualControl('CA-103', 'Managed Identities', 'High', 'Verify managed identity protection'),
+      manualControl('CA-104', 'Privilege Workloads', 'Critical', 'Review privileged SP policies'),
+      manualControl('CA-105', 'Authentication Context', 'Medium', 'Configure authentication context'),
+      manualControl('CA-106', 'Risk-Based Protection', 'High', 'Enable risk detection'),
+      manualControl('CA-107', 'High Risk Blocking', 'Critical', 'Configure blocking policies')
     ]
   }
 }
 
 function evaluateCategoryGuestExternalUserProtection(policies = []) {
+  const policyCount = (policies || []).length
+  const enabledCount = (policies || []).filter(p => p.state === 'enabled').length
+
   return {
     categoryId: 'CA-CAT-09',
     categoryName: 'Guest & External User Protection',
     zeroTrustPillar: 'Identity',
-    totalScore: 54,
-    maxScore: 62,
-    coverage: 87,
+    totalScore: enabledCount > 0 ? 30 : 0,
+    maxScore: 80,
+    coverage: policyCount > 0 ? Math.round((enabledCount / policyCount) * 100) : 0,
     controls: [
       {
         controlId: 'CA-090',
-        name: 'Guest Users Require MFA',
+        name: 'Guest Policy Status',
         severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Guests-MFA', 'CA-B2B-MFA'],
-        missingCoverage: [],
-        recommendation: 'Guest users are required to use MFA for all access.'
+        status: policyCount > 0 ? 'Passed' : 'Failed',
+        validationType: 'Automatic',
+        score: policyCount > 0 ? 10 : 0,
+        matchedPolicies: policyCount > 0 ? [`${policyCount} policies loaded`] : [],
+        missingCoverage: policyCount === 0 ? ['No policies'] : [],
+        recommendation: policyCount > 0 ? `${enabledCount} enabled, ${policyCount - enabledCount} disabled` : 'Create guest protection policies'
       },
-      {
-        controlId: 'CA-091',
-        name: 'Guest Risk-Based Access',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-GuestRisk-Block'],
-        missingCoverage: [],
-        recommendation: 'High-risk guest access is blocked appropriately.'
-      },
-      {
-        controlId: 'CA-092',
-        name: 'Guest Device Requirements',
-        severity: 'High',
-        status: 'Warning',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['Compliant device requirement'],
-        recommendation: 'Guest users are not required to use compliant devices. Consider requiring compliant devices or approved applications.'
-      },
-      {
-        controlId: 'CA-093',
-        name: 'Guest Session Controls',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-Guest-SessionControl'],
-        missingCoverage: [],
-        recommendation: 'Session controls are applied to guest access policies.'
-      },
-      {
-        controlId: 'CA-094',
-        name: 'Guest Access Limited to Approved Applications',
-        severity: 'High',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Guest-AppRestriction', 'CA-B2B-AppRestriction'],
-        missingCoverage: [],
-        recommendation: 'Guest access is properly limited to approved applications.'
-      },
-      {
-        controlId: 'CA-095',
-        name: 'Guest Administrators Protected',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-GuestAdmin-Protection'],
-        missingCoverage: [],
-        recommendation: 'Guest administrators are protected with strong authentication requirements.'
-      },
-      {
-        controlId: 'CA-096',
-        name: 'Cross-Tenant Access Policies Configured',
-        severity: 'High',
-        status: 'Warning',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['Cross-tenant policies'],
-        recommendation: 'Cross-tenant access policies are not configured. Configure to restrict external organization access.'
-      },
-      {
-        controlId: 'CA-097',
-        name: 'External Collaboration Protected',
-        severity: 'Medium',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-B2B-Governance'],
-        missingCoverage: [],
-        recommendation: 'B2B collaboration policies are configured and enforced.'
-      }
+      manualControl('CA-091', 'Guest MFA Required', 'Critical', 'Verify guest MFA requirement'),
+      manualControl('CA-092', 'Guest Risk-Based Access', 'Critical', 'Review guest risk policies'),
+      manualControl('CA-093', 'Guest Device Requirements', 'High', 'Verify device compliance'),
+      manualControl('CA-094', 'Guest Session Controls', 'High', 'Configure session controls'),
+      manualControl('CA-095', 'App Restrictions', 'High', 'Review app access limits'),
+      manualControl('CA-096', 'Guest Admins', 'Critical', 'Review admin protection'),
+      manualControl('CA-097', 'Cross-Tenant Access', 'High', 'Configure cross-tenant policies')
     ]
   }
 }
 
 function evaluateCategorySessionProtection(policies = []) {
+  const policyCount = (policies || []).length
+  const enabledCount = (policies || []).filter(p => p.state === 'enabled').length
+
   return {
     categoryId: 'CA-CAT-08',
     categoryName: 'Session Protection',
     zeroTrustPillar: 'Identity',
-    totalScore: 52,
-    maxScore: 62,
-    coverage: 84,
+    totalScore: enabledCount > 0 ? 30 : 0,
+    maxScore: 75,
+    coverage: policyCount > 0 ? Math.round((enabledCount / policyCount) * 100) : 0,
     controls: [
       {
         controlId: 'CA-080',
-        name: 'Sign-in Frequency Configured',
+        name: 'Session Policy Status',
         severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Admins-SignInFrequency', 'CA-Internals-SignInFrequency'],
-        missingCoverage: [],
-        recommendation: 'Sign-in frequency is properly configured for periodic reauthentication.'
+        status: policyCount > 0 ? 'Passed' : 'Failed',
+        validationType: 'Automatic',
+        score: policyCount > 0 ? 10 : 0,
+        matchedPolicies: policyCount > 0 ? [`${policyCount} policies loaded`] : [],
+        missingCoverage: policyCount === 0 ? ['No policies'] : [],
+        recommendation: policyCount > 0 ? `${enabledCount} enabled, ${policyCount - enabledCount} disabled` : 'Create session policies'
       },
-      {
-        controlId: 'CA-081',
-        name: 'Persistent Browser Session Controlled',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-BrowserSession-Control'],
-        missingCoverage: [],
-        recommendation: 'Persistent browser sessions are controlled and limited.'
-      },
-      {
-        controlId: 'CA-082',
-        name: 'Application Enforced Restrictions Enabled',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-AppEnforced-Restrictions'],
-        missingCoverage: [],
-        recommendation: 'Applications enforce additional restrictions on sessions.'
-      },
-      {
-        controlId: 'CA-083',
-        name: 'Microsoft Defender for Cloud Apps Session Control',
-        severity: 'Critical',
-        status: 'Warning',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['Cloud Apps Session Control'],
-        recommendation: 'Configure Microsoft Defender for Cloud Apps session controls for real-time monitoring and restriction of risky behaviors.'
-      },
-      {
-        controlId: 'CA-084',
-        name: 'Continuous Access Evaluation Enabled',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-CAE-Enabled'],
-        missingCoverage: [],
-        recommendation: 'Continuous Access Evaluation is enabled for real-time access decisions.'
-      },
-      {
-        controlId: 'CA-085',
-        name: 'Token Protection Enabled',
-        severity: 'Critical',
-        status: 'Failed',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['Token Protection'],
-        recommendation: 'Enable Token Protection to prevent token exfiltration and replay attacks. Configure in Conditional Access policies.'
-      },
-      {
-        controlId: 'CA-086',
-        name: 'Session Controls Applied to High Value Applications',
-        severity: 'High',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-HighValueApps-SessionControl', 'CA-Exchange-SessionControl', 'CA-SharePoint-SessionControl'],
-        missingCoverage: [],
-        recommendation: 'Session controls are applied to all high-value applications.'
-      },
-      {
-        controlId: 'CA-087',
-        name: 'Administrative Sessions Protected',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-GlobalAdmin-SessionControl', 'CA-PrivilegedRole-SessionControl'],
-        missingCoverage: [],
-        recommendation: 'Administrative sessions are protected with session controls.'
-      }
+      manualControl('CA-081', 'Sign-in Frequency', 'Critical', 'Configure sign-in frequency'),
+      manualControl('CA-082', 'Browser Sessions', 'High', 'Control persistent sessions'),
+      manualControl('CA-083', 'App Restrictions', 'High', 'Configure app enforcement'),
+      manualControl('CA-084', 'Cloud Apps Control', 'Critical', 'Enable Defender for Cloud Apps'),
+      manualControl('CA-085', 'CAE Enabled', 'High', 'Enable CAE support'),
+      manualControl('CA-086', 'Token Protection', 'Critical', 'Enable token protection'),
+      manualControl('CA-087', 'High-Value Apps', 'High', 'Apply controls to apps')
     ]
   }
 }
 
 function evaluateCategoryClientApplicationProtection(policies = []) {
+  const policyCount = (policies || []).length
+  const enabledCount = (policies || []).filter(p => p.state === 'enabled').length
+
   return {
     categoryId: 'CA-CAT-07',
     categoryName: 'Client Application Protection',
     zeroTrustPillar: 'Applications',
-    totalScore: 56,
-    maxScore: 62,
-    coverage: 90,
+    totalScore: enabledCount > 0 ? 30 : 0,
+    maxScore: 95,
+    coverage: policyCount > 0 ? Math.round((enabledCount / policyCount) * 100) : 0,
     controls: [
       {
         controlId: 'CA-070',
-        name: 'Legacy Authentication Blocked',
+        name: 'Client Policy Status',
         severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Block-LegacyAuth'],
-        missingCoverage: [],
-        recommendation: 'Legacy authentication is properly blocked across all protocols.'
+        status: policyCount > 0 ? 'Passed' : 'Failed',
+        validationType: 'Automatic',
+        score: policyCount > 0 ? 10 : 0,
+        matchedPolicies: policyCount > 0 ? [`${policyCount} policies loaded`] : [],
+        missingCoverage: policyCount === 0 ? ['No policies'] : [],
+        recommendation: policyCount > 0 ? `${enabledCount} enabled, ${policyCount - enabledCount} disabled` : 'Create client policies'
       },
-      {
-        controlId: 'CA-071',
-        name: 'Browser Access Protected',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Browser-MFA', 'CA-Browser-Compliance'],
-        missingCoverage: [],
-        recommendation: 'Browser access is properly protected with MFA and device compliance.'
-      },
-      {
-        controlId: 'CA-072',
-        name: 'Mobile Applications Protected',
-        severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-Mobile-AppProtection', 'CA-Desktop-MFA'],
-        missingCoverage: [],
-        recommendation: 'Mobile and desktop client protection is active.'
-      },
-      {
-        controlId: 'CA-073',
-        name: 'Exchange ActiveSync Restricted',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-Block-EAS'],
-        missingCoverage: [],
-        recommendation: 'Exchange ActiveSync is properly restricted.'
-      },
-      {
-        controlId: 'CA-074',
-        name: 'Modern Authentication Enforced',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['Global-LegacyAuthBlock'],
-        missingCoverage: [],
-        recommendation: 'Modern authentication is enforced globally.'
-      },
-      {
-        controlId: 'CA-075',
-        name: 'Desktop Clients Protected',
-        severity: 'High',
-        status: 'Warning',
-        score: 10,
-        matchedPolicies: ['CA-Desktop-Protection'],
-        missingCoverage: ['Compliant device requirement'],
-        recommendation: 'Desktop clients require MFA but do not require compliant devices. Consider adding device compliance requirement.'
-      }
+      manualControl('CA-071', 'Legacy Auth Blocked', 'Critical', 'Verify legacy auth blocking'),
+      manualControl('CA-072', 'Browser Access', 'Critical', 'Verify browser protection'),
+      manualControl('CA-073', 'Mobile Apps', 'Critical', 'Verify mobile protection'),
+      manualControl('CA-074', 'EAS Restricted', 'High', 'Verify ActiveSync restrictions'),
+      manualControl('CA-075', 'Modern Auth', 'High', 'Verify modern auth enforcement'),
+      manualControl('CA-076', 'Desktop Clients', 'High', 'Verify desktop protection')
     ]
   }
 }
 
 function evaluateCategoryNetworkProtection(policies = []) {
+  const policyCount = (policies || []).length
+  const enabledCount = (policies || []).filter(p => p.state === 'enabled').length
+
   return {
     categoryId: 'CA-CAT-06',
     categoryName: 'Network Protection',
     zeroTrustPillar: 'Network',
-    totalScore: 54,
-    maxScore: 66,
-    coverage: 82,
+    totalScore: enabledCount > 0 ? 30 : 0,
+    maxScore: 85,
+    coverage: policyCount > 0 ? Math.round((enabledCount / policyCount) * 100) : 0,
     controls: [
       {
         controlId: 'CA-060',
-        name: 'Named Locations Configured',
+        name: 'Network Policy Status',
         severity: 'Critical',
-        status: 'Passed',
-        score: 10,
-        matchedPolicies: ['CA-NamedLocations-Corporate', 'CA-NamedLocations-Trusted'],
-        missingCoverage: [],
-        recommendation: 'Named locations are properly configured for trusted and untrusted networks.'
+        status: policyCount > 0 ? 'Passed' : 'Failed',
+        validationType: 'Automatic',
+        score: policyCount > 0 ? 10 : 0,
+        matchedPolicies: policyCount > 0 ? [`${policyCount} policies loaded`] : [],
+        missingCoverage: policyCount === 0 ? ['No policies'] : [],
+        recommendation: policyCount > 0 ? `${enabledCount} enabled, ${policyCount - enabledCount} disabled` : 'Create network policies'
       },
-      {
-        controlId: 'CA-061',
-        name: 'Trusted Locations Configured',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-TrustedLocations'],
-        missingCoverage: [],
-        recommendation: 'Trusted locations are defined for known office networks.'
-      },
-      {
-        controlId: 'CA-062',
-        name: 'Trusted Locations Excluded Where Appropriate',
-        severity: 'Medium',
-        status: 'Passed',
-        score: 5,
-        matchedPolicies: ['CA-TrustedLocationExclusions'],
-        missingCoverage: [],
-        recommendation: 'Trusted locations are appropriately excluded from certain policies.'
-      },
-      {
-        controlId: 'CA-063',
-        name: 'High Risk Countries Restricted',
-        severity: 'Critical',
-        status: 'Failed',
-        score: 0,
-        matchedPolicies: [],
-        missingCoverage: ['All regions'],
-        recommendation: 'Configure country-based restrictions for high-risk nations (North Korea, Iran, Syria, etc.).'
-      },
-      {
-        controlId: 'CA-064',
-        name: 'Anonymous IP Addresses Restricted',
-        severity: 'High',
-        status: 'Passed',
-        score: 8,
-        matchedPolicies: ['CA-RiskDetection-AnonymousIP'],
-        missingCoverage: [],
-        recommendation: 'Anonymous IP detection is active in risk-based Conditional Access.'
-      },
-      {
-        controlId: 'CA-065',
-        name: 'TOR / VPN Access Controlled',
-        severity: 'Medium',
-        status: 'Warning',
-        score: 3,
-        matchedPolicies: [],
-        missingCoverage: ['VPN/TOR blocking'],
-        recommendation: 'No explicit protection against VPN/TOR traffic. Consider location-based policies.'
-      },
-      {
-        controlId: 'CA-066',
-        name: 'Location-based Conditional Access Implemented',
-        severity: 'High',
-        status: 'Passed',
-        score: 20,
-        matchedPolicies: ['CA-LocationBased-Internal', 'CA-LocationBased-External', 'CA-LocationBased-MFA'],
-        missingCoverage: [],
-        recommendation: 'Location-based conditions are actively used in multiple policies.'
-      }
+      manualControl('CA-061', 'Named Locations', 'Critical', 'Configure named locations'),
+      manualControl('CA-062', 'Trusted Locations', 'High', 'Define trusted networks'),
+      manualControl('CA-063', 'Location Exclusions', 'Medium', 'Configure location exclusions'),
+      manualControl('CA-064', 'Country Restrictions', 'Critical', 'Restrict high-risk countries'),
+      manualControl('CA-065', 'Anonymous IPs', 'High', 'Block anonymous IP access'),
+      manualControl('CA-066', 'VPN/TOR Control', 'Medium', 'Control VPN/TOR access'),
+      manualControl('CA-067', 'Location-based CA', 'High', 'Implement location policies')
     ]
   }
 }
