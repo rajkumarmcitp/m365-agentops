@@ -818,7 +818,10 @@ function getDemoWorkloadIdentities() {
 
 function renderWorkloadIdentityTab(el) {
   const container = el.querySelector('#pa-tab-workload')
-  if (!container) return
+  if (!container) {
+    console.warn('⚠️ Workload identity container not found')
+    return
+  }
 
   // Use real workload identities from API if loaded, or fallback to demo data
   // Important: empty array is still valid real data (means 0 privileged apps), don't fall back
@@ -855,15 +858,15 @@ function renderWorkloadIdentityTab(el) {
 
   let html = `
     <!-- Cache Status & Refresh -->
-    <div style="background:var(--color-background-secondary);border-radius:6px;padding:12px;margin-bottom:16px;border-left:3px solid var(--color-primary);display:flex;justify-content:space-between;align-items:center">
-      <div style="font-size:11px;color:var(--color-text-secondary)">
+    <div style="background:#F5F5F5;border-radius:6px;padding:12px;margin-bottom:16px;border-left:3px solid #1976D2;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:11px;color:#666">
         <div>✅ Data cached${workloadIdentities.length > 0 ? ': ' + workloadIdentities.length + ' apps' : ''}</div>
         <div style="margin-top:4px;font-size:10px">Last updated: <span id="cache-timestamp">fetching...</span></div>
       </div>
-      <button id="refresh-workload-btn" style="padding:6px 12px;background:var(--color-primary);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.2s">
+      <button id="refresh-workload-btn" style="padding:8px 16px;background:#1976D2;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;transition:all 0.2s;margin-left:12px">
         🔄 Refresh Now
       </button>
-    </div>
+    </div>`
 
     <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
