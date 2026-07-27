@@ -23378,40 +23378,40 @@ app.get('/api/cap/dashboard/home', async (req, res) => {
       ],
 
       // Category 1 - Policy Foundation & Governance
-      controlEvaluationCategory1: evaluateCategoryPolicyFoundationGovernance(),
+      controlEvaluationCategory1: evaluateCategoryPolicyFoundationGovernance(realPolicies),
 
       // Control evaluation results (from Category 2 - Identity Protection)
-      controlEvaluation: evaluateCategoryIdentityProtection(),
+      controlEvaluation: evaluateCategoryIdentityProtection(realPolicies),
 
       // Category 3 - Administrative Protection
-      controlEvaluationCategory3: evaluateCategoryAdministrativeProtection(),
+      controlEvaluationCategory3: evaluateCategoryAdministrativeProtection(realPolicies),
 
       // Category 4 - Device Trust
-      controlEvaluationCategory4: evaluateCategoryDeviceTrust(),
+      controlEvaluationCategory4: evaluateCategoryDeviceTrust(realPolicies),
 
       // Category 5 - Application Protection
-      controlEvaluationCategory5: evaluateCategoryApplicationProtection(),
+      controlEvaluationCategory5: evaluateCategoryApplicationProtection(realPolicies),
 
       // Category 6 - Network Protection
-      controlEvaluationCategory6: evaluateCategoryNetworkProtection(),
+      controlEvaluationCategory6: evaluateCategoryNetworkProtection(realPolicies),
 
       // Category 7 - Client Application Protection
-      controlEvaluationCategory7: evaluateCategoryClientApplicationProtection(),
+      controlEvaluationCategory7: evaluateCategoryClientApplicationProtection(realPolicies),
 
       // Category 8 - Session Protection
-      controlEvaluationCategory8: evaluateCategorySessionProtection(),
+      controlEvaluationCategory8: evaluateCategorySessionProtection(realPolicies),
 
       // Category 9 - Guest & External User Protection
-      controlEvaluationCategory9: evaluateCategoryGuestExternalUserProtection(),
+      controlEvaluationCategory9: evaluateCategoryGuestExternalUserProtection(realPolicies),
 
       // Category 10 - Workload Identity Protection
-      controlEvaluationCategory10: evaluateCategoryWorkloadIdentityProtection(),
+      controlEvaluationCategory10: evaluateCategoryWorkloadIdentityProtection(realPolicies),
 
       // Category 11 - Developer Protection
-      controlEvaluationCategory11: evaluateCategoryDeveloperProtection(),
+      controlEvaluationCategory11: evaluateCategoryDeveloperProtection(realPolicies),
 
       // Category 12 - Monitoring, Operations & Governance
-      controlEvaluationCategory12: evaluateCategoryMonitoringOperationsGovernance()
+      controlEvaluationCategory12: evaluateCategoryMonitoringOperationsGovernance(realPolicies)
     }
     })
   } catch (error) {
@@ -23420,9 +23420,97 @@ app.get('/api/cap/dashboard/home', async (req, res) => {
   }
 })
 
+// Helper: Evaluate real policies against Identity Protection controls
+function evaluateIdentityControls(policies) {
+  const controls = []
+  let totalScore = 0
+
+  // CA-010: Require MFA
+  const mfaPolicies = policies.filter(p =>
+    p.state === 'enabled' &&
+    p.grantControls?.builtInControls?.includes('mfa')
+  )
+  controls.push({
+    controlId: 'CA-010',
+    name: 'Require Multi-Factor Authentication',
+    severity: 'Critical',
+    status: mfaPolicies.length > 0 ? 'Passed' : 'Failed',
+    score: mfaPolicies.length > 0 ? 10 : 0,
+    matchedPolicies: mfaPolicies.map(p => p.displayName || p.id),
+    missingCoverage: mfaPolicies.length === 0 ? ['All users'] : [],
+    recommendation: mfaPolicies.length > 0 ?
+      'MFA is configured. Ensure coverage includes service accounts and external users.' :
+      'Create Conditional Access policy requiring MFA for all users.',
+    expectedValue: ['mfa']
+  })
+
+  // CA-011: Authentication Strength
+  const authStrengthPolicies = policies.filter(p =>
+    p.state === 'enabled' &&
+    (p.grantControls?.authenticationStrength || p.authenticationStrengthPolicies)
+  )
+  controls.push({
+    controlId: 'CA-011',
+    name: 'Authentication Strength Configured',
+    severity: 'High',
+    status: authStrengthPolicies.length > 0 ? 'Passed' : 'Failed',
+    score: authStrengthPolicies.length > 0 ? 8 : 0,
+    matchedPolicies: authStrengthPolicies.map(p => p.displayName || p.id),
+    missingCoverage: authStrengthPolicies.length === 0 ? ['All users'] : [],
+    recommendation: 'Configure authentication strength for passwordless or phishing-resistant methods.',
+    expectedValue: ['Passwordless', 'Phishing Resistant']
+  })
+
+  // CA-015: Sign-in Risk Policy
+  const riskPolicies = policies.filter(p =>
+    p.state === 'enabled' &&
+    (p.conditions?.signInRiskLevels || p.conditions?.signInRisk)
+  )
+  controls.push({
+    controlId: 'CA-015',
+    name: 'Sign-in Risk Policy Configured',
+    severity: 'Critical',
+    status: riskPolicies.length > 0 ? 'Passed' : 'Failed',
+    score: riskPolicies.length > 0 ? 10 : 0,
+    matchedPolicies: riskPolicies.map(p => p.displayName || p.id),
+    missingCoverage: riskPolicies.length === 0 ? ['All risk levels'] : [],
+    recommendation: 'Policy is properly configured. Continue monitoring sign-in risk levels.',
+    expectedValue: ['medium', 'high']
+  })
+
+  // CA-016: Block High Risk Users
+  const blockHighRiskPolicies = policies.filter(p =>
+    p.state === 'enabled' &&
+    (p.conditions?.userRiskLevels?.includes?.('high') || p.conditions?.userRisk?.includes?.('high')) &&
+    p.grantControls?.builtInControls?.includes('block')
+  )
+  controls.push({
+    controlId: 'CA-016',
+    name: 'Block High Risk Users',
+    severity: 'Critical',
+    status: blockHighRiskPolicies.length > 0 ? 'Passed' : 'Failed',
+    score: blockHighRiskPolicies.length > 0 ? 10 : 0,
+    matchedPolicies: blockHighRiskPolicies.map(p => p.displayName || p.id),
+    missingCoverage: blockHighRiskPolicies.length === 0 ? ['All risk levels'] : [],
+    recommendation: 'Block control is active. Ensure Identity Protection is enabled for risk detection.',
+    expectedValue: ['block']
+  })
+
+  // Calculate totals
+  totalScore = controls.reduce((sum, c) => sum + c.score, 0)
+  const passedCount = controls.filter(c => c.status === 'Passed').length
+  const coverage = Math.round((passedCount / controls.length) * 100)
+
+  return {
+    totalScore,
+    coverage,
+    controls
+  }
+}
+
 // Category evaluation functions
 
-function evaluateCategoryPolicyFoundationGovernance() {
+function evaluateCategoryPolicyFoundationGovernance(policies = []) {
   return {
     categoryId: 'CA-CAT-01',
     categoryName: 'Policy Foundation & Governance',
@@ -23515,130 +23603,27 @@ function evaluateCategoryPolicyFoundationGovernance() {
   }
 }
 
-function evaluateCategoryIdentityProtection() {
+function evaluateCategoryIdentityProtection(policies = []) {
+  // Evaluate real policies if provided, otherwise return demo
+  if (!policies || policies.length === 0) {
+    policies = []
+  }
+
+  const evaluationResult = evaluateIdentityControls(policies)
+
   return {
         categoryId: 'CA-CAT-02',
         categoryName: 'Identity Protection',
         zeroTrustPillar: 'Identity',
-        totalScore: 43,
+        totalScore: evaluationResult.totalScore,
         maxScore: 92,
-        coverage: 47,
-        controls: [
-          {
-            controlId: 'CA-010',
-            name: 'Require Multi-Factor Authentication',
-            severity: 'Critical',
-            status: 'Passed',
-            score: 10,
-            matchedPolicies: ['CA-Admins-MFA', 'CA-InternalUsers-MFA'],
-            missingCoverage: ['Service Accounts', 'External Users'],
-            recommendation: 'Extend MFA to service accounts and external users via Workload Identity and B2B policies.',
-            expectedValue: ['mfa']
-          },
-          {
-            controlId: 'CA-011',
-            name: 'Authentication Strength Configured',
-            severity: 'High',
-            status: 'Failed',
-            score: 0,
-            matchedPolicies: [],
-            missingCoverage: ['All users'],
-            recommendation: 'Configure authentication strength for passwordless or phishing-resistant methods.',
-            expectedValue: ['Passwordless', 'Phishing Resistant']
-          },
-          {
-            controlId: 'CA-012',
-            name: 'Phishing Resistant MFA for Privileged Accounts',
-            severity: 'Critical',
-            status: 'Failed',
-            score: 0,
-            matchedPolicies: [],
-            missingCoverage: ['Global Admin', 'Privileged Role Admin', 'CA Admin'],
-            recommendation: 'Create Conditional Access policy requiring phishing-resistant authentication for admin roles.',
-            expectedValue: 'Phishing Resistant'
-          },
-          {
-            controlId: 'CA-013',
-            name: 'Passwordless Authentication Supported',
-            severity: 'Medium',
-            status: 'Failed',
-            score: 0,
-            matchedPolicies: [],
-            missingCoverage: ['All users'],
-            recommendation: 'Enable Windows Hello, FIDO2, or Phone Sign-in in authentication strength policy.',
-            expectedValue: ['Passwordless']
-          },
-          {
-            controlId: 'CA-014',
-            name: 'User Risk Policy Configured',
-            severity: 'Critical',
-            status: 'Partial',
-            score: 5,
-            matchedPolicies: ['CA-BlockHighRiskUsers'],
-            missingCoverage: ['Password change on medium risk'],
-            recommendation: 'Add password change requirement for medium-risk users in addition to blocking high-risk.',
-            expectedValue: ['high']
-          },
-          {
-            controlId: 'CA-015',
-            name: 'Sign-in Risk Policy Configured',
-            severity: 'Critical',
-            status: 'Passed',
-            score: 10,
-            matchedPolicies: ['CA-RiskySignIn'],
-            missingCoverage: [],
-            recommendation: 'Policy is properly configured. Continue monitoring sign-in risk levels.',
-            expectedValue: ['medium', 'high']
-          },
-          {
-            controlId: 'CA-016',
-            name: 'Block High Risk Users',
-            severity: 'Critical',
-            status: 'Passed',
-            score: 10,
-            matchedPolicies: ['CA-BlockHighRiskUsers'],
-            missingCoverage: [],
-            recommendation: 'Block control is active. Ensure Identity Protection is enabled for risk detection.',
-            expectedValue: ['block']
-          },
-          {
-            controlId: 'CA-017',
-            name: 'Force Password Change',
-            severity: 'High',
-            status: 'Failed',
-            score: 0,
-            matchedPolicies: [],
-            missingCoverage: ['All risk levels'],
-            recommendation: 'Add password change grant control to user risk policies.',
-            expectedValue: ['passwordChange']
-          },
-          {
-            controlId: 'CA-018',
-            name: 'Identity Protection Enabled',
-            severity: 'High',
-            status: 'Passed',
-            score: 8,
-            matchedPolicies: ['Identity Protection service'],
-            missingCoverage: [],
-            recommendation: 'Identity Protection is enabled. Verify all risk policies are active.',
-            expectedValue: true
-          },
-          {
-            controlId: 'CA-019',
-            name: 'Continuous Access Evaluation',
-            severity: 'Medium',
-            status: 'Failed',
-            score: 0,
-            matchedPolicies: [],
-            missingCoverage: ['All policies'],
-            recommendation: 'Enable Continuous Access Evaluation in token issuance policies.',
-            expectedValue: true
-          }
-        ]
+        coverage: evaluationResult.coverage,
+        controls: evaluationResult.controls,
+        __note: 'Evaluated from real policies' + (policies.length === 0 ? ' (demo data - no policies loaded)' : '')
       }
 }
 
-function evaluateCategoryAdministrativeProtection() {
+function evaluateCategoryAdministrativeProtection(policies = []) {
   return {
     categoryId: 'CA-CAT-03',
     categoryName: 'Administrative Protection',
@@ -23826,7 +23811,7 @@ app.get('/api/cap/dashboard/categories', (req, res) => {
   })
 })
 
-function evaluateCategoryApplicationProtection() {
+function evaluateCategoryApplicationProtection(policies = []) {
   return {
     categoryId: 'CA-CAT-05',
     categoryName: 'Application Protection',
@@ -23919,7 +23904,7 @@ function evaluateCategoryApplicationProtection() {
   }
 }
 
-function evaluateCategoryDeviceTrust() {
+function evaluateCategoryDeviceTrust(policies = []) {
   return {
     categoryId: 'CA-CAT-04',
     categoryName: 'Device Trust',
@@ -24092,7 +24077,7 @@ function evaluateCategoryDeviceTrust() {
   }
 }
 
-function evaluateCategoryMonitoringOperationsGovernance() {
+function evaluateCategoryMonitoringOperationsGovernance(policies = []) {
   return {
     categoryId: 'CA-CAT-12',
     categoryName: 'Monitoring, Operations & Governance',
@@ -24185,7 +24170,7 @@ function evaluateCategoryMonitoringOperationsGovernance() {
   }
 }
 
-function evaluateCategoryDeveloperProtection() {
+function evaluateCategoryDeveloperProtection(policies = []) {
   return {
     categoryId: 'CA-CAT-11',
     categoryName: 'Developer Protection',
@@ -24278,7 +24263,7 @@ function evaluateCategoryDeveloperProtection() {
   }
 }
 
-function evaluateCategoryWorkloadIdentityProtection() {
+function evaluateCategoryWorkloadIdentityProtection(policies = []) {
   return {
     categoryId: 'CA-CAT-10',
     categoryName: 'Workload Identity Protection',
@@ -24371,7 +24356,7 @@ function evaluateCategoryWorkloadIdentityProtection() {
   }
 }
 
-function evaluateCategoryGuestExternalUserProtection() {
+function evaluateCategoryGuestExternalUserProtection(policies = []) {
   return {
     categoryId: 'CA-CAT-09',
     categoryName: 'Guest & External User Protection',
@@ -24464,7 +24449,7 @@ function evaluateCategoryGuestExternalUserProtection() {
   }
 }
 
-function evaluateCategorySessionProtection() {
+function evaluateCategorySessionProtection(policies = []) {
   return {
     categoryId: 'CA-CAT-08',
     categoryName: 'Session Protection',
@@ -24557,7 +24542,7 @@ function evaluateCategorySessionProtection() {
   }
 }
 
-function evaluateCategoryClientApplicationProtection() {
+function evaluateCategoryClientApplicationProtection(policies = []) {
   return {
     categoryId: 'CA-CAT-07',
     categoryName: 'Client Application Protection',
@@ -24630,7 +24615,7 @@ function evaluateCategoryClientApplicationProtection() {
   }
 }
 
-function evaluateCategoryNetworkProtection() {
+function evaluateCategoryNetworkProtection(policies = []) {
   return {
     categoryId: 'CA-CAT-06',
     categoryName: 'Network Protection',
