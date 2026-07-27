@@ -23512,6 +23512,16 @@ function evaluateIdentityControls(policies) {
     expectedValue: ['block']
   })
 
+  // Add manual validation controls for remaining Identity Protection checks
+  controls.push(
+    manualControl('CA-012', 'User Risk Policy Configured', 'High', 'Verify user risk detection enabled in Identity Protection'),
+    manualControl('CA-013', 'Risk-based Conditional Access', 'Critical', 'Review risk-based policies in Azure AD portal'),
+    manualControl('CA-014', 'MFA Registration Required', 'High', 'Verify MFA registration enforcement'),
+    manualControl('CA-017', 'Passwordless Methods Enabled', 'High', 'Enable Windows Hello, FIDO2, or app passwords'),
+    manualControl('CA-018', 'Session Token Protection', 'Medium', 'Configure token lifetime policies'),
+    manualControl('CA-019', 'Identity Protection Enabled', 'Critical', 'Verify Identity Protection license and setup')
+  )
+
   // Calculate totals
   totalScore = controls.reduce((sum, c) => sum + c.score, 0)
   const passedCount = controls.filter(c => c.status === 'Passed').length
