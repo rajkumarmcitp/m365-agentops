@@ -231,7 +231,6 @@ function renderDemoApplicationsPage(el) {
           <i class="fas fa-question-circle"></i>
         </button>
         <div class="page-actions">
-          <button class="btn" id="navigate-compliance-reports"><i class="ti ti-file-text"></i> Compliance Reports</button>
           <button class="btn"><i class="fas fa-sync"></i> Refresh</button>
         </div>
       </div>
@@ -595,10 +594,6 @@ function render(el) {
   })
 
   el.querySelector('#app-audit')?.addEventListener('click', () => showToast('Application audit exported as CSV.', 'success'))
-
-  el.querySelector('#navigate-compliance-reports')?.addEventListener('click', () => {
-    window.go('compliance-reports')
-  })
 
   wireSection(el)
 }

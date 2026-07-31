@@ -35,7 +35,6 @@ import { initBackup } from './pages/backup.js'
 import { initBackupConfig } from './pages/backup-config.js'
 import { initNotifications, stopNotifications } from './components/notifications.js'
 import { initApplications } from './pages/applications.js'
-import { initComplianceReports } from './pages/compliance-reports.js'  // Phase 4.4: Compliance Reports
 import { initComplianceDashboard } from './pages/compliance-dashboard.js'  // Phase 2: Executive Dashboard
 import { initIntune } from './pages/intune.js'
 import { initMyAccount } from './pages/myaccount.js'
@@ -294,7 +293,6 @@ const PAGE_INIT = {
   settings: initSettings,
   backup: initBackup,
   'backup-config': initBackupConfig,
-  'compliance-reports': initComplianceReports,  // Phase 4.4: Compliance Reports
   'compliance-dashboard': initComplianceDashboard,  // Phase 2: Executive Dashboard
 }
 
@@ -554,8 +552,8 @@ async function doLoginWithEntraID(account) {
 
   // Determine nav access based on role
   const roleNavAccess = {
-    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'compliance-reports', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
-    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'compliance-reports', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
+    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
+    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
     manager: ['requests', 'msgcenter', 'tasks', 'portal', 'myreqs', 'myaccount', 'chat'],
     user: ['portal', 'myreqs', 'myaccount', 'chat']
   }

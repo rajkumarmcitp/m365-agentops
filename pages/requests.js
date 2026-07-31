@@ -309,9 +309,6 @@ function renderList(el) {
       <button id="export-csv-btn" style="padding:8px 12px;background:var(--clr-info-bg);color:var(--clr-info-text);border:none;border-radius:var(--border-radius-sm);cursor:pointer;font-size:11px;font-weight:600">
         <i class="ti ti-download"></i> Export CSV
       </button>
-      <button id="compliance-report-btn" style="padding:8px 12px;background:var(--clr-success-bg);color:var(--clr-success-text);border:none;border-radius:var(--border-radius-sm);cursor:pointer;font-size:11px;font-weight:600">
-        <i class="ti ti-file-text"></i> Compliance Report
-      </button>
     </div>
 
     <!-- Bulk Actions Bar -->
@@ -562,14 +559,6 @@ function renderList(el) {
   el.querySelector('#export-csv-btn')?.addEventListener('click', () => {
     exportToCSV(filteredRequests, `requests-${new Date().toISOString().split('T')[0]}.csv`)
     showToast('CSV exported successfully', 'success')
-  })
-
-  el.querySelector('#compliance-report-btn')?.addEventListener('click', () => {
-    const stats = generateComplianceReport(filteredRequests)
-    const html = generateComplianceReportHTML(stats)
-    const printWindow = window.open('', '', 'width=900,height=600')
-    printWindow.document.write(html)
-    printWindow.document.close()
   })
 
   // Bulk action listeners
