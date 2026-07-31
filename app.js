@@ -552,8 +552,8 @@ async function doLoginWithEntraID(account) {
 
   // Determine nav access based on role
   const roleNavAccess = {
-    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
-    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
+    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'compliance-dashboard', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
+    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'compliance-dashboard', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
     manager: ['requests', 'msgcenter', 'tasks', 'portal', 'myreqs', 'myaccount', 'chat'],
     user: ['portal', 'myreqs', 'myaccount', 'chat']
   }
@@ -628,8 +628,8 @@ function renderShell() {
 function renderAllPages() {
   const pages = [
     'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','conditionalaccess','driftmonitoring','privaccts','m365config',
-    'msgcenter','messages','tasks','applications','intune','licenses','agents','agent-details','approvals','portal','myreqs','myaccount','chat',
-    'graphapi','sso','setup-wizard','audit','settings','backup','backup-config','compliance-reports'
+    'msgcenter','messages','tasks','applications','compliance-dashboard','intune','licenses','agents','agent-details','approvals','portal','myreqs','myaccount','chat',
+    'graphapi','sso','setup-wizard','audit','settings','backup','backup-config'
   ]
   return pages.map(p => `<div class="page" id="page-${p}"></div>`).join('')
 }
