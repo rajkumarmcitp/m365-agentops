@@ -51,6 +51,7 @@ const NAV_ITEMS = {
     { id: 'messages',       label: 'Service Health',       icon: 'ti-heartbeat',      badge: '75', badgeCls: 'orange' },
     { id: 'tasks',          label: 'Change Tasks',         icon: 'ti-checkbox',       badge: '18', badgeCls: 'blue' },
     { id: 'applications',   label: 'Entra Apps',           icon: 'ti-app-window',     badge: '42', badgeCls: 'red' },
+    { id: 'compliance-dashboard', label: 'Compliance Dashboard', icon: 'ti-chart-bar',    badge: 'DB', badgeCls: 'purple' },
     { id: 'intune',         label: 'Intune Insights',      icon: 'ti-device-laptop',  badge: '156',badgeCls: 'red' },
     { id: 'licenses',       label: 'Licenses',            icon: 'ti-license' },
     { id: 'agents',     label: 'AI Agents',            icon: 'ti-robot' },
