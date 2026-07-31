@@ -35,6 +35,8 @@ import { initBackup } from './pages/backup.js'
 import { initBackupConfig } from './pages/backup-config.js'
 import { initNotifications, stopNotifications } from './components/notifications.js'
 import { initApplications } from './pages/applications.js'
+import { initComplianceReports } from './pages/compliance-reports.js'  // Phase 4.4: Compliance Reports
+import { initComplianceDashboard } from './pages/compliance-dashboard.js'  // Phase 2: Executive Dashboard
 import { initIntune } from './pages/intune.js'
 import { initMyAccount } from './pages/myaccount.js'
 import { initializeServiceHealth } from './lib/service-health-manager.js'
@@ -292,6 +294,8 @@ const PAGE_INIT = {
   settings: initSettings,
   backup: initBackup,
   'backup-config': initBackupConfig,
+  'compliance-reports': initComplianceReports,  // Phase 4.4: Compliance Reports
+  'compliance-dashboard': initComplianceDashboard,  // Phase 2: Executive Dashboard
 }
 
 // Export configuration utilities
@@ -511,7 +515,7 @@ async function doLogin(userId) {
   // Fetch tenant domain from Graph API (even for demo users if token available)
   await fetchTenantDomain()
 
-  const defaultPage = user.navAccess[0]
+  const defaultPage = user.navAccess[0] || 'dashboard'
   await go(defaultPage)
   showToast(`Welcome back, ${user.name}!`, 'success')
 }
@@ -525,7 +529,7 @@ async function doLoginWithEntraID(account) {
   try {
     console.log(`📡 Determining role for user: ${account.localAccountId}`)
     const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    const apiUrl = import.meta.env.VITE_API_URL || (isDev ? 'http://localhost:3000' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net')
+    const apiUrl = import.meta.env.VITE_API_URL || (isDev ? 'http://localhost:3001' : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net')
     const token = await getAccessToken()
     const response = await fetch(
       `${apiUrl}/api/user/role`,
@@ -550,8 +554,8 @@ async function doLoginWithEntraID(account) {
 
   // Determine nav access based on role
   const roleNavAccess = {
-    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
-    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
+    super: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'compliance-reports', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'graphapi', 'sso', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
+    admin: ['dashboard', 'requests', 'security', 'tenantguard', 'user-investigation', 'zerotrust', 'conditionalaccess', 'driftmonitoring', 'privaccts', 'm365config', 'licenses', 'agents', 'approvals', 'msgcenter', 'tasks', 'applications', 'compliance-reports', 'intune', 'portal', 'myreqs', 'myaccount', 'chat', 'setup-wizard', 'audit', 'settings', 'backup', 'backup-config'],
     manager: ['requests', 'msgcenter', 'tasks', 'portal', 'myreqs', 'myaccount', 'chat'],
     user: ['portal', 'myreqs', 'myaccount', 'chat']
   }
@@ -597,7 +601,7 @@ async function doLoginWithEntraID(account) {
   // Fetch tenant domain from Graph API (await to ensure it completes before rendering)
   await fetchTenantDomain()
 
-  const defaultPage = entraUser.navAccess[0]
+  const defaultPage = entraUser.navAccess[0] || 'dashboard'
   await go(defaultPage)
   showToast(`Welcome, ${entraUser.name}! Role: ${role}`, 'success')
 }
@@ -627,7 +631,7 @@ function renderAllPages() {
   const pages = [
     'dashboard','requests','security','tenantguard','tenantguard-enhanced','user-investigation','zerotrust','conditionalaccess','driftmonitoring','privaccts','m365config',
     'msgcenter','messages','tasks','applications','intune','licenses','agents','agent-details','approvals','portal','myreqs','myaccount','chat',
-    'graphapi','sso','setup-wizard','audit','settings','backup','backup-config'
+    'graphapi','sso','setup-wizard','audit','settings','backup','backup-config','compliance-reports'
   ]
   return pages.map(p => `<div class="page" id="page-${p}"></div>`).join('')
 }
