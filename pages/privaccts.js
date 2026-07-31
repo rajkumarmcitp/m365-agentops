@@ -1,14 +1,18 @@
 import { showToast } from '../components/toast.js'
-import { getPrivilegedAccounts, getWorkloadIdentitiesWithRisk, getPrivilegedGroups } from '../lib/api-client.js'
+import { getPrivilegedAccounts, getWorkloadIdentitiesWithRisk, getPrivilegedGroups, getAllUsers, getAllGroups, savePrivilegedAccounts, savePrivilegedGroups, saveChangeLog, loadPrivilegedAccounts, loadPrivilegedGroups, loadChangeLog, refreshWorkloadIdentities, getWorkloadIdentitiesScanHistory, getLatestWorkloadIdentitiesScan } from '../lib/api-client.js'
 import { isDemoAccount } from '../lib/demo-account.js'
-import { PA_GROUPS } from '../data/pa-data.js'
+import { PA_ACCOUNTS, PA_GROUPS } from '../data/pa-data.js'
 import { skeletonLoader } from '../lib/skeleton-loader.js'
 
 let logEntries = []
+let changeLog = [] // Track all changes to accounts, groups, and apps
 let realPrivilegedAccounts = []
 let workloadIdentities = []
 let workloadDataLoaded = false // Track if API returned data (even if empty)
-let privilegedGroups = [] // Real groups from API
+let privilegedGroups = [] // Tagged groups from SharePoint
+let directoryRoles = [] // All directory roles from Azure AD (for reference only)
+let allUsers = [] // All users in tenant for "Add Account" modal
+let allGroups = [] // All groups in tenant for "Add Group" modal
 let accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0, servicePrincipals: 0 }
 
 export async function initPrivAccts() {
@@ -23,6 +27,10 @@ export async function initPrivAccts() {
 
   // Show skeleton immediately
   renderPrivAcctsSkeleton(el)
+
+  // Load previously saved data from SharePoint first, then browser storage as fallback
+  await loadFromSharePoint()
+  loadFromLocalStorage()
 
   try {
     console.log('📡 Fetching real privileged accounts from Azure AD...')
@@ -49,20 +57,33 @@ export async function initPrivAccts() {
       workloadDataLoaded = false
     }
 
-    console.log('📡 Fetching privileged groups...')
+    console.log('📡 Fetching Azure AD directory roles for reference...')
     const groupsResult = await getPrivilegedGroups()
     if (groupsResult.success && groupsResult.data?.groups) {
-      privilegedGroups = groupsResult.data.groups
-      console.log(`✅ Loaded ${privilegedGroups.length} real privileged groups`)
+      directoryRoles = groupsResult.data.groups
+      console.log(`✅ Loaded ${directoryRoles.length} Azure AD directory roles (for reference)`)
     } else {
-      console.warn('⚠️ No privileged groups data available from API')
-      privilegedGroups = []
+      console.warn('⚠️ No directory roles data available from API')
+      directoryRoles = []
     }
+
+    console.log('📡 Fetching all users in tenant...')
+    const usersResult = await getAllUsers()
+    if (usersResult.success && usersResult.data) {
+      allUsers = usersResult.data
+      console.log(`✅ Loaded ${allUsers.length} users from tenant`)
+    } else {
+      console.warn('⚠️ Could not load all users')
+      allUsers = []
+    }
+
+    // Note: allGroups is now fetched on-demand in showAddGroupModal (lazy loading)
+    // This improves performance by not loading 50+ groups upfront
   } catch (error) {
     console.error('❌ Error loading privileged accounts, workload identities, or groups:', error.message)
     realPrivilegedAccounts = []
     workloadIdentities = []
-    privilegedGroups = []
+    directoryRoles = []
     accountsSummary = { totalAccounts: 0, atRisk: 0, noMFA: 0, permanentRoles: 0, servicePrincipals: 0 }
   }
 
@@ -88,7 +109,8 @@ function renderPrivAcctsContent(el) {
       </div>
       <div class="page-actions">
         <button class="btn" id="pa-sync"><i class="ti ti-refresh"></i> Sync tenant</button>
-        <button class="btn btn-primary" id="pa-tag-account"><i class="ti ti-plus"></i> Tag account</button>
+        <button class="btn btn-primary" id="pa-tag-account"><i class="ti ti-plus"></i> Add Account</button>
+        <button class="btn btn-primary" id="pa-add-group"><i class="ti ti-plus"></i> Add Group</button>
       </div>
     </div>
 
@@ -111,7 +133,7 @@ function renderPrivAcctsContent(el) {
       <button class="tab-btn active" data-tab="accounts">Privileged Accounts</button>
       <button class="tab-btn" data-tab="groups">Privileged Groups</button>
       <button class="tab-btn" data-tab="workload">Workload Identity</button>
-      <button class="tab-btn" data-tab="log">Membership Log</button>
+      <button class="tab-btn" data-tab="log">Change Log</button>
     </div>
 
     <div class="tab-panel active" id="pa-tab-accounts"></div>
@@ -146,7 +168,11 @@ function renderPrivAcctsContent(el) {
   })
 
   el.querySelector('#pa-tag-account').addEventListener('click', () => {
-    showToast('Tag account: select an account from the table below.', 'info')
+    showAddAccountModal(el)
+  })
+
+  el.querySelector('#pa-add-group')?.addEventListener('click', () => {
+    showAddGroupModal(el)
   })
 }
 
@@ -167,6 +193,559 @@ function mfaBadge(mfa) {
 function roleBadge(role) {
   const isGlobal = role.toLowerCase().includes('global')
   return `<span class="pa-role-chip ${isGlobal ? 'global' : ''}">${role}</span>`
+}
+
+function logChange(type, action, itemName, itemId = '', description = '') {
+  // type: 'Account' | 'Group' | 'App'
+  // action: 'Added' | 'Removed' | 'Tagged' | 'Untagged'
+  const now = new Date()
+  const timestamp = now.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+
+  const severity = action === 'Removed' ? 'danger' : action === 'Added' ? 'success' : 'info'
+
+  // Generate description if not provided
+  let finalDescription = description
+  if (!finalDescription) {
+    if (action === 'Tagged') {
+      const acct = realPrivilegedAccounts.find(a => a.id === itemId)
+      finalDescription = `Account tagged as privileged. Risk: ${acct?.risk || 'Unknown'}`
+    } else if (action === 'Untagged') {
+      finalDescription = `Account removed from privileged monitoring`
+    } else if (action === 'Added' && type === 'Group') {
+      finalDescription = `${itemName} added to privileged groups monitoring`
+    } else if (action === 'Added' && type === 'Account') {
+      finalDescription = `${itemName} added to privileged accounts monitoring`
+    } else if (action === 'Removed') {
+      finalDescription = `${itemName} removed from ${type.toLowerCase()} monitoring`
+    } else {
+      finalDescription = `${action} on ${itemName}`
+    }
+  }
+
+  changeLog.unshift({
+    timestamp,
+    type,
+    action,
+    itemName,
+    itemId,
+    severity,
+    by: 'Admin',
+    description: finalDescription
+  })
+
+  // Keep only last 100 changes
+  if (changeLog.length > 100) {
+    changeLog.pop()
+  }
+
+  // Auto-save to SharePoint
+  saveToSharePoint()
+}
+
+async function saveToSharePoint() {
+  try {
+    // Save accounts to SharePoint
+    if (realPrivilegedAccounts.length > 0) {
+      await savePrivilegedAccounts(realPrivilegedAccounts, changeLog)
+    }
+
+    // Save groups to SharePoint
+    if (privilegedGroups.length > 0) {
+      await savePrivilegedGroups(privilegedGroups, changeLog)
+    }
+
+    // Save change log to SharePoint
+    if (changeLog.length > 0) {
+      await saveChangeLog(changeLog)
+    }
+
+    console.log('✅ Data saved to SharePoint')
+  } catch (error) {
+    console.warn('⚠️ Error saving to SharePoint:', error.message)
+    // Don't show error to user - it's a background operation
+  }
+
+  // Also save to localStorage as fallback
+  saveToLocalStorage()
+}
+
+function saveToLocalStorage() {
+  try {
+    const data = {
+      privilegedAccounts: realPrivilegedAccounts,
+      privilegedGroups: privilegedGroups,
+      changeLog: changeLog,
+      timestamp: new Date().toISOString()
+    }
+    localStorage.setItem('m365-privaccts-data', JSON.stringify(data))
+    console.log('💾 Data saved to browser storage')
+  } catch (error) {
+    console.warn('⚠️ Error saving to localStorage:', error.message)
+  }
+}
+
+async function loadFromSharePoint() {
+  try {
+    console.log('📡 Attempting to load from SharePoint...')
+
+    // Load accounts from SharePoint
+    const accountsResult = await loadPrivilegedAccounts()
+    if (accountsResult.success && accountsResult.data?.accounts?.length > 0) {
+      realPrivilegedAccounts = accountsResult.data.accounts
+      console.log(`📡 Loaded ${realPrivilegedAccounts.length} accounts from SharePoint`)
+    }
+
+    // Load groups from SharePoint
+    const groupsResult = await loadPrivilegedGroups()
+    if (groupsResult.success && groupsResult.data?.groups?.length > 0) {
+      privilegedGroups = groupsResult.data.groups
+      console.log(`📡 Loaded ${privilegedGroups.length} groups from SharePoint`)
+    }
+
+    // Load change log from SharePoint
+    const logResult = await loadChangeLog()
+    if (logResult.success && logResult.data?.changeLog?.length > 0) {
+      changeLog = logResult.data.changeLog
+      console.log(`📡 Loaded ${changeLog.length} change log entries from SharePoint`)
+    }
+
+    return true
+  } catch (error) {
+    console.warn('⚠️ Error loading from SharePoint:', error.message)
+    return false
+  }
+}
+
+function loadFromLocalStorage() {
+  try {
+    const data = localStorage.getItem('m365-privaccts-data')
+    if (data) {
+      const parsed = JSON.parse(data)
+      if (parsed.privilegedAccounts && parsed.privilegedAccounts.length > 0 && realPrivilegedAccounts.length === 0) {
+        realPrivilegedAccounts = parsed.privilegedAccounts
+        console.log(`💾 Loaded ${realPrivilegedAccounts.length} accounts from browser storage`)
+      }
+      if (parsed.privilegedGroups && parsed.privilegedGroups.length > 0 && privilegedGroups.length === 0) {
+        privilegedGroups = parsed.privilegedGroups
+        console.log(`💾 Loaded ${privilegedGroups.length} groups from browser storage`)
+      }
+      if (parsed.changeLog && parsed.changeLog.length > 0 && changeLog.length === 0) {
+        changeLog = parsed.changeLog
+        console.log(`💾 Loaded ${changeLog.length} change log entries from browser storage`)
+      }
+      return true
+    }
+  } catch (error) {
+    console.warn('⚠️ Error loading from localStorage:', error.message)
+  }
+  return false
+}
+
+function showAddAccountModal(el) {
+  const modal = document.createElement('div')
+  modal.id = 'add-account-modal'
+  modal.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); display: flex; align-items: center;
+    justify-content: center; z-index: 10000;
+  `
+
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2)">
+      <div style="padding: 20px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 600">Add Account for Monitoring</h2>
+        <button class="close-modal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6B7280">×</button>
+      </div>
+
+      <div style="padding: 20px; flex: 1; overflow-y: auto; display: flex; flex-direction: column">
+        <div style="margin-bottom: 16px">
+          <label style="display: block; font-size: 13px; color: #4B5563; margin-bottom: 8px; font-weight: 500">Search for users in your tenant</label>
+          <input type="text" id="add-account-search" placeholder="Type user name or email to search..."
+            style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px">
+          <div style="font-size: 12px; color: #6B7280; margin-top: 8px">Start typing to search users by name or email</div>
+        </div>
+
+        <div style="font-size: 13px; color: #6B7280; margin-bottom: 12px">
+          Results: <strong id="account-result-count">0</strong>
+        </div>
+
+        <div id="add-account-list" style="flex: 1; overflow-y: auto; min-height: 200px; display: flex; align-items: center; justify-content: center; color: #9CA3AF">
+          <div style="text-align: center">
+            <div style="font-size: 14px; margin-bottom: 8px">🔍 Enter a name or email to search</div>
+            <div style="font-size: 12px">Example: "John Smith", "john@company.com", etc.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 16px; border-top: 1px solid #E5E7EB; text-align: right">
+        <button class="close-modal" style="padding: 8px 16px; background: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500">Close</button>
+      </div>
+    </div>
+  `
+
+  document.body.appendChild(modal)
+
+  const closeButtons = modal.querySelectorAll('.close-modal')
+  closeButtons.forEach(btn => {
+    btn.addEventListener('click', () => modal.remove())
+  })
+
+  const searchInput = modal.querySelector('#add-account-search')
+  const accountList = modal.querySelector('#add-account-list')
+  let searchTimeout = null
+
+  searchInput?.addEventListener('input', async (e) => {
+    const query = e.target.value.trim()
+
+    // Clear timeout if exists
+    clearTimeout(searchTimeout)
+
+    // If query is empty, show initial message
+    if (query.length === 0) {
+      accountList.innerHTML = `
+        <div style="text-align: center; color: #9CA3AF">
+          <div style="font-size: 14px; margin-bottom: 8px">🔍 Enter a name or email to search</div>
+          <div style="font-size: 12px">Example: "John Smith", "john@company.com", etc.</div>
+        </div>
+      `
+      document.getElementById('account-result-count').textContent = '0'
+      return
+    }
+
+    // If query is less than 2 characters, show message
+    if (query.length < 2) {
+      accountList.innerHTML = `
+        <div style="text-align: center; color: #9CA3AF; padding: 20px">
+          <div style="font-size: 12px">Type at least 2 characters to search</div>
+        </div>
+      `
+      document.getElementById('account-result-count').textContent = '0'
+      return
+    }
+
+    // Show loading state
+    accountList.innerHTML = `
+      <div style="text-align: center; color: #6B7280; padding: 20px">
+        <div style="font-size: 14px">🔄 Searching for users...</div>
+      </div>
+    `
+
+    // Search with debounce (wait 500ms after user stops typing)
+    searchTimeout = setTimeout(async () => {
+      try {
+        // Fetch all users and filter client-side
+        const response = await getAllUsers()
+
+        if (response.success && response.data) {
+          const allTenantUsers = response.data
+
+          // Filter users by search query
+          const matchedUsers = allTenantUsers.filter(u => {
+            const name = (u.displayName || u.name || '').toLowerCase()
+            const email = (u.userPrincipalName || u.upn || u.mail || '').toLowerCase()
+            return name.includes(query.toLowerCase()) || email.includes(query.toLowerCase())
+          })
+
+          // Filter out already-monitored users
+          const availableUsers = matchedUsers.filter(u => !realPrivilegedAccounts.some(ra => {
+            return ra.userPrincipalName === u.userPrincipalName || ra.upn === u.userPrincipalName
+          }))
+
+          // Display results
+          if (availableUsers.length === 0) {
+            accountList.innerHTML = `
+              <div style="text-align: center; color: #6B7280; padding: 20px">
+                <div style="font-size: 14px">No users found matching "${query}"</div>
+                <div style="font-size: 12px; margin-top: 8px">Try searching with a different name or email</div>
+              </div>
+            `
+          } else {
+            accountList.innerHTML = availableUsers.map(u => `
+              <div class="add-account-item" data-id="${u.id}" data-upn="${u.userPrincipalName || u.upn}" style="padding: 12px; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center">
+                <div>
+                  <div style="font-weight: 600; font-size: 14px; color: #1F2937">${u.displayName || u.userPrincipalName}</div>
+                  <div style="font-size: 12px; color: #6B7280">${u.userPrincipalName || u.mail}</div>
+                  ${u.jobTitle ? `<div style="font-size: 11px; color: #9CA3AF; margin-top: 4px">${u.jobTitle}</div>` : ''}
+                </div>
+                <button class="add-account-btn" data-id="${u.id}" data-upn="${u.userPrincipalName || u.upn}" style="padding: 6px 12px; background: #1976D2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap">Add</button>
+              </div>
+            `).join('')
+
+            // Attach click handlers to newly added buttons
+            const addButtons = accountList.querySelectorAll('.add-account-btn')
+            addButtons.forEach(btn => {
+              btn.addEventListener('click', (e) => handleAddUser(e, availableUsers, el, modal))
+            })
+          }
+
+          document.getElementById('account-result-count').textContent = availableUsers.length
+        } else {
+          accountList.innerHTML = `
+            <div style="text-align: center; color: #DC2626; padding: 20px">
+              <div style="font-size: 14px">⚠️ Error searching users</div>
+              <div style="font-size: 12px; margin-top: 8px">Please try again</div>
+            </div>
+          `
+          document.getElementById('account-result-count').textContent = '0'
+        }
+      } catch (error) {
+        console.error('Error searching users:', error)
+        accountList.innerHTML = `
+          <div style="text-align: center; color: #DC2626; padding: 20px">
+            <div style="font-size: 14px">⚠️ Error searching users</div>
+            <div style="font-size: 12px; margin-top: 8px">${error.message}</div>
+          </div>
+        `
+        document.getElementById('account-result-count').textContent = '0'
+      }
+    }, 500)
+  })
+
+  function handleAddUser(e, searchResults, el, modal) {
+    e.stopPropagation()
+    const userId = e.target.dataset.id
+    let userToAdd = searchResults.find(u => u.id === userId)
+
+    if (userToAdd) {
+      const newAccount = {
+        id: userToAdd.id,
+        name: userToAdd.displayName || userToAdd.userPrincipalName,
+        upn: userToAdd.userPrincipalName,
+        userPrincipalName: userToAdd.userPrincipalName,
+        mail: userToAdd.mail || '',
+        roles: [],
+        mfa: [],
+        risk: 'None',
+        pim: false,
+        tagged: false,
+        isSPN: false,
+        bg: '#' + Math.floor(Math.random()*16777215).toString(16)
+      }
+
+      realPrivilegedAccounts.push(newAccount)
+      const displayName = userToAdd.displayName || userToAdd.userPrincipalName
+      showToast(`${displayName} added to privileged accounts for monitoring`, 'success')
+      logChange('Account', 'Added', displayName, userToAdd.id)
+
+      // Re-render the accounts tab
+      const accountsTab = el.querySelector('#pa-tab-accounts')
+      if (accountsTab) {
+        renderAccountsTab(el)
+      }
+
+      modal.remove()
+    }
+  }
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove()
+  })
+}
+
+function showAddGroupModal(el) {
+  const modal = document.createElement('div')
+  modal.id = 'add-group-modal'
+  modal.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); display: flex; align-items: center;
+    justify-content: center; z-index: 10000;
+  `
+
+  modal.innerHTML = `
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2)">
+      <div style="padding: 20px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 600">Add Group for Monitoring</h2>
+        <button class="close-modal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6B7280">×</button>
+      </div>
+
+      <div style="padding: 20px; flex: 1; overflow-y: auto; display: flex; flex-direction: column">
+        <div style="margin-bottom: 16px">
+          <label style="display: block; font-size: 13px; color: #4B5563; margin-bottom: 8px; font-weight: 500">Search for groups in your tenant</label>
+          <input type="text" id="add-group-search" placeholder="Type group name to search..."
+            style="width: 100%; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px">
+          <div style="font-size: 12px; color: #6B7280; margin-top: 8px">Start typing to search groups by name</div>
+        </div>
+
+        <div style="font-size: 13px; color: #6B7280; margin-bottom: 12px">
+          Results: <strong id="group-result-count">0</strong>
+        </div>
+
+        <div id="add-group-list" style="flex: 1; overflow-y: auto; min-height: 200px; display: flex; align-items: center; justify-content: center; color: #9CA3AF">
+          <div style="text-align: center">
+            <div style="font-size: 14px; margin-bottom: 8px">🔍 Enter a group name to search</div>
+            <div style="font-size: 12px">Example: "IT Team", "HR", etc.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 16px; border-top: 1px solid #E5E7EB; text-align: right">
+        <button class="close-modal" style="padding: 8px 16px; background: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500">Close</button>
+      </div>
+    </div>
+  `
+
+  document.body.appendChild(modal)
+
+  const closeButtons = modal.querySelectorAll('.close-modal')
+  closeButtons.forEach(btn => {
+    btn.addEventListener('click', () => modal.remove())
+  })
+
+  const searchInput = modal.querySelector('#add-group-search')
+  const groupList = modal.querySelector('#add-group-list')
+  let searchTimeout = null
+
+  searchInput?.addEventListener('input', async (e) => {
+    const query = e.target.value.trim()
+
+    // Clear timeout if exists
+    clearTimeout(searchTimeout)
+
+    // If query is empty, show initial message
+    if (query.length === 0) {
+      groupList.innerHTML = `
+        <div style="text-align: center; color: #9CA3AF">
+          <div style="font-size: 14px; margin-bottom: 8px">🔍 Enter a group name to search</div>
+          <div style="font-size: 12px">Example: "IT Team", "HR", etc.</div>
+        </div>
+      `
+      document.getElementById('group-result-count').textContent = '0'
+      return
+    }
+
+    // If query is less than 2 characters, show message
+    if (query.length < 2) {
+      groupList.innerHTML = `
+        <div style="text-align: center; color: #9CA3AF; padding: 20px">
+          <div style="font-size: 12px">Type at least 2 characters to search</div>
+        </div>
+      `
+      document.getElementById('group-result-count').textContent = '0'
+      return
+    }
+
+    // Show loading state
+    groupList.innerHTML = `
+      <div style="text-align: center; color: #6B7280; padding: 20px">
+        <div style="font-size: 14px">🔄 Searching for groups...</div>
+      </div>
+    `
+
+    // Search with debounce (wait 500ms after user stops typing)
+    searchTimeout = setTimeout(async () => {
+      try {
+        // Fetch all groups and filter client-side (for now)
+        // In future, this could call an API search endpoint
+        const response = await getAllGroups()
+
+        if (response.success && response.data) {
+          const allTenantGroups = response.data
+
+          // Filter groups by search query
+          const matchedGroups = allTenantGroups.filter(g => {
+            const name = (g.displayName || g.name || '').toLowerCase()
+            const desc = (g.description || '').toLowerCase()
+            return name.includes(query.toLowerCase()) || desc.includes(query.toLowerCase())
+          })
+
+          // Filter out already-monitored groups
+          const availableGroups = matchedGroups.filter(g => !privilegedGroups.some(pg => {
+            return pg.id === g.id || pg.displayName === g.displayName || pg.name === g.displayName
+          }))
+
+          // Display results
+          if (availableGroups.length === 0) {
+            groupList.innerHTML = `
+              <div style="text-align: center; color: #6B7280; padding: 20px">
+                <div style="font-size: 14px">No groups found matching "${query}"</div>
+                <div style="font-size: 12px; margin-top: 8px">Try searching with a different name</div>
+              </div>
+            `
+          } else {
+            groupList.innerHTML = availableGroups.map(g => `
+              <div class="add-group-item" data-id="${g.id}" style="padding: 12px; border: 1px solid #E5E7EB; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center">
+                <div>
+                  <div style="font-weight: 600; font-size: 14px; color: #1F2937">${g.displayName || g.name}</div>
+                  ${g.description ? `<div style="font-size: 12px; color: #6B7280">${g.description}</div>` : ''}
+                  ${g.mail ? `<div style="font-size: 11px; color: #9CA3AF; margin-top: 4px">${g.mail}</div>` : ''}
+                </div>
+                <button class="add-group-btn" data-id="${g.id}" style="padding: 6px 12px; background: #1976D2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap">Add</button>
+              </div>
+            `).join('')
+
+            // Attach click handlers to newly added buttons
+            const addButtons = groupList.querySelectorAll('.add-group-btn')
+            addButtons.forEach(btn => {
+              btn.addEventListener('click', (e) => handleAddGroup(e, availableGroups, el, modal))
+            })
+          }
+
+          document.getElementById('group-result-count').textContent = availableGroups.length
+        } else {
+          groupList.innerHTML = `
+            <div style="text-align: center; color: #DC2626; padding: 20px">
+              <div style="font-size: 14px">⚠️ Error searching groups</div>
+              <div style="font-size: 12px; margin-top: 8px">Please try again</div>
+            </div>
+          `
+          document.getElementById('group-result-count').textContent = '0'
+        }
+      } catch (error) {
+        console.error('Error searching groups:', error)
+        groupList.innerHTML = `
+          <div style="text-align: center; color: #DC2626; padding: 20px">
+            <div style="font-size: 14px">⚠️ Error searching groups</div>
+            <div style="font-size: 12px; margin-top: 8px">${error.message}</div>
+          </div>
+        `
+        document.getElementById('group-result-count').textContent = '0'
+      }
+    }, 500)
+  })
+
+  function handleAddGroup(e, searchResults, el, modal) {
+    e.stopPropagation()
+    const groupId = e.target.dataset.id
+    let groupToAdd = searchResults.find(g => g.id === groupId)
+
+    if (groupToAdd) {
+      const newGroup = {
+        id: groupToAdd.id,
+        name: groupToAdd.displayName || groupToAdd.name,
+        displayName: groupToAdd.displayName || groupToAdd.name,
+        description: groupToAdd.description || '',
+        mail: groupToAdd.mail || '',
+        roles: [],
+        members: 0,
+        pim: false,
+        ml: []
+      }
+
+      privilegedGroups.push(newGroup)
+      const groupDisplayName = groupToAdd.displayName || groupToAdd.name
+      showToast(`${groupDisplayName} added to privileged groups for monitoring`, 'success')
+      logChange('Group', 'Added', groupDisplayName, groupToAdd.id)
+
+      // Re-render the groups tab
+      const groupsTab = el.querySelector('#pa-tab-groups')
+      if (groupsTab) {
+        renderGroupsTab(el)
+      }
+
+      modal.remove()
+    }
+  }
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove()
+  })
 }
 
 async function renderDemoPrivAccts(el) {
@@ -230,7 +809,8 @@ async function renderDemoPrivAccts(el) {
       </div>
       <div class="page-actions">
         <button class="btn" id="pa-sync"><i class="ti ti-refresh"></i> Sync tenant</button>
-        <button class="btn btn-primary" id="pa-tag-account"><i class="ti ti-plus"></i> Tag account</button>
+        <button class="btn btn-primary" id="pa-tag-account"><i class="ti ti-plus"></i> Add Account</button>
+        <button class="btn btn-primary" id="pa-add-group"><i class="ti ti-plus"></i> Add Group</button>
       </div>
     </div>
 
@@ -256,7 +836,7 @@ async function renderDemoPrivAccts(el) {
       <button class="tab-btn active" data-tab="accounts">Privileged Accounts</button>
       <button class="tab-btn" data-tab="groups">Privileged Groups</button>
       <button class="tab-btn" data-tab="workload">Workload Identity</button>
-      <button class="tab-btn" data-tab="log">Membership Log</button>
+      <button class="tab-btn" data-tab="log">Change Log</button>
     </div>
 
     <div class="tab-panel active" id="pa-tab-accounts"></div>
@@ -279,6 +859,14 @@ async function renderDemoPrivAccts(el) {
       btn.disabled = false
       showToast('Sync complete — all privileged accounts updated', 'success')
     }, 2000)
+  })
+
+  el.querySelector('#pa-tag-account').addEventListener('click', () => {
+    showAddAccountModal(el)
+  })
+
+  el.querySelector('#pa-add-group')?.addEventListener('click', () => {
+    showAddGroupModal(el)
   })
 
   el.querySelectorAll('#pa-tabs .tab-btn').forEach(btn => {
@@ -388,6 +976,9 @@ function renderAccountsTab(el) {
   const container = el.querySelector('#pa-tab-accounts')
   const searchId = 'pa-acct-search'
 
+  // Use real accounts if available, otherwise fall back to demo accounts
+  const accountsToDisplay = realPrivilegedAccounts.length > 0 ? realPrivilegedAccounts : PA_ACCOUNTS
+
   let html = `
     <div class="filter-bar" style="margin-bottom:12px">
       <input type="text" class="form-input search" id="${searchId}" placeholder="Search accounts...">
@@ -410,7 +1001,7 @@ function renderAccountsTab(el) {
           <th style="width:5%"></th>
         </tr></thead>
         <tbody id="pa-acct-tbody">
-          ${realPrivilegedAccounts.map(a => accountRow(a)).join('')}
+          ${accountsToDisplay.map(a => accountRow(a)).join('')}
         </tbody>
       </table>
     </div>
@@ -433,9 +1024,13 @@ function renderAccountsTab(el) {
 function filterAccounts(container, q, risk) {
   const tbody = container.querySelector('#pa-acct-tbody')
   if (!tbody) return
-  tbody.innerHTML = realPrivilegedAccounts
+
+  // Use real accounts if available, otherwise fall back to demo accounts
+  const accountsToFilter = realPrivilegedAccounts.length > 0 ? realPrivilegedAccounts : PA_ACCOUNTS
+
+  tbody.innerHTML = accountsToFilter
     .filter(a => {
-      const matchQ = !q || a.upn.toLowerCase().includes(q) || a.name.toLowerCase().includes(q)
+      const matchQ = !q || (a.upn?.toLowerCase?.().includes(q) ?? false) || (a.name?.toLowerCase?.().includes(q) ?? false) || (a.email?.toLowerCase?.().includes(q) ?? false)
       const matchR = risk === 'all' || a.risk === risk
       return matchQ && matchR
     })
@@ -448,7 +1043,7 @@ function accountRow(a) {
     <tr class="pa-acct-row" data-id="${a.id}">
       <td>
         <div style="display:flex;align-items:center;gap:6px">
-          <div class="user-avatar" style="background:${a.bg};width:24px;height:24px;font-size:9px">${a.isSPN ? 'SP' : a.name.split(' ').map(n=>n[0]).join('')}</div>
+          <div class="user-avatar" style="background:${a.bg};width:24px;height:24px;font-size:9px">${a.isSPN ? 'SP' : (a.name || '?').split(' ').map(n=>n[0]).join('')}</div>
           <div>
             <div style="font-size:11px;font-weight:600">${a.name}</div>
             <div class="monospace" style="font-size:9px">${a.upn}</div>
@@ -493,6 +1088,7 @@ function accountRow(a) {
             </div>
           </div>
           <div class="pa-action-row">
+            ${a.tagged ? `<button class="btn btn-sm btn-primary pa-action pa-tag-toggle" data-action="untag" data-id="${a.id}"><i class="ti ti-tag-off"></i> Untag Account</button>` : `<button class="btn btn-sm pa-action pa-tag-toggle" data-action="tag" data-id="${a.id}"><i class="ti ti-tag"></i> Tag as Privileged</button>`}
             <button class="btn btn-sm btn-danger pa-action" data-action="pwd-reset" data-id="${a.id}"><i class="ti ti-key"></i> Force pwd reset</button>
             ${!a.pim ? `<button class="btn btn-sm btn-warning pa-action" data-action="convert-pim" data-id="${a.id}"><i class="ti ti-shield-bolt"></i> Convert to PIM</button>` : ''}
             ${!a.mfa.length ? `<button class="btn btn-sm pa-action" data-action="mfa-enroll" data-id="${a.id}"><i class="ti ti-device-mobile"></i> Trigger MFA enrollment</button>` : ''}
@@ -521,8 +1117,18 @@ function wireAccountEvents(container) {
     btn.addEventListener('click', e => {
       e.stopPropagation()
       const { action, id } = btn.dataset
-      const acct = PA_ACCOUNTS.find(a => a.id === id)
-      if (action === 'pwd-reset') {
+      const acct = realPrivilegedAccounts.find(a => a.id === id) || PA_ACCOUNTS.find(a => a.id === id)
+      if (action === 'tag') {
+        acct.tagged = true
+        showToast(`${acct?.name} tagged as privileged account.`, 'success')
+        logChange('Account', 'Tagged', acct?.name, acct?.id)
+        renderAccountsTab(container.closest('#pa-tab-accts') || document.querySelector('#pa-tab-accts'))
+      } else if (action === 'untag') {
+        acct.tagged = false
+        showToast(`${acct?.name} removed from privileged tag.`, 'info')
+        logChange('Account', 'Untagged', acct?.name, acct?.id)
+        renderAccountsTab(container.closest('#pa-tab-accts') || document.querySelector('#pa-tab-accts'))
+      } else if (action === 'pwd-reset') {
         showToast(`Password reset initiated for ${acct?.name}.`, 'warning')
         addLogEntry('risk', `Password reset forced for ${acct?.upn}`, 'Admin')
       } else if (action === 'convert-pim') {
@@ -760,6 +1366,85 @@ function calculateRiskScore(app) {
   }
 }
 
+async function loadScanHistory(container) {
+  try {
+    const historyContainer = container.querySelector('#scan-history-container')
+    if (!historyContainer) return
+
+    const result = await getWorkloadIdentitiesScanHistory()
+    const scans = result.data?.scans || []
+
+    if (scans.length === 0) {
+      historyContainer.innerHTML = `
+        <div style="text-align:center;color:var(--color-text-tertiary);font-size:11px;padding:12px">
+          No scan history yet. Run a scan to start tracking history.
+        </div>
+      `
+      return
+    }
+
+    let html = `
+      <table style="width:100%;border-collapse:collapse;font-size:10px">
+        <thead>
+          <tr style="border-bottom:1px solid var(--color-border-tertiary)">
+            <th style="padding:8px;text-align:left;font-weight:600;color:var(--color-text-secondary)">Scan Time</th>
+            <th style="padding:8px;text-align:center;font-weight:600;color:var(--color-text-secondary)">Total Apps</th>
+            <th style="padding:8px;text-align:center;font-weight:600;color:var(--color-text-secondary)">Privileged</th>
+            <th style="padding:8px;text-align:center;font-weight:600;color:var(--color-text-secondary)">Critical</th>
+            <th style="padding:8px;text-align:center;font-weight:600;color:var(--color-text-secondary)">High</th>
+            <th style="padding:8px;text-align:center;font-weight:600;color:var(--color-text-secondary)">Duration</th>
+            <th style="padding:8px;text-align:center;font-weight:600;color:var(--color-text-secondary)">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+    `
+
+    scans.slice(0, 10).forEach((scan, idx) => {
+      const scanDate = new Date(scan.scanTimestamp)
+      const dateStr = scanDate.toLocaleString()
+      const statusColor = scan.status === 'Success' ? 'var(--clr-success-text)' : 'var(--clr-danger-text)'
+      const statusBg = scan.status === 'Success' ? 'var(--clr-success-bg)' : 'var(--clr-danger-bg)'
+
+      html += `
+        <tr style="border-bottom:0.5px solid var(--color-border-tertiary);${idx % 2 === 0 ? 'background:transparent' : 'background:var(--color-background-primary)'}">
+          <td style="padding:8px;text-align:left">${dateStr}</td>
+          <td style="padding:8px;text-align:center;font-weight:600">${scan.totalApps}</td>
+          <td style="padding:8px;text-align:center;font-weight:600;color:var(--clr-danger-text)">${scan.privilegedCount}</td>
+          <td style="padding:8px;text-align:center;font-weight:600;color:#D32F2F">${scan.criticalCount || 0}</td>
+          <td style="padding:8px;text-align:center;font-weight:600;color:var(--clr-warning-text)">${scan.highCount || 0}</td>
+          <td style="padding:8px;text-align:center">${scan.scanDurationSeconds}s</td>
+          <td style="padding:8px;text-align:center">
+            <span style="display:inline-block;background:${statusBg};color:${statusColor};padding:3px 6px;border-radius:3px;font-weight:600">
+              ${scan.status === 'Success' ? '✅' : '❌'} ${scan.status}
+            </span>
+          </td>
+        </tr>
+      `
+    })
+
+    html += `
+        </tbody>
+      </table>
+    `
+
+    if (scans.length > 10) {
+      html += `<div style="text-align:center;font-size:10px;color:var(--color-text-tertiary);padding:8px">Showing last 10 of ${scans.length} scans</div>`
+    }
+
+    historyContainer.innerHTML = html
+  } catch (error) {
+    console.error('Error loading scan history:', error)
+    const historyContainer = container.querySelector('#scan-history-container')
+    if (historyContainer) {
+      historyContainer.innerHTML = `
+        <div style="text-align:center;color:var(--clr-danger-text);font-size:11px;padding:12px">
+          ⚠️ Could not load scan history
+        </div>
+      `
+    }
+  }
+}
+
 function getDemoWorkloadIdentities() {
   return [
     {
@@ -931,7 +1616,7 @@ function renderWorkloadIdentityTab(el) {
         <div style="margin-top:4px;font-size:10px">Last updated: <span id="cache-timestamp">fetching...</span></div>
       </div>
       <button id="refresh-workload-btn" style="padding:8px 16px;background:#1976D2;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;transition:all 0.2s;margin-left:12px">
-        🔄 Refresh Now
+        ▶️ Run Scan Now
       </button>
     </div>
 
@@ -951,6 +1636,13 @@ function renderWorkloadIdentityTab(el) {
       <div class="card" style="flex:1;min-width:140px;padding:12px;background:var(--color-bg-secondary);text-align:center">
         <div style="font-size:24px;font-weight:700;color:var(--color-primary)">${highPrivilegeApps.length}</div>
         <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Total Identities</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--color-text-primary)">📜 Scan History</div>
+      <div id="scan-history-container" style="background:var(--color-background-secondary);border-radius:6px;padding:12px;border:1px solid var(--color-border-tertiary);min-height:60px">
+        <div style="text-align:center;color:var(--color-text-tertiary);font-size:11px">Loading scan history...</div>
       </div>
     </div>
 
@@ -1037,35 +1729,44 @@ function renderWorkloadIdentityTab(el) {
     cacheEl.textContent = date.toLocaleTimeString()
   }
 
+  // Load scan history
+  loadScanHistory(container)
+
   const refreshBtn = container.querySelector('#refresh-workload-btn')
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
       refreshBtn.disabled = true
-      refreshBtn.textContent = '⏳ Refreshing...'
+      refreshBtn.textContent = '⏳ Running Scan...'
 
       try {
-        const response = await fetch('/api/workload-identities/refresh', { method: 'POST' })
-        const result = await response.json()
+        const response = await refreshWorkloadIdentities()
 
-        if (result.success) {
-          showToast('🔄 Refresh job started. Data will update shortly.', 'info')
-          refreshBtn.textContent = '⏳ Running...'
+        if (response.success) {
+          showToast('🔄 Scan job started. This may take 30-60 seconds...', 'info')
+          refreshBtn.textContent = '⏳ Scanning...'
+
           // Poll for completion (check every 5 seconds for up to 2 minutes)
           let attempts = 0
           const pollInterval = setInterval(async () => {
             attempts++
             try {
-              const statusResp = await fetch('/api/workload-identities/risk-assessment')
-              const statusData = await statusResp.json()
-              const summary = statusData.data?.summary
+              const statusResp = await getWorkloadIdentitiesWithRisk()
+              const summary = statusResp.data?.summary
 
               if (summary && !summary.isRunning) {
                 clearInterval(pollInterval)
-                showToast('✅ Workload identities refreshed!', 'success')
-                refreshBtn.textContent = '🔄 Refresh Now'
+                showToast('✅ Scan completed! Updating page...', 'success')
+                refreshBtn.textContent = '▶️ Run Scan Now'
                 refreshBtn.disabled = false
-                // Reload the page or update the data
+                // Reload the page to show updated data
+                await new Promise(r => setTimeout(r, 1000))
                 location.reload()
+              } else if (attempts > 24) {
+                // Timeout after 2 minutes
+                clearInterval(pollInterval)
+                showToast('✅ Scan still running. Check back in a moment.', 'info')
+                refreshBtn.textContent = '▶️ Run Scan Now'
+                refreshBtn.disabled = false
               }
             } catch (err) {
               console.error('Error polling status:', err)
@@ -1197,21 +1898,71 @@ function renderLogTab(el) {
 }
 
 function redrawLog(container) {
+  const severityIcons = {
+    success: 'ti-check-circle',
+    danger: 'ti-trash',
+    info: 'ti-edit',
+    warning: 'ti-alert-triangle'
+  }
+
+  const severityColors = {
+    success: 'var(--clr-success-text)',
+    danger: 'var(--clr-danger-text)',
+    info: 'var(--clr-info-text)',
+    warning: 'var(--clr-warning-text)'
+  }
+
+  const severityBgs = {
+    success: 'var(--clr-success-bg)',
+    danger: 'var(--clr-danger-bg)',
+    info: 'var(--clr-info-bg)',
+    warning: 'var(--clr-warning-bg)'
+  }
+
   container.innerHTML = `
-    <div class="card" style="padding:12px 16px">
-      <div class="card-title mb-3"><i class="ti ti-history"></i> Membership Change Log</div>
-      ${logEntries.map(e => `
-        <div class="log-entry-row">
-          <div class="log-icon-wrap" style="background:${e.bg}">
-            <i class="ti ${e.icls}" style="color:${e.ic}"></i>
-          </div>
-          <div style="flex:1">
-            <div style="font-size:11px;font-weight:600">${e.title}</div>
-            <div style="font-size:10px;color:var(--color-text-secondary);margin-top:1px">${e.detail}</div>
-            <div style="font-size:9px;color:var(--color-text-tertiary);margin-top:2px">By ${e.by} · ${e.time}</div>
-          </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding: 16px; border-bottom: 1px solid #E5E7EB; background: #F9FAFB">
+        <div class="card-title mb-2"><i class="ti ti-history"></i> Change Log</div>
+        <div style="font-size: 12px; color: #6B7280">Track all changes to accounts, groups, and apps for monitoring</div>
+      </div>
+      ${changeLog.length === 0 ? `
+        <div style="text-align: center; padding: 60px 20px; color: #9CA3AF">
+          <div style="font-size: 16px; margin-bottom: 8px">📭 No changes yet</div>
+          <div style="font-size: 12px">Changes to accounts, groups, and apps will appear here</div>
         </div>
-      `).join('')}
+      ` : `
+        <table style="width: 100%; border-collapse: collapse">
+          <thead>
+            <tr style="background: #F9FAFB; border-bottom: 1px solid #E5E7EB">
+              <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #4B5563; width: 140px">Timestamp</th>
+              <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #4B5563; width: 80px">Type</th>
+              <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #4B5563; width: 120px">Action</th>
+              <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #4B5563; width: 150px">Item</th>
+              <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #4B5563; flex: 1">Description</th>
+              <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #4B5563; width: 150px">By</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${changeLog.map(log => `
+              <tr style="border-bottom: 1px solid #E5E7EB; hover-background: #F3F4F6;">
+                <td style="padding: 12px 16px; font-size: 10px; color: #6B7280; white-space: nowrap">${log.timestamp}</td>
+                <td style="padding: 12px 16px; font-size: 11px">
+                  <span style="background: #E0E7FF; color: #4F46E5; padding: 4px 8px; border-radius: 4px; font-weight: 500; display: inline-block">${log.type}</span>
+                </td>
+                <td style="padding: 12px 16px; font-size: 11px">
+                  <span style="background: ${severityBgs[log.severity]}; color: ${severityColors[log.severity]}; padding: 4px 8px; border-radius: 4px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap">
+                    <i class="ti ${severityIcons[log.severity]}" style="font-size: 10px"></i>
+                    ${log.action}
+                  </span>
+                </td>
+                <td style="padding: 12px 16px; font-size: 11px; font-weight: 500; color: #1F2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${log.itemName}</td>
+                <td style="padding: 12px 16px; font-size: 11px; color: #374151; line-height: 1.4; max-height: 60px; overflow: hidden; word-break: break-word">${log.description || log.action + ' on ' + log.itemName}</td>
+                <td style="padding: 12px 16px; font-size: 10px; color: #6B7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${log.by}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `}
     </div>
   `
 }

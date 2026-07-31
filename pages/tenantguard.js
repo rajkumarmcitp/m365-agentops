@@ -37,7 +37,7 @@ let riskHistory = []
 // Real-time update config
 const REFRESH_INTERVAL = 60 * 1000 // 60 seconds (1 minute) for efficient polling
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:3000'
+  ? 'http://localhost:3001'
   : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'
 
 const ALERT_PRIORITY = {
@@ -1522,7 +1522,7 @@ async function refreshData() {
     // Load alert filter setting
     let alertsUrl = `${API_BASE}/api/tenantguard/alerts?limit=1000`
     try {
-      const filterRes = await fetch('http://localhost:3000/api/tenantguard/settings/alert-filter')
+      const filterRes = await fetch('http://localhost:3001/api/tenantguard/settings/alert-filter')
       const filterData = await filterRes.json()
       if (filterData.data?.excludeInformational) {
         alertsUrl += '&exclude=informational'

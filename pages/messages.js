@@ -13,7 +13,7 @@ import {
 
 const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 const API_BASE = import.meta.env.VITE_API_URL || (isDev
-  ? 'http://localhost:3000'
+  ? 'http://localhost:3001'
   : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net')
 
 let allMessages = []

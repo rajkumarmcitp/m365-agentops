@@ -6,7 +6,7 @@ import { skeletonLoader } from '../lib/skeleton-loader.js'
 function getApiBaseUrl() {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     // Local development - use backend port 3000
-    return 'http://localhost:3000'
+    return 'http://localhost:3001'
   }
   // Production - use App Service backend URL (matches api-client.js)
   return 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net'

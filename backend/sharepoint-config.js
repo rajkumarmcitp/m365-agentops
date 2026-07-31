@@ -35,7 +35,16 @@ export function loadConfig() {
       zeroTrustResults: null,
       zeroTrustHistory: null,
       selfServiceRequests: null,
-      selfServiceAudit: null
+      selfServiceAudit: null,
+      'Privileged-Accounts': null,
+      'Privileged-Groups': null,
+      'Workload-Identities-Scan': null,
+      'Change-Log': null,
+      'Permissions-Audit-History': null,
+      'BackupHistories': null,
+      'BackupSchedules': null,
+      'BackupVersions': null,
+      'BackupAuditLog': null
     },
     lastUpdated: new Date().toISOString()
   }
@@ -103,7 +112,16 @@ export async function initializeAllLists(graphClient, siteId) {
     { key: 'zeroTrustResults', displayName: 'Zero Trust Results' },
     { key: 'zeroTrustHistory', displayName: 'Zero Trust History' },
     { key: 'selfServiceRequests', displayName: 'SelfServiceRequests' },
-    { key: 'selfServiceAudit', displayName: 'SelfServiceAudit' }
+    { key: 'selfServiceAudit', displayName: 'SelfServiceAudit' },
+    { key: 'Privileged-Accounts', displayName: 'Privileged-Accounts' },
+    { key: 'Privileged-Groups', displayName: 'Privileged-Groups' },
+    { key: 'Workload-Identities-Scan', displayName: 'Workload-Identities-Scan' },
+    { key: 'Change-Log', displayName: 'Change-Log' },
+    { key: 'Permissions-Audit-History', displayName: 'Permissions-Audit-History' },
+    { key: 'BackupHistories', displayName: 'Backup Histories' },
+    { key: 'BackupSchedules', displayName: 'Backup Schedules' },
+    { key: 'BackupVersions', displayName: 'Backup Versions' },
+    { key: 'BackupAuditLog', displayName: 'Backup Audit Log' }
   ]
 
   let anyCreated = false

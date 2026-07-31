@@ -42,6 +42,31 @@ export class SharePointListsInitializer {
           name: 'ZT-Compliance',
           description: 'Framework compliance metrics and trends',
           template: 'genericList'
+        },
+        {
+          name: 'Privileged-Accounts',
+          description: 'Monitored privileged user accounts and service principals',
+          template: 'genericList'
+        },
+        {
+          name: 'Privileged-Groups',
+          description: 'Monitored privileged directory roles and groups',
+          template: 'genericList'
+        },
+        {
+          name: 'Workload-Identities-Scan',
+          description: 'Historical scan results for privileged workload identities',
+          template: 'genericList'
+        },
+        {
+          name: 'Change-Log',
+          description: 'Audit trail for all changes to privileged accounts, groups, and apps',
+          template: 'genericList'
+        },
+        {
+          name: 'Permissions-Audit-History',
+          description: 'Historical record of application permission audits with trends',
+          template: 'genericList'
         }
       ]
 
@@ -171,6 +196,56 @@ export class SharePointListsInitializer {
           { name: 'SnapshotDate', type: 'datetime', required: false },
           { name: 'TrendDirection', type: 'choice', choices: ['improving', 'stable', 'declining'], required: false },
           { name: 'MappedControls', type: 'number', required: false }
+        ],
+        'Privileged-Accounts': [
+          { name: 'userPrincipalName', type: 'text', required: true },
+          { name: 'accountId', type: 'text', required: true },
+          { name: 'risk', type: 'choice', choices: ['None', 'Low', 'Medium', 'High'], required: false },
+          { name: 'tagged', type: 'choice', choices: ['Yes', 'No'], required: false },
+          { name: 'roles', type: 'text', required: false },
+          { name: 'mfaStatus', type: 'text', required: false },
+          { name: 'isPIM', type: 'choice', choices: ['Yes', 'No'], required: false },
+          { name: 'lastModified', type: 'datetime', required: false }
+        ],
+        'Privileged-Groups': [
+          { name: 'groupId', type: 'text', required: true },
+          { name: 'description', type: 'text', required: false },
+          { name: 'members', type: 'number', required: false },
+          { name: 'mail', type: 'text', required: false },
+          { name: 'lastModified', type: 'datetime', required: false }
+        ],
+        'Workload-Identities-Scan': [
+          { name: 'scanTimestamp', type: 'datetime', required: true },
+          { name: 'totalApps', type: 'number', required: true },
+          { name: 'privilegedCount', type: 'number', required: true },
+          { name: 'criticalCount', type: 'number', required: false },
+          { name: 'highCount', type: 'number', required: false },
+          { name: 'mediumCount', type: 'number', required: false },
+          { name: 'scanDurationSeconds', type: 'number', required: false },
+          { name: 'status', type: 'choice', choices: ['Success', 'Running', 'Failed'], required: true },
+          { name: 'errorMessage', type: 'text', required: false },
+          { name: 'runBy', type: 'text', required: false }
+        ],
+        'Change-Log': [
+          { name: 'timestamp', type: 'datetime', required: true },
+          { name: 'type', type: 'choice', choices: ['Account', 'Group', 'App'], required: true },
+          { name: 'action', type: 'choice', choices: ['Added', 'Removed', 'Tagged', 'Untagged', 'Password Reset', 'Member Added', 'Member Removed', 'Configuration Changed', 'Permission Added', 'Account Deleted', 'Group Deleted', 'Application Deleted', 'MFA Changed', 'Device Deleted', 'Policy Deleted', 'Service Principal Deleted'], required: true },
+          { name: 'itemName', type: 'text', required: true },
+          { name: 'itemId', type: 'text', required: false },
+          { name: 'severity', type: 'choice', choices: ['success', 'danger', 'info', 'warning'], required: false },
+          { name: 'by', type: 'text', required: false },
+          { name: 'description', type: 'text', required: false }
+        ],
+        'Permissions-Audit-History': [
+          { name: 'auditTimestamp', type: 'datetime', required: true },
+          { name: 'totalApps', type: 'number', required: true },
+          { name: 'criticalCount', type: 'number', required: false },
+          { name: 'highCount', type: 'number', required: false },
+          { name: 'mediumCount', type: 'number', required: false },
+          { name: 'auditDurationSeconds', type: 'number', required: false },
+          { name: 'status', type: 'choice', choices: ['Success', 'Running', 'Failed'], required: true },
+          { name: 'errorMessage', type: 'text', required: false },
+          { name: 'runBy', type: 'text', required: false }
         ]
       }
 
@@ -253,16 +328,41 @@ export class SharePointListsInitializer {
    * Store list IDs for later use
    */
   storeListIds(results) {
+    // Import here to avoid circular dependency
+    const fs = require('fs')
+    const path = require('path')
+
     const envVars = {
       SHAREPOINT_ZT_VALIDATIONS_LIST_ID: results['ZT-Validations'],
       SHAREPOINT_ZT_EXCEPTIONS_LIST_ID: results['ZT-Exceptions'],
       SHAREPOINT_ZT_AUDIT_LOGS_LIST_ID: results['ZT-AuditLogs'],
       SHAREPOINT_ZT_RISK_SCORES_LIST_ID: results['ZT-RiskScores'],
-      SHAREPOINT_ZT_COMPLIANCE_LIST_ID: results['ZT-Compliance']
+      SHAREPOINT_ZT_COMPLIANCE_LIST_ID: results['ZT-Compliance'],
+      SHAREPOINT_PRIVILEGED_ACCOUNTS_LIST_ID: results['Privileged-Accounts'],
+      SHAREPOINT_PRIVILEGED_GROUPS_LIST_ID: results['Privileged-Groups'],
+      SHAREPOINT_CHANGE_LOG_LIST_ID: results['Change-Log'],
+      SHAREPOINT_PERMISSIONS_AUDIT_HISTORY_LIST_ID: results['Permissions-Audit-History']
     }
 
     // Update process.env for current session
     Object.assign(process.env, envVars)
+
+    // Also update config file if it exists
+    try {
+      const configPath = path.join(process.cwd(), 'backend', 'sharepoint-lists-config.json')
+      if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+        // Update with new list IDs
+        config.lists['Privileged-Accounts'] = results['Privileged-Accounts']
+        config.lists['Privileged-Groups'] = results['Privileged-Groups']
+        config.lists['Change-Log'] = results['Change-Log']
+        config.lastUpdated = new Date().toISOString()
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
+        console.log('✅ Updated config file with privileged accounts list IDs')
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not update config file:', error.message)
+    }
 
     // Log for user to copy to Azure App Service Configuration
     console.log('\n📋 Add these to Azure App Service Configuration:')

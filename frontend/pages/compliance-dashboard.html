@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>M365 AgentOps - Compliance Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f3f4f6;
+      color: #1f2937;
+    }
+
+    #app {
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-size: 18px;
+      color: #6b7280;
+    }
+
+    .error-container {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 24px;
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      border-radius: 8px;
+      color: #991b1b;
+    }
+
+    .error-container h2 {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .error-container p {
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .error-container code {
+      display: block;
+      background: rgba(0, 0, 0, 0.1);
+      padding: 12px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      margin-top: 12px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="loading">Loading Compliance Dashboard...</div>
+
+  <script type="module">
+    // Configuration
+    const API_URL = window.location.hostname === 'localhost'
+      ? 'http://localhost:3000'
+      : '/api'
+
+    const getTenantId = () => {
+      // Try URL parameter first
+      const params = new URLSearchParams(window.location.search)
+      const tenantFromUrl = params.get('tenantId')
+      if (tenantFromUrl) return tenantFromUrl
+
+      // Try localStorage
+      const tenantFromStorage = localStorage.getItem('tenantId')
+      if (tenantFromStorage) return tenantFromStorage
+
+      // Try window global
+      if (window.TENANT_ID) return window.TENANT_ID
+
+      // Default for testing
+      return 'test-tenant'
+    }
+
+    // Set globals for dashboard
+    window.API_URL = API_URL
+    window.TENANT_ID = getTenantId()
+
+    console.log('🔧 Compliance Dashboard Configuration:')
+    console.log('  API URL:', window.API_URL)
+    console.log('  Tenant:', window.TENANT_ID)
+
+    // Import and initialize dashboard
+    try {
+      const { initComplianceDashboard } = await import('./compliance-dashboard.js')
+
+      console.log('✅ Dashboard module loaded')
+      console.log('🚀 Initializing dashboard...')
+
+      initComplianceDashboard()
+    } catch (error) {
+      console.error('❌ Dashboard initialization failed:', error)
+
+      const appDiv = document.getElementById('app')
+      appDiv.innerHTML = `
+        <div class="error-container">
+          <h2>⚠️ Dashboard Failed to Load</h2>
+          <p><strong>Error:</strong> ${error.message}</p>
+          <p><strong>Troubleshooting steps:</strong></p>
+          <ul style="margin-left: 20px; margin-top: 12px;">
+            <li>Verify backend is running: <code>curl http://localhost:3000/api/health</code></li>
+            <li>Check browser console (F12) for detailed errors</li>
+            <li>Try hard refresh: Cmd+Shift+R (Mac) or Ctrl+Shift+R (Windows)</li>
+            <li>Ensure tenant ID is set: <code>${window.TENANT_ID}</code></li>
+          </ul>
+          <code style="margin-top: 20px;">
+Error details:
+${error.stack}
+          </code>
+        </div>
+      `
+    }
+  </script>
+</body>
+</html>

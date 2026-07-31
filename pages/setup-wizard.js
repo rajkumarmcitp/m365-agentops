@@ -3,7 +3,7 @@ import { showToast } from '../components/toast.js'
 
 const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 const API_URL = import.meta.env.VITE_API_URL || (isDev
-  ? 'http://localhost:3000'
+  ? 'http://localhost:3001'
   : 'https://m365ops-api-gtbgezb9c7bgata7.centralus-01.azurewebsites.net')
 
 const wizardState = {
@@ -277,7 +277,7 @@ window.installPowerShellModules = async function() {
 // PowerShell status check - defined at global scope
 window.checkPowerShellStatus = async function() {
   try {
-    const response = await fetch((API_URL || 'http://localhost:3000') + '/api/setup/powershell/status', {
+    const response = await fetch((API_URL || 'http://localhost:3001') + '/api/setup/powershell/status', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     })

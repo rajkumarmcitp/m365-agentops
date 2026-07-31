@@ -964,7 +964,7 @@ function showToast(message, type = 'info') {
 
 async function getAlertFilterSettings() {
   try {
-    const response = await fetch('http://localhost:3000/api/tenantguard/settings/alert-filter')
+    const response = await fetch('http://localhost:3001/api/tenantguard/settings/alert-filter')
     const result = await response.json()
     return result.data || { excludeInformational: false }
   } catch (error) {
@@ -974,7 +974,7 @@ async function getAlertFilterSettings() {
 }
 
 async function saveAlertFilterSettings(settings) {
-  const response = await fetch('http://localhost:3000/api/tenantguard/settings/alert-filter', {
+  const response = await fetch('http://localhost:3001/api/tenantguard/settings/alert-filter', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(settings)

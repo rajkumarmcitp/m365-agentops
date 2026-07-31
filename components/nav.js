@@ -28,6 +28,7 @@ const ICON_MAP = {
   'ti-sparkles': 'fas fa-magic',
   'ti-api': 'fas fa-plug',
   'ti-key': 'fas fa-key',
+  'ti-file-text': 'fas fa-file-alt',
 }
 
 const getIcon = (tiClass) => {
@@ -50,6 +51,7 @@ const NAV_ITEMS = {
     { id: 'messages',       label: 'Service Health',       icon: 'ti-heartbeat',      badge: '75', badgeCls: 'orange' },
     { id: 'tasks',          label: 'Change Tasks',         icon: 'ti-checkbox',       badge: '18', badgeCls: 'blue' },
     { id: 'applications',   label: 'Entra Apps',           icon: 'ti-app-window',     badge: '42', badgeCls: 'red' },
+    { id: 'compliance-reports', label: 'Compliance Reports', icon: 'ti-file-text',     badge: 'NEW', badgeCls: 'blue' },
     { id: 'intune',         label: 'Intune Insights',      icon: 'ti-device-laptop',  badge: '156',badgeCls: 'red' },
     { id: 'licenses',       label: 'Licenses',            icon: 'ti-license' },
     { id: 'agents',     label: 'AI Agents',            icon: 'ti-robot' },
@@ -88,12 +90,13 @@ export function renderNav() {
     access = [...access, 'user-investigation']
   }
 
-  // Ensure backup pages, conditional access, and drift monitoring are in access for super/admin users
+  // Ensure backup pages, conditional access, drift monitoring, and compliance reports are in access for super/admin users
   if (['super', 'admin'].includes(u.role)) {
     if (!access.includes('backup')) access = [...access, 'backup']
     if (!access.includes('backup-config')) access = [...access, 'backup-config']
     if (!access.includes('conditionalaccess')) access = [...access, 'conditionalaccess']
     if (!access.includes('driftmonitoring')) access = [...access, 'driftmonitoring']
+    if (!access.includes('compliance-reports')) access = [...access, 'compliance-reports']
   }
 
   let html = `

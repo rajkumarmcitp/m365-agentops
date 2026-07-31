@@ -7,7 +7,16 @@
     "zeroTrustResults": "51d13b27-ac5c-4dd5-9fd1-d72c0a3c4bb1",
     "zeroTrustHistory": "8f4ee188-2340-4807-a9b2-8d7003ae735f",
     "selfServiceRequests": "d0888a4f-07e4-4ac4-bf1f-fbbc699cc15d",
-    "selfServiceAudit": "0b2b2304-fbbc-412a-a1d0-587e29092a21"
+    "selfServiceAudit": "0b2b2304-fbbc-412a-a1d0-587e29092a21",
+    "Privileged-Accounts": "aab13aba-539d-499b-9da3-2dce4b305920",
+    "Privileged-Groups": "32bb1539-8468-4b7f-a32a-fed701c5929a",
+    "Workload-Identities-Scan": "01a7673a-68bc-4d56-b4fd-7a30951f7079",
+    "Change-Log": "2cdbed82-b3d5-4066-b063-a3351bb6a5d0",
+    "Permissions-Audit-History": null,
+    "BackupHistories": null,
+    "BackupSchedules": null,
+    "BackupVersions": null,
+    "BackupAuditLog": null
   },
-  "lastUpdated": "2026-07-14T03:15:29.551Z"
+  "lastUpdated": "2026-07-30T00:00:00.000Z"
 }

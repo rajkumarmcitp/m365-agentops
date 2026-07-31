@@ -1,5 +1,41 @@
 [
   {
+    "dateKey": "2026-07-31",
+    "timestamp": "2026-07-30T23:51:12.831Z",
+    "overallScore": 11,
+    "pass": 33,
+    "fail": 39,
+    "warn": 231,
+    "riskScore": 36
+  },
+  {
+    "dateKey": "2026-07-30",
+    "timestamp": "2026-07-30T01:09:37.495Z",
+    "overallScore": 11,
+    "pass": 33,
+    "fail": 39,
+    "warn": 231,
+    "riskScore": 36
+  },
+  {
+    "dateKey": "2026-07-29",
+    "timestamp": "2026-07-29T01:18:51.600Z",
+    "overallScore": 9,
+    "pass": 27,
+    "fail": 44,
+    "warn": 232,
+    "riskScore": 36
+  },
+  {
+    "dateKey": "2026-07-28",
+    "timestamp": "2026-07-27T22:19:07.553Z",
+    "overallScore": 11,
+    "pass": 33,
+    "fail": 39,
+    "warn": 231,
+    "riskScore": 36
+  },
+  {
     "dateKey": "2026-07-27",
     "timestamp": "2026-07-26T20:31:14.495Z",
     "overallScore": 11,

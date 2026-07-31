@@ -1,0 +1,163 @@
+{
+  "validationSystem": {
+    "enabled": true,
+    "batchSize": 15,
+    "cacheTTL": 300000,
+    "maxRetries": 3,
+    "timeoutMs": 30000,
+    "parallelRequests": 5
+  },
+  "domains": {
+    "Identity Security": {
+      "enabled": true,
+      "priority": "critical",
+      "validators": ["mfa", "legacy-auth", "security-defaults", "admin-review"],
+      "graphScopes": ["Directory.Read.All", "RoleManagement.Read.Directory"]
+    },
+    "Conditional Access": {
+      "enabled": true,
+      "priority": "critical",
+      "validators": ["policy-count", "policy-effectiveness"],
+      "graphScopes": ["Policy.Read.All"]
+    },
+    "Application Security": {
+      "enabled": true,
+      "priority": "high",
+      "validators": ["service-principals", "permissions", "consent"],
+      "graphScopes": ["Application.Read.All", "AppRoleAssignment.ReadWrite.All"]
+    },
+    "Defender/Threat Protection": {
+      "enabled": true,
+      "priority": "high",
+      "validators": ["alert-monitoring", "threat-protection"],
+      "graphScopes": ["SecurityAlert.Read.All", "ThreatProtection.Read.All"]
+    },
+    "Exchange Online": {
+      "enabled": true,
+      "priority": "high",
+      "validators": ["powershell-only"],
+      "note": "Requires PowerShell for validation"
+    },
+    "SharePoint Online": {
+      "enabled": true,
+      "priority": "high",
+      "validators": ["site-settings", "sharing-policies"],
+      "graphScopes": ["Sites.Read.All"]
+    },
+    "Teams": {
+      "enabled": true,
+      "priority": "high",
+      "validators": ["team-config", "policies"],
+      "graphScopes": ["Team.Read.All", "TeamSettings.Read.All"]
+    },
+    "Data Protection": {
+      "enabled": true,
+      "priority": "critical",
+      "validators": ["dlp-policies", "labels", "retention"],
+      "graphScopes": ["InformationProtectionPolicy.Read.All"]
+    },
+    "Intune": {
+      "enabled": true,
+      "priority": "high",
+      "validators": ["device-policies", "compliance"],
+      "graphScopes": ["DeviceManagementConfiguration.Read.All"]
+    },
+    "Device": {
+      "enabled": true,
+      "priority": "medium",
+      "validators": ["device-registration"],
+      "graphScopes": ["Device.Read.All"]
+    }
+  },
+  "frameworks": {
+    "CIS M365": {
+      "enabled": true,
+      "weight": 0.25,
+      "controlCount": 400
+    },
+    "NIST CSF 2.0": {
+      "enabled": true,
+      "weight": 0.20,
+      "controlCount": 350
+    },
+    "NIST 800-53": {
+      "enabled": true,
+      "weight": 0.20,
+      "controlCount": 300
+    },
+    "ISO 27001:2022": {
+      "enabled": true,
+      "weight": 0.15,
+      "controlCount": 280
+    },
+    "Zero Trust": {
+      "enabled": true,
+      "weight": 0.20,
+      "controlCount": 320
+    }
+  },
+  "severities": {
+    "Critical": {
+      "weight": 10,
+      "mustFix": true,
+      "sla": "24 hours"
+    },
+    "High": {
+      "weight": 7,
+      "mustFix": true,
+      "sla": "7 days"
+    },
+    "Medium": {
+      "weight": 4,
+      "mustFix": false,
+      "sla": "30 days"
+    },
+    "Low": {
+      "weight": 2,
+      "mustFix": false,
+      "sla": "90 days"
+    }
+  },
+  "scoring": {
+    "passScore": 100,
+    "partialScore": 50,
+    "failScore": 0,
+    "unknownScore": 0,
+    "minimumPassRate": 0.8,
+    "goodComplianceScore": 75,
+    "excellentComplianceScore": 85
+  },
+  "caching": {
+    "enabled": true,
+    "backend": "memory",
+    "ttl": 300,
+    "maxSize": 10000,
+    "strategy": "lru"
+  },
+  "notifications": {
+    "enabled": true,
+    "alertOnFailure": true,
+    "alertOnPartial": false,
+    "minSeverity": "High",
+    "channels": ["email", "teams", "webhook"]
+  },
+  "reporting": {
+    "enabled": true,
+    "formats": ["json", "csv", "pdf"],
+    "schedules": ["daily", "weekly", "monthly"],
+    "recipients": ["security-team@company.com"]
+  },
+  "graphApi": {
+    "retryPolicy": "exponential",
+    "maxRetries": 3,
+    "initialDelayMs": 100,
+    "maxDelayMs": 5000,
+    "throttleThreshold": 429,
+    "timeout": 30000
+  },
+  "database": {
+    "persistence": true,
+    "retentionDays": 90,
+    "pruneSchedule": "weekly"
+  }
+}
