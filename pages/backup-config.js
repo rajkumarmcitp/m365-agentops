@@ -61,11 +61,18 @@ function renderBackupConfig(el) {
   el.innerHTML = `
     <div style="max-width:1400px;margin:0 auto">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
-        <div>
+        <div style="flex:1">
           <h2 style="margin:0;font-size:24px;font-weight:600">Backup Configuration</h2>
           <p style="margin:8px 0 0 0;color:var(--color-text-secondary);font-size:13px">
             Select which components to include in backups for each service
           </p>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:12px">
+            <label style="font-size:12px;font-weight:600;color:var(--color-text-secondary);white-space:nowrap">Filter Service:</label>
+            <select id="config-service-filter" style="flex:1;max-width:300px;padding:8px 12px;border:1px solid var(--color-border-tertiary);border-radius:6px;background:var(--color-background-secondary);color:var(--color-text-primary);font-size:12px;cursor:pointer">
+              <option value="">— All Services —</option>
+              ${allServices.map(s => `<option value="${s.key}">${s.displayName}</option>`).join('')}
+            </select>
+          </div>
         </div>
         <div style="display:flex;gap:12px">
           <button id="select-all-btn" class="btn btn-secondary">
@@ -80,7 +87,7 @@ function renderBackupConfig(el) {
         </div>
       </div>
 
-      <div style="display:grid;gap:24px">
+      <div style="display:grid;gap:24px" id="services-config-container">
         ${allServices.map(service => renderServiceConfig(service)).join('')}
       </div>
     </div>
@@ -95,7 +102,7 @@ function renderServiceConfig(service) {
   const enabledCount = enabled.filter(Boolean).length
 
   return `
-    <div class="card" style="border:1px solid var(--color-border);border-radius:8px;overflow:hidden">
+    <div class="card" data-service="${service.key}" style="border:1px solid var(--color-border);border-radius:8px;overflow:hidden">
       <!-- Service Header -->
       <div style="
         padding:16px;
@@ -193,6 +200,23 @@ function setupConfigEvents(el) {
 
   // Save Configuration button
   el.querySelector('#save-config-btn')?.addEventListener('click', saveConfiguration)
+
+  // Service filter listener
+  el.querySelector('#config-service-filter')?.addEventListener('change', (e) => {
+    const selectedService = e.target.value
+    const serviceCards = el.querySelectorAll('[data-service]')
+
+    serviceCards.forEach(card => {
+      const serviceKey = card.dataset.service
+      if (!selectedService) {
+        // Show all services
+        card.style.display = ''
+      } else {
+        // Show only selected service
+        card.style.display = serviceKey === selectedService ? '' : 'none'
+      }
+    })
+  })
 }
 
 function updateComponentCount(el, serviceKey) {
